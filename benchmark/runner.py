@@ -77,7 +77,7 @@ class BenchmarkRunner:
         warmup_throughputs = []
         warmup_subset = images[:min(10, len(images))]
         slow_transform_threshold = 0.1  # seconds per image
-        min_iterations_before_stopping = 50  # minimum iterations to try before giving up
+        min_iterations_before_stopping = 10  # minimum iterations to try before giving up
 
         with tqdm(total=self.max_warmup_iterations,
                 desc=f"Warming up {transform_spec.name}",

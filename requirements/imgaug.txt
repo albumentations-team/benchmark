@@ -1,1 +1,2 @@
 imgaug
+numpy<2

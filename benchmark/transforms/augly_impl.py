@@ -12,15 +12,15 @@ class AuglyImpl:
     """Augly implementations of transforms"""
 
     @staticmethod
-    def HorizontalFlip(params: dict[str, Any]) -> imaugs.BaseTransform:
+    def HorizontalFlip(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
         return imaugs.HFlip(p=params["p"])
 
     @staticmethod
-    def VerticalFlip(params: dict[str, Any]) -> imaugs.BaseTransform:
+    def VerticalFlip(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
         return imaugs.VFlip(p=params["p"])
 
     @staticmethod
-    def Rotate(params: dict[str, Any]) -> imaugs.BaseTransform:
+    def Rotate(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
         return imaugs.RandomRotation(
             min_degrees=params["angle"],
             max_degrees=params["angle"],
@@ -28,7 +28,7 @@ class AuglyImpl:
         )
 
     @staticmethod
-    def RandomCrop64(params: dict[str, Any]) -> imaugs.BaseTransform:
+    def RandomCrop64(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
         # Augly uses relative coordinates (0-1)
         # Using fixed values as augly's crop works differently
         return imaugs.Crop(
@@ -40,7 +40,7 @@ class AuglyImpl:
         )
 
     @staticmethod
-    def Resize(params: dict[str, Any]) -> imaugs.BaseTransform:
+    def Resize(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
         return imaugs.Resize(
             width=params["target_size"],
             height=params["target_size"],
@@ -49,11 +49,11 @@ class AuglyImpl:
         )
 
     @staticmethod
-    def Grayscale(params: dict[str, Any]) -> imaugs.BaseTransform:
+    def Grayscale(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
         return imaugs.Grayscale(p=params["p"])
 
     @staticmethod
-    def ColorJitter(params: dict[str, Any]) -> imaugs.BaseTransform:
+    def ColorJitter(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
         return imaugs.ColorJitter(
             brightness_factor=params["brightness"],
             contrast_factor=params["contrast"],
@@ -62,21 +62,21 @@ class AuglyImpl:
         )
 
     @staticmethod
-    def GaussianBlur(params: dict[str, Any]) -> imaugs.BaseTransform:
+    def GaussianBlur(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
         return imaugs.Blur(
             radius=params["sigma"],
             p=params["p"]
         )
 
     @staticmethod
-    def JpegCompression(params: dict[str, Any]) -> imaugs.BaseTransform:
+    def JpegCompression(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
         return imaugs.EncodingQuality(
             quality=params["quality"],
             p=params["p"]
         )
 
     @staticmethod
-    def GaussianNoise(params: dict[str, Any]) -> imaugs.BaseTransform:
+    def GaussianNoise(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
         return imaugs.RandomNoise(
             mean=params["mean"],
             var=params["var"],
@@ -84,6 +84,28 @@ class AuglyImpl:
         )
 
     @staticmethod
-    def __call__(transform: imaugs.BaseTransform, image: Image.Image) -> Image.Image:
+    def Blur(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
+        return imaugs.Blur(
+            radius=params["radius"],
+            p=params["p"]
+        )
+
+    @staticmethod
+    def Brightness(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
+        return imaugs.RandomBrightness(
+            min_factor=params["brightness_limit"][0],
+            max_factor=params["brightness_limit"][1],
+            p=params["p"]
+        )
+
+    @staticmethod
+    def Contrast(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
+        return imaugs.Contrast(
+            factor=params["contrast_limit"][0],
+            p=params["p"]
+        )
+
+    @staticmethod
+    def __call__(transform: imaugs.transforms.BaseTransform, image: Image.Image) -> Image.Image:
         """Apply the transform to the image"""
         return transform(image)

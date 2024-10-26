@@ -34,7 +34,7 @@ def read_img_pillow(path: Path) -> Any:  # PIL.Image.Image
 
 def read_img_kornia(path: Path) -> Any:  # torch.Tensor
     """Read image using kornia format"""
-    return read_img_torch(path)
+    return read_img_torch(path) / 255.0
 
 def time_transform(transform: Any, images: list[Any]) -> float:
     """Time the execution of a transform on a list of images"""
@@ -127,22 +127,26 @@ def get_library_versions(library: str) -> dict[str, str]:
     """Get versions of relevant libraries"""
     versions = {}
 
+    def get_version(package: str) -> str:
+        try:
+            return str(pkg_resources.get_distribution(package).version)
+        except pkg_resources.DistributionNotFound:
+            return "not installed"
+
     # Replace direct string assignments with proper string values
     if library == "albumentations":
-        versions["albumentations"] = str(pkg_resources.get_distribution("albumentations").version)
+        versions["albumentations"] = get_version("albumentations")
     elif library == "torchvision":
-        versions["torchvision"] = str(pkg_resources.get_distribution("torchvision").version)
+        versions["torchvision"] = get_version("torchvision")
     elif library == "keras":
-        versions["tensorflow"] = str(pkg_resources.get_distribution("tensorflow").version)
+        versions["tensorflow"] = get_version("tensorflow")
 
     # Common libraries
-    versions["numpy"] = str(pkg_resources.get_distribution("numpy").version)
-    versions["pillow"] = str(pkg_resources.get_distribution("pillow").version)
-    versions["opencv-python-headless"] = str(pkg_resources.get_distribution("opencv-python-headless").version)
-
+    versions["numpy"] = get_version("numpy")
+    versions["pillow"] = get_version("pillow")
+    versions["opencv-python-headless"] = get_version("opencv-python-headless")
 
     return versions
-
 
 
 def is_variance_stable(throughputs: list[float],

@@ -40,6 +40,14 @@ class AlbumentationsImpl:
         )
 
     @staticmethod
+    def Clahe(params: dict[str, Any]) -> A.BasicTransform:
+        return A.CLAHE(
+            clip_limit=params["clip_limit"],
+            tile_grid_size=params["tile_grid_size"],
+            p=params["p"]
+        )
+
+    @staticmethod
     def Equalize(params: dict[str, Any]) -> A.BasicTransform:
         return A.Equalize(**params)
 
@@ -178,6 +186,45 @@ class AlbumentationsImpl:
         return A.Normalize(
             mean=params["mean"],
             std=params["std"],
+            p=params["p"]
+        )
+
+    @staticmethod
+    def Brightness(params: dict[str, Any]) -> A.BasicTransform:
+        return A.RandomBrightnessContrast(
+            brightness_limit=params["brightness_limit"],
+            contrast_limit=(0.0, 0.0),
+            p=params["p"]
+        )
+
+    @staticmethod
+    def Contrast(params: dict[str, Any]) -> A.BasicTransform:
+        return A.RandomBrightnessContrast(
+            brightness_limit=(0.0, 0.0),
+            contrast_limit=params["contrast_limit"],
+            p=params["p"]
+        )
+
+    @staticmethod
+    def Solarize(params: dict[str, Any]) -> A.BasicTransform:
+        return A.Solarize(
+            threshold=params["threshold"],
+            p=params["p"]
+        )
+
+    @staticmethod
+    def CoarseDropout(params: dict[str, Any]) -> A.BasicTransform:
+        return A.CoarseDropout(
+            hole_height_range=params["hole_height_range"],
+            hole_width_range=params["hole_width_range"],
+            num_holes_range=params["num_holes_range"],
+            p=params["p"]
+        )
+
+    @staticmethod
+    def Blur(params: dict[str, Any]) -> A.BasicTransform:
+        return A.Blur(
+            blur_limit=params["radius"],
             p=params["p"]
         )
 

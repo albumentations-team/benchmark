@@ -145,5 +145,33 @@ TRANSFORM_SPECS = [
         "mean": (0.485, 0.456, 0.406),
         "std": (0.229, 0.224, 0.225),
         "p": 1.0
+    }),
+
+    TransformSpec("Clahe", {
+        "clip_limit": (1, 4),
+        "tile_grid_size": (8, 8),
+        "p": 1.0
+    }),
+
+    TransformSpec("Brightness", {
+        "brightness_limit": (0.2, 0.2),
+        "p": 1.0
+    }),
+
+    TransformSpec("Contrast", {
+        "contrast_limit": (0.2, 0.2),
+        "p": 1.0
+    }),
+
+    TransformSpec("CoarseDropout", {
+        "hole_height_range": (16, 16),
+        "hole_width_range": (16, 16),
+        "num_holes_range": (1, 1),
+        "p": 1.0
+    }),
+
+    TransformSpec("Blur", {
+        "radius": 5,
+        "p": 1.0
     })
 ]

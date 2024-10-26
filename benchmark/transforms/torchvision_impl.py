@@ -64,7 +64,6 @@ class TorchvisionImpl:
     def Grayscale(params: dict[str, Any]) -> v2.Transform:
         return v2.RandomGrayscale(
             p=params["p"],
-            num_output_channels=params["num_output_channels"]
         )
 
     @staticmethod
@@ -108,10 +107,17 @@ class TorchvisionImpl:
 
     @staticmethod
     def Normalize(params: dict[str, Any]) -> v2.Transform:
-        return v2.Normalize(
+        return v2.Compose([
+        v2.ConvertImageDtype(torch.float32),  # Convert to float32 first
+        v2.Normalize(
             mean=params["mean"],
             std=params["std"]
         )
+    ])
+
+    @staticmethod
+    def JpegCompression(params: dict[str, Any]) -> v2.Transform:
+        return v2.JPEG(quality=params["quality"])
 
     @staticmethod
     def __call__(transform: v2.Transform, image: torch.Tensor) -> torch.Tensor:

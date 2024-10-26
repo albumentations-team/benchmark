@@ -19,20 +19,28 @@ class KorniaImpl:
     @staticmethod
     def Rotate(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         # Convert degrees to radians for rotation
-        angle = torch.tensor(-params["angle"]) * (torch.pi / 180.0)
+        angle = torch.tensor(params["angle"]) * (torch.pi / 180.0)
         return Kaug.RandomRotation(
-            degrees=params["angle"],
+            degrees=angle,
+            resample="bilinear",
             p=params["p"],
-            padding_mode="zeros"
         )
 
     @staticmethod
     def Affine(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomAffine(
             degrees=params["angle"],
-            translate=params["shift"],
+            translate=0.1,
             scale=[params["scale"], params["scale"]],
             shear=params["shear"],
+            p=params["p"]
+        )
+
+    @staticmethod
+    def Clahe(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
+        return Kaug.RandomClahe(
+            clip_limit=params["clip_limit"],
+            grid_size=params["tile_grid_size"],
             p=params["p"]
         )
 
@@ -155,6 +163,50 @@ class KorniaImpl:
         return Kaug.Normalize(
             mean=params["mean"],
             std=params["std"],
+            p=params["p"]
+        )
+
+    @staticmethod
+    def Brightness(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
+        return Kaug.RandomBrightness(
+            brightness=params["brightness_limit"],
+            p=params["p"]
+        )
+
+    @staticmethod
+    def Contrast(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
+        return Kaug.RandomContrast(
+            contrast=params["contrast_limit"],
+            p=params["p"]
+        )
+
+    @staticmethod
+    def GaussianNoise(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
+        return Kaug.RandomGaussianNoise(
+            mean=params["mean"],
+            std=params["var"],
+            p=params["p"]
+        )
+
+    @staticmethod
+    def RGBShift(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
+        return Kaug.RandomRGBShift(
+            r_shift_limit=params["r_shift_limit"] / 255.0,
+            g_shift_limit=params["g_shift_limit"] / 255.0,
+            b_shift_limit=params["b_shift_limit"] / 255.0,
+            p=params["p"]
+        )
+
+    @staticmethod
+    def Solarize(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
+        return Kaug.RandomSolarize(
+            threshold=params["threshold"] / 255.0,
+            p=params["p"]
+        )
+
+    @staticmethod
+    def CoarseDropout(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
+        return Kaug.RandomErasing(
             p=params["p"]
         )
 

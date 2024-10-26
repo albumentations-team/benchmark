@@ -80,7 +80,6 @@ class ImgaugImpl:
         return iaa.PerspectiveTransform(
             scale=params["scale"],
             mode=params["mode"] if "mode" in params else "replicate",
-            order=1 if params["interpolation"] == "bilinear" else 0
         )
 
     @staticmethod
@@ -120,7 +119,7 @@ class ImgaugImpl:
     def GaussianNoise(params: dict[str, Any]) -> iaa.Augmenter:
         return iaa.AdditiveGaussianNoise(
             loc=params["mean"],
-            scale=(0, params["var"] * 255),  # Convert to 0-255 range
+            scale=(0, params["var"]),
             per_channel=params["per_channel"]
         )
 
