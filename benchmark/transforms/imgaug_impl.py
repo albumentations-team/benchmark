@@ -79,7 +79,7 @@ class ImgaugImpl:
     def RandomPerspective(params: dict[str, Any]) -> iaa.Augmenter:
         return iaa.PerspectiveTransform(
             scale=params["scale"],
-            mode=params["mode"] if "mode" in params else "replicate",
+            mode=params.get("mode", "replicate"),
         )
 
     @staticmethod
