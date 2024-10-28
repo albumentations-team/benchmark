@@ -1,0 +1,4 @@
+kornia
+numpy
+torch
+torchvision
