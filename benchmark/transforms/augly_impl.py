@@ -4,7 +4,7 @@ import augly.image as imaugs
 from PIL import Image
 
 Image.MAX_IMAGE_PIXELS = None  # Disable image size check
-if hasattr(Image.core, 'set_threads'):
+if hasattr(Image.core, "set_threads"):
     Image.core.set_threads(1)
 
 
@@ -25,7 +25,7 @@ class AuglyImpl:
         return imaugs.RandomRotation(
             min_degrees=params["angle"],
             max_degrees=params["angle"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -37,7 +37,7 @@ class AuglyImpl:
             y1=0.25,
             x2=0.75,
             y2=0.75,
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -46,7 +46,7 @@ class AuglyImpl:
             width=params["target_size"],
             height=params["target_size"],
             resample=Image.BILINEAR if params["interpolation"] == "bilinear" else Image.NEAREST,
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -59,21 +59,21 @@ class AuglyImpl:
             brightness_factor=params["brightness"],
             contrast_factor=params["contrast"],
             saturation_factor=params["saturation"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def GaussianBlur(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
         return imaugs.Blur(
             radius=params["sigma"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def JpegCompression(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
         return imaugs.EncodingQuality(
             quality=params["quality"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -81,14 +81,14 @@ class AuglyImpl:
         return imaugs.RandomNoise(
             mean=params["mean"],
             var=params["var"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def Blur(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
         return imaugs.Blur(
             radius=params["radius"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -96,14 +96,14 @@ class AuglyImpl:
         return imaugs.RandomBrightness(
             min_factor=params["brightness_limit"][0],
             max_factor=params["brightness_limit"][1],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def Contrast(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
         return imaugs.Contrast(
             factor=params["contrast_limit"][0],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod

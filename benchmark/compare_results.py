@@ -1,7 +1,8 @@
-from pathlib import Path
 import json
+from pathlib import Path
+
 import pandas as pd
-import numpy as np
+
 
 def load_results(file_path: Path) -> tuple[str, dict[str, float], dict[str, float], str]:
     """Load results from a JSON file and extract mean and std throughputs and version"""
@@ -14,12 +15,13 @@ def load_results(file_path: Path) -> tuple[str, dict[str, float], dict[str, floa
     version = data["metadata"]["library_versions"].get(library, "N/A")
 
     for transform_name, results in data["results"].items():
-        transform_name = transform_name.split('(')[0].strip()
+        transform_name_stripped = transform_name.split("(")[0].strip()
         if results["supported"]:
-            medians[transform_name] = results["median_throughput"]
-            stds[transform_name] = results["std_throughput"]
+            medians[transform_name_stripped] = results["median_throughput"]
+            stds[transform_name_stripped] = results["std_throughput"]
 
     return library, medians, stds, version
+
 
 def create_comparison_table(results_dir: Path) -> pd.DataFrame:
     """Create a comparison table from all result files in the directory"""
@@ -55,15 +57,13 @@ def create_comparison_table(results_dir: Path) -> pd.DataFrame:
                 median = df_medians.loc[idx, library]
                 std = df_stds.loc[idx, library]
                 # Bold if it's the maximum value
-                if median == max_values[idx]:
-                    value = f"**{median:.0f} ± {std:.0f}**"
-                else:
-                    value = f"{median:.0f} ± {std:.0f}"
+                value = f"**{median:.0f} ± {std:.0f}**" if median == max_values[idx] else f"{median:.0f} ± {std:.0f}"
             column_values.append(value)
 
         formatted_data[f"{library}<br>{versions[library]}"] = column_values
 
     return pd.DataFrame(formatted_data)
+
 
 def get_system_summary(results_dir: Path) -> str:
     """Extract and format system information from any result file"""
@@ -96,11 +96,13 @@ def get_system_summary(results_dir: Path) -> str:
     ]
 
     # Add library versions
-    summary.extend([
-        "",
-        "### Library Versions",
-        "",
-    ])
+    summary.extend(
+        [
+            "",
+            "### Library Versions",
+            "",
+        ],
+    )
 
     # Collect versions from all result files
     versions = {}
@@ -115,6 +117,7 @@ def get_system_summary(results_dir: Path) -> str:
         summary.append(f"- {library}: {version}")
 
     return "\n".join(summary)
+
 
 def main() -> None:
     import argparse

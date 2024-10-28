@@ -1,4 +1,3 @@
-
 from typing import Any
 
 import albumentations as A
@@ -8,6 +7,7 @@ import numpy as np
 # Ensure single thread
 cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
+
 
 class AlbumentationsImpl:
     """Albumentations implementations of transforms"""
@@ -25,7 +25,7 @@ class AlbumentationsImpl:
         return A.Rotate(
             limit=(params["angle"], params["angle"]),
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -36,7 +36,7 @@ class AlbumentationsImpl:
             scale=params["scale"],
             shear=params["shear"],
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -44,7 +44,7 @@ class AlbumentationsImpl:
         return A.CLAHE(
             clip_limit=params["clip_limit"],
             tile_grid_size=params["tile_grid_size"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -56,7 +56,7 @@ class AlbumentationsImpl:
         return A.RandomCrop(
             height=params["height"],
             width=params["width"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -67,7 +67,7 @@ class AlbumentationsImpl:
             scale=params["scale"],
             ratio=params["ratio"],
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -77,7 +77,7 @@ class AlbumentationsImpl:
             r_shift_limit=shift,
             g_shift_limit=shift,
             b_shift_limit=shift,
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -86,14 +86,14 @@ class AlbumentationsImpl:
             height=params["target_size"],
             width=params["target_size"],
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def RandomGamma(params: dict[str, Any]) -> A.BasicTransform:
         return A.RandomGamma(
             gamma_limit=(params["gamma"], params["gamma"]),
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -107,14 +107,14 @@ class AlbumentationsImpl:
             contrast=params["contrast"],
             saturation=params["saturation"],
             hue=params["hue"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def PlankianJitter(params: dict[str, Any]) -> A.BasicTransform:
         return A.PlanckianJitter(
             mode=params["mode"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -122,7 +122,7 @@ class AlbumentationsImpl:
         return A.Perspective(
             scale=params["scale"],
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -130,28 +130,28 @@ class AlbumentationsImpl:
         return A.GaussianBlur(
             blur_limit=params["kernel_size"][0],  # assuming square kernel
             sigma_limit=(params["sigma"], params["sigma"]),
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def MedianBlur(params: dict[str, Any]) -> A.BasicTransform:
         return A.MedianBlur(
             blur_limit=(params["blur_limit"], params["blur_limit"]),
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def MotionBlur(params: dict[str, Any]) -> A.BasicTransform:
         return A.MotionBlur(
             blur_limit=params["kernel_size"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def Posterize(params: dict[str, Any]) -> A.BasicTransform:
         return A.Posterize(
             num_bits=params["bits"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -159,7 +159,7 @@ class AlbumentationsImpl:
         return A.ImageCompression(
             quality_lower=params["quality"],
             quality_upper=params["quality"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -168,7 +168,7 @@ class AlbumentationsImpl:
             var_limit=params["var"] * 255,  # convert to 0-255 range
             mean=params["mean"],
             per_channel=params["per_channel"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -179,7 +179,7 @@ class AlbumentationsImpl:
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             approximate=params["approximate"],
             same_dxdy=params["same_dxdy"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -187,7 +187,7 @@ class AlbumentationsImpl:
         return A.Normalize(
             mean=params["mean"],
             std=params["std"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -195,7 +195,7 @@ class AlbumentationsImpl:
         return A.RandomBrightnessContrast(
             brightness_limit=params["brightness_limit"],
             contrast_limit=(0.0, 0.0),
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -203,14 +203,14 @@ class AlbumentationsImpl:
         return A.RandomBrightnessContrast(
             brightness_limit=(0.0, 0.0),
             contrast_limit=params["contrast_limit"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def Solarize(params: dict[str, Any]) -> A.BasicTransform:
         return A.Solarize(
             threshold=params["threshold"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -219,14 +219,14 @@ class AlbumentationsImpl:
             hole_height_range=params["hole_height_range"],
             hole_width_range=params["hole_width_range"],
             num_holes_range=params["num_holes_range"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def Blur(params: dict[str, Any]) -> A.BasicTransform:
         return A.Blur(
             blur_limit=params["radius"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod

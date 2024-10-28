@@ -1,21 +1,15 @@
-import json
-import numpy as np
-from pathlib import Path
-from typing import Any
 import importlib
-from tqdm import tqdm
+import json
+import os
 import time
-import json
-
 from pathlib import Path
 from typing import Any
-import importlib
+
+import numpy as np
+from tqdm import tqdm
 
 from .transforms.specs import TRANSFORM_SPECS
-from .utils import get_image_loader, get_system_info, time_transform, verify_thread_settings, get_library_versions, is_variance_stable
-
-
-import os
+from .utils import get_image_loader, get_library_versions, get_system_info, time_transform, verify_thread_settings
 
 # Environment variables for various libraries
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -23,6 +17,7 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
 
 class BenchmarkRunner:
     def __init__(
@@ -55,7 +50,7 @@ class BenchmarkRunner:
             module = importlib.import_module(f".transforms.{self.library.lower()}_impl", package="benchmark")
             return getattr(module, f"{self.library.capitalize()}Impl")
         except (ImportError, AttributeError) as e:
-            raise ValueError(f"Library {self.library} not supported: {e}")
+            raise ValueError(f"Library {self.library} not supported: {e}")  # noqa: B904
 
     def load_images(self) -> list[Any]:
         """Load images using appropriate loader"""
@@ -67,7 +62,7 @@ class BenchmarkRunner:
                 try:
                     img = self.image_loader(path)
                     # Check if image is RGB (3 channels)
-                    if hasattr(img, 'shape'):  # numpy array or tensor
+                    if hasattr(img, "shape"):  # numpy array or tensor
                         if len(img.shape) == 4:  # batched tensor (B,C,H,W)
                             if img.shape[1] != 3:  # check channels
                                 continue
@@ -76,18 +71,18 @@ class BenchmarkRunner:
                                 continue
                         else:
                             continue
-                    elif hasattr(img, 'mode'):  # PIL Image
-                        if img.mode != 'RGB':
-                            continue
+                    elif hasattr(img, "mode") and img.mode != "RGB":
+                        continue
+
                     rgb_images.append(img)
 
                     if len(rgb_images) >= self.num_images:
                         break
-                except Exception as e:
+                except Exception:  # noqa: S112, BLE001
                     # Skip problematic images
                     continue
 
-                pbar.set_postfix({'loaded': len(rgb_images)})
+                pbar.set_postfix({"loaded": len(rgb_images)})
 
         if not rgb_images:
             raise ValueError("No valid RGB images found in the directory")
@@ -101,7 +96,7 @@ class BenchmarkRunner:
         self,
         transform: Any,
         transform_spec: Any,
-        warmup_subset: list[Any]
+        warmup_subset: list[Any],
     ) -> tuple[list[float], float, bool, str | None]:
         """Perform adaptive warmup until performance stabilizes or early stopping conditions are met.
 
@@ -123,10 +118,7 @@ class BenchmarkRunner:
         max_time_per_transform = 60
         start_time = time.time()
 
-        with tqdm(total=self.max_warmup_iterations,
-                desc=f"Warming up {transform_spec.name}",
-                leave=False) as pbar:
-
+        with tqdm(total=self.max_warmup_iterations, desc=f"Warming up {transform_spec.name}", leave=False) as pbar:
             for i in range(self.max_warmup_iterations):
                 elapsed = time_transform(lambda x: self.impl.__call__(transform, x), warmup_subset)
                 throughput = len(warmup_subset) / elapsed
@@ -137,20 +129,32 @@ class BenchmarkRunner:
                 total_time = time.time() - start_time
 
                 # Stop if transform is too slow
-                if (i >= min_iterations_before_stopping and
-                    time_per_image > slow_transform_threshold):
-                    return warmup_throughputs, time_per_image, True, \
-                           f"Transform too slow: {time_per_image:.3f} sec/image > {slow_transform_threshold} sec/image threshold"
+                if i >= min_iterations_before_stopping and time_per_image > slow_transform_threshold:
+                    return (
+                        warmup_throughputs,
+                        time_per_image,
+                        True,
+                        (
+                            f"Transform too slow: {time_per_image:.3f} sec/image > {slow_transform_threshold}"
+                            " sec/image threshold"
+                        ),
+                    )
 
                 # Stop if total time exceeds maximum
                 if total_time > max_time_per_transform:
-                    return warmup_throughputs, time_per_image, True, \
-                           f"Transform timeout: {total_time:.1f} sec > {max_time_per_transform} sec limit"
+                    return (
+                        warmup_throughputs,
+                        time_per_image,
+                        True,
+                        f"Transform timeout: {total_time:.1f} sec > {max_time_per_transform} sec limit",
+                    )
 
                 # Variance stability check
-                if (i >= self.warmup_window * self.min_warmup_windows and
-                    len(warmup_throughputs) >= self.warmup_window * 2):
-                    recent_mean = np.mean(warmup_throughputs[-self.warmup_window:])
+                if (
+                    i >= self.warmup_window * self.min_warmup_windows
+                    and len(warmup_throughputs) >= self.warmup_window * 2
+                ):
+                    recent_mean = np.mean(warmup_throughputs[-self.warmup_window :])
                     overall_mean = np.mean(warmup_throughputs)
                     relative_diff = abs(recent_mean - overall_mean) / overall_mean
 
@@ -162,7 +166,6 @@ class BenchmarkRunner:
 
         return warmup_throughputs, time_per_image, False, None
 
-
     def run_transform(self, transform_spec: Any, images: list[Any]) -> dict[str, Any]:
         """Run benchmark for a single transform"""
         if not hasattr(self.impl, transform_spec.name):
@@ -173,9 +176,12 @@ class BenchmarkRunner:
         transform = transform_fn(transform_spec.params)
 
         # Perform warmup
-        warmup_subset = images[:min(10, len(images))]
-        warmup_throughputs, time_per_image, early_stopped, early_stop_reason = \
-            self._perform_warmup(transform, transform_spec, warmup_subset)
+        warmup_subset = images[: min(10, len(images))]
+        warmup_throughputs, time_per_image, early_stopped, early_stop_reason = self._perform_warmup(
+            transform,
+            transform_spec,
+            warmup_subset,
+        )
 
         if early_stopped:
             return {
@@ -189,16 +195,14 @@ class BenchmarkRunner:
                 "std_time": 0.0,
                 "variance_stable": False,
                 "early_stopped": True,
-                "early_stop_reason": early_stop_reason
+                "early_stop_reason": early_stop_reason,
             }
 
         # Benchmark runs
         throughputs = []
         times = []
 
-        for _ in tqdm(range(self.num_runs),
-                    desc=f"Benchmarking {transform_spec.name}",
-                    leave=False):
+        for _ in tqdm(range(self.num_runs), desc=f"Benchmarking {transform_spec.name}", leave=False):
             elapsed = time_transform(lambda x: self.impl.__call__(transform, x), images)
             throughput = len(images) / elapsed
             throughputs.append(throughput)
@@ -215,10 +219,10 @@ class BenchmarkRunner:
             "std_throughput": std_throughput,
             "times": times,
             "mean_time": len(images) / median_throughput,
-            "std_time": std_throughput / (median_throughput ** 2) * len(images),
+            "std_time": std_throughput / (median_throughput**2) * len(images),
             "variance_stable": True,
             "early_stopped": False,
-            "early_stop_reason": None
+            "early_stop_reason": None,
         }
 
     def run(self, output_path: Path | None = None) -> dict[str, Any]:
@@ -237,29 +241,29 @@ class BenchmarkRunner:
                 "max_warmup_iterations": self.max_warmup_iterations,
                 "warmup_window": self.warmup_window,
                 "warmup_threshold": self.warmup_threshold,
-                "min_warmup_windows": self.min_warmup_windows
-            }
+                "min_warmup_windows": self.min_warmup_windows,
+            },
         }
 
         # Run benchmarks
         results = {
-            str(spec): self.run_transform(spec, images)
-            for spec in tqdm(TRANSFORM_SPECS, desc="Running transforms")
+            str(spec): self.run_transform(spec, images) for spec in tqdm(TRANSFORM_SPECS, desc="Running transforms")
         }
 
         # Combine results and metadata
         full_results = {
             "metadata": metadata,
-            "results": results
+            "results": results,
         }
 
         if output_path:
             output_path = Path(output_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_path, 'w') as f:
+            with open(output_path, "w") as f:
                 json.dump(full_results, f, indent=2)
 
         return full_results
+
 
 def main() -> None:
     """CLI entry point"""
@@ -286,10 +290,11 @@ def main() -> None:
         max_warmup_iterations=args.max_warmup,
         warmup_window=args.warmup_window,
         warmup_threshold=args.warmup_threshold,
-        min_warmup_windows=args.min_warmup_windows
+        min_warmup_windows=args.min_warmup_windows,
     )
 
     runner.run(args.output)
+
 
 if __name__ == "__main__":
     main()

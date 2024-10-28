@@ -1,7 +1,8 @@
 from typing import Any
 
-import torch
 import kornia.augmentation as Kaug
+import torch
+
 torch.set_num_threads(1)
 
 
@@ -33,7 +34,7 @@ class KorniaImpl:
             translate=0.1,
             scale=[params["scale"], params["scale"]],
             shear=params["shear"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -41,7 +42,7 @@ class KorniaImpl:
         return Kaug.RandomClahe(
             clip_limit=params["clip_limit"],
             grid_size=params["tile_grid_size"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -52,7 +53,7 @@ class KorniaImpl:
     def RandomCrop80(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomCrop(
             size=(params["height"], params["width"]),
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -61,14 +62,14 @@ class KorniaImpl:
             size=(params["height"], params["width"]),
             scale=params["scale"],
             ratio=params["ratio"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def Resize(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.Resize(
             size=(params["target_size"], params["target_size"]),
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -76,7 +77,7 @@ class KorniaImpl:
         gamma = params["gamma"] / 100  # Convert to kornia scale
         return Kaug.RandomGamma(
             gamma=(gamma, gamma),
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -90,21 +91,21 @@ class KorniaImpl:
             contrast=params["contrast"],
             saturation=params["saturation"],
             hue=params["hue"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def PlankianJitter(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomPlanckianJitter(
             mode=params["mode"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def RandomPerspective(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomPerspective(
             distortion_scale=params["scale"][1],  # Using max scale
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -112,7 +113,7 @@ class KorniaImpl:
         return Kaug.RandomGaussianBlur(
             kernel_size=params["kernel_size"],
             sigma=(params["sigma"], params["sigma"]),
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -122,7 +123,7 @@ class KorniaImpl:
             kernel_size += 1  # Ensure odd kernel size
         return Kaug.RandomMedianBlur(
             kernel_size=(kernel_size, kernel_size),
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -131,21 +132,21 @@ class KorniaImpl:
             kernel_size=params["kernel_size"],
             angle=params["angle"],
             direction=params["direction"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def Posterize(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomPosterize(
             bits=params["bits"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def JpegCompression(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomJPEG(
             jpeg_quality=params["quality"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -155,7 +156,7 @@ class KorniaImpl:
         return Kaug.RandomElasticTransform(
             alpha=alpha,
             sigma=sigma,
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -163,21 +164,21 @@ class KorniaImpl:
         return Kaug.Normalize(
             mean=params["mean"],
             std=params["std"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def Brightness(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomBrightness(
             brightness=params["brightness_limit"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def Contrast(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomContrast(
             contrast=params["contrast_limit"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -185,7 +186,7 @@ class KorniaImpl:
         return Kaug.RandomGaussianNoise(
             mean=params["mean"],
             std=params["var"],
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
@@ -194,20 +195,20 @@ class KorniaImpl:
             r_shift_limit=params["r_shift_limit"] / 255.0,
             g_shift_limit=params["g_shift_limit"] / 255.0,
             b_shift_limit=params["b_shift_limit"] / 255.0,
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def Solarize(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomSolarize(
             threshold=params["threshold"] / 255.0,
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
     def CoarseDropout(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomErasing(
-            p=params["p"]
+            p=params["p"],
         )
 
     @staticmethod
