@@ -88,7 +88,7 @@ done
 
 # Generate comparison table
 echo "Generating comparison table..."
-python -m benchmark.compare_results -r "$OUTPUT_DIR" -o"${OUTPUT_DIR}/comparison.csv"
+python -m benchmark.compare_results -r "$OUTPUT_DIR" -o"${OUTPUT_DIR}/comparison.md"
 
 echo "All benchmarks complete."
 echo "Individual results saved in: $OUTPUT_DIR"
