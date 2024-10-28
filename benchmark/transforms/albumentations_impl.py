@@ -52,7 +52,7 @@ class AlbumentationsImpl:
         return A.Equalize(**params)
 
     @staticmethod
-    def RandomCrop64(params: dict[str, Any]) -> A.BasicTransform:
+    def RandomCrop80(params: dict[str, Any]) -> A.BasicTransform:
         return A.RandomCrop(
             height=params["height"],
             width=params["width"],
@@ -178,6 +178,7 @@ class AlbumentationsImpl:
             sigma=params["sigma"],
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             approximate=params["approximate"],
+            same_dxdy=params["same_dxdy"],
             p=params["p"]
         )
 
@@ -232,4 +233,4 @@ class AlbumentationsImpl:
     def __call__(transform: A.BasicTransform, image: np.ndarray) -> np.ndarray:
         """Apply the transform to the image"""
         result = transform(image=image)
-        return result["image"]
+        return np.ascontiguousarray(result["image"])

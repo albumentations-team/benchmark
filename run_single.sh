@@ -69,8 +69,8 @@ fi
 # Set default values for optional arguments
 NUM_IMAGES=${NUM_IMAGES:-1000}
 NUM_RUNS=${NUM_RUNS:-5}
-MAX_WARMUP=${MAX_WARMUP:-5000}
-WARMUP_WINDOW=${WARMUP_WINDOW:-5}
+MAX_WARMUP=${MAX_WARMUP:-1000}
+WARMUP_WINDOW=${WARMUP_WINDOW:-20}
 WARMUP_THRESHOLD=${WARMUP_THRESHOLD:-0.05}
 MIN_WARMUP_WINDOWS=${MIN_WARMUP_WINDOWS:-3}
 
@@ -92,8 +92,8 @@ fi
 echo "Installing requirements..."
 pip install -U uv
 uv pip install setuptools
-uv pip install -r "${SCRIPT_DIR}/requirements/requirements.txt"
-uv pip install -r "${SCRIPT_DIR}/requirements/${LIBRARY}.txt"
+uv pip install -U -r "${SCRIPT_DIR}/requirements/requirements.txt"
+uv pip install -U -r "${SCRIPT_DIR}/requirements/${LIBRARY}.txt"
 
 # Run benchmark
 echo "Running benchmark..."

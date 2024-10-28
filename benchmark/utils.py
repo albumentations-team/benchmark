@@ -133,18 +133,10 @@ def get_library_versions(library: str) -> dict[str, str]:
         except pkg_resources.DistributionNotFound:
             return "not installed"
 
-    # Replace direct string assignments with proper string values
-    if library == "albumentations":
-        versions["albumentations"] = get_version("albumentations")
-    elif library == "torchvision":
-        versions["torchvision"] = get_version("torchvision")
-    elif library == "keras":
-        versions["tensorflow"] = get_version("tensorflow")
+    versions[library] = get_version(library)
 
-    # Common libraries
-    versions["numpy"] = get_version("numpy")
-    versions["pillow"] = get_version("pillow")
-    versions["opencv-python-headless"] = get_version("opencv-python-headless")
+    for extra_librarties in ["numpy", "pillow", "opencv-python-headless", "torch", "opencv-python"]:
+        versions[extra_librarties] = get_version(extra_librarties)
 
     return versions
 

@@ -21,6 +21,7 @@ class AuglyImpl:
 
     @staticmethod
     def Rotate(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
+        # Augly uses nearest interpolation by default
         return imaugs.RandomRotation(
             min_degrees=params["angle"],
             max_degrees=params["angle"],
@@ -28,7 +29,7 @@ class AuglyImpl:
         )
 
     @staticmethod
-    def RandomCrop64(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
+    def RandomCrop80(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
         # Augly uses relative coordinates (0-1)
         # Using fixed values as augly's crop works differently
         return imaugs.Crop(

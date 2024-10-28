@@ -49,7 +49,7 @@ class KorniaImpl:
         return Kaug.RandomEqualize(**params)
 
     @staticmethod
-    def RandomCrop64(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
+    def RandomCrop80(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomCrop(
             size=(params["height"], params["width"]),
             p=params["p"]

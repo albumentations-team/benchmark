@@ -167,6 +167,4 @@ conda_build/
 
 data/
 
-output/
-
 .venv_*

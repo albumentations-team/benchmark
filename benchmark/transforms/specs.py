@@ -24,7 +24,7 @@ TRANSFORM_SPECS = [
     TransformSpec("Rotate", {
         "angle": 45,
         "p": 1.0,
-        "interpolation": "bilinear",
+        "interpolation": "nearest",
         "mode": "reflect"  # from imgaug implementation
     }),
 
@@ -42,9 +42,9 @@ TRANSFORM_SPECS = [
         "p": 1.0
     }),
 
-    TransformSpec("RandomCrop64", {
-        "height": 64,
-        "width": 64,
+    TransformSpec("RandomCrop80", {
+        "height": 80,
+        "width": 80,
         "p": 1.0
     }),
 
@@ -137,7 +137,8 @@ TRANSFORM_SPECS = [
         "alpha": 50.0,
         "sigma": 5.0,
         "interpolation": "bilinear",
-        "approximate": True,  # from albumentations implementation
+        "approximate": False,
+        "same_dxdy": True,
         "p": 1.0
     }),
 

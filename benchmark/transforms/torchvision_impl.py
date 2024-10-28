@@ -38,7 +38,7 @@ class TorchvisionImpl:
         return v2.RandomEqualize(**params)
 
     @staticmethod
-    def RandomCrop64(params: dict[str, Any]) -> v2.Transform:
+    def RandomCrop80(params: dict[str, Any]) -> v2.Transform:
         return v2.RandomCrop(
             size=(params["height"], params["width"])
         )
@@ -122,4 +122,4 @@ class TorchvisionImpl:
     @staticmethod
     def __call__(transform: v2.Transform, image: torch.Tensor) -> torch.Tensor:
         """Apply the transform to the image"""
-        return transform(image)
+        return transform(image).contiguous()

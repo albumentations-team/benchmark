@@ -44,7 +44,7 @@ class ImgaugImpl:
         return iaa.AllChannelsHistogramEqualization()
 
     @staticmethod
-    def RandomCrop64(params: dict[str, Any]) -> iaa.Augmenter:
+    def RandomCrop80(params: dict[str, Any]) -> iaa.Augmenter:
         return iaa.CropToFixedSize(
             width=params["width"],
             height=params["height"]
@@ -134,4 +134,4 @@ class ImgaugImpl:
     @staticmethod
     def __call__(transform: iaa.Augmenter, image: np.ndarray) -> np.ndarray:
         """Apply the transform to the image"""
-        return transform.augment_image(image)
+        return np.ascontiguousarray(transform.augment_image(image))

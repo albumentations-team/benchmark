@@ -58,10 +58,6 @@ repos:
     hooks:
       - id: codespell
         additional_dependencies: ["tomli"]
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.42.0
-    hooks:
-      - id: markdownlint
   - repo: https://github.com/tox-dev/pyproject-fmt
     rev: "v2.4.3"
     hooks:
