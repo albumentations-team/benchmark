@@ -1,21 +1,16 @@
-import json
-import numpy as np
-from pathlib import Path
-from typing import Any
 import importlib
-from tqdm import tqdm
+import json
+import os
 import time
-import json
-
 from pathlib import Path
 from typing import Any
-import importlib
+
+import numpy as np
+from tqdm import tqdm
 
 from .transforms.specs import TRANSFORM_SPECS
-from .utils import get_image_loader, get_system_info, time_transform, verify_thread_settings, get_library_versions, is_variance_stable
-
-
-import os
+from .utils import (get_image_loader, get_library_versions, get_system_info,
+                    time_transform, verify_thread_settings)
 
 # Environment variables for various libraries
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -29,6 +24,7 @@ class BenchmarkRunner:
         self,
         library: str,
         data_dir: Path,
+        recursive: bool = False,
         num_images: int = 1000,
         num_runs: int = 5,
         max_warmup_iterations: int = 1000,
@@ -38,6 +34,7 @@ class BenchmarkRunner:
     ):
         self.library = library
         self.data_dir = Path(data_dir)
+        self.recursive = recursive
         self.num_images = num_images
         self.num_runs = num_runs
         self.max_warmup_iterations = max_warmup_iterations
@@ -59,7 +56,10 @@ class BenchmarkRunner:
 
     def load_images(self) -> list[Any]:
         """Load images using appropriate loader"""
-        image_paths = sorted(self.data_dir.glob("*.*"))
+        if self.recursive:
+            image_paths = sorted(self.data_dir.rglob("*.*"))
+        else:
+            image_paths = sorted(self.data_dir.glob("*.*"))
         rgb_images = []
 
         with tqdm(image_paths, desc="Loading images") as pbar:
@@ -271,6 +271,7 @@ def main() -> None:
     parser.add_argument("-o", "--output", type=Path, help="Output JSON path")
     parser.add_argument("-n", "--num-images", type=int, default=1000, help="Number of images")
     parser.add_argument("-r", "--num-runs", type=int, default=5, help="Number of benchmark runs")
+    parser.add_argument("-R", "--recursive", action="store_true", help="Recurse into subdirectories")
     parser.add_argument("--max-warmup", type=int, default=5000, help="Maximum warmup iterations")
     parser.add_argument("--warmup-window", type=int, default=5, help="Window size for variance check")
     parser.add_argument("--warmup-threshold", type=float, default=0.05, help="Variance stability threshold")
@@ -281,6 +282,7 @@ def main() -> None:
     runner = BenchmarkRunner(
         library=args.library,
         data_dir=args.data_dir,
+        recursive=args.recursive,
         num_images=args.num_images,
         num_runs=args.num_runs,
         max_warmup_iterations=args.max_warmup,
