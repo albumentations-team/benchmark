@@ -2,7 +2,7 @@ import multiprocessing
 import platform
 import sys
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -129,7 +129,7 @@ def get_system_info() -> dict[str, str]:
         "platform": platform.platform(),
         "processor": platform.processor(),
         "cpu_count": str(multiprocessing.cpu_count()),
-        "timestamp": datetime.now(UTC).isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
