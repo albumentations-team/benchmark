@@ -4,6 +4,7 @@ import os
 import time
 from pathlib import Path
 from typing import Any
+from warnings import warn
 
 import numpy as np
 from tqdm import tqdm
@@ -246,9 +247,12 @@ class BenchmarkRunner:
         }
 
         # Run benchmarks
-        results = {
-            str(spec): self.run_transform(spec, images) for spec in tqdm(TRANSFORM_SPECS, desc="Running transforms")
-        }
+        results = {}
+        for spec in tqdm(TRANSFORM_SPECS, desc="Running transforms"):
+            try:
+                results[str(spec)] = self.run_transform(spec, images)
+            except Exception as e:
+                warn(f"Transform {spec} failed: {e}")
 
         # Combine results and metadata
         full_results = {
