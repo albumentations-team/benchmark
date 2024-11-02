@@ -79,7 +79,7 @@ class BenchmarkRunner:
 
                     if len(rgb_images) >= self.num_images:
                         break
-                except Exception:  # noqa: S112, BLE001
+                except Exception:  # noqa: S112
                     # Skip problematic images
                     continue
 
@@ -190,7 +190,7 @@ class BenchmarkRunner:
                 "warmup_iterations": len(warmup_throughputs),
                 "throughputs": [],
                 "median_throughput": np.median(warmup_throughputs),
-                "std_throughput": np.std(warmup_throughputs),
+                "std_throughput": np.std(warmup_throughputs, ddof=1),
                 "times": [],
                 "mean_time": time_per_image,
                 "std_time": 0.0,
@@ -210,7 +210,7 @@ class BenchmarkRunner:
             times.append(elapsed)
 
         median_throughput = np.median(throughputs)
-        std_throughput = np.std(throughputs)
+        std_throughput = np.std(throughputs, ddof=1)
 
         return {
             "supported": True,
@@ -252,7 +252,7 @@ class BenchmarkRunner:
             try:
                 results[str(spec)] = self.run_transform(spec, images)
             except Exception as e:
-                warn(f"Transform {spec} failed: {e}")
+                warn(f"Transform {spec} failed: {e}", stacklevel=2)
 
         # Combine results and metadata
         full_results = {

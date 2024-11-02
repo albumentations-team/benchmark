@@ -1,0 +1,327 @@
+{
+  "metadata": {
+    "system_info": {
+      "python_version": "3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 08:22:19) [Clang 14.0.6 ]",
+      "platform": "macOS-15.0.1-arm64-arm-64bit",
+      "processor": "arm",
+      "cpu_count": "10",
+      "timestamp": "2024-11-02T18:19:57.986096+00:00"
+    },
+    "library_versions": {
+      "ultralytics": "8.3.27",
+      "numpy": "1.26.4",
+      "pillow": "11.0.0",
+      "opencv-python-headless": "not installed",
+      "torch": "2.5.1",
+      "opencv-python": "4.10.0.84"
+    },
+    "thread_settings": {
+      "environment": "{'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1', 'VECLIB_MAXIMUM_THREADS': '1', 'NUMEXPR_NUM_THREADS': '1'}",
+      "opencv": "{'threads': 1, 'opencl': False}",
+      "pytorch": "{'threads': 1, 'gpu_available': False, 'gpu_device': None}",
+      "pillow": "{'threads': 'unknown', 'simd': False}"
+    },
+    "benchmark_params": {
+      "num_images": 1000,
+      "num_runs": 20,
+      "max_warmup_iterations": 1000,
+      "warmup_window": 5,
+      "warmup_threshold": 0.05,
+      "min_warmup_windows": 3
+    }
+  },
+  "results": {
+    "HorizontalFlip(p=1.0)": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        841.8786648559606,
+        699.594887724157,
+        685.6976528455758,
+        707.6840122771789,
+        717.0749437574431,
+        889.1034259464221,
+        906.0312694192049,
+        872.1719689287944,
+        557.5720691935844,
+        479.2594770125527,
+        429.50342027543,
+        469.3938671561123,
+        792.3358412720365,
+        447.5442018190185,
+        644.8023679415448,
+        525.9758775865503,
+        801.5349932644664,
+        910.832980531138,
+        848.6543737424703,
+        912.52990240112
+      ],
+      "median_throughput": 712.3794780173109,
+      "std_throughput": 170.2237268829553,
+      "times": [
+        1.1878196250181645,
+        1.4293986670672894,
+        1.4583687079139054,
+        1.4130600418429822,
+        1.3945543749723583,
+        1.124728542054072,
+        1.1037146660964936,
+        1.1465628747828305,
+        1.7934901248663664,
+        2.086552374996245,
+        2.32827016687952,
+        2.1304070418700576,
+        1.2620910829864442,
+        2.234416167018935,
+        1.5508627910166979,
+        1.9012278749141842,
+        1.2476061661727726,
+        1.0978961251676083,
+        1.1783359998371452,
+        1.0958545000758022
+      ],
+      "mean_time": 1.403746220740654,
+      "std_time": 0.33542644147664685,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "VerticalFlip(p=1.0)": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        20320.729007516966,
+        25161.663725307295,
+        26809.651330744786,
+        24965.282711251974,
+        24639.745933887472,
+        22720.75341851415,
+        25062.49958678655,
+        25314.02550618196,
+        16145.253565675388,
+        22371.677430312164,
+        22388.832467500983,
+        24167.212998951316,
+        26943.526121157047,
+        21401.494841268664,
+        24881.991526432645,
+        26418.07247096498,
+        27069.246268461808,
+        25402.228399804688,
+        22524.086473914573,
+        24585.453588214743
+      ],
+      "median_throughput": 24760.86873016006,
+      "std_throughput": 2630.8914952297087,
+      "times": [
+        0.04921083291992545,
+        0.039742999942973256,
+        0.03730000020004809,
+        0.04005562490783632,
+        0.04058483405970037,
+        0.04401262500323355,
+        0.03990025003440678,
+        0.03950379206798971,
+        0.06193770794197917,
+        0.04469937505200505,
+        0.04466512496583164,
+        0.041378374909982085,
+        0.03711466700769961,
+        0.046725708059966564,
+        0.040189709048718214,
+        0.037852875189855695,
+        0.036942292004823685,
+        0.03936662501655519,
+        0.044396917102858424,
+        0.04067445802502334
+      ],
+      "mean_time": 0.0403863051372647,
+      "std_time": 0.004291125156685678,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Rotate(angle=45, p=1.0, interpolation=nearest, mode=reflect)": {
+      "supported": false
+    },
+    "Affine(angle=25.0, shift=(50, 50), scale=2.0, shear=[10.0, 15.0], p=1.0, interpolation=bilinear, mode=reflect)": {
+      "supported": false
+    },
+    "Equalize(p=1.0)": {
+      "supported": false
+    },
+    "RandomCrop80(height=80, width=80, p=1.0)": {
+      "supported": false
+    },
+    "RandomResizedCrop(height=512, width=512, scale=(0.08, 1.0), ratio=(0.75, 1.3333333333333333), interpolation=bilinear, p=1.0)": {
+      "supported": false
+    },
+    "ShiftRGB(pixel_shift=100, p=1.0, per_channel=True)": {
+      "supported": false
+    },
+    "Resize(target_size=512, interpolation=bilinear, p=1.0)": {
+      "supported": false
+    },
+    "RandomGamma(gamma=120, p=1.0)": {
+      "supported": false
+    },
+    "Grayscale(p=1.0, num_output_channels=3)": {
+      "supported": false
+    },
+    "ColorJitter(brightness=0.5, contrast=1.5, saturation=1.5, hue=0.5, p=1.0)": {
+      "supported": false
+    },
+    "PlankianJitter(mode=blackbody, p=1.0)": {
+      "supported": false
+    },
+    "RandomPerspective(scale=(0.05, 0.1), p=1.0, interpolation=bilinear)": {
+      "supported": true,
+      "warmup_iterations": 21,
+      "throughputs": [
+        921.3588363393928,
+        925.8198775030913,
+        881.3756184457931,
+        901.4316086909563,
+        767.5682947611682,
+        781.4172977026907,
+        940.5804746877445,
+        939.7855136987769,
+        952.220624592744,
+        930.6050529656837,
+        805.697138615283,
+        939.4909132396625,
+        886.5139182046229,
+        870.532517450398,
+        943.0378791853104,
+        891.29654463843,
+        863.9911595574382,
+        828.922458788985,
+        933.965015947896,
+        940.8546248552589
+      ],
+      "median_throughput": 911.3952225151745,
+      "std_throughput": 56.8417155121185,
+      "times": [
+        1.0853534589987248,
+        1.0801237090490758,
+        1.1345900420565158,
+        1.1093464998994023,
+        1.3028156671207398,
+        1.2797259581275284,
+        1.0631732498295605,
+        1.064072584034875,
+        1.0501767911482602,
+        1.0745697079692036,
+        1.241161165991798,
+        1.0644062501378357,
+        1.1280138748697937,
+        1.1487221671268344,
+        1.0604027919471264,
+        1.1219610420521349,
+        1.1574192501138896,
+        1.2063854578882456,
+        1.0707039160188287,
+        1.0628634579479694
+      ],
+      "mean_time": 1.097218830311951,
+      "std_time": 0.06843112523128562,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "GaussianBlur(sigma=2.0, kernel_size=(5, 5), p=1.0)": {
+      "supported": false
+    },
+    "MedianBlur(blur_limit=5, p=1.0)": {
+      "supported": false
+    },
+    "MotionBlur(kernel_size=5, angle=45, direction=0.0, p=1.0)": {
+      "supported": false
+    },
+    "Posterize(bits=4, p=1.0)": {
+      "supported": false
+    },
+    "JpegCompression(quality=50, p=1.0)": {
+      "supported": false
+    },
+    "GaussianNoise(mean=127, var=0.01, per_channel=True, p=1.0)": {
+      "supported": false
+    },
+    "Elastic(alpha=50.0, sigma=5.0, interpolation=bilinear, approximate=False, same_dxdy=True, p=1.0)": {
+      "supported": false
+    },
+    "Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), p=1.0)": {
+      "supported": false
+    },
+    "Clahe(clip_limit=(1, 4), tile_grid_size=(8, 8), p=1.0)": {
+      "supported": false
+    },
+    "Brightness(brightness_limit=(0.2, 0.2), p=1.0)": {
+      "supported": false
+    },
+    "Contrast(contrast_limit=(0.2, 0.2), p=1.0)": {
+      "supported": false
+    },
+    "CoarseDropout(hole_height_range=(16, 16), hole_width_range=(16, 16), num_holes_range=(1, 1), p=1.0)": {
+      "supported": false
+    },
+    "Blur(radius=5, p=1.0)": {
+      "supported": false
+    },
+    "HSV(hue=0.015, saturation=0.7, value=0.4, p=1.0)": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        969.4416247560506,
+        1013.7586471170154,
+        999.230135128295,
+        997.8515836253247,
+        992.6090745430413,
+        987.6366409548866,
+        992.7269516893923,
+        1004.7922733415248,
+        835.4466947035025,
+        932.3748884141193,
+        996.4889538299202,
+        992.070791990705,
+        987.8970265727789,
+        984.8865068089325,
+        981.1868055043942,
+        976.8581495233533,
+        992.7587759875458,
+        983.9253246298648,
+        989.2066426795457,
+        998.1540389075379
+      ],
+      "median_throughput": 990.6387173351253,
+      "std_throughput": 37.836672203845936,
+      "times": [
+        1.0315216248854995,
+        0.9864280840847641,
+        1.0007704580202699,
+        1.002153042005375,
+        1.0074459579773247,
+        1.0125181251205504,
+        1.007326333085075,
+        0.9952305830083787,
+        1.1969644578639418,
+        1.0725299580954015,
+        1.003523417050019,
+        1.007992582861334,
+        1.0122512499801815,
+        1.0153454160317779,
+        1.0191739171277732,
+        1.0236900828313082,
+        1.0072940418031067,
+        1.0163372920360416,
+        1.010911124991253,
+        1.001849374966696
+      ],
+      "mean_time": 1.0094497443932506,
+      "std_time": 0.038555144692515274,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    }
+  }
+}

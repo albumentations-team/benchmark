@@ -233,4 +233,13 @@ TRANSFORM_SPECS = [
             "p": 1.0,
         },
     ),
+    TransformSpec(
+        "HSV",
+        {
+            "hue": 0.015,  # standard HSV adjustment values
+            "saturation": 0.7,
+            "value": 0.4,
+            "p": 1.0,
+        },
+    ),
 ]

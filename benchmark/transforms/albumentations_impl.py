@@ -230,6 +230,15 @@ class AlbumentationsImpl:
         )
 
     @staticmethod
+    def HSV(params: dict[str, Any]) -> A.BasicTransform:
+        return A.HueSaturationValue(
+            hue_shift_limit=params["hue"],
+            sat_shift_limit=params["saturation"],
+            val_shift_limit=params["value"],
+            p=params["p"],
+        )
+
+    @staticmethod
     def __call__(transform: A.BasicTransform, image: np.ndarray) -> np.ndarray:
         """Apply the transform to the image"""
         result = transform(image=image)

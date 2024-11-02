@@ -2,7 +2,7 @@ import multiprocessing
 import platform
 import sys
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -58,6 +58,7 @@ def get_image_loader(library: str) -> Callable[[Path], Any]:
     """Get the appropriate image loader for the library"""
     loaders = {
         "albumentations": read_img_cv2,
+        "ultralytics": read_img_cv2,
         "imgaug": read_img_cv2,
         "torchvision": read_img_torch,
         "kornia": read_img_kornia,
@@ -129,7 +130,7 @@ def get_system_info() -> dict[str, str]:
         "platform": platform.platform(),
         "processor": platform.processor(),
         "cpu_count": str(multiprocessing.cpu_count()),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
