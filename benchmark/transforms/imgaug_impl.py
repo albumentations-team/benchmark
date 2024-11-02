@@ -126,6 +126,14 @@ class ImgaugImpl:
         return iaa.AverageBlur(k=params["radius"])
 
     @staticmethod
+    def Brightness(params: dict[str, Any]) -> iaa.Augmenter:
+        return iaa.AddToBrightness(add=params["brightness_limit"])
+
+    @staticmethod
+    def Contrast(params: dict[str, Any]) -> iaa.Augmenter:
+        return iaa.AddToHueAndSaturation(value=int(params["contrast_limit"][0] * 100))
+
+    @staticmethod
     def __call__(transform: iaa.Augmenter, image: np.ndarray) -> np.ndarray:
         """Apply the transform to the image"""
         return np.ascontiguousarray(transform.augment_image(image))

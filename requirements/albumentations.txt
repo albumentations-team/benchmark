@@ -1,1 +1,1 @@
-albumentations
+git+https://github.com/albumentations-team/albumentations.git
