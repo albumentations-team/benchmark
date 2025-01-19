@@ -59,6 +59,8 @@ TRANSFORM_SPECS = [
         "Pad",
         {
             "padding": 10,
+            "fill": 0,
+            "border_mode": "constant",
         },
     ),
     TransformSpec(
@@ -66,7 +68,8 @@ TRANSFORM_SPECS = [
         {
             "angle": 45,
             "interpolation": "nearest",
-            "mode": "reflect",  # from imgaug implementation
+            "mode": "constant",
+            "fill": 0,
         },
     ),
     TransformSpec(
@@ -77,7 +80,8 @@ TRANSFORM_SPECS = [
             "scale": 2.0,
             "shear": [10.0, 15.0],
             "interpolation": "bilinear",
-            "mode": "constant",  # from imgaug implementation
+            "mode": "constant",
+            "fill": 0,
         },
     ),
     TransformSpec(
@@ -85,6 +89,7 @@ TRANSFORM_SPECS = [
         {
             "scale": (0.05, 0.1),
             "interpolation": "bilinear",
+            "fill": 0,
         },
     ),
     TransformSpec(
@@ -113,7 +118,7 @@ TRANSFORM_SPECS = [
     TransformSpec(
         "Grayscale",
         {
-            "num_output_channels": 3,  # from torchvision implementation
+            "num_output_channels": 1,
         },
     ),
     TransformSpec(

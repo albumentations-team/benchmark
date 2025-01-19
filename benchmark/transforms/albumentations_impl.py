@@ -59,6 +59,18 @@ class AlbumentationsImpl:
     def Pad(params: dict[str, Any]) -> A.BasicTransform:
         return A.Pad(
             padding=params["padding"],
+            fill=params["fill"],
+            border_mode=cv2.BORDER_CONSTANT if params["border_mode"] == "constant" else cv2.BORDER_REFLECT,
+            p=1,
+        )
+
+    @staticmethod
+    def Rotate(params: dict[str, Any]) -> A.BasicTransform:
+        return A.Rotate(
+            limit=params["angle"],
+            interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
+            border_mode=cv2.BORDER_CONSTANT if params["mode"] == "constant" else cv2.BORDER_REFLECT,
+            fill=params["fill"],
             p=1,
         )
 
@@ -71,6 +83,7 @@ class AlbumentationsImpl:
             shear=params["shear"],
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             border_mode=cv2.BORDER_CONSTANT if params["mode"] == "constant" else cv2.BORDER_REFLECT,
+            fill=params["fill"],
             p=1,
         )
 
@@ -109,7 +122,7 @@ class AlbumentationsImpl:
 
     @staticmethod
     def Grayscale(params: dict[str, Any]) -> A.BasicTransform:
-        return A.ToGray(p=1)
+        return A.ToGray(num_output_channels=params["num_output_channels"], p=1)
 
     @staticmethod
     def ShiftRGB(params: dict[str, Any]) -> A.BasicTransform:
