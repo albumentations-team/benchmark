@@ -146,7 +146,7 @@ class KorniaImpl:
     def JpegCompression(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomJPEG(
             jpeg_quality=params["quality"],
-            p=params["p"],
+            p=1,
         )
 
     @staticmethod

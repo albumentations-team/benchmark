@@ -17,50 +17,17 @@ class TransformSpec:
 # Define all transform specifications based on the original implementations
 TRANSFORM_SPECS = [
     TransformSpec(
-        "HorizontalFlip",
+        "Resize",
         {
-            "p": 1.0,
-        },
-    ),
-    TransformSpec(
-        "VerticalFlip",
-        {
-            "p": 1.0,
-        },
-    ),
-    TransformSpec(
-        "Rotate",
-        {
-            "angle": 45,
-            "p": 1.0,
-            "interpolation": "nearest",
-            "mode": "reflect",  # from imgaug implementation
-        },
-    ),
-    TransformSpec(
-        "Affine",
-        {
-            "angle": 25.0,
-            "shift": (50, 50),
-            "scale": 2.0,
-            "shear": [10.0, 15.0],
-            "p": 1.0,
+            "target_size": 512,
             "interpolation": "bilinear",
-            "mode": "reflect",  # from imgaug implementation
         },
     ),
     TransformSpec(
-        "Equalize",
+        "RandomCrop128",
         {
-            "p": 1.0,
-        },
-    ),
-    TransformSpec(
-        "RandomCrop80",
-        {
-            "height": 80,
-            "width": 80,
-            "p": 1.0,
+            "height": 128,
+            "width": 128,
         },
     ),
     TransformSpec(
@@ -71,109 +38,53 @@ TRANSFORM_SPECS = [
             "scale": (0.08, 1.0),
             "ratio": (0.75, 1.3333333333333333),
             "interpolation": "bilinear",
-            "p": 1.0,
         },
     ),
     TransformSpec(
-        "ShiftRGB",
+        "CenterCrop128",
         {
-            "pixel_shift": 100,
-            "p": 1.0,
-            "per_channel": True,  # from imgaug implementation
+            "height": 128,
+            "width": 128,
         },
     ),
     TransformSpec(
-        "Resize",
+        "HorizontalFlip",
+        {},
+    ),
+    TransformSpec(
+        "VerticalFlip",
+        {},
+    ),
+    TransformSpec(
+        "Pad",
         {
-            "target_size": 512,
+            "padding": 10,
+        },
+    ),
+    TransformSpec(
+        "Rotate",
+        {
+            "angle": 45,
+            "interpolation": "nearest",
+            "mode": "reflect",  # from imgaug implementation
+        },
+    ),
+    TransformSpec(
+        "Affine",
+        {
+            "angle": 25.0,
+            "shift": (20, 20),
+            "scale": 2.0,
+            "shear": [10.0, 15.0],
             "interpolation": "bilinear",
-            "p": 1.0,
+            "mode": "constant",  # from imgaug implementation
         },
     ),
     TransformSpec(
-        "RandomGamma",
-        {
-            "gamma": 120,
-            "p": 1.0,
-        },
-    ),
-    TransformSpec(
-        "Grayscale",
-        {
-            "p": 1.0,
-            "num_output_channels": 3,  # from torchvision implementation
-        },
-    ),
-    TransformSpec(
-        "ColorJitter",
-        {
-            "brightness": 0.5,
-            "contrast": 1.5,
-            "saturation": 1.5,
-            "hue": 0.5,
-            "p": 1.0,
-        },
-    ),
-    TransformSpec(
-        "PlankianJitter",
-        {
-            "mode": "blackbody",
-            "p": 1.0,
-        },
-    ),
-    TransformSpec(
-        "RandomPerspective",
+        "Perspective",
         {
             "scale": (0.05, 0.1),
-            "p": 1.0,
             "interpolation": "bilinear",
-        },
-    ),
-    TransformSpec(
-        "GaussianBlur",
-        {
-            "sigma": 2.0,
-            "kernel_size": (5, 5),
-            "p": 1.0,
-        },
-    ),
-    TransformSpec(
-        "MedianBlur",
-        {
-            "blur_limit": 5,
-            "p": 1.0,
-        },
-    ),
-    TransformSpec(
-        "MotionBlur",
-        {
-            "kernel_size": 5,
-            "angle": 45,
-            "direction": 0.0,
-            "p": 1.0,
-        },
-    ),
-    TransformSpec(
-        "Posterize",
-        {
-            "bits": 4,
-            "p": 1.0,
-        },
-    ),
-    TransformSpec(
-        "JpegCompression",
-        {
-            "quality": 50,
-            "p": 1.0,
-        },
-    ),
-    TransformSpec(
-        "GaussianNoise",
-        {
-            "mean": 127,
-            "var": 0.010,
-            "per_channel": True,
-            "p": 1.0,
         },
     ),
     TransformSpec(
@@ -184,62 +95,166 @@ TRANSFORM_SPECS = [
             "interpolation": "bilinear",
             "approximate": False,
             "same_dxdy": True,
-            "p": 1.0,
         },
+    ),
+    TransformSpec(
+        "ColorJitter",
+        {
+            "brightness": 0.5,
+            "contrast": 1.5,
+            "saturation": 1.5,
+            "hue": 0.5,
+        },
+    ),
+    TransformSpec(
+        "ChannelShuffle",
+        {},
+    ),
+    TransformSpec(
+        "Grayscale",
+        {
+            "num_output_channels": 3,  # from torchvision implementation
+        },
+    ),
+    TransformSpec(
+        "ShiftRGB",
+        {
+            "pixel_shift": 100,
+            "per_channel": True,  # from imgaug implementation
+        },
+    ),
+    TransformSpec(
+        "GaussianBlur",
+        {
+            "sigma": 2.0,
+            "kernel_size": (5, 5),
+        },
+    ),
+    TransformSpec(
+        "GaussianNoise",
+        {
+            "mean": 0,
+            "std": 0.44,
+            "per_channel": True,
+        },
+    ),
+    TransformSpec(
+        "Invert",
+        {},
+    ),
+    TransformSpec(
+        "Posterize",
+        {
+            "bits": 4,
+        },
+    ),
+    TransformSpec(
+        "Solarize",
+        {
+            "threshold": 0.5,
+        },
+    ),
+    TransformSpec(
+        "Sharpen",
+        {
+            "alpha": [0.2, 0.5],
+            "lightness": [0.5, 1],
+        },
+    ),
+    TransformSpec(
+        "AutoContrast",
+        {},
+    ),
+    TransformSpec(
+        "Equalize",
+        {},
     ),
     TransformSpec(
         "Normalize",
         {
             "mean": (0.485, 0.456, 0.406),
             "std": (0.229, 0.224, 0.225),
-            "p": 1.0,
         },
     ),
     TransformSpec(
-        "Clahe",
+        "Erasing",
+        {
+            "scale": (0.02, 0.33),
+            "ratio": (0.3, 3.3),
+            "fill": 0,
+        },
+    ),
+    TransformSpec(
+        "JpegCompression",
+        {
+            "quality": 50,
+        },
+    ),
+    TransformSpec(
+        "RandomGamma",
+        {
+            "gamma": 120,
+        },
+    ),
+    TransformSpec(
+        "PlankianJitter",
+        {
+            "mode": "blackbody",
+        },
+    ),
+    TransformSpec(
+        "MedianBlur",
+        {
+            "blur_limit": 5,
+        },
+    ),
+    TransformSpec(
+        "MotionBlur",
+        {
+            "kernel_size": 5,
+            "angle_range": (0, 360),
+            "direction_range": (-1, 1),
+        },
+    ),
+    TransformSpec(
+        "CLAHE",
         {
             "clip_limit": (1, 4),
             "tile_grid_size": (8, 8),
-            "p": 1.0,
         },
     ),
     TransformSpec(
         "Brightness",
         {
             "brightness_limit": (0.2, 0.2),
-            "p": 1.0,
         },
     ),
     TransformSpec(
         "Contrast",
         {
             "contrast_limit": (0.2, 0.2),
-            "p": 1.0,
         },
     ),
     TransformSpec(
         "CoarseDropout",
         {
-            "hole_height_range": (16, 16),
-            "hole_width_range": (16, 16),
-            "num_holes_range": (1, 1),
-            "p": 1.0,
+            "hole_height_range": (0.1, 0.1),
+            "hole_width_range": (0.1, 0.1),
+            "num_holes_range": (4, 4),
         },
     ),
     TransformSpec(
         "Blur",
         {
             "radius": 5,
-            "p": 1.0,
         },
     ),
     TransformSpec(
         "HSV",
         {
-            "hue": 0.015,  # standard HSV adjustment values
+            "hue": 0.015,
             "saturation": 0.7,
             "value": 0.4,
-            "p": 1.0,
         },
     ),
 ]
