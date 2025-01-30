@@ -71,6 +71,7 @@ mkdir -p "$OUTPUT_DIR"
 # Libraries to benchmark
 LIBRARIES=("albumentations" "imgaug" "torchvision" "kornia" "augly")
 
+
 # Run benchmarks for each library
 for library in "${LIBRARIES[@]}"; do
     echo "Running benchmark for ${library}..."

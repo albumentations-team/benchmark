@@ -21,7 +21,7 @@ class TorchvisionImpl:
 
     @staticmethod
     def RandomCrop128(params: dict[str, Any]) -> v2.Transform:
-        return v2.RandomCrop(size=(params["height"], params["width"]))
+        return v2.RandomCrop(size=(params["height"], params["width"]), pad_if_needed=True)
 
     @staticmethod
     def RandomResizedCrop(params: dict[str, Any]) -> v2.Transform:
@@ -36,7 +36,7 @@ class TorchvisionImpl:
 
     @staticmethod
     def CenterCrop128(params: dict[str, Any]) -> v2.Transform:
-        return v2.CenterCrop(size=(params["height"], params["width"]))
+        return v2.CenterCrop(size=(params["height"], params["width"]), pad_if_needed=True)
 
     @staticmethod
     def HorizontalFlip(params: dict[str, Any]) -> v2.Transform:

@@ -78,7 +78,7 @@ TRANSFORM_SPECS = [
             "angle": 25.0,
             "shift": (20, 20),
             "scale": 2.0,
-            "shear": [10.0, 15.0],
+            "shear": (10.0, 15.0),
             "interpolation": "bilinear",
             "mode": "constant",
             "fill": 0,
@@ -122,10 +122,9 @@ TRANSFORM_SPECS = [
         },
     ),
     TransformSpec(
-        "ShiftRGB",
+        "RGBShift",
         {
             "pixel_shift": 100,
-            "per_channel": True,  # from imgaug implementation
         },
     ),
     TransformSpec(
@@ -162,8 +161,8 @@ TRANSFORM_SPECS = [
     TransformSpec(
         "Sharpen",
         {
-            "alpha": [0.2, 0.5],
-            "lightness": [0.5, 1],
+            "alpha": (0.2, 0.5),
+            "lightness": (0.5, 1),
         },
     ),
     TransformSpec(
@@ -252,6 +251,7 @@ TRANSFORM_SPECS = [
         "Blur",
         {
             "radius": 5,
+            "border_mode": "constant",
         },
     ),
     TransformSpec(
@@ -260,6 +260,96 @@ TRANSFORM_SPECS = [
             "hue": 0.015,
             "saturation": 0.7,
             "value": 0.4,
+        },
+    ),
+    TransformSpec(
+        "ChannelDropout",
+        {},
+    ),
+    TransformSpec(
+        "LinearIllumination",
+        {
+            "gain": (0.01, 0.2),
+        },
+    ),
+    TransformSpec(
+        "CornerIllumination",
+        {
+            "gain": (0.01, 0.2),
+        },
+    ),
+    TransformSpec(
+        "GaussianIllumination",
+        {
+            "gain": (0.01, 0.2),
+        },
+    ),
+    TransformSpec(
+        "Hue",
+        {
+            "hue": 20,
+        },
+    ),
+    TransformSpec(
+        "PlasmaBrightness",
+        {
+            "roughness": 0.5,
+        },
+    ),
+    TransformSpec(
+        "PlasmaContrast",
+        {
+            "roughness": 0.5,
+        },
+    ),
+    TransformSpec(
+        "PlasmaShadow",
+        {
+            "roughness": 0.5,
+        },
+    ),
+    TransformSpec(
+        "Rain",
+        {
+            "drop_width": 5,
+            "drop_height": 20,
+            "brightness_coefficient": 1.0,
+        },
+    ),
+    TransformSpec(
+        "SaltAndPepper",
+        {
+            "amount": (0.01, 0.06),
+            "salt_vs_pepper": (0.4, 0.6),
+        },
+    ),
+    TransformSpec(
+        "Saturation",
+        {
+            "saturation_factor": 0.5,
+        },
+    ),
+    TransformSpec(
+        "Snow",
+        {"snow_point_range": (0.5, 0.5)},
+    ),
+    TransformSpec(
+        "OpticalDistortion",
+        {
+            "distort_limit": 0.5,
+        },
+    ),
+    TransformSpec(
+        "Shear",
+        {
+            "shear": 10,
+        },
+    ),
+    TransformSpec(
+        "ThinPlateSpline",
+        {
+            "num_control_points": 2,
+            "distortion_scale": 0.5,
         },
     ),
 ]

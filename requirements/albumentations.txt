@@ -1,1 +1,2 @@
-git+https://github.com/albumentations-team/albumentations.git
+# git+https://github.com/albumentations-team/albumentations.git
+../albumentations

@@ -26,6 +26,7 @@ class AlbumentationsImpl:
         return A.RandomCrop(
             height=params["height"],
             width=params["width"],
+            pad_if_needed=True,
             p=1,
         )
 
@@ -44,6 +45,7 @@ class AlbumentationsImpl:
         return A.CenterCrop(
             height=params["height"],
             width=params["width"],
+            pad_if_needed=True,
             p=1,
         )
 
@@ -125,7 +127,7 @@ class AlbumentationsImpl:
         return A.ToGray(num_output_channels=params["num_output_channels"], p=1)
 
     @staticmethod
-    def ShiftRGB(params: dict[str, Any]) -> A.BasicTransform:
+    def RGBShift(params: dict[str, Any]) -> A.BasicTransform:
         shift = params["pixel_shift"]
         return A.RGBShift(
             r_shift_limit=shift,
@@ -179,7 +181,7 @@ class AlbumentationsImpl:
 
     @staticmethod
     def AutoContrast(params: dict[str, Any]) -> A.BasicTransform:
-        return A.AutoContrast(p=1)
+        return A.AutoContrast(p=1, method="pil")
 
     @staticmethod
     def Equalize(params: dict[str, Any]) -> A.BasicTransform:
@@ -285,6 +287,86 @@ class AlbumentationsImpl:
             sat_shift_limit=params["saturation"] * 255,
             val_shift_limit=params["value"] * 255,
             p=1,
+        )
+
+    @staticmethod
+    def ChannelDropout(params: dict[str, Any]) -> A.BasicTransform:
+        return A.ChannelDropout(p=1)
+
+    @staticmethod
+    def LinearIllumination(params: dict[str, Any]) -> A.BasicTransform:
+        return A.Illumination(p=1, mode="linear", angle_range=(90, 90))
+
+    @staticmethod
+    def CornerIllumination(params: dict[str, Any]) -> A.BasicTransform:
+        return A.Illumination(p=1, mode="corner")
+
+    @staticmethod
+    def GaussianIllumination(params: dict[str, Any]) -> A.BasicTransform:
+        return A.Illumination(p=1, mode="gaussian")
+
+    @staticmethod
+    def Hue(params: dict[str, Any]) -> A.BasicTransform:
+        return A.HueSaturationValue(
+            hue_shift_limit=params["hue"],
+            sat_shift_limit=0,
+            val_shift_limit=0,
+            p=1,
+        )
+
+    @staticmethod
+    def PlasmaBrightness(params: dict[str, Any]) -> A.BasicTransform:
+        return A.PlasmaBrightnessContrast(p=1, roughness=params["roughness"], contrast_range=(0.0, 0.0))
+
+    @staticmethod
+    def PlasmaContrast(params: dict[str, Any]) -> A.BasicTransform:
+        return A.PlasmaBrightnessContrast(p=1, roughness=params["roughness"], brightness_range=(0.0, 0.0))
+
+    @staticmethod
+    def PlasmaShadow(params: dict[str, Any]) -> A.BasicTransform:
+        return A.PlasmaShadow(p=1, roughness=params["roughness"])
+
+    @staticmethod
+    def Rain(params: dict[str, Any]) -> A.BasicTransform:
+        return A.RandomRain(
+            p=1,
+            drop_width=params["drop_width"],
+            brightness_coefficient=params["brightness_coefficient"],
+        )
+
+    @staticmethod
+    def SaltAndPepper(params: dict[str, Any]) -> A.BasicTransform:
+        return A.SaltAndPepper(p=1, amount=params["amount"], salt_vs_pepper=params["salt_vs_pepper"])
+
+    @staticmethod
+    def Saturation(params: dict[str, Any]) -> A.BasicTransform:
+        sat_shift_limit = params["saturation_factor"] * 255
+        return A.HueSaturationValue(p=1, hue_shift_limit=0, sat_shift_limit=sat_shift_limit, val_shift_limit=0)
+
+    @staticmethod
+    def Snow(params: dict[str, Any]) -> A.BasicTransform:
+        return A.RandomSnow(p=1, snow_point_range=params["snow_point_range"])
+
+    @staticmethod
+    def OpticalDistortion(params: dict[str, Any]) -> A.BasicTransform:
+        return A.OpticalDistortion(p=1, distort_limit=params["distort_limit"])
+
+    @staticmethod
+    def Shear(params: dict[str, Any]) -> A.BasicTransform:
+        return A.Affine(
+            p=1,
+            shear=params["shear"],
+            interpolation=cv2.INTER_LINEAR,
+            border_mode=cv2.BORDER_CONSTANT,
+            fill=0,
+        )
+
+    @staticmethod
+    def ThinPlateSpline(params: dict[str, Any]) -> A.BasicTransform:
+        return A.ThinPlateSpline(
+            p=1,
+            num_control_points=params["num_control_points"],
+            scale_range=(params["distortion_scale"], params["distortion_scale"]),
         )
 
     @staticmethod

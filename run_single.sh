@@ -93,7 +93,7 @@ echo "Installing requirements..."
 pip install -U uv
 uv pip install setuptools
 uv pip install -U -r "${SCRIPT_DIR}/requirements/requirements.txt"
-uv pip install -U -r "${SCRIPT_DIR}/requirements/${LIBRARY}.txt"
+uv pip install -U --force-reinstall -r "${SCRIPT_DIR}/requirements/${LIBRARY}.txt"
 
 # Run benchmark
 echo "Running benchmark..."
