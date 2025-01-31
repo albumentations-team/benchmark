@@ -135,6 +135,8 @@ def main() -> None:
     df = create_comparison_table(args.results_dir)
     markdown_table = df.to_markdown(index=False)
 
+    df.to_csv(args.output.with_suffix(".csv"), index=False)
+
     # Combine summary and table
     full_report = f"""# Benchmark Results
 
