@@ -168,3 +168,5 @@ conda_build/
 data/
 
 .venv_*
+
+notebooks/

@@ -40,62 +40,90 @@ This benchmark suite measures the throughput and performance characteristics of 
 - Thread control settings for consistent single-threaded performance
 - Support for multiple image formats and loading methods
 
-## Benchmark Results
+
+![Albumentations vs TorchVision vs Kornia](speedup_analysis.png)
+
+# Benchmark Results
 
 ### System Information
 
-- Platform: macOS-15.0.1-arm64-arm-64bit
+- Platform: macOS-15.1-arm64-arm-64bit
 - Processor: arm
-- CPU Count: 10
-- Python Version: 3.12.7
+- CPU Count: 16
+- Python Version: 3.12.8
 
 ### Benchmark Parameters
 
-- Number of images: 1000
-- Runs per transform: 20
+- Number of images: 2000
+- Runs per transform: 5
 - Max warmup iterations: 1000
 
 ### Library Versions
 
-- albumentations: 1.4.21
+- albumentations: 2.0.2
 - augly: 1.0.0
 - imgaug: 0.4.0
-- kornia: 0.7.3
+- kornia: 0.8.0
 - torchvision: 0.20.1
 
 ## Performance Comparison
 
-| Transform         | albumentations<br>1.4.21   | augly<br>1.0.0   | imgaug<br>0.4.0   | kornia<br>0.7.3   | torchvision<br>0.20.1   |
-|:------------------|:---------------------------|:-----------------|:------------------|:------------------|:------------------------|
-| HorizontalFlip    | **8622 ± 891**             | 4121 ± 1001      | 6162 ± 393        | 571 ± 84          | 861 ± 38                |
-| VerticalFlip      | **23951 ± 5013**           | 7775 ± 1376      | 11663 ± 2258      | 1590 ± 100        | 3156 ± 402              |
-| Rotate            | 1163 ± 84                  | 1095 ± 82        | **1224 ± 75**     | 167 ± 11          | 160 ± 11                |
-| Affine            | **907 ± 49**               | -                | 890 ± 34          | 181 ± 6           | 129 ± 16                |
-| Equalize          | **852 ± 90**               | -                | 610 ± 35          | 184 ± 9           | 416 ± 44                |
-| RandomCrop80      | **107764 ± 3630**          | 25192 ± 5964     | 12343 ± 2013      | 1492 ± 22         | 28767 ± 858             |
-| ShiftRGB          | **2351 ± 276**             | -                | 1674 ± 63         | -                 | -                       |
-| Resize            | **2372 ± 156**             | 632 ± 38         | 2025 ± 74         | 332 ± 18          | 180 ± 11                |
-| RandomGamma       | **9014 ± 371**             | -                | 2592 ± 143        | 128 ± 10          | -                       |
-| Grayscale         | **11373 ± 923**            | 3359 ± 65        | 1849 ± 75         | 628 ± 75          | 1497 ± 317              |
-| RandomPerspective | 401 ± 24                   | -                | **596 ± 38**      | 98 ± 7            | 106 ± 4                 |
-| GaussianBlur      | **1664 ± 144**             | 235 ± 18         | 1043 ± 142        | 165 ± 12          | 82 ± 3                  |
-| MedianBlur        | 847 ± 36                   | -                | **849 ± 32**      | 4 ± 0             | -                       |
-| MotionBlur        | **3928 ± 742**             | -                | 663 ± 36          | 75 ± 6            | -                       |
-| Posterize         | **9034 ± 331**             | -                | 2400 ± 142        | 363 ± 69          | 3052 ± 380              |
-| JpegCompression   | **906 ± 40**               | 754 ± 14         | 443 ± 79          | 69 ± 3            | 606 ± 42                |
-| GaussianNoise     | 183 ± 5                    | 70 ± 1           | **204 ± 18**      | 65 ± 2            | -                       |
-| Elastic           | 229 ± 17                   | -                | **251 ± 22**      | 1 ± 0             | 3 ± 0                   |
-| Clahe             | **471 ± 18**               | -                | 422 ± 12          | 90 ± 2            | -                       |
-| Brightness        | **9251 ± 709**             | 1297 ± 42        | 742 ± 39          | 519 ± 15          | 449 ± 14                |
-| Contrast          | **9146 ± 1034**            | 880 ± 9          | 510 ± 9           | 476 ± 116         | 358 ± 4                 |
-| CoarseDropout     | **14488 ± 2108**           | -                | 653 ± 85          | 526 ± 86          | -                       |
-| Blur              | **5804 ± 305**             | 243 ± 9          | 3857 ± 385        | -                 | -                       |
-| ColorJitter       | **700 ± 31**               | 252 ± 15         | -                 | 50 ± 4            | 47 ± 2                  |
-| RandomResizedCrop | **2879 ± 158**             | -                | -                 | 321 ± 10          | 462 ± 47                |
-| Normalize         | **1349 ± 65**              | -                | -                 | 645 ± 40          | 528 ± 20                |
-| PlankianJitter    | **2155 ± 340**             | -                | -                 | 1023 ± 114        | -                       |
-| HSV               | **1243 ± 44**              | -                | -                 | -                 | -                       |
-## Requirements
+Number shows how many uint8 images per second can be processed on one CPU thread. Larger is better.
+
+| Transform            | albumentations<br>2.0.2   | augly<br>1.0.0   | imgaug<br>0.4.0   | kornia<br>0.8.0   | torchvision<br>0.20.1   |
+|:---------------------|:--------------------------|:-----------------|:------------------|:------------------|:------------------------|
+| Resize               | **3662 ± 54**             | 1083 ± 21        | 2995 ± 70         | 645 ± 13          | 260 ± 9                 |
+| RandomCrop128        | **116784 ± 2222**         | 45395 ± 934      | 21408 ± 622       | 2946 ± 42         | 31450 ± 249             |
+| HorizontalFlip       | **12649 ± 238**           | 8808 ± 1012      | 9599 ± 495        | 1297 ± 13         | 2486 ± 107              |
+| VerticalFlip         | **24989 ± 904**           | 16830 ± 1653     | 19935 ± 1708      | 2872 ± 37         | 4696 ± 161              |
+| Rotate               | **3066 ± 83**             | 1739 ± 105       | 2574 ± 10         | 256 ± 2           | 258 ± 4                 |
+| Affine               | **1503 ± 29**             | -                | 1328 ± 16         | 248 ± 6           | 188 ± 2                 |
+| Perspective          | **1222 ± 16**             | -                | 908 ± 8           | 154 ± 3           | 147 ± 5                 |
+| Elastic              | 359 ± 7                   | -                | **395 ± 14**      | 1 ± 0             | 3 ± 0                   |
+| ChannelShuffle       | **8162 ± 180**            | -                | 1252 ± 26         | 1328 ± 44         | 4417 ± 234              |
+| Grayscale            | **37212 ± 1856**          | 6088 ± 107       | 3100 ± 24         | 1201 ± 52         | 2600 ± 23               |
+| GaussianBlur         | 943 ± 11                  | 387 ± 4          | **1460 ± 23**     | 254 ± 5           | 127 ± 4                 |
+| GaussianNoise        | 234 ± 7                   | -                | **263 ± 9**       | 125 ± 1           | -                       |
+| Invert               | **35494 ± 17186**         | -                | 3682 ± 79         | 2881 ± 43         | 4244 ± 30               |
+| Posterize            | **14146 ± 1381**          | -                | 3111 ± 95         | 836 ± 30          | 4247 ± 26               |
+| Solarize             | **12920 ± 1097**          | -                | 3843 ± 80         | 263 ± 6           | 1032 ± 14               |
+| Sharpen              | **2375 ± 38**             | -                | 1101 ± 30         | 201 ± 2           | 220 ± 3                 |
+| Equalize             | **1303 ± 64**             | -                | 814 ± 11          | 306 ± 1           | 795 ± 3                 |
+| JpegCompression      | **1354 ± 23**             | 1202 ± 19        | 687 ± 26          | 120 ± 1           | 889 ± 7                 |
+| RandomGamma          | **12631 ± 1159**          | -                | 3504 ± 72         | 230 ± 3           | -                       |
+| MedianBlur           | **1259 ± 8**              | -                | 1152 ± 14         | 6 ± 0             | -                       |
+| MotionBlur           | **3608 ± 18**             | -                | 928 ± 37          | 159 ± 1           | -                       |
+| CLAHE                | **649 ± 13**              | -                | 555 ± 14          | 165 ± 3           | -                       |
+| Brightness           | **11254 ± 418**           | 2108 ± 32        | 1076 ± 32         | 1127 ± 27         | 854 ± 13                |
+| Contrast             | **11255 ± 242**           | 1379 ± 25        | 717 ± 5           | 1109 ± 41         | 602 ± 13                |
+| CoarseDropout        | **15760 ± 594**           | -                | 1190 ± 22         | -                 | -                       |
+| Blur                 | **7403 ± 114**            | 386 ± 4          | 5381 ± 125        | 265 ± 11          | -                       |
+| Saturation           | **1581 ± 127**            | -                | 495 ± 3           | 155 ± 2           | -                       |
+| Shear                | **1336 ± 18**             | -                | 1244 ± 14         | 261 ± 1           | -                       |
+| ColorJitter          | **968 ± 52**              | 418 ± 5          | -                 | 104 ± 4           | 87 ± 1                  |
+| RandomResizedCrop    | **4521 ± 17**             | -                | -                 | 661 ± 16          | 837 ± 37                |
+| Pad                  | **31866 ± 530**           | -                | -                 | -                 | 4889 ± 183              |
+| AutoContrast         | **1534 ± 115**            | -                | -                 | 541 ± 8           | 344 ± 1                 |
+| Normalize            | **1797 ± 190**            | -                | -                 | 1251 ± 14         | 1018 ± 7                |
+| Erasing              | **25411 ± 5727**          | -                | -                 | 1210 ± 27         | 3577 ± 49               |
+| CenterCrop128        | **119630 ± 3484**         | -                | -                 | -                 | -                       |
+| RGBShift             | **3526 ± 128**            | -                | -                 | 896 ± 9           | -                       |
+| PlankianJitter       | **3351 ± 42**             | -                | -                 | 2150 ± 52         | -                       |
+| HSV                  | **1277 ± 91**             | -                | -                 | -                 | -                       |
+| ChannelDropout       | **10988 ± 243**           | -                | -                 | 2283 ± 24         | -                       |
+| LinearIllumination   | 462 ± 52                  | -                | -                 | **708 ± 6**       | -                       |
+| CornerIllumination   | **464 ± 45**              | -                | -                 | 452 ± 3           | -                       |
+| GaussianIllumination | **670 ± 91**              | -                | -                 | 436 ± 13          | -                       |
+| Hue                  | **1846 ± 193**            | -                | -                 | 150 ± 1           | -                       |
+| PlasmaBrightness     | **163 ± 1**               | -                | -                 | 85 ± 1            | -                       |
+| PlasmaContrast       | **138 ± 4**               | -                | -                 | 84 ± 0            | -                       |
+| PlasmaShadow         | 190 ± 3                   | -                | -                 | **216 ± 5**       | -                       |
+| Rain                 | **2121 ± 64**             | -                | -                 | 1493 ± 9          | -                       |
+| SaltAndPepper        | **2233 ± 35**             | -                | -                 | 480 ± 12          | -                       |
+| Snow                 | **588 ± 32**              | -                | -                 | 143 ± 1           | -                       |
+| OpticalDistortion    | **687 ± 38**              | -                | -                 | 174 ± 0           | -                       |
+| ThinPlateSpline      | **75 ± 5**                | -                | -                 | 58 ± 0            | -                       |
+
 
 The benchmark automatically creates isolated virtual environments for each library and installs the necessary dependencies. Base requirements:
 

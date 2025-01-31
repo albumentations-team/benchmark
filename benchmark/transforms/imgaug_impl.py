@@ -15,11 +15,11 @@ class ImgaugImpl:
 
     @staticmethod
     def HorizontalFlip(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.Fliplr(p=params["p"])
+        return iaa.Fliplr(p=1)
 
     @staticmethod
     def VerticalFlip(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.Flipud(p=params["p"])
+        return iaa.Flipud(p=1)
 
     @staticmethod
     def Rotate(params: dict[str, Any]) -> iaa.Augmenter:
@@ -44,7 +44,7 @@ class ImgaugImpl:
         return iaa.AllChannelsHistogramEqualization()
 
     @staticmethod
-    def RandomCrop80(params: dict[str, Any]) -> iaa.Augmenter:
+    def RandomCrop128(params: dict[str, Any]) -> iaa.Augmenter:
         return iaa.CropToFixedSize(width=params["width"], height=params["height"])
 
     @staticmethod
@@ -70,7 +70,7 @@ class ImgaugImpl:
         return iaa.Grayscale(alpha=1.0)
 
     @staticmethod
-    def RandomPerspective(params: dict[str, Any]) -> iaa.Augmenter:
+    def Perspective(params: dict[str, Any]) -> iaa.Augmenter:
         return iaa.PerspectiveTransform(
             scale=params["scale"],
             mode=params.get("mode", "replicate"),
@@ -87,7 +87,7 @@ class ImgaugImpl:
 
     @staticmethod
     def MotionBlur(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.MotionBlur(k=params["kernel_size"], angle=[params["angle"]], direction=params["direction"])
+        return iaa.MotionBlur(k=params["kernel_size"], angle=params["angle_range"])
 
     @staticmethod
     def Posterize(params: dict[str, Any]) -> iaa.Augmenter:
@@ -101,7 +101,7 @@ class ImgaugImpl:
     def GaussianNoise(params: dict[str, Any]) -> iaa.Augmenter:
         return iaa.AdditiveGaussianNoise(
             loc=params["mean"],
-            scale=(0, params["var"]),
+            scale=(0, params["std"]),
             per_channel=params["per_channel"],
         )
 
@@ -114,7 +114,7 @@ class ImgaugImpl:
         )
 
     @staticmethod
-    def Clahe(params: dict[str, Any]) -> iaa.Augmenter:
+    def CLAHE(params: dict[str, Any]) -> iaa.Augmenter:
         return iaa.AllChannelsCLAHE(clip_limit=params["clip_limit"], tile_grid_size_px=params["tile_grid_size"])
 
     @staticmethod
@@ -132,6 +132,33 @@ class ImgaugImpl:
     @staticmethod
     def Contrast(params: dict[str, Any]) -> iaa.Augmenter:
         return iaa.AddToHueAndSaturation(value=int(params["contrast_limit"][0] * 100))
+
+    @staticmethod
+    def Invert(params: dict[str, Any]) -> iaa.Augmenter:
+        return iaa.Invert(1.0)
+
+    @staticmethod
+    def Sharpen(params: dict[str, Any]) -> iaa.Augmenter:
+        return iaa.Sharpen(
+            alpha=(params["alpha"][0], params["alpha"][1]),
+            lightness=(params["lightness"][0], params["lightness"][1]),
+        )
+
+    @staticmethod
+    def Solarize(params: dict[str, Any]) -> iaa.Augmenter:
+        return iaa.Solarize(threshold=params["threshold"] * 255)  # Convert from [0,1] to [0,255]
+
+    @staticmethod
+    def ChannelShuffle(params: dict[str, Any]) -> iaa.Augmenter:
+        return iaa.ChannelShuffle(1.0)
+
+    @staticmethod
+    def Saturation(params: dict[str, Any]) -> iaa.Augmenter:
+        return iaa.MultiplySaturation(mul=params["saturation_factor"])
+
+    @staticmethod
+    def Shear(params: dict[str, Any]) -> iaa.Augmenter:
+        return iaa.ShearX(shear=params["shear"])
 
     @staticmethod
     def __call__(transform: iaa.Augmenter, image: np.ndarray) -> np.ndarray:
