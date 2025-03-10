@@ -7,8 +7,8 @@ import torch
 torch.set_num_threads(1)
 
 
-class KorniaImpl:
-    """Kornia implementations of transforms"""
+class KorniaVideoImpl:
+    """Kornia implementations of video transforms"""
 
     @staticmethod
     def ColorJitter(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
@@ -18,11 +18,12 @@ class KorniaImpl:
             saturation=params["saturation"],
             hue=params["hue"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
     def AutoContrast(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
-        return Kaug.RandomAutoContrast(p=1)
+        return Kaug.RandomAutoContrast(p=1, same_on_batch=True)
 
     @staticmethod
     def Blur(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
@@ -30,6 +31,7 @@ class KorniaImpl:
             p=1,
             kernel_size=(params["radius"], params["radius"]),
             border_type=params["border_mode"],
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -37,30 +39,37 @@ class KorniaImpl:
         return Kaug.RandomBrightness(
             brightness=params["brightness_limit"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
     def ChannelDropout(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
-        return Kaug.RandomChannelDropout(p=1)
+        return Kaug.RandomChannelDropout(p=1, same_on_batch=True)
 
     @staticmethod
     def ChannelShuffle(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
-        return Kaug.RandomChannelShuffle(p=1)
+        return Kaug.RandomChannelShuffle(p=1, same_on_batch=True)
 
     @staticmethod
     def CLAHE(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
-        return Kaug.RandomClahe(p=1, clip_limit=params["clip_limit"], grid_size=params["tile_grid_size"])
+        return Kaug.RandomClahe(
+            p=1,
+            clip_limit=params["clip_limit"],
+            grid_size=params["tile_grid_size"],
+            same_on_batch=True,
+        )
 
     @staticmethod
     def Contrast(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomContrast(
             contrast=params["contrast_limit"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
     def Equalize(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
-        return Kaug.RandomEqualize(p=1)
+        return Kaug.RandomEqualize(p=1, same_on_batch=True)
 
     @staticmethod
     def RandomGamma(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
@@ -68,6 +77,7 @@ class KorniaImpl:
         return Kaug.RandomGamma(
             gamma=(gamma, gamma),
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -76,6 +86,7 @@ class KorniaImpl:
             kernel_size=params["kernel_size"],
             sigma=(params["sigma"], params["sigma"]),
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -83,6 +94,7 @@ class KorniaImpl:
         return Kaug.RandomLinearIllumination(
             gain=params["gain"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -90,6 +102,7 @@ class KorniaImpl:
         return Kaug.RandomLinearCornerIllumination(
             gain=params["gain"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -97,6 +110,7 @@ class KorniaImpl:
         return Kaug.RandomGaussianIllumination(
             gain=params["gain"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -105,28 +119,31 @@ class KorniaImpl:
             mean=params["mean"],
             std=params["std"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
     def Grayscale(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
-        return Kaug.RandomGrayscale(p=1)
+        return Kaug.RandomGrayscale(p=1, same_on_batch=True)
 
     @staticmethod
     def Hue(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomHue(
             hue=params["hue"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
     def Invert(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
-        return Kaug.RandomInvert(p=1)
+        return Kaug.RandomInvert(p=1, same_on_batch=True)
 
     @staticmethod
     def JpegCompression(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomJPEG(
             jpeg_quality=params["quality"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -135,6 +152,7 @@ class KorniaImpl:
         return Kaug.RandomMedianBlur(
             kernel_size=(kernel_size, kernel_size),
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -144,6 +162,7 @@ class KorniaImpl:
             angle=params["angle_range"],
             direction=params["direction_range"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -151,6 +170,7 @@ class KorniaImpl:
         return Kaug.RandomPlanckianJitter(
             mode=params["mode"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -158,6 +178,7 @@ class KorniaImpl:
         return Kaug.RandomPlasmaBrightness(
             roughness=(params["roughness"], params["roughness"]),
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -165,6 +186,7 @@ class KorniaImpl:
         return Kaug.RandomPlasmaContrast(
             roughness=(params["roughness"], params["roughness"]),
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -172,6 +194,7 @@ class KorniaImpl:
         return Kaug.RandomPlasmaShadow(
             roughness=(params["roughness"], params["roughness"]),
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -180,6 +203,7 @@ class KorniaImpl:
             drop_width=(params["drop_width"], params["drop_width"]),
             drop_height=(params["drop_height"], params["drop_height"]),
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -189,6 +213,7 @@ class KorniaImpl:
             g_shift_limit=params["pixel_shift"] / 255.0,
             b_shift_limit=params["pixel_shift"] / 255.0,
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -197,6 +222,7 @@ class KorniaImpl:
             amount=params["amount"],
             salt_vs_pepper=params["salt_vs_pepper"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -204,12 +230,14 @@ class KorniaImpl:
         return Kaug.RandomSaturation(
             saturation=params["saturation_factor"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
     def Sharpen(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomSharpness(
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -217,6 +245,7 @@ class KorniaImpl:
         return Kaug.RandomSnow(
             snow_coefficient=params["snow_point_range"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -224,6 +253,7 @@ class KorniaImpl:
         return Kaug.RandomSolarize(
             thresholds=params["threshold"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -241,6 +271,7 @@ class KorniaImpl:
             scale=(params["scale"], params["scale"]),
             shear=params["shear"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -249,14 +280,16 @@ class KorniaImpl:
             size=(params["height"], params["width"]),
             pad_if_needed=True,
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
     def Elastic(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomElasticTransform(
-            alpha=(params["alpha"], params["alpha"]),
-            sigma=(params["sigma"], params["sigma"]),
             p=1,
+            sigma=(params["sigma"], params["sigma"]),
+            alpha=(params["alpha"], params["alpha"]),
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -266,6 +299,7 @@ class KorniaImpl:
             scale=params["scale"],
             ratio=params["ratio"],
             value=params["fill"],
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -275,11 +309,12 @@ class KorniaImpl:
             center_y=torch.tensor([-0.3, 0.3]),
             gamma=torch.tensor([0.9, 1.1]),
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
     def HorizontalFlip(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
-        return Kaug.RandomHorizontalFlip(p=1)
+        return Kaug.RandomHorizontalFlip(p=1, same_on_batch=True)
 
     @staticmethod
     def Perspective(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
@@ -287,6 +322,7 @@ class KorniaImpl:
             distortion_scale=params["scale"][1],
             resample=params["interpolation"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -296,13 +332,15 @@ class KorniaImpl:
             scale=params["scale"],
             ratio=params["ratio"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
     def RandomRotate90(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
-        return Kaug.RandomRotation90(
+        return Kaug.RandomRotation(
             times=(0, 3),
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
@@ -319,17 +357,19 @@ class KorniaImpl:
         return Kaug.RandomShear(
             shear=params["shear"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
     def ThinPlateSpline(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
         return Kaug.RandomThinPlateSpline(
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
     def VerticalFlip(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
-        return Kaug.RandomVerticalFlip(p=1)
+        return Kaug.RandomVerticalFlip(p=1, same_on_batch=True)
 
     @staticmethod
     def Resize(params: dict[str, Any]) -> Kaug.AugmentationBase2D:
@@ -351,9 +391,22 @@ class KorniaImpl:
         return Kaug.RandomPosterize(
             bits=params["bits"],
             p=1,
+            same_on_batch=True,
         )
 
     @staticmethod
-    def __call__(transform: Kaug.AugmentationBase2D, image: torch.Tensor) -> torch.Tensor:
-        """Apply the transform to the image"""
-        return transform(image).contiguous()
+    def __call__(transform: Kaug.AugmentationBase2D, video: torch.Tensor) -> torch.Tensor:
+        """Apply transform to video tensor
+
+        Args:
+            transform: Kornia transform to apply
+            video: Video tensor of shape (T, C, H, W)
+
+        Returns:
+            Transformed video tensor of shape (T, C, H, W)
+        """
+        # Treat time dimension (T) as batch dimension
+        # video shape is already (T, C, H, W) which is what Kornia expects for batched images
+        # Apply transform directly to the video tensor
+        # This will apply the same transform to all frames due to same_on_batch=True
+        return transform(video)

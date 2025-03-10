@@ -9,8 +9,8 @@ cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
 
 
-class AlbumentationsImpl:
-    """Albumentations implementations of transforms"""
+class AlbumentationsVideoImpl:
+    """Albumentations implementations of transforms for videos"""
 
     @staticmethod
     def Resize(params: dict[str, Any]) -> A.BasicTransform:
@@ -370,7 +370,7 @@ class AlbumentationsImpl:
         )
 
     @staticmethod
-    def __call__(transform: A.BasicTransform, image: np.ndarray) -> np.ndarray:
-        """Apply the transform to the image"""
-        result = transform(image=image)
-        return np.ascontiguousarray(result["image"])
+    def __call__(transform: A.BasicTransform, video: np.ndarray) -> np.ndarray:
+        """Apply transform to video using the 'images' parameter directly"""
+        # Use the transform directly with p=1 to ensure it's applied
+        return np.ascontiguousarray(transform(images=video)["images"])

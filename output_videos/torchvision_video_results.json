@@ -1,0 +1,604 @@
+{
+  "metadata": {
+    "system_info": {
+      "python_version": "3.12.8 | packaged by Anaconda, Inc. | (main, Dec 11 2024, 10:37:40) [Clang 14.0.6 ]",
+      "platform": "macOS-15.1-arm64-arm-64bit",
+      "processor": "arm",
+      "cpu_count": "16",
+      "timestamp": "2025-03-09T23:55:55.994586+00:00"
+    },
+    "library_versions": {
+      "torchvision": "0.21.0",
+      "numpy": "2.2.3",
+      "pillow": "11.1.0",
+      "opencv-python-headless": "not installed",
+      "torch": "2.6.0",
+      "opencv-python": "not installed"
+    },
+    "thread_settings": {
+      "environment": "{'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1', 'VECLIB_MAXIMUM_THREADS': '1', 'NUMEXPR_NUM_THREADS': '1'}",
+      "opencv": "not installed",
+      "pytorch": "{'threads': 1, 'gpu_available': False, 'gpu_device': None}",
+      "pillow": "{'threads': 'unknown', 'simd': False}"
+    },
+    "benchmark_params": {
+      "num_videos": 1,
+      "num_runs": 2,
+      "max_warmup_iterations": 100,
+      "warmup_window": 5,
+      "warmup_threshold": 0.05,
+      "min_warmup_windows": 3
+    }
+  },
+  "results": {
+    "Resize": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        1.6776217716747703,
+        1.69394565967261
+      ],
+      "median_throughput": 1.6857837156736901,
+      "std_throughput": 0.011542731898602054,
+      "times": [
+        0.5960819160100073,
+        0.5903377090580761
+      ],
+      "mean_time": 0.5931959068665993,
+      "std_time": 0.004061672474735563,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "RandomCrop128": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        344.783023541354,
+        364.50337255176197
+      ],
+      "median_throughput": 354.643198046558,
+      "std_throughput": 13.9443925126249,
+      "times": [
+        0.0029003748204559088,
+        0.002743458840996027
+      ],
+      "mean_time": 0.002819735456673608,
+      "std_time": 0.00011087058261994497,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "RandomResizedCrop": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        2.076939894331225,
+        2.2535647150224722
+      ],
+      "median_throughput": 2.165252304676849,
+      "std_throughput": 0.12489260843663899,
+      "times": [
+        0.4814775828272104,
+        0.4437414170242846
+      ],
+      "mean_time": 0.4618399425508263,
+      "std_time": 0.026639110361786986,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "CenterCrop128": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        361.13025769089285,
+        383.01334867419746
+      ],
+      "median_throughput": 372.0718031825452,
+      "std_throughput": 15.473682027616887,
+      "times": [
+        0.0027690839488059282,
+        0.0026108750607818365
+      ],
+      "mean_time": 0.002687653274035877,
+      "std_time": 0.0001117738345319085,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "HorizontalFlip": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        110.31846076757986,
+        110.21965432851532
+      ],
+      "median_throughput": 110.26905754804758,
+      "std_throughput": 0.06986670308743603,
+      "times": [
+        0.009064665995538235,
+        0.009072792017832398
+      ],
+      "mean_time": 0.009068727186357511,
+      "std_time": 5.745964314913271e-06,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "VerticalFlip": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        107.2549042210158,
+        107.46861776114216
+      ],
+      "median_throughput": 107.36176099107898,
+      "std_throughput": 0.15111829345472488,
+      "times": [
+        0.009323582984507084,
+        0.009305041981860995
+      ],
+      "mean_time": 0.009314303256287805,
+      "std_time": 1.3110455713621898e-05,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Pad": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        83.97451401995004,
+        82.98267741290539
+      ],
+      "median_throughput": 83.47859571642772,
+      "std_throughput": 0.7013343906703268,
+      "times": [
+        0.011908374959602952,
+        0.012050707824528217
+      ],
+      "mean_time": 0.011979118616189305,
+      "std_time": 0.00010064098207870777,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Rotate": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        6.908828759122231,
+        6.9616330104861035
+      ],
+      "median_throughput": 6.935230884804167,
+      "std_throughput": 0.03733824421487353,
+      "times": [
+        0.14474233402870595,
+        0.14364445791579783
+      ],
+      "mean_time": 0.14419130618868178,
+      "std_time": 0.0007763043932583697,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Affine": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        5.889850967067959,
+        6.006775632970375
+      ],
+      "median_throughput": 5.9483133000191675,
+      "std_throughput": 0.08267822414756977,
+      "times": [
+        0.16978358291089535,
+        0.16647866694256663
+      ],
+      "mean_time": 0.16811488392798302,
+      "std_time": 0.0023367027516683872,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Perspective": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        6.0663185130762995,
+        6.051902619594098
+      ],
+      "median_throughput": 6.059110566335199,
+      "std_throughput": 0.01019357603812772,
+      "times": [
+        0.16484462493099272,
+        0.16523729194886982
+      ],
+      "mean_time": 0.16504072488065546,
+      "std_time": 0.00027765711815954487,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Elastic": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        3.6801682256349277,
+        3.970755388537296
+      ],
+      "median_throughput": 3.825461807086112,
+      "std_throughput": 0.20547615341402467,
+      "times": [
+        0.27172670885920525,
+        0.2518412498757243
+      ],
+      "mean_time": 0.2614063478944282,
+      "std_time": 0.014040859261451865,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "ColorJitter": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        1.4706289648058604,
+        1.4176583272902752
+      ],
+      "median_throughput": 1.4441436460480679,
+      "std_throughput": 0.03745589699104481,
+      "times": [
+        0.6799811671953648,
+        0.7053885839413851
+      ],
+      "mean_time": 0.6924518919821604,
+      "std_time": 0.01795971391648847,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "ChannelShuffle": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        104.59750054150015,
+        103.82913389839375
+      ],
+      "median_throughput": 104.21331721994696,
+      "std_throughput": 0.5433172637780821,
+      "times": [
+        0.009560457896441221,
+        0.009631208144128323
+      ],
+      "mean_time": 0.009595702609575842,
+      "std_time": 5.0027300012527144e-05,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Grayscale": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        39.874263892970085,
+        41.822192650553006
+      ],
+      "median_throughput": 40.84822827176154,
+      "std_throughput": 1.3773936337551704,
+      "times": [
+        0.025078832870349288,
+        0.023910750169306993
+      ],
+      "mean_time": 0.02448086593491992,
+      "std_time": 0.0008254896311104653,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "RGBShift": {
+      "supported": false
+    },
+    "GaussianBlur": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        4.767135353487826,
+        4.754720791203963
+      ],
+      "median_throughput": 4.760928072345894,
+      "std_throughput": 0.008778421176382716,
+      "times": [
+        0.20976958400569856,
+        0.21031729178503156
+      ],
+      "mean_time": 0.2100430808456346,
+      "std_time": 0.00038728722653006824,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "GaussianNoise": {
+      "supported": false
+    },
+    "Invert": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        86.89418528210892,
+        87.17730771406511
+      ],
+      "median_throughput": 87.03574649808701,
+      "std_throughput": 0.20019779154224665,
+      "times": [
+        0.01150824991054833,
+        0.011470875004306436
+      ],
+      "mean_time": 0.011489532062805705,
+      "std_time": 2.6427979736786565e-05,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Posterize": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        88.58213379423619,
+        81.58603269917107
+      ],
+      "median_throughput": 85.08408324670363,
+      "std_throughput": 4.946990526187173,
+      "times": [
+        0.011288958135992289,
+        0.012256999965757132
+      ],
+      "mean_time": 0.011753079563664953,
+      "std_time": 0.0006833519388860217,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Solarize": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        18.394568100496695,
+        18.708169808019523
+      ],
+      "median_throughput": 18.55136895425811,
+      "std_throughput": 0.2217498939810721,
+      "times": [
+        0.05436387495137751,
+        0.05345258302986622
+      ],
+      "mean_time": 0.05390437775593209,
+      "std_time": 0.0006443346624158405,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Sharpen": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        5.062246649642639,
+        5.101894398418097
+      ],
+      "median_throughput": 5.082070524030368,
+      "std_throughput": 0.028035192017907037,
+      "times": [
+        0.19754075002856553,
+        0.19600562495179474
+      ],
+      "mean_time": 0.19677019342245247,
+      "std_time": 0.0010854808350090105,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "AutoContrast": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        5.716837870094015,
+        5.6614429068892695
+      ],
+      "median_throughput": 5.6891403884916425,
+      "std_throughput": 0.039170154125654486,
+      "times": [
+        0.17492187512107193,
+        0.17663341597653925
+      ],
+      "mean_time": 0.1757734792452765,
+      "std_time": 0.00121021345986954,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Equalize": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        11.815634760086084,
+        11.741028242961892
+      ],
+      "median_throughput": 11.778331501523988,
+      "std_throughput": 0.052754774179226194,
+      "times": [
+        0.08463362487964332,
+        0.08517141593620181
+      ],
+      "mean_time": 0.08490166878650095,
+      "std_time": 0.00038027188856857907,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Normalize": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        13.24186877087884,
+        13.552683549122255
+      ],
+      "median_throughput": 13.397276160000548,
+      "std_throughput": 0.2197792373889119,
+      "times": [
+        0.07551804184913635,
+        0.07378612481988966
+      ],
+      "mean_time": 0.0746420382813068,
+      "std_time": 0.0012244854890427898,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Erasing": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        71.71221806343847,
+        70.11168388195041
+      ],
+      "median_throughput": 70.91195097269444,
+      "std_throughput": 1.1317485732510661,
+      "times": [
+        0.013944625156000257,
+        0.014262957964092493
+      ],
+      "mean_time": 0.014101995309437515,
+      "std_time": 0.00022506661927260615,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "JpegCompression": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        17.20041707744739,
+        17.04296103286765
+      ],
+      "median_throughput": 17.12168905515752,
+      "std_throughput": 0.11133823686114466,
+      "times": [
+        0.058138125110417604,
+        0.0586752500385046
+      ],
+      "mean_time": 0.05840545268510017,
+      "std_time": 0.0003797966488053496,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "RandomGamma": {
+      "supported": false
+    },
+    "PlankianJitter": {
+      "supported": false
+    },
+    "MedianBlur": {
+      "supported": false
+    },
+    "MotionBlur": {
+      "supported": false
+    },
+    "CLAHE": {
+      "supported": false
+    },
+    "Brightness": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        15.769833839834634,
+        16.01606962114301
+      ],
+      "median_throughput": 15.892951730488821,
+      "std_throughput": 0.17411499073392084,
+      "times": [
+        0.06341220904141665,
+        0.06243729102425277
+      ],
+      "mean_time": 0.06292097383531428,
+      "std_time": 0.0006893297709630723,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Contrast": {
+      "supported": true,
+      "warmup_iterations": 16,
+      "throughputs": [
+        11.033579852615066,
+        10.84192020204182
+      ],
+      "median_throughput": 10.937750027328443,
+      "std_throughput": 0.1355238386001867,
+      "times": [
+        0.09063241607509553,
+        0.09223458403721452
+      ],
+      "mean_time": 0.0914264814519857,
+      "std_time": 0.0011328168668257872,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "CoarseDropout": {
+      "supported": false
+    },
+    "Blur": {
+      "supported": false
+    },
+    "HSV": {
+      "supported": false
+    },
+    "ChannelDropout": {
+      "supported": false
+    },
+    "LinearIllumination": {
+      "supported": false
+    },
+    "CornerIllumination": {
+      "supported": false
+    },
+    "GaussianIllumination": {
+      "supported": false
+    },
+    "Hue": {
+      "supported": false
+    },
+    "PlasmaBrightness": {
+      "supported": false
+    },
+    "PlasmaContrast": {
+      "supported": false
+    },
+    "PlasmaShadow": {
+      "supported": false
+    },
+    "Rain": {
+      "supported": false
+    },
+    "SaltAndPepper": {
+      "supported": false
+    },
+    "Saturation": {
+      "supported": false
+    },
+    "Snow": {
+      "supported": false
+    },
+    "OpticalDistortion": {
+      "supported": false
+    },
+    "Shear": {
+      "supported": false
+    },
+    "ThinPlateSpline": {
+      "supported": false
+    }
+  }
+}
