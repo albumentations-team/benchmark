@@ -77,6 +77,12 @@ def read_video_torch(path: Path) -> Any:  # torch.Tensor
     return video.permute(0, 3, 1, 2)
 
 
+def read_video_torch_float16(path: Path) -> Any:  # torch.Tensor
+    """Read video using torchvision and convert to float16"""
+    video = read_video_torch(path)
+    return (video.float() / 255.0).half()  # Convert to float16
+
+
 def read_video_kornia(path: Path) -> Any:  # torch.Tensor
     """Read video using kornia format"""
     video = read_video_torch(path)
@@ -118,7 +124,7 @@ def get_video_loader(library: str) -> Callable[[Path], Any]:
     """Get the appropriate video loader for the library"""
     loaders = {
         "albumentations": read_video_cv2,
-        "torchvision": read_video_torch,
+        "torchvision": read_video_torch_float16,
         "kornia": read_video_kornia,
     }
 

@@ -267,9 +267,10 @@ class VideoBenchmarkRunner:
             },
         }
 
-        # Add precision information for Kornia
-        if self.library == "kornia" and isinstance(videos[0], torch.Tensor):
+        # Add precision information for tensor-based libraries
+        if isinstance(videos[0], torch.Tensor):
             metadata["precision"] = str(videos[0].dtype)
+            logger.info(f"Using {videos[0].dtype} precision for {self.library}")
 
         # Run benchmarks
         results = {}
@@ -299,6 +300,28 @@ class VideoBenchmarkRunner:
                 results[transform_spec.name] = {
                     "skipped": True,
                     "reason": "Compatibility issues with GPU tensors or float16 precision",
+                    "throughput": None,
+                    "time_per_video": None,
+                    "warmup_iterations": 0,
+                    "early_stopped": True,
+                    "early_stop_reason": "Skipped",
+                }
+                continue
+
+            # Skip problematic transforms for torchvision on GPU
+            torchvision_problematic_gpu_transforms = [
+                "JpegCompression",
+            ]
+            # Skip JpegCompression on GPU for torchvision
+            if (
+                torch.cuda.is_available()
+                and self.library == "torchvision"
+                and transform_spec.name in torchvision_problematic_gpu_transforms
+            ):
+                logger.info(f"Skipping {transform_spec.name} for {self.library} on GPU due to uint8 requirement...")
+                results[transform_spec.name] = {
+                    "skipped": True,
+                    "reason": "Requires uint8 input tensors which conflicts with float16 GPU processing",
                     "throughput": None,
                     "time_per_video": None,
                     "warmup_iterations": 0,

@@ -188,6 +188,11 @@ class TorchvisionVideoImpl:
         # Move video to GPU if available
         video = video.to(device)
 
+        # Convert to float16 for GPU processing, except for JpegCompression which requires uint8
+        if device.type == "cuda" and not isinstance(transform, v2.JPEG):
+            # Keep uint8 for JPEG compression, convert to float16 for other transforms
+            video = (video.float() / 255.0).half()
+
         # Directly apply the transform to the video tensor
         # The time dimension (T) is treated as the batch dimension (B)
         return transform(video).contiguous()
