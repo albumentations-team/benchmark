@@ -1,0 +1,9 @@
+---
+description: My custom rules for all of the project.
+globs: *.py
+alwaysApply: false
+---
+
+# Your rule content
+
+- I use python 3.12

@@ -33,7 +33,7 @@ TRANSFORM_SPECS = [
     TransformSpec(
         "RandomResizedCrop",
         {
-            "height": 512,
+            "size": (512, 512),
             "width": 512,
             "scale": (0.08, 1.0),
             "ratio": (0.75, 1.3333333333333333),
@@ -353,3 +353,6 @@ TRANSFORM_SPECS = [
         },
     ),
 ]
+
+# Use the same TRANSFORM_SPECS for both images and videos
+# No need for separate VIDEO_TRANSFORM_SPECS

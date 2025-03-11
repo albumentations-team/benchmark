@@ -3,11 +3,12 @@ from typing import Any
 import torch
 from torchvision.transforms import InterpolationMode, v2
 
-torch.set_num_threads(1)
+# Get device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class TorchvisionImpl:
-    """Torchvision implementations of transforms"""
+class TorchvisionVideoImpl:
+    """Torchvision implementations of video transforms"""
 
     @staticmethod
     def Resize(params: dict[str, Any]) -> v2.Transform:
@@ -171,6 +172,27 @@ class TorchvisionImpl:
         return v2.ColorJitter(brightness=0.0, contrast=params["contrast_limit"], saturation=0.0, hue=0.0)
 
     @staticmethod
-    def __call__(transform: v2.Transform, image: torch.Tensor) -> torch.Tensor:
-        """Apply the transform to the image"""
-        return transform(image).contiguous()
+    def __call__(transform: v2.Transform, video: torch.Tensor) -> torch.Tensor:
+        """Apply the transform to a video tensor
+
+        Args:
+            transform: The torchvision transform to apply
+            video: Video tensor of shape (T, C, H, W)
+
+        Returns:
+            Transformed video tensor of shape (T, C, H, W)
+        """
+        # Set a fixed random seed for consistent transformations
+        torch.manual_seed(137)
+
+        # Move video to GPU if available
+        video = video.to(device)
+
+        # Convert to float16 for GPU processing, except for JpegCompression which requires uint8
+        if device.type == "cuda" and not isinstance(transform, v2.JPEG):
+            # Keep uint8 for JPEG compression, convert to float16 for other transforms
+            video = (video.float() / 255.0).half()
+
+        # Directly apply the transform to the video tensor
+        # The time dimension (T) is treated as the batch dimension (B)
+        return transform(video).contiguous()

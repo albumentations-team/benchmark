@@ -2,30 +2,30 @@
 
 # Help message
 show_help() {
-    echo "Usage: $0 -d DATA_DIR -o OUTPUT_DIR [-n NUM_IMAGES] [-r NUM_RUNS] [--max-warmup MAX_WARMUP] [--warmup-window WINDOW] [--warmup-threshold THRESHOLD] [--min-warmup-windows MIN_WINDOWS] [--update-docs]"
+    echo "Usage: $0 -d DATA_DIR -o OUTPUT_DIR [-n NUM_VIDEOS] [-r NUM_RUNS] [--max-warmup MAX_WARMUP] [--warmup-window WINDOW] [--warmup-threshold THRESHOLD] [--min-warmup-windows MIN_WINDOWS] [--update-docs]"
     echo
     echo "Required arguments:"
-    echo "  -d DATA_DIR     Directory containing images"
+    echo "  -d DATA_DIR     Directory containing videos"
     echo "  -o OUTPUT_DIR   Directory for output files"
     echo
     echo "Optional arguments:"
-    echo "  -n NUM_IMAGES   Number of images to process (default: 2000)"
+    echo "  -n NUM_VIDEOS   Number of videos to process (default: 50)"
     echo "  -r NUM_RUNS     Number of benchmark runs (default: 5)"
-    echo "  --max-warmup    Maximum warmup iterations (default: 1000)"
+    echo "  --max-warmup    Maximum warmup iterations (default: 100)"
     echo "  --warmup-window Window size for variance check (default: 5)"
     echo "  --warmup-threshold Variance stability threshold (default: 0.05)"
-    echo "  --min-warmup-windows Minimum windows to check (default: 10)"
+    echo "  --min-warmup-windows Minimum windows to check (default: 3)"
     echo "  --update-docs   Update documentation with results (default: false)"
     echo "  -h             Show this help message"
 }
 
 # Default values
-NUM_IMAGES=2000
+NUM_VIDEOS=50
 NUM_RUNS=5
-MAX_WARMUP=1000
+MAX_WARMUP=100
 WARMUP_WINDOW=5
 WARMUP_THRESHOLD=0.05
-MIN_WARMUP_WINDOWS=10
+MIN_WARMUP_WINDOWS=3
 UPDATE_DOCS=false
 
 # Parse command line arguments
@@ -62,7 +62,7 @@ while getopts "d:o:n:r:h-:" opt; do
             OUTPUT_DIR="${OPTARG}"
             ;;
         n)
-            NUM_IMAGES="${OPTARG}"
+            NUM_VIDEOS="${OPTARG}"
             ;;
         r)
             NUM_RUNS="${OPTARG}"
@@ -89,15 +89,15 @@ fi
 mkdir -p "$OUTPUT_DIR"
 
 # Run benchmarks for each library
-LIBRARIES=("albumentations" "imgaug" "torchvision" "kornia" "augly")
+LIBRARIES=("albumentations" "kornia")
 
 for lib in "${LIBRARIES[@]}"; do
-    echo "Running benchmark for $lib..."
-    ./run_single.sh \
+    echo "Running video benchmark for $lib..."
+    ./run_video_single.sh \
         -l "$lib" \
         -d "$DATA_DIR" \
         -o "$OUTPUT_DIR" \
-        -n "$NUM_IMAGES" \
+        -n "$NUM_VIDEOS" \
         -r "$NUM_RUNS" \
         --max-warmup "$MAX_WARMUP" \
         --warmup-window "$WARMUP_WINDOW" \
@@ -106,15 +106,15 @@ for lib in "${LIBRARIES[@]}"; do
 done
 
 # Generate comparison table
-echo "Generating comparison table..."
-python -m tools.compare_results -r "$OUTPUT_DIR" -o"${OUTPUT_DIR}/comparison.md"
+echo "Generating video comparison table..."
+python -m tools.compare_video_results -r "$OUTPUT_DIR" -o"${OUTPUT_DIR}/video_comparison.md"
 
-echo "All benchmarks complete."
+echo "All video benchmarks complete."
 echo "Individual results saved in: $OUTPUT_DIR"
-echo "Comparison table saved as: ${OUTPUT_DIR}/comparison.md"
+echo "Comparison table saved as: ${OUTPUT_DIR}/video_comparison.md"
 
 # Update documentation if requested
 if [ "$UPDATE_DOCS" = true ]; then
     echo "Updating documentation..."
-    ./tools/update_docs.sh --image-results "$OUTPUT_DIR"
+    ./tools/update_docs.sh --video-results "$OUTPUT_DIR"
 fi

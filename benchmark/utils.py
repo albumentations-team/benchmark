@@ -38,7 +38,55 @@ def read_img_pillow(path: Path) -> Any:  # PIL.Image.Image
 
 def read_img_kornia(path: Path) -> Any:  # torch.Tensor
     """Read image using kornia format"""
-    return read_img_torch(path) / 255.0
+    return (read_img_torch(path) / 255.0).half()  # Convert to float16
+
+
+def read_video_cv2(path: Path) -> np.ndarray:
+    """Read video using OpenCV (for Albumentations)
+
+    Returns a 4D NumPy array with shape (num_frames, height, width, num_channels)
+    """
+    import cv2
+
+    cap = cv2.VideoCapture(str(path))
+    if not cap.isOpened():
+        raise ValueError(f"Failed to load video: {path}")
+
+    frames = []
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+
+    cap.release()
+
+    if not frames:
+        raise ValueError(f"No frames found in video: {path}")
+
+    return np.array(frames)
+
+
+def read_video_torch(path: Path) -> Any:  # torch.Tensor
+    """Read video using torchvision"""
+    import torchvision
+
+    # Returns tensor of shape (T, C, H, W)
+    video, _, _ = torchvision.io.read_video(str(path))
+    # Convert to (T, C, H, W) format
+    return video.permute(0, 3, 1, 2)
+
+
+def read_video_torch_float16(path: Path) -> Any:  # torch.Tensor
+    """Read video using torchvision and convert to float16"""
+    video = read_video_torch(path)
+    return (video.float() / 255.0).half()  # Convert to float16
+
+
+def read_video_kornia(path: Path) -> Any:  # torch.Tensor
+    """Read video using kornia format"""
+    video = read_video_torch(path)
+    return (video.float() / 255.0).half()  # Convert to float16
 
 
 def time_transform(transform: Any, images: list[Any]) -> float:
@@ -67,6 +115,21 @@ def get_image_loader(library: str) -> Callable[[Path], Any]:
 
     if library not in loaders:
         raise ValueError(f"Unsupported library: {library}. Supported libraries are: {list(loaders.keys())}")
+
+    return loaders[library]
+
+
+@cache
+def get_video_loader(library: str) -> Callable[[Path], Any]:
+    """Get the appropriate video loader for the library"""
+    loaders = {
+        "albumentations": read_video_cv2,
+        "torchvision": read_video_torch_float16,
+        "kornia": read_video_kornia,
+    }
+
+    if library not in loaders:
+        raise ValueError(f"Unsupported library for video: {library}. Supported libraries are: {list(loaders.keys())}")
 
     return loaders[library]
 
@@ -100,10 +163,25 @@ def verify_thread_settings() -> dict[str, Any]:
     try:
         import torch
 
+        gpu_info = {}
+        if torch.cuda.is_available():
+            gpu_info = {
+                "gpu_available": True,
+                "gpu_device": torch.cuda.current_device(),
+                "gpu_name": torch.cuda.get_device_name(torch.cuda.current_device()),
+                "gpu_memory_total": torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory
+                / (1024**3),  # GB
+                "gpu_memory_allocated": torch.cuda.memory_allocated() / (1024**3),  # GB
+            }
+        else:
+            gpu_info = {
+                "gpu_available": False,
+                "gpu_device": None,
+            }
+
         thread_vars["pytorch"] = {
             "threads": torch.get_num_threads(),
-            "gpu_available": torch.cuda.is_available(),
-            "gpu_device": str(torch.cuda.current_device()) if torch.cuda.is_available() else None,
+            **gpu_info,
         }
     except ImportError:
         thread_vars["pytorch"] = "not installed"

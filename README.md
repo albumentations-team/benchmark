@@ -1,138 +1,82 @@
-# Image Augmentation Library Benchmarks
+# Image and Video Augmentation Library Benchmarks
 
-A comprehensive benchmarking suite for comparing the performance of popular image augmentation libraries including [Albumentations](https://albumentations.ai/), [imgaug](https://imgaug.readthedocs.io/en/latest/), [torchvision](https://pytorch.org/vision/stable/index.html), [Kornia](https://kornia.readthedocs.io/en/latest/), and [Augly](https://github.com/facebookresearch/AugLy).
+A comprehensive benchmarking suite for comparing the performance of popular image and video augmentation libraries including [Albumentations](https://albumentations.ai/), [imgaug](https://imgaug.readthedocs.io/en/latest/), [torchvision](https://pytorch.org/vision/stable/index.html), [Kornia](https://kornia.readthedocs.io/en/latest/), and [Augly](https://github.com/facebookresearch/AugLy).
 
 <details>
 <summary>Table of Contents</summary>
 
-- [Image Augmentation Library Benchmarks](#image-augmentation-library-benchmarks)
+- [Image and Video Augmentation Library Benchmarks](#image-and-video-augmentation-library-benchmarks)
   - [Overview](#overview)
-  - [Benchmark Results](#benchmark-results)
-    - [System Information](#system-information)
-    - [Benchmark Parameters](#benchmark-parameters)
-    - [Library Versions](#library-versions)
-  - [Performance Comparison](#performance-comparison)
+  - [Benchmark Types](#benchmark-types)
+    - [Image Benchmarks](#image-benchmarks)
+    - [Video Benchmarks](#video-benchmarks)
+  - [Performance Highlights](#performance-highlights)
+    - [Image Augmentation Performance](#image-augmentation-performance)
+    - [Video Augmentation Performance](#video-augmentation-performance)
   - [Requirements](#requirements)
   - [Supported Libraries](#supported-libraries)
-  - [Notes](#notes)
   - [Setup](#setup)
     - [Getting Started](#getting-started)
-    - [Using Your Own Images](#using-your-own-images)
-  - [Methodology](#methodology)
-    - [Benchmark Process](#benchmark-process)
+    - [Using Your Own Data](#using-your-own-data)
   - [Running Benchmarks](#running-benchmarks)
-    - [Single Library](#single-library)
-      - [Command Line Arguments](#command-line-arguments)
-    - [All Libraries](#all-libraries)
-      - [All Libraries Options](#all-libraries-options)
-    - [Output Structure](#output-structure)
-    - [Output Format](#output-format)
+    - [Image Benchmarks](#running-image-benchmarks)
+    - [Video Benchmarks](#running-video-benchmarks)
+  - [Methodology](#methodology)
+  - [Contributing](#contributing)
 
 </details>
 
 ## Overview
 
-This benchmark suite measures the throughput and performance characteristics of common image augmentation operations across different libraries. It features:
+This benchmark suite measures the throughput and performance characteristics of common augmentation operations across different libraries. It features:
 
+- Benchmarks for both image and video augmentation
 - Adaptive warmup to ensure stable measurements
 - Multiple runs for statistical significance
 - Detailed performance metrics and system information
-- Thread control settings for consistent single-threaded performance
-- Support for multiple image formats and loading methods
+- Thread control settings for consistent performance
+- Support for multiple image/video formats and loading methods
 
+## Benchmark Types
 
-![Albumentations vs TorchVision vs Kornia](speedup_analysis.png)
+### Image Benchmarks
 
-# Benchmark Results
+The image benchmarks compare the performance of various libraries on standard image transformations. All benchmarks are run on a single CPU thread to ensure consistent and comparable results.
 
-### System Information
+[**Detailed Image Benchmark Results**](docs/images/README.md)
 
-- Platform: macOS-15.1-arm64-arm-64bit
-- Processor: arm
-- CPU Count: 16
-- Python Version: 3.12.8
+![Image Speedup Analysis](docs/images/images_speedup_analysis.png)
 
-### Benchmark Parameters
+### Video Benchmarks
 
-- Number of images: 2000
-- Runs per transform: 5
-- Max warmup iterations: 1000
+The video benchmarks compare CPU-based processing (Albumentations) with GPU-accelerated processing (Kornia) for video transformations. The benchmarks use the [UCF101 dataset](https://www.crcv.ucf.edu/data/UCF101.php), which contains realistic videos from 101 action categories.
 
-### Library Versions
+[**Detailed Video Benchmark Results**](docs/videos/README.md)
 
-- albumentations: 2.0.4
-- augly: 1.0.0
-- imgaug: 0.4.0
-- kornia: 0.8.0
-- torchvision: 0.20.1
+![Video Speedup Analysis](docs/videos/videos_speedup_analysis.png)
 
-## Performance Comparison
+## Performance Highlights
 
-Number shows how many uint8 images per second can be processed on one CPU thread. Larger is better.
+### Image Augmentation Performance
 
-## Performance Comparison
+<!-- IMAGE_SPEEDUP_SUMMARY_START -->
+Albumentations is generally the fastest library for image augmentation, with a median speedup of 4.1× compared to other libraries. For some transforms, the speedup can be as high as 119.7× (MedianBlur).
+<!-- IMAGE_SPEEDUP_SUMMARY_END -->
 
-| Transform            | albumentations<br>2.0.4   | augly<br>1.0.0   | imgaug<br>0.4.0   | kornia<br>0.8.0   | torchvision<br>0.20.1   |
-|:---------------------|:--------------------------|:-----------------|:------------------|:------------------|:------------------------|
-| Resize               | **3532 ± 67**             | 1083 ± 21        | 2995 ± 70         | 645 ± 13          | 260 ± 9                 |
-| RandomCrop128        | **111859 ± 1374**         | 45395 ± 934      | 21408 ± 622       | 2946 ± 42         | 31450 ± 249             |
-| HorizontalFlip       | **14460 ± 368**           | 8808 ± 1012      | 9599 ± 495        | 1297 ± 13         | 2486 ± 107              |
-| VerticalFlip         | **32386 ± 936**           | 16830 ± 1653     | 19935 ± 1708      | 2872 ± 37         | 4696 ± 161              |
-| Rotate               | **2912 ± 68**             | 1739 ± 105       | 2574 ± 10         | 256 ± 2           | 258 ± 4                 |
-| Affine               | **1445 ± 9**              | -                | 1328 ± 16         | 248 ± 6           | 188 ± 2                 |
-| Perspective          | **1206 ± 3**              | -                | 908 ± 8           | 154 ± 3           | 147 ± 5                 |
-| Elastic              | 374 ± 2                   | -                | **395 ± 14**      | 1 ± 0             | 3 ± 0                   |
-| ChannelShuffle       | **6772 ± 109**            | -                | 1252 ± 26         | 1328 ± 44         | 4417 ± 234              |
-| Grayscale            | **32284 ± 1130**          | 6088 ± 107       | 3100 ± 24         | 1201 ± 52         | 2600 ± 23               |
-| GaussianBlur         | **2350 ± 118**            | 387 ± 4          | 1460 ± 23         | 254 ± 5           | 127 ± 4                 |
-| GaussianNoise        | **315 ± 4**               | -                | 263 ± 9           | 125 ± 1           | -                       |
-| Invert               | **27665 ± 3803**          | -                | 3682 ± 79         | 2881 ± 43         | 4244 ± 30               |
-| Posterize            | **12979 ± 1121**          | -                | 3111 ± 95         | 836 ± 30          | 4247 ± 26               |
-| Solarize             | **11756 ± 481**           | -                | 3843 ± 80         | 263 ± 6           | 1032 ± 14               |
-| Sharpen              | **2346 ± 10**             | -                | 1101 ± 30         | 201 ± 2           | 220 ± 3                 |
-| Equalize             | **1236 ± 21**             | -                | 814 ± 11          | 306 ± 1           | 795 ± 3                 |
-| JpegCompression      | **1321 ± 33**             | 1202 ± 19        | 687 ± 26          | 120 ± 1           | 889 ± 7                 |
-| RandomGamma          | **12444 ± 753**           | -                | 3504 ± 72         | 230 ± 3           | -                       |
-| MedianBlur           | **1229 ± 9**              | -                | 1152 ± 14         | 6 ± 0             | -                       |
-| MotionBlur           | **3521 ± 25**             | -                | 928 ± 37          | 159 ± 1           | -                       |
-| CLAHE                | **647 ± 4**               | -                | 555 ± 14          | 165 ± 3           | -                       |
-| Brightness           | **11985 ± 455**           | 2108 ± 32        | 1076 ± 32         | 1127 ± 27         | 854 ± 13                |
-| Contrast             | **12394 ± 363**           | 1379 ± 25        | 717 ± 5           | 1109 ± 41         | 602 ± 13                |
-| CoarseDropout        | **18962 ± 1346**          | -                | 1190 ± 22         | -                 | -                       |
-| Blur                 | **7657 ± 114**            | 386 ± 4          | 5381 ± 125        | 265 ± 11          | -                       |
-| Saturation           | **1596 ± 24**             | -                | 495 ± 3           | 155 ± 2           | -                       |
-| Shear                | **1299 ± 11**             | -                | 1244 ± 14         | 261 ± 1           | -                       |
-| ColorJitter          | **1020 ± 91**             | 418 ± 5          | -                 | 104 ± 4           | 87 ± 1                  |
-| RandomResizedCrop    | **4347 ± 37**             | -                | -                 | 661 ± 16          | 837 ± 37                |
-| Pad                  | **48589 ± 2059**          | -                | -                 | -                 | 4889 ± 183              |
-| AutoContrast         | **1657 ± 13**             | -                | -                 | 541 ± 8           | 344 ± 1                 |
-| Normalize            | **1819 ± 49**             | -                | -                 | 1251 ± 14         | 1018 ± 7                |
-| Erasing              | **27451 ± 2794**          | -                | -                 | 1210 ± 27         | 3577 ± 49               |
-| CenterCrop128        | **119293 ± 2164**         | -                | -                 | -                 | -                       |
-| RGBShift             | **3391 ± 104**            | -                | -                 | 896 ± 9           | -                       |
-| PlankianJitter       | **3221 ± 63**             | -                | -                 | 2150 ± 52         | -                       |
-| HSV                  | **1197 ± 23**             | -                | -                 | -                 | -                       |
-| ChannelDropout       | **11534 ± 306**           | -                | -                 | 2283 ± 24         | -                       |
-| LinearIllumination   | 479 ± 5                   | -                | -                 | **708 ± 6**       | -                       |
-| CornerIllumination   | **484 ± 7**               | -                | -                 | 452 ± 3           | -                       |
-| GaussianIllumination | **720 ± 7**               | -                | -                 | 436 ± 13          | -                       |
-| Hue                  | **1944 ± 64**             | -                | -                 | 150 ± 1           | -                       |
-| PlasmaBrightness     | **168 ± 2**               | -                | -                 | 85 ± 1            | -                       |
-| PlasmaContrast       | **145 ± 3**               | -                | -                 | 84 ± 0            | -                       |
-| PlasmaShadow         | 183 ± 5                   | -                | -                 | **216 ± 5**       | -                       |
-| Rain                 | **2043 ± 115**            | -                | -                 | 1493 ± 9          | -                       |
-| SaltAndPepper        | **629 ± 6**               | -                | -                 | 480 ± 12          | -                       |
-| Snow                 | **611 ± 9**               | -                | -                 | 143 ± 1           | -                       |
-| OpticalDistortion    | **661 ± 7**               | -                | -                 | 174 ± 0           | -                       |
-| ThinPlateSpline      | **82 ± 1**                | -                | -                 | 58 ± 0            | -                       |
+### Video Augmentation Performance
 
+<!-- VIDEO_SPEEDUP_SUMMARY_START -->
+For video processing, the performance comparison between CPU (Albumentations) and GPU (Kornia) shows interesting trade-offs. While GPU acceleration provides significant benefits for complex transformations, CPU processing can be more efficient for simple operations.
+<!-- VIDEO_SPEEDUP_SUMMARY_END -->
+
+## Requirements
 
 The benchmark automatically creates isolated virtual environments for each library and installs the necessary dependencies. Base requirements:
 
 - Python 3.10+
 - uv (for fast package installation)
 - Disk space for virtual environments
-- Image dataset in a supported format (JPEG, PNG)
+- Image/video dataset in a supported format
 
 ## Supported Libraries
 
@@ -144,171 +88,84 @@ The benchmark automatically creates isolated virtual environments for each libra
 
 Each library's specific dependencies are managed through separate requirements files in the `requirements/` directory.
 
-## Notes
-
-- The benchmark prioritizes consistent measurement over raw speed by enforcing single-threaded execution
-- Early stopping mechanisms prevent excessive time spent on slow transforms
-- Variance stability checks ensure meaningful measurements
-- System information and thread settings are captured to aid in reproducibility
-
 ## Setup
 
 ### Getting Started
 
-For testing and comparison purposes, you can use the ImageNet validation set:
+For testing and comparison purposes, you can use standard datasets:
 
+**For image benchmarks:**
 ```bash
 wget https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_val.tar
 tar -xf ILSVRC2012_img_val.tar -C /path/to/your/target/directory
 ```
 
-### Using Your Own Images
+**For video benchmarks:**
+```bash
+# UCF101 dataset
+wget https://www.crcv.ucf.edu/data/UCF101/UCF101.rar
+unrar x UCF101.rar -d /path/to/your/target/directory
+```
 
-While the ImageNet validation set provides a standardized benchmark, we strongly recommend running the benchmarks on your own dataset that matches your use case:
+### Using Your Own Data
 
-- Use images that are representative of your actual workload
-- Consider image sizes and formats you typically work with
+We strongly recommend running the benchmarks on your own dataset that matches your use case:
+
+- Use images/videos that are representative of your actual workload
+- Consider sizes and formats you typically work with
 - Include edge cases specific to your application
 
-This will give you more relevant performance metrics for your specific use case, as:
-
-- Different image sizes can significantly impact performance
-- Some transforms may perform differently on different types of images
-- Your specific image characteristics might favor certain libraries over others
-
-## Methodology
-
-### Benchmark Process
-
-1. **Image Loading**: Images are loaded using library-specific loaders to ensure optimal format compatibility:
-   - OpenCV (BGR → RGB) for Albumentations and imgaug
-   - torchvision for PyTorch-based operations
-   - PIL for augly
-   - Normalized tensors for Kornia
-
-2. **Warmup Phase**:
-   - Performs adaptive warmup until performance variance stabilizes
-   - Uses configurable parameters for stability detection
-   - Implements early stopping for slow transforms
-   - Maximum time limits prevent hanging on problematic transforms
-
-3. **Measurement Phase**:
-   - Multiple runs of each transform
-   - Measures throughput (images/second)
-   - Calculates statistical metrics (median, standard deviation)
-
-4. **Environment Control**:
-   - Forces single-threaded execution across libraries
-   - Captures detailed system information and library versions
-   - Monitors thread settings for various numerical libraries
+This will give you more relevant performance metrics for your specific use case.
 
 ## Running Benchmarks
 
-### Single Library
+### Running Image Benchmarks
 
 To benchmark a single library:
 
 ```bash
-./benchmark/run_single.sh -l albumentations -d /path/to/images -o /path/to/output
+./run_single.sh -l albumentations -d /path/to/images -o /path/to/output
 ```
-
-#### Command Line Arguments
-
-```bash
-Usage: run_single.sh -l LIBRARY -d DATA_DIR -o OUTPUT_DIR [-n NUM_IMAGES] [-r NUM_RUNS]
-[--max-warmup MAX_WARMUP] [--warmup-window WINDOW]
-[--warmup-threshold THRESHOLD] [--min-warmup-windows MIN_WINDOWS]
-Required arguments:
--l LIBRARY Library to benchmark (albumentations, imgaug, torchvision, kornia, augly)
--d DATA_DIR Directory containing images
--o OUTPUT_DIR Directory for output files
-Optional arguments:
--n NUM_IMAGES Number of images to process (default: 1000)
--r NUM_RUNS Number of benchmark runs (default: 5)
---max-warmup Maximum warmup iterations (default: 5000)
---warmup-window Window size for variance check (default: 5)
---warmup-threshold Variance stability threshold (default: 0.05)
---min-warmup-windows Minimum windows to check (default: 3)
-```
-
-### All Libraries
 
 To run benchmarks for all supported libraries and generate a comparison:
 
 ```bash
-./run_all.sh -d /path/to/images -o /path/to/output
+./run_all.sh -d /path/to/images -o /path/to/output --update-docs
 ```
 
-#### All Libraries Options
+### Running Video Benchmarks
+
+To benchmark a single library:
 
 ```bash
-Usage: run_all.sh -d DATA_DIR -o OUTPUT_DIR [-n NUM_IMAGES] [-r NUM_RUNS]
-[--max-warmup MAX_WARMUP] [--warmup-window WINDOW]
-[--warmup-threshold THRESHOLD] [--min-warmup-windows MIN_WINDOWS]
-Required arguments:
--d DATA_DIR Directory containing images
--o OUTPUT_DIR Directory for output files
-Optional arguments:
--n NUM_IMAGES Number of images to process (default: 2000)
--r NUM_RUNS Number of benchmark runs (default: 5)
---max-warmup Maximum warmup iterations (default: 1000)
---warmup-window Window size for variance check (default: 5)
---warmup-threshold Variance stability threshold (default: 0.05)
---min-warmup-windows Minimum windows to check (default: 3)
+./run_video_single.sh -l albumentations -d /path/to/videos -o /path/to/output
 ```
 
-The `run_all.sh` script will:
+To run benchmarks for all supported libraries and generate a comparison:
 
-1. Run benchmarks for each library ([albumentations](https://albumentations.ai/), [imgaug](https://imgaug.readthedocs.io/en/latest/), [torchvision](https://pytorch.org/vision/stable/index.html), [kornia](https://kornia.readthedocs.io/en/latest/), [augly](https://github.com/facebookresearch/AugLy))
-2. Save individual results as JSON files in the output directory
-3. Generate a comparison CSV file combining results from all libraries
-
-### Output Structure
-
-```tree
-output_directory/
-├── albumentations_results.json
-├── imgaug_results.json
-├── torchvision_results.json
-├── kornia_results.json
-└── augly_results.json
+```bash
+./run_video_all.sh -d /path/to/videos -o /path/to/output --update-docs
 ```
 
-When running all benchmarks, the output directory will contain:
+## Methodology
 
-### Output Format
+The benchmark methodology is designed to ensure fair and reproducible comparisons:
 
-The benchmark produces a JSON file containing:
+1. **Data Loading**: Data is loaded using library-specific loaders to ensure optimal format compatibility
+2. **Warmup Phase**: Adaptive warmup until performance variance stabilizes
+3. **Measurement Phase**: Multiple runs with statistical analysis
+4. **Environment Control**: Consistent thread settings and hardware utilization
 
-```json
-{
-    "metadata": {
-        "system_info": {
-            "python_version": "...",
-            "platform": "...",
-            "processor": "...",
-            "cpu_count": "...",
-            "timestamp": "..."
-        },
-        "library_versions": {...},
-        "thread_settings": {...},
-        "benchmark_params": {...}
-    },
-    "results": {
-        "transform_name": {
-            "supported": true,
-            "warmup_iterations": 100,
-            "throughputs": [...],
-            "median_throughput": 123.45,
-            "std_throughput": 1.23,
-            "times": [...],
-            "mean_time": 0.123,
-            "std_time": 0.001,
-            "variance_stable": true,
-            "early_stopped": false,
-            "early_stop_reason": null
-        }
-        // ... results for other transforms
-    }
-}
-```
+For detailed methodology, see the specific benchmark READMEs:
+- [Image Benchmark Methodology](docs/images/README.md#methodology)
+- [Video Benchmark Methodology](docs/videos/README.md#methodology)
+
+## Contributing
+
+Contributions are welcome! If you'd like to add support for a new library, improve the benchmarking methodology, or fix issues, please submit a pull request.
+
+When contributing, please:
+1. Follow the existing code style
+2. Add tests for new functionality
+3. Update documentation as needed
+4. Ensure all tests pass
