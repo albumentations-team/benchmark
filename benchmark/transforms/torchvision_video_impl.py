@@ -3,7 +3,8 @@ from typing import Any
 import torch
 from torchvision.transforms import InterpolationMode, v2
 
-torch.set_num_threads(1)
+# Get device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class TorchvisionVideoImpl:
@@ -183,6 +184,9 @@ class TorchvisionVideoImpl:
         """
         # Set a fixed random seed for consistent transformations
         torch.manual_seed(137)
+
+        # Move video to GPU if available
+        video = video.to(device)
 
         # Directly apply the transform to the video tensor
         # The time dimension (T) is treated as the batch dimension (B)

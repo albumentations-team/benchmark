@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import torch
 from tqdm import tqdm
 
 from .transforms.specs import TRANSFORM_SPECS
@@ -59,6 +60,8 @@ class VideoBenchmarkRunner:
 
     def load_videos(self) -> list[Any]:
         """Load videos using appropriate loader"""
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         # Search recursively for video files
         video_paths = []
         for ext in ["mp4", "avi", "mov"]:
@@ -73,6 +76,10 @@ class VideoBenchmarkRunner:
             for path in pbar:
                 try:
                     video = self.video_loader(path)
+                    # Move video to GPU if available
+                    if isinstance(video, torch.Tensor) and torch.cuda.is_available():
+                        # For Kornia, ensure we maintain float16 precision when moving to GPU
+                        video = video.to(device, non_blocking=True) if self.library == "kornia" else video.to(device)
                     videos.append(video)
 
                     if len(videos) >= self.num_videos:
@@ -88,7 +95,17 @@ class VideoBenchmarkRunner:
             raise ValueError("No valid videos found in the directory (searched recursively)")
 
         if len(videos) < self.num_videos:
-            logger.warning(f"Only found {len(videos)} valid videos, requested {self.num_videos}")
+            logger.warning(
+                f"Only {len(videos)} valid videos found, which is less than the requested {self.num_videos}",
+            )
+
+        logger.info(f"Loaded {len(videos)} videos")
+
+        # Log GPU memory usage if available
+        if torch.cuda.is_available():
+            allocated = torch.cuda.memory_allocated() / (1024**3)  # GB
+            total = torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory / (1024**3)  # GB
+            logger.info(f"GPU memory: {allocated:.2f}GB / {total:.2f}GB")
 
         return videos
 
@@ -227,11 +244,16 @@ class VideoBenchmarkRunner:
 
     def run(self, output_path: Path | None = None) -> dict[str, Any]:
         """Run all benchmarks"""
-        logger.info(f"\nRunning video benchmarks for {self.library}")
+        # Load videos
         videos = self.load_videos()
+        logger.info(f"Loaded {len(videos)} videos")
+
+        # Log precision information for Kornia
+        if self.library == "kornia" and isinstance(videos[0], torch.Tensor):
+            logger.info(f"Using {videos[0].dtype} precision for Kornia")
 
         # Collect metadata
-        metadata = {
+        metadata: dict[str, Any] = {
             "system_info": get_system_info(),
             "library_versions": get_library_versions(self.library),
             "thread_settings": verify_thread_settings(),
@@ -245,12 +267,52 @@ class VideoBenchmarkRunner:
             },
         }
 
+        # Add precision information for Kornia
+        if self.library == "kornia" and isinstance(videos[0], torch.Tensor):
+            metadata["precision"] = str(videos[0].dtype)
+
         # Run benchmarks
         results = {}
         for transform_spec in TRANSFORM_SPECS:
             # Skip problematic transforms for Kornia due to compatibility issues
-            problematic_transforms = ["Elastic", "GaussianBlur", "MotionBlur"]
-            if transform_spec.name in problematic_transforms and self.library == "kornia":
+            problematic_cpu_transforms = ["Elastic", "GaussianBlur", "MotionBlur"]
+            problematic_gpu_transforms = [
+                "Perspective",
+                "Posterize",
+                "Erasing",
+                "JpegCompression",
+                "MotionBlur",
+                "CLAHE",
+                "Snow",
+                "Shear",
+                "Elastic",
+                "OpticalDistortion",
+            ]
+
+            # Skip Perspective on GPU for Kornia
+            if (
+                torch.cuda.is_available()
+                and self.library == "kornia"
+                and transform_spec.name in problematic_gpu_transforms
+            ):
+                logger.info(f"Skipping {transform_spec.name} for {self.library} on GPU due to compatibility issues...")
+                results[transform_spec.name] = {
+                    "skipped": True,
+                    "reason": "Compatibility issues with GPU tensors or float16 precision",
+                    "throughput": None,
+                    "time_per_video": None,
+                    "warmup_iterations": 0,
+                    "early_stopped": True,
+                    "early_stop_reason": "Skipped",
+                }
+                continue
+
+            # Skip other problematic transforms for Kornia
+            if (
+                not torch.cuda.is_available()
+                and transform_spec.name in problematic_cpu_transforms
+                and self.library == "kornia"
+            ):
                 logger.info(f"Skipping {transform_spec.name} for {self.library} due to compatibility issues...")
                 results[transform_spec.name] = {
                     "skipped": True,
@@ -284,6 +346,8 @@ def main() -> None:
     """Command-line entry point"""
     import argparse
 
+    import torch
+
     parser = argparse.ArgumentParser(description="Run video augmentation benchmarks")
     parser.add_argument("-l", "--library", required=True, help="Library to benchmark")
     parser.add_argument("-d", "--data-dir", required=True, help="Directory containing videos")
@@ -294,8 +358,20 @@ def main() -> None:
     parser.add_argument("--warmup-window", type=int, default=5, help="Window size for variance check")
     parser.add_argument("--warmup-threshold", type=float, default=0.05, help="Variance stability threshold")
     parser.add_argument("--min-warmup-windows", type=int, default=3, help="Minimum windows to check")
+    parser.add_argument("--gpu", action="store_true", help="Use GPU for benchmarking")
 
     args = parser.parse_args()
+
+    # Check if GPU is requested but not available
+    if args.gpu and not torch.cuda.is_available():
+        logger.warning("GPU requested but not available. Falling back to CPU.")
+
+    # Log GPU information if available
+    if torch.cuda.is_available():
+        logger.info(f"GPU: {torch.cuda.get_device_name(torch.cuda.current_device())}")
+        logger.info(f"CUDA Version: {torch.version.cuda}")
+        memory = torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory / (1024**3)
+        logger.info(f"Total GPU Memory: {memory:.2f} GB")
 
     runner = VideoBenchmarkRunner(
         library=args.library,
