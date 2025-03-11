@@ -140,7 +140,7 @@ def generate_comparison_tables(csv_path: Path) -> str:
 
             # Calculate speedup
             speedup = calculate_speedup(values)
-            speedup_str = f"{speedup:.1f}x" if speedup > 0 else "-"
+            speedup_str = f"{speedup:.2f}x" if speedup > 0 else "-"
 
             markdown += f"| {transform_name} | {' | '.join(formatted)} | {speedup_str} |\n"
 

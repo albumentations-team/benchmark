@@ -2,7 +2,7 @@
 
 # Help message
 show_help() {
-    echo "Usage: $0 -d DATA_DIR -o OUTPUT_DIR [-n NUM_VIDEOS] [-r NUM_RUNS] [--max-warmup MAX_WARMUP] [--warmup-window WINDOW] [--warmup-threshold THRESHOLD] [--min-warmup-windows MIN_WINDOWS]"
+    echo "Usage: $0 -d DATA_DIR -o OUTPUT_DIR [-n NUM_VIDEOS] [-r NUM_RUNS] [--max-warmup MAX_WARMUP] [--warmup-window WINDOW] [--warmup-threshold THRESHOLD] [--min-warmup-windows MIN_WINDOWS] [--update-docs]"
     echo
     echo "Required arguments:"
     echo "  -d DATA_DIR     Directory containing videos"
@@ -15,8 +15,18 @@ show_help() {
     echo "  --warmup-window Window size for variance check (default: 5)"
     echo "  --warmup-threshold Variance stability threshold (default: 0.05)"
     echo "  --min-warmup-windows Minimum windows to check (default: 3)"
+    echo "  --update-docs   Update documentation with results (default: false)"
     echo "  -h             Show this help message"
 }
+
+# Default values
+NUM_VIDEOS=50
+NUM_RUNS=5
+MAX_WARMUP=100
+WARMUP_WINDOW=5
+WARMUP_THRESHOLD=0.05
+MIN_WARMUP_WINDOWS=3
+UPDATE_DOCS=false
 
 # Parse command line arguments
 while getopts "d:o:n:r:h-:" opt; do
@@ -35,47 +45,56 @@ while getopts "d:o:n:r:h-:" opt; do
                 min-warmup-windows)
                     MIN_WARMUP_WINDOWS="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     ;;
+                update-docs)
+                    UPDATE_DOCS=true
+                    ;;
                 *)
-                    echo "Invalid option: --${OPTARG}" >&2
+                    echo "Unknown option --${OPTARG}"
                     show_help
                     exit 1
                     ;;
-            esac;;
-        d) DATA_DIR="$OPTARG";;
-        o) OUTPUT_DIR="$OPTARG";;
-        n) NUM_VIDEOS="$OPTARG";;
-        r) NUM_RUNS="$OPTARG";;
-        h) show_help; exit 0;;
-        ?) show_help; exit 1;;
+            esac
+            ;;
+        d)
+            DATA_DIR="${OPTARG}"
+            ;;
+        o)
+            OUTPUT_DIR="${OPTARG}"
+            ;;
+        n)
+            NUM_VIDEOS="${OPTARG}"
+            ;;
+        r)
+            NUM_RUNS="${OPTARG}"
+            ;;
+        h)
+            show_help
+            exit 0
+            ;;
+        *)
+            show_help
+            exit 1
+            ;;
     esac
 done
 
-# Validate required arguments
+# Check required arguments
 if [ -z "$DATA_DIR" ] || [ -z "$OUTPUT_DIR" ]; then
-    echo "Error: Missing required arguments"
+    echo "Error: Missing required arguments."
     show_help
     exit 1
 fi
 
-# Set default values for optional arguments
-NUM_VIDEOS=${NUM_VIDEOS:-1000}
-NUM_RUNS=${NUM_RUNS:-5}
-MAX_WARMUP=${MAX_WARMUP:-100}
-WARMUP_WINDOW=${WARMUP_WINDOW:-5}
-WARMUP_THRESHOLD=${WARMUP_THRESHOLD:-0.05}
-MIN_WARMUP_WINDOWS=${MIN_WARMUP_WINDOWS:-3}
-
 # Create output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
 
-# Libraries to benchmark - only include albumentations, torchvision, and kornia
-LIBRARIES=("albumentations" "torchvision" "kornia")
-
 # Run benchmarks for each library
-for library in "${LIBRARIES[@]}"; do
-    echo "Running video benchmark for ${library}..."
+LIBRARIES=("albumentations" "kornia")
+
+for lib in "${LIBRARIES[@]}"; do
+    echo "Running video benchmark for $lib..."
     ./run_video_single.sh \
-        -l "$library" \
+        -l "$lib" \
         -d "$DATA_DIR" \
         -o "$OUTPUT_DIR" \
         -n "$NUM_VIDEOS" \
@@ -93,3 +112,9 @@ python -m tools.compare_video_results -r "$OUTPUT_DIR" -o"${OUTPUT_DIR}/video_co
 echo "All video benchmarks complete."
 echo "Individual results saved in: $OUTPUT_DIR"
 echo "Comparison table saved as: ${OUTPUT_DIR}/video_comparison.md"
+
+# Update documentation if requested
+if [ "$UPDATE_DOCS" = true ]; then
+    echo "Updating documentation..."
+    ./tools/update_docs.sh --video-results "$OUTPUT_DIR"
+fi

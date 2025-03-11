@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import json
 from pathlib import Path
 
@@ -15,6 +16,7 @@ def load_results(file_path: Path) -> tuple[str, dict[str, float], dict[str, floa
     version = data["metadata"]["library_versions"].get(library, "N/A")
 
     for transform_name, results in data["results"].items():
+        # Strip parameters from transform name
         transform_name_stripped = transform_name.split("(")[0].strip()
         if results["supported"]:
             medians[transform_name_stripped] = results["median_throughput"]
@@ -45,6 +47,24 @@ def create_comparison_table(results_dir: Path) -> pd.DataFrame:
     # Find maximum values in each row
     max_values = df_medians.max(axis=1)
 
+    # Calculate speedup: Albumentations / fastest among other libraries
+    speedups = []
+    for idx in df_medians.index:
+        if "albumentations" in df_medians.columns and not pd.isna(df_medians.loc[idx, "albumentations"]):
+            # Get all libraries except albumentations
+            other_libs = [col for col in df_medians.columns if col != "albumentations"]
+            # Filter out NaN values
+            other_values = [df_medians.loc[idx, lib] for lib in other_libs if not pd.isna(df_medians.loc[idx, lib])]
+
+            if other_values:  # If there are other libraries with this transform
+                fastest_other = max(other_values)
+                speedup = df_medians.loc[idx, "albumentations"] / fastest_other
+                speedups.append(f"{speedup:.2f}×")
+            else:
+                speedups.append("N/A")
+        else:
+            speedups.append("N/A")
+
     # Create the final formatted DataFrame
     formatted_data = {"Transform": df_medians.index}
 
@@ -61,6 +81,9 @@ def create_comparison_table(results_dir: Path) -> pd.DataFrame:
             column_values.append(value)
 
         formatted_data[f"{library}<br>{versions[library]}"] = column_values
+
+    # Add speedup column
+    formatted_data["Speedup<br>(Alb/fastest other)"] = speedups
 
     return pd.DataFrame(formatted_data)
 
@@ -119,12 +142,46 @@ def get_system_summary(results_dir: Path) -> str:
     return "\n".join(summary)
 
 
+def update_readme(readme_path: Path, content: str, start_marker: str, end_marker: str) -> None:
+    """Update a section of the README file between markers"""
+    if not readme_path.exists():
+        # Create a new README if it doesn't exist
+        readme_path.write_text(f"{start_marker}\n{content}\n{end_marker}")
+        return
+
+    # Read the existing README
+    readme_content = readme_path.read_text()
+
+    # Find the section to update
+    start_index = readme_content.find(start_marker)
+    end_index = readme_content.find(end_marker)
+
+    if start_index == -1 or end_index == -1:
+        # If markers not found, append to the end
+        readme_content += f"\n\n{start_marker}\n{content}\n{end_marker}"
+    else:
+        # Replace the section between markers
+        readme_content = (
+            readme_content[:start_index + len(start_marker)]
+            + "\n"
+            + content
+            + "\n"
+            + readme_content[end_index:]
+        )
+
+    # Write the updated README
+    readme_path.write_text(readme_content)
+
+
 def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description="Generate comparison table from benchmark results")
     parser.add_argument("-r", "--results-dir", type=Path, help="Directory containing benchmark result JSON files")
     parser.add_argument("-o", "--output", type=Path, help="Output markdown file path")
+    parser.add_argument("--update-readme", type=Path, help="Path to README file to update with results")
+    parser.add_argument("--start-marker", default="<!-- BENCHMARK_RESULTS_START -->", help="Marker for start of results section in README")
+    parser.add_argument("--end-marker", default="<!-- BENCHMARK_RESULTS_END -->", help="Marker for end of results section in README")
 
     args = parser.parse_args()
 
@@ -135,14 +192,19 @@ def main() -> None:
     df = create_comparison_table(args.results_dir)
     markdown_table = df.to_markdown(index=False)
 
-    df.to_csv(args.output.with_suffix(".csv"), index=False)
+    # Save CSV version
+    if args.output:
+        df.to_csv(args.output.with_suffix(".csv"), index=False)
 
     # Combine summary and table
-    full_report = f"""# Benchmark Results
+    full_report = f"""# Image Benchmark Results
 
 {system_summary}
 
 ## Performance Comparison
+
+Number shows how many uint8 images per second can be processed on one CPU thread. Larger is better.
+The Speedup column shows how many times faster Albumentations is compared to the fastest other library for each transform.
 
 {markdown_table}
 """
@@ -150,6 +212,11 @@ def main() -> None:
     # Save to file
     if args.output:
         args.output.write_text(full_report)
+
+    # Update README if requested
+    if args.update_readme:
+        update_readme(args.update_readme, full_report, args.start_marker, args.end_marker)
+        print(f"Updated {args.update_readme}")
 
     # Print preview
     print("\nBenchmark Report Preview:")
