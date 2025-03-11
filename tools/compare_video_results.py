@@ -31,9 +31,7 @@ def format_throughput(throughput: float, std: Optional[float] = None, is_max: bo
 
 def format_time(time_ms: float, std: Optional[float] = None) -> str:
     """Format time value with optional standard deviation."""
-    if std is not None:
-        return f"{time_ms:.2f} ± {std:.2f}"
-    return f"{time_ms:.2f}"
+    return f"{time_ms:.2f} ± {std:.2f}" if std is not None else f"{time_ms:.2f}"
 
 
 def get_hardware_info(results: Dict[str, Dict[str, Any]]) -> Dict[str, str]:
