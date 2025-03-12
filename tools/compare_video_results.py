@@ -31,15 +31,47 @@ def format_throughput(throughput: float, std: float | None = None, is_max: bool 
     if std is not None:
         formatted = f"{formatted} ± {std:.2f}"
 
-    if is_max:
-        return f"**{formatted}**"
-
-    return formatted
+    return f"**{formatted}**" if is_max else formatted
 
 
 def format_time(time_ms: float, std: float | None = None) -> str:
     """Format time value with optional standard deviation."""
     return f"{time_ms:.2f} ± {std:.2f}" if std is not None else f"{time_ms:.2f}"
+
+
+def extract_gpu_info(thread_settings: dict[str, Any]) -> str:
+    """Extract GPU information from thread settings."""
+    if "pytorch" not in thread_settings:
+        return "Unknown hardware"
+
+    pytorch_settings = thread_settings["pytorch"]
+
+    # Handle the case where pytorch settings are stored as a string
+    if isinstance(pytorch_settings, str):
+        # Try to extract GPU info from the string
+        if "gpu_available': True" in pytorch_settings:
+            # Extract GPU name if available
+            if "gpu_name':" in pytorch_settings:
+                import re
+
+                gpu_name_match = re.search(r"gpu_name': '([^']+)'", pytorch_settings)
+                if gpu_name_match:
+                    return gpu_name_match.group(1)
+                # Extract GPU device if name not available
+                gpu_device_match = re.search(r"gpu_device': ([^,}]+)", pytorch_settings)
+                if gpu_device_match:
+                    return f"GPU {gpu_device_match.group(1)}"
+                return "GPU (details unknown)"
+            return "GPU (details unknown)"
+        return "CPU (GPU not available)"
+    # Handle the case where pytorch settings are a dictionary
+    if pytorch_settings.get("gpu_available", False):
+        gpu_name = pytorch_settings.get("gpu_name", None)
+        if gpu_name:
+            return gpu_name
+        gpu_device = pytorch_settings.get("gpu_device", "Unknown")
+        return f"GPU {gpu_device}"
+    return "CPU (GPU not available)"
 
 
 def get_hardware_info(results: dict[str, dict[str, Any]]) -> dict[str, str]:
@@ -59,41 +91,7 @@ def get_hardware_info(results: dict[str, dict[str, Any]]) -> dict[str, str]:
 
                 # For GPU-based libraries (Kornia, TorchVision, etc.)
                 elif "pytorch" in thread_settings:
-                    # Handle the case where pytorch settings are stored as a string
-                    pytorch_settings = thread_settings["pytorch"]
-                    if isinstance(pytorch_settings, str):
-                        # Try to extract GPU info from the string
-                        if "gpu_available': True" in pytorch_settings:
-                            # Extract GPU name if available
-                            if "gpu_name':" in pytorch_settings:
-                                import re
-
-                                gpu_name_match = re.search(r"gpu_name': '([^']+)'", pytorch_settings)
-                                if gpu_name_match:
-                                    gpu_name = gpu_name_match.group(1)
-                                    hardware_info[library] = gpu_name
-                                else:
-                                    # Extract GPU device if name not available
-                                    gpu_device_match = re.search(r"gpu_device': ([^,}]+)", pytorch_settings)
-                                    if gpu_device_match:
-                                        gpu_device = gpu_device_match.group(1)
-                                        hardware_info[library] = f"GPU {gpu_device}"
-                                    else:
-                                        hardware_info[library] = "GPU (details unknown)"
-                            else:
-                                hardware_info[library] = "GPU (details unknown)"
-                        else:
-                            hardware_info[library] = "CPU (GPU not available)"
-                    # Handle the case where pytorch settings are a dictionary
-                    elif pytorch_settings.get("gpu_available", False):
-                        gpu_name = pytorch_settings.get("gpu_name", None)
-                        if gpu_name:
-                            hardware_info[library] = gpu_name
-                        else:
-                            gpu_device = pytorch_settings.get("gpu_device", "Unknown")
-                            hardware_info[library] = f"GPU {gpu_device}"
-                    else:
-                        hardware_info[library] = "CPU (GPU not available)"
+                    hardware_info[library] = extract_gpu_info(thread_settings)
                 else:
                     hardware_info[library] = "Unknown hardware"
             # Default hardware info if thread_settings not found

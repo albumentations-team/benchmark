@@ -120,58 +120,6 @@ def get_system_summary(results_dir: Path) -> str:
         "",
     ]
 
-    # Extract GPU information from each library's results
-    gpu_info = {}
-    for file_path in result_files:
-        with file_path.open() as f:
-            lib_data = json.load(f)
-
-        library = file_path.stem.replace("_results", "")
-        lib_metadata = lib_data.get("metadata", {})
-
-        # Check for GPU info in thread_settings
-        if "thread_settings" in lib_metadata:
-            thread_settings = lib_metadata["thread_settings"]
-
-            # For GPU-based libraries (Kornia, TorchVision)
-            if "pytorch" in thread_settings:
-                pytorch_settings = thread_settings["pytorch"]
-
-                # Handle string representation
-                if isinstance(pytorch_settings, str):
-                    import re
-
-                    # Check if GPU is available
-                    if "gpu_available': True" in pytorch_settings:
-                        # Try to extract GPU name
-                        gpu_name_match = re.search(r"gpu_name': '([^']+)'", pytorch_settings)
-                        if gpu_name_match:
-                            gpu_info[library] = gpu_name_match.group(1)
-                        else:
-                            # Try to extract GPU device
-                            gpu_device_match = re.search(r"gpu_device': ([^,}]+)", pytorch_settings)
-                            if gpu_device_match:
-                                gpu_info[library] = f"GPU {gpu_device_match.group(1)}"
-                            else:
-                                gpu_info[library] = "GPU (details unknown)"
-                # Handle dictionary representation
-                elif isinstance(pytorch_settings, dict):
-                    if pytorch_settings.get("gpu_available", False):
-                        gpu_name = pytorch_settings.get("gpu_name")
-                        if gpu_name:
-                            gpu_info[library] = gpu_name
-                        else:
-                            gpu_device = pytorch_settings.get("gpu_device", "Unknown")
-                            gpu_info[library] = f"GPU {gpu_device}"
-
-    # Add GPU information if available
-    if gpu_info:
-        summary.append("### GPU Information")
-        summary.append("")
-        for library, gpu in sorted(gpu_info.items()):
-            summary.append(f"- {library.capitalize()}: {gpu}")
-        summary.append("")
-
     summary.extend(
         [
             "### Benchmark Parameters",
