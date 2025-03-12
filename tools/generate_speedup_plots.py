@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
+import seaborn as sns
 
 # Configure logging
 logging.basicConfig(
@@ -138,37 +138,31 @@ def plot_speedup_distribution(
         plt.close()
         return
 
+    # Set seaborn style for better aesthetics
+    sns.set_style("whitegrid")
+    sns.set_context("paper", font_scale=1.1)
+
+    palette = sns.color_palette("tab10", 4)
+    hist_color = palette[0]  # Blue
+    top_color = palette[2]  # Green
+    bottom_color = palette[3]  # Red
+
     # Create figure with three subplots
-    fig = plt.figure(figsize=(15, 5))
+    fig = plt.figure(figsize=(15, 6.5))  # Increased height for better spacing
     gs = plt.GridSpec(1, 3, width_ratios=[1.5, 1, 1])
     ax1 = fig.add_subplot(gs[0])
     ax2 = fig.add_subplot(gs[1])
     ax3 = fig.add_subplot(gs[2])
 
-    # Use colorblind-friendly colors
-    hist_color = "#4878D0"  # Blue
-    top_color = "#60BD68"  # Green
-    bottom_color = "#EE6677"  # Red
-
     # 1. Histogram of typical speedups (< max_speedup)
     typical_speedups = comparison_df[comparison_df["Speedup"] < max_speedup]["Speedup"]
 
     if len(typical_speedups) > 0:
-        ax1.hist(typical_speedups, bins=15, color=hist_color, alpha=0.7, edgecolor="black")
-        ax1.axvline(
-            typical_speedups.median(),
-            color="#404040",
-            linestyle="--",
-            linewidth=1.5,
-            label=f"Median: {typical_speedups.median():.2f}x",
-        )
-        ax1.axvline(1, color="#404040", linestyle=":", linewidth=1.5, alpha=0.7, label="No speedup (1x)")
-        ax1.grid(True, alpha=0.3)
+        sns.histplot(typical_speedups, bins=15, color=hist_color, alpha=0.7, edgecolor="black", ax=ax1)
 
         ax1.set_xlabel("Speedup (x)", fontsize=12)
         ax1.set_ylabel("Number of transforms", fontsize=12)
-        ax1.set_title(f"(a) Distribution of Typical Speedups\n(< {max_speedup}x)", fontsize=14)
-        ax1.legend(fontsize=10)
+        ax1.set_title(f"(a) Distribution of Speedups < {max_speedup}x", fontsize=14)
     else:
         ax1.text(0.5, 0.5, "No speedup data < 20x", ha="center", va="center", fontsize=12)
         ax1.set_axis_off()
@@ -177,17 +171,23 @@ def plot_speedup_distribution(
     top_n = min(10, len(comparison_df))
     if top_n > 0:
         top_10 = comparison_df.nlargest(top_n, "Speedup")
-        bars = ax2.barh(np.arange(len(top_10)), top_10["Speedup"], color=top_color, alpha=0.7, edgecolor="black")
-        ax2.set_yticks(np.arange(len(top_10)))
-        ax2.set_yticklabels(top_10["Transform"], fontsize=10)
+        sns.barplot(
+            x="Speedup",
+            y="Transform",
+            data=top_10,
+            color=top_color,
+            alpha=0.7,
+            edgecolor="black",
+            ax=ax2,
+        )
         ax2.grid(True, alpha=0.3)
 
-        for _, bar in enumerate(bars):
-            width = bar.get_width()
+        # Add text labels for speedup values
+        for i, v in enumerate(top_10["Speedup"]):
             ax2.text(
-                width + 0.05,
-                bar.get_y() + bar.get_height() / 2,
-                f"{width:.2f}x",
+                v + 0.05,
+                i,
+                f"{v:.2f}x",
                 ha="left",
                 va="center",
                 fontsize=10,
@@ -195,6 +195,8 @@ def plot_speedup_distribution(
             )
 
         ax2.set_xlabel("Speedup (x)", fontsize=12)
+        # Remove y-label "Transform"
+        ax2.set_ylabel("")
         ax2.set_title("(b) Top 10 Speedups", fontsize=14)
     else:
         ax2.text(0.5, 0.5, "No speedup data", ha="center", va="center", fontsize=12)
@@ -204,23 +206,23 @@ def plot_speedup_distribution(
     bottom_n = min(10, len(comparison_df))
     if bottom_n > 0:
         bottom_10 = comparison_df.nsmallest(bottom_n, "Speedup")
-        bars = ax3.barh(
-            np.arange(len(bottom_10)),
-            bottom_10["Speedup"],
+        sns.barplot(
+            x="Speedup",
+            y="Transform",
+            data=bottom_10,
             color=bottom_color,
             alpha=0.7,
             edgecolor="black",
+            ax=ax3,
         )
-        ax3.set_yticks(np.arange(len(bottom_10)))
-        ax3.set_yticklabels(bottom_10["Transform"], fontsize=10)
         ax3.grid(True, alpha=0.3)
 
-        for _, bar in enumerate(bars):
-            width = bar.get_width()
+        # Add text labels for speedup values
+        for i, v in enumerate(bottom_10["Speedup"]):
             ax3.text(
-                width + 0.05,
-                bar.get_y() + bar.get_height() / 2,
-                f"{width:.2f}x",
+                v + 0.05,
+                i,
+                f"{v:.2f}x",
                 ha="left",
                 va="center",
                 fontsize=10,
@@ -228,6 +230,8 @@ def plot_speedup_distribution(
             )
 
         ax3.set_xlabel("Speedup (x)", fontsize=12)
+        # Remove y-label "Transform"
+        ax3.set_ylabel("")
         ax3.set_title("(c) Bottom 10 Speedups", fontsize=14)
     else:
         ax3.text(0.5, 0.5, "No speedup data", ha="center", va="center", fontsize=12)
@@ -256,23 +260,28 @@ def plot_speedup_distribution(
         f"{total_transforms} transforms with multiple library support"
     )
 
-    # Add the stats text to the bottom right of the figure
+    # Add the stats text to the right side of the left plot with larger font
+    ax1_pos = ax1.get_position()
+    # Calculate 10% of the plot width
+    plot_width = ax1_pos.x1 - ax1_pos.x0
+    shift_amount = plot_width * 0.1
+
     plt.figtext(
-        0.98,
-        0.02,
+        ax1_pos.x1 - 0.02 - shift_amount,  # Shifted left by 10% of plot width
+        ax1_pos.y1 - 0.02,  # Slightly below the top edge of the left plot
         stats_text,
         ha="right",
-        va="bottom",
-        bbox={"facecolor": "white", "alpha": 0.9, "edgecolor": "none"},
-        fontsize=10,
+        va="top",
+        bbox={"facecolor": "white", "alpha": 0.9, "edgecolor": "lightgray", "boxstyle": "round,pad=0.5"},
+        fontsize=14,  # Significantly increased font size
     )
 
-    # Add title with information about the reference library
-    plt.suptitle(f"Speedup Analysis: {reference_library.capitalize()} vs Other Libraries", fontsize=16)
+    # Add title with information about the reference library with more space
+    plt.suptitle(f"Speedup Analysis: {reference_library.capitalize()} vs Other Libraries", fontsize=16, y=1.02)
 
     # Adjust layout and save
     plt.tight_layout()
-    plt.subplots_adjust(top=0.9, bottom=0.15)  # Make room for the suptitle and stats
+    plt.subplots_adjust(top=0.88)  # Increased top margin for suptitle
     plt.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close()
 

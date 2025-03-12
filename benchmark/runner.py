@@ -1,5 +1,6 @@
 import importlib
 import json
+import logging
 import os
 import time
 from pathlib import Path
@@ -11,6 +12,13 @@ from tqdm import tqdm
 
 from .transforms.specs import TRANSFORM_SPECS
 from .utils import get_image_loader, get_library_versions, get_system_info, time_transform, verify_thread_settings
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 # Environment variables for various libraries
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -89,7 +97,7 @@ class BenchmarkRunner:
             raise ValueError("No valid RGB images found in the directory")
 
         if len(rgb_images) < self.num_images:
-            print(f"Warning: Only found {len(rgb_images)} valid RGB images, requested {self.num_images}")
+            logger.warning("Only found %d valid RGB images, requested %d", len(rgb_images), self.num_images)
 
         return rgb_images
 
@@ -228,7 +236,7 @@ class BenchmarkRunner:
 
     def run(self, output_path: Path | None = None) -> dict[str, Any]:
         """Run all benchmarks"""
-        print(f"\nRunning benchmarks for {self.library}")
+        logger.info("Running benchmarks for %s", self.library)
         images = self.load_images()
 
         # Collect metadata
@@ -263,7 +271,7 @@ class BenchmarkRunner:
         if output_path:
             output_path = Path(output_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_path, "w") as f:
+            with output_path.open("w") as f:
                 json.dump(full_results, f, indent=2)
 
         return full_results

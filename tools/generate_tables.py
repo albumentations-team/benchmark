@@ -1,17 +1,25 @@
-import csv
+import logging
 from pathlib import Path
-from typing import Any, Tuple
 
-def parse_throughput(value: str) -> Tuple[float, float]:
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+def parse_throughput(value: str) -> tuple[float, float]:
     """Parse throughput string like '3662 ± 54' or '-' into (value, std)"""
-    if value == '-':
+    if value == "-":
         return (0, 0)
     # Remove bold markers if present
-    value = value.replace('**', '')
-    parts = value.split('±')
+    value = value.replace("**", "")
+    parts = value.split("±")
     return (float(parts[0].strip()), float(parts[1].strip()))
 
-def load_results_from_csv(csv_path: Path) -> dict[str, list[Tuple[float, float]]]:
+
+def load_results_from_csv(csv_path: Path) -> dict[str, list[tuple[float, float]]]:
     """Load results from CSV file into a dictionary mapping transform names to lists of (value, std) tuples"""
     import pandas as pd
 
@@ -19,20 +27,21 @@ def load_results_from_csv(csv_path: Path) -> dict[str, list[Tuple[float, float]]
     results = {}
 
     # Select only the columns we want, using partial matches
-    albumentations_col = [col for col in df.columns if col.startswith('albumentations')][0]
-    torchvision_col = [col for col in df.columns if col.startswith('torchvision')][0]
-    kornia_col = [col for col in df.columns if col.startswith('kornia')][0]
+    albumentations_col = next(col for col in df.columns if col.startswith("albumentations"))
+    torchvision_col = next(col for col in df.columns if col.startswith("torchvision"))
+    kornia_col = next(col for col in df.columns if col.startswith("kornia"))
 
-    columns = ['Transform', albumentations_col, torchvision_col, kornia_col]
+    columns = ["Transform", albumentations_col, torchvision_col, kornia_col]
     df = df[columns]
 
     for _, row in df.iterrows():
-        transform = row['Transform']
+        transform = row["Transform"]
         # Get throughput values for each library (skip the Transform column)
         throughputs = [parse_throughput(val) for val in row.iloc[1:]]
         results[transform] = throughputs
 
     return results
+
 
 def format_throughput(value: float, std: float) -> str:
     if value == 0:
@@ -42,7 +51,9 @@ def format_throughput(value: float, std: float) -> str:
 
 def calculate_speedup(values: list[float]) -> float:
     """Calculate speedup ratio between Albumentations and the best of other libraries.
-    Returns > 1 if Albumentations is faster, < 1 if another library is faster."""
+
+    Returns > 1 if Albumentations is faster, < 1 if another library is faster.
+    """
     albumentations_value = values[0]  # First value is Albumentations
     other_values = [v for v in values[1:] if v > 0]  # Rest are other libraries
 
@@ -108,14 +119,17 @@ PIXEL_TRANSFORMS: set[str] = {
     "Snow",
 }
 
+
 def generate_comparison_tables(csv_path: Path) -> str:
     results = load_results_from_csv(csv_path)
 
     markdown = "## Performance Comparison (images/second, higher is better)\n\n"
 
     # Generate tables for both categories
-    for category, transforms in [("Spatial Transformations", SPATIAL_TRANSFORMS),
-                               ("Pixel-Level Transformations", PIXEL_TRANSFORMS)]:
+    for category, transforms in [
+        ("Spatial Transformations", SPATIAL_TRANSFORMS),
+        ("Pixel-Level Transformations", PIXEL_TRANSFORMS),
+    ]:
         markdown += f"### {category}\n"
         markdown += "| Transform | Albumentations | TorchVision | Kornia | Speedup* |\n"
         markdown += "|-----------|---------------|-------------|--------|----------|\n"
@@ -148,11 +162,13 @@ def generate_comparison_tables(csv_path: Path) -> str:
 
     return markdown
 
+
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='Generate comparison tables from benchmark results')
-    parser.add_argument("-f", '--file', type=str, help='Path to CSV file containing benchmark results')
+
+    parser = argparse.ArgumentParser(description="Generate comparison tables from benchmark results")
+    parser.add_argument("-f", "--file", type=str, help="Path to CSV file containing benchmark results")
     args = parser.parse_args()
 
-    markdown = generate_comparison_tables(Path(args.file))
-    print(markdown)
+    tables = generate_comparison_tables(Path(args.file))
+    logger.info("Generated comparison tables:\n%s", tables)
