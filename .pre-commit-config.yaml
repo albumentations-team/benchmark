@@ -68,6 +68,6 @@ repos:
       - id: mypy
         additional_dependencies:
         - types-setuptools  # Add the type stubs here
-        files: ^benchmark/
+        files: ^(benchmark|tools)/
         args:
           [ --config-file=pyproject.toml ]

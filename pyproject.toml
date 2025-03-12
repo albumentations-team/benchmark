@@ -34,7 +34,7 @@ license = { file = "LICENSE" }
 maintainers = [ { name = "Vladimir Iglovikov" } ]
 
 authors = [ { name = "Vladimir Iglovikov" } ]
-requires-python = ">=3.7"
+requires-python = ">=3.12"
 
 classifiers = [
   "Development Status :: 5 - Production/Stable",
@@ -44,11 +44,6 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.7",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -63,17 +58,17 @@ urls.Homepage = "https://albumentations.ai/docs/benchmarking_results/"
 include-package-data = false
 
 [tool.setuptools.packages.find]
-include = [ "benchmark*" ]
+include = [ "benchmark*", "tools*" ]
 exclude = [ "output*", "output_videos*", ".venv*", "tests*" ]
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
-target-version = "py37"
+target-version = "py312"
 
 line-length = 120
 indent-width = 4
 
-# Assume Python 3.7
+# Assume Python 3.12
 exclude = [
   ".bzr",
   ".direnv",
@@ -103,7 +98,6 @@ exclude = [
   "site",
   "site-packages",
   "tests",
-  "tools",
   "venv",
 ]
 
@@ -122,18 +116,27 @@ lint.ignore = [
   "ANN401",
   "ARG004",
   "BLE001",
+  "C901",
   "D100",
   "D101",
   "D102",
+  "D103",
   "D105",
   "D107",
   "D415",
   "EM101",
   "EM102",
+  "FBT001",
+  "FBT002",
+  "FBT003",
   "G004",
   "N802",
   "N812",
+  "PD901",
+  "PLR0912",
   "PLR0913",
+  "PLR0915",
+  "PLR2004",
   "TRY003",
 ]
 
@@ -148,7 +151,7 @@ lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 lint.pydocstyle.convention = "google"
 
 [tool.mypy]
-python_version = "3.7"
+python_version = "3.12"
 ignore_missing_imports = true
 follow_imports = "silent"
 warn_redundant_casts = true
