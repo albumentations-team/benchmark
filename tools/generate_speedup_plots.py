@@ -159,7 +159,6 @@ def plot_speedup_distribution(
 
     if len(typical_speedups) > 0:
         sns.histplot(typical_speedups, bins=15, color=hist_color, alpha=0.7, edgecolor="black", ax=ax1)
-        # Removed the vertical dashed line completely
 
         ax1.set_xlabel("Speedup (x)", fontsize=12)
         ax1.set_ylabel("Number of transforms", fontsize=12)
