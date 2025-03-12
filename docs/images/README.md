@@ -1,3 +1,5 @@
+<!-- This file is auto-generated. Do not edit directly. -->
+
 # Image Augmentation Benchmarks
 
 This directory contains benchmark results for image augmentation libraries.
@@ -47,6 +49,8 @@ To run all libraries and generate a comparison:
 ## Benchmark Results
 
 <!-- BENCHMARK_RESULTS_START -->
+<!-- This file is auto-generated. Do not edit directly. -->
+
 # Image Benchmark Results
 
 ### System Information

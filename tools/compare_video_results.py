@@ -3,38 +3,46 @@
 
 import argparse
 import json
+import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
-def load_results(results_dir: Path) -> Dict[str, Dict[str, Any]]:
+def load_results(results_dir: Path) -> dict[str, dict[str, Any]]:
     """Load all video benchmark results from the directory."""
     results = {}
     for file_path in results_dir.glob("*_video_results.json"):
         library = file_path.stem.replace("_video_results", "")
-        with open(file_path, "r") as f:
+        with file_path.open() as f:
             results[library] = json.load(f)
     return results
 
 
-def format_throughput(throughput: float, std: Optional[float] = None, is_max: bool = False) -> str:
+def format_throughput(throughput: float, std: float | None = None, is_max: bool = False) -> str:
     """Format throughput value with optional standard deviation and bold if it's the max value."""
     formatted = f"{throughput:.2f}"
     if std is not None:
         formatted = f"{formatted} ± {std:.2f}"
 
     if is_max:
-        formatted = f"**{formatted}**"
+        return f"**{formatted}**"
 
     return formatted
 
 
-def format_time(time_ms: float, std: Optional[float] = None) -> str:
+def format_time(time_ms: float, std: float | None = None) -> str:
     """Format time value with optional standard deviation."""
     return f"{time_ms:.2f} ± {std:.2f}" if std is not None else f"{time_ms:.2f}"
 
 
-def get_hardware_info(results: Dict[str, Dict[str, Any]]) -> Dict[str, str]:
+def get_hardware_info(results: dict[str, dict[str, Any]]) -> dict[str, str]:
     """Extract hardware information from metadata."""
     hardware_info = {}
     for library, result in results.items():
@@ -49,8 +57,8 @@ def get_hardware_info(results: Dict[str, Dict[str, Any]]) -> Dict[str, str]:
                     cpu_count = result["metadata"]["system_info"].get("cpu_count", "1")
                     hardware_info[library] = f"{cpu_info} ({cpu_count} cores)"
 
-                # For GPU (Kornia)
-                elif library.lower() == "kornia" and "pytorch" in thread_settings:
+                # For GPU-based libraries (Kornia, TorchVision, etc.)
+                elif "pytorch" in thread_settings:
                     # Handle the case where pytorch settings are stored as a string
                     pytorch_settings = thread_settings["pytorch"]
                     if isinstance(pytorch_settings, str):
@@ -59,6 +67,7 @@ def get_hardware_info(results: Dict[str, Dict[str, Any]]) -> Dict[str, str]:
                             # Extract GPU name if available
                             if "gpu_name':" in pytorch_settings:
                                 import re
+
                                 gpu_name_match = re.search(r"gpu_name': '([^']+)'", pytorch_settings)
                                 if gpu_name_match:
                                     gpu_name = gpu_name_match.group(1)
@@ -75,39 +84,36 @@ def get_hardware_info(results: Dict[str, Dict[str, Any]]) -> Dict[str, str]:
                                 hardware_info[library] = "GPU (details unknown)"
                         else:
                             hardware_info[library] = "CPU (GPU not available)"
-                    else:
-                        # Handle the case where pytorch settings are a dictionary
-                        if pytorch_settings.get("gpu_available", False):
-                            gpu_name = pytorch_settings.get("gpu_name", None)
-                            if gpu_name:
-                                hardware_info[library] = gpu_name
-                            else:
-                                gpu_device = pytorch_settings.get("gpu_device", "Unknown")
-                                hardware_info[library] = f"GPU {gpu_device}"
+                    # Handle the case where pytorch settings are a dictionary
+                    elif pytorch_settings.get("gpu_available", False):
+                        gpu_name = pytorch_settings.get("gpu_name", None)
+                        if gpu_name:
+                            hardware_info[library] = gpu_name
                         else:
-                            hardware_info[library] = "CPU (GPU not available)"
+                            gpu_device = pytorch_settings.get("gpu_device", "Unknown")
+                            hardware_info[library] = f"GPU {gpu_device}"
+                    else:
+                        hardware_info[library] = "CPU (GPU not available)"
                 else:
                     hardware_info[library] = "Unknown hardware"
-            else:
-                # Default hardware info if thread_settings not found
-                if library.lower() == "albumentations":
-                    hardware_info[library] = "CPU (1 core)"
-                elif library.lower() == "kornia":
-                    hardware_info[library] = "GPU"
-                else:
-                    hardware_info[library] = "Unknown"
-        else:
-            # Default hardware info if metadata not found
-            if library.lower() == "albumentations":
+            # Default hardware info if thread_settings not found
+            elif library.lower() == "albumentations":
                 hardware_info[library] = "CPU (1 core)"
-            elif library.lower() == "kornia":
-                hardware_info[library] = "GPU"
+            elif library.lower() in ["kornia", "torchvision"]:
+                hardware_info[library] = "GPU (details unknown)"
             else:
                 hardware_info[library] = "Unknown"
+        # Default hardware info if metadata not found
+        elif library.lower() == "albumentations":
+            hardware_info[library] = "CPU (1 core)"
+        elif library.lower() in ["kornia", "torchvision"]:
+            hardware_info[library] = "GPU (details unknown)"
+        else:
+            hardware_info[library] = "Unknown"
     return hardware_info
 
 
-def generate_comparison_table(results: Dict[str, Dict[str, Any]]) -> str:
+def generate_comparison_table(results: dict[str, dict[str, Any]]) -> str:
     """Generate a markdown table comparing the results."""
     if not results:
         return "No results found."
@@ -120,11 +126,11 @@ def generate_comparison_table(results: Dict[str, Dict[str, Any]]) -> str:
     # Clean transform names - remove parameters in parentheses
     clean_transforms = {}
     for transform in all_transforms:
-        clean_name = transform.split('(')[0].strip()
+        clean_name = transform.split("(")[0].strip()
         clean_transforms[transform] = clean_name
 
     # Sort transforms for consistent ordering
-    all_transforms = sorted(all_transforms, key=lambda x: clean_transforms[x])
+    sorted_transforms = sorted(all_transforms, key=lambda x: clean_transforms[x])
 
     # Get list of libraries
     libraries = sorted(results.keys())
@@ -133,14 +139,18 @@ def generate_comparison_table(results: Dict[str, Dict[str, Any]]) -> str:
     hardware_info = get_hardware_info(results)
 
     # Create table header with hardware info
-    header = "| Transform | " + " | ".join(f"{lib} (videos per second)<br>{hardware_info.get(lib, 'Unknown')}" for lib in libraries) + " | Speedup<br>(Alb/fastest other) |\n"
+    header = (
+        "| Transform | "
+        + " | ".join(f"{lib} (videos per second)<br>{hardware_info.get(lib, 'Unknown')}" for lib in libraries)
+        + " | Speedup<br>(Alb/fastest other) |\n"
+    )
 
     # Create table separator
     separator = "|" + "|".join("---" for _ in range(len(libraries) + 2)) + "|\n"
 
     # Create table rows
     rows = []
-    for transform in all_transforms:
+    for transform in sorted_transforms:
         # Use clean transform name for display
         clean_name = clean_transforms[transform]
         row = f"| {clean_name} |"
@@ -160,7 +170,7 @@ def generate_comparison_table(results: Dict[str, Dict[str, Any]]) -> str:
         max_throughput = max((t for _, t, _ in throughputs if t > 0), default=0)
 
         # Add formatted throughput values to the row
-        for lib, throughput, std in throughputs:
+        for _, throughput, std in throughputs:
             if throughput > 0:
                 is_max = throughput == max_throughput
                 row += f" {format_throughput(throughput, std, is_max)} |"
@@ -174,7 +184,7 @@ def generate_comparison_table(results: Dict[str, Dict[str, Any]]) -> str:
         if alb_throughput > 0 and other_throughputs:
             fastest_other = max(other_throughputs)
             speedup = alb_throughput / fastest_other
-            row += f" {speedup:.2f}× |"
+            row += f" {speedup:.2f}x |"
         else:
             row += " N/A |"
 
@@ -184,7 +194,7 @@ def generate_comparison_table(results: Dict[str, Dict[str, Any]]) -> str:
     return header + separator + "\n".join(rows)
 
 
-def get_metadata_summary(results: Dict[str, Dict[str, Any]]) -> str:
+def get_metadata_summary(results: dict[str, dict[str, Any]]) -> str:
     """Generate a summary of metadata for each library."""
     metadata_summary = []
     for library, result in results.items():
@@ -204,13 +214,19 @@ def get_metadata_summary(results: Dict[str, Dict[str, Any]]) -> str:
 
 def update_readme(readme_path: Path, content: str, start_marker: str, end_marker: str) -> None:
     """Update a section of the README file between markers"""
+    auto_generated_comment = "<!-- This file is auto-generated. Do not edit directly. -->\n\n"
+
     if not readme_path.exists():
         # Create a new README if it doesn't exist
-        readme_path.write_text(f"{start_marker}\n{content}\n{end_marker}")
+        readme_path.write_text(f"{auto_generated_comment}{start_marker}\n{content}\n{end_marker}")
         return
 
     # Read the existing README
     readme_content = readme_path.read_text()
+
+    # Add auto-generated comment at the top if it doesn't exist
+    if not readme_content.startswith(auto_generated_comment.strip()):
+        readme_content = auto_generated_comment + readme_content
 
     # Find the section to update
     start_index = readme_content.find(start_marker)
@@ -222,11 +238,7 @@ def update_readme(readme_path: Path, content: str, start_marker: str, end_marker
     else:
         # Replace the section between markers
         readme_content = (
-            readme_content[:start_index + len(start_marker)]
-            + "\n"
-            + content
-            + "\n"
-            + readme_content[end_index:]
+            readme_content[: start_index + len(start_marker)] + "\n" + content + "\n" + readme_content[end_index:]
         )
 
     # Write the updated README
@@ -239,8 +251,16 @@ def main() -> None:
     parser.add_argument("-r", "--results-dir", required=True, help="Directory containing benchmark results")
     parser.add_argument("-o", "--output", required=True, help="Output markdown file")
     parser.add_argument("--update-readme", type=Path, help="Path to README file to update with results")
-    parser.add_argument("--start-marker", default="<!-- BENCHMARK_RESULTS_START -->", help="Marker for start of results section in README")
-    parser.add_argument("--end-marker", default="<!-- BENCHMARK_RESULTS_END -->", help="Marker for end of results section in README")
+    parser.add_argument(
+        "--start-marker",
+        default="<!-- BENCHMARK_RESULTS_START -->",
+        help="Marker for start of results section in README",
+    )
+    parser.add_argument(
+        "--end-marker",
+        default="<!-- BENCHMARK_RESULTS_END -->",
+        help="Marker for end of results section in README",
+    )
     args = parser.parse_args()
 
     results_dir = Path(args.results_dir)
@@ -250,11 +270,14 @@ def main() -> None:
     table = generate_comparison_table(results)
     metadata = get_metadata_summary(results)
 
-    # Create full report
-    full_report = f"""# Video Benchmark Results
+    # Create full report with auto-generated comment
+    full_report = f"""<!-- This file is auto-generated. Do not edit directly. -->
+
+# Video Benchmark Results
 
 Number shows how many videos per second can be processed. Larger is better.
-The Speedup column shows how many times faster Albumentations is compared to the fastest other library for each transform.
+The Speedup column shows how many times faster Albumentations is compared to the fastest other
+library for each transform.
 
 {table}
 
@@ -262,15 +285,15 @@ The Speedup column shows how many times faster Albumentations is compared to the
 """
 
     # Write to file
-    with open(output_file, "w") as f:
+    with output_file.open("w") as f:
         f.write(full_report)
 
-    print(f"Results written to {output_file}")
+    logger.info(f"Results written to {output_file}")
 
     # Update README if requested
     if args.update_readme:
         update_readme(args.update_readme, full_report, args.start_marker, args.end_marker)
-        print(f"Updated {args.update_readme}")
+        logger.info(f"Updated {args.update_readme}")
 
 
 if __name__ == "__main__":

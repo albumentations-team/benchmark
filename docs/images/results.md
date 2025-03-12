@@ -1,3 +1,5 @@
+<!-- This file is auto-generated. Do not edit directly. -->
+
 # Image Benchmark Results
 
 ### System Information

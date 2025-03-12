@@ -1,3 +1,5 @@
+<!-- This file is auto-generated. Do not edit directly. -->
+
 # Video Augmentation Benchmarks
 
 This directory contains benchmark results for video augmentation libraries.
@@ -58,12 +60,14 @@ To run all libraries and generate a comparison:
 ## Benchmark Results
 
 <!-- BENCHMARK_RESULTS_START -->
+<!-- This file is auto-generated. Do not edit directly. -->
+
 # Video Benchmark Results
 
 Number shows how many videos per second can be processed. Larger is better.
 The Speedup column shows how many times faster Albumentations is compared to the fastest other library for each transform.
 
-| Transform | albumentations (videos per second)<br>arm (16 cores) | kornia (videos per second)<br>NVIDIA GeForce RTX 4090 | torchvision (videos per second)<br>Unknown hardware | Speedup<br>(Alb/fastest other) |
+| Transform | albumentations (videos per second)<br>arm (16 cores) | kornia (videos per second)<br>NVIDIA GeForce RTX 4090 | torchvision (videos per second)<br>NVIDIA GeForce RTX 4090 | Speedup<br>(Alb/fastest other) |
 |---|---|---|---|---|
 | Affine | 4.45 ± 0.06 | 21.39 ± 0.05 | **452.58 ± 0.14** | 0.01× |
 | AutoContrast | 20.85 ± 0.10 | 21.41 ± 0.02 | **577.72 ± 16.86** | 0.04× |
