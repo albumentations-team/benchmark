@@ -347,9 +347,9 @@ def main() -> None:
         "std_speedup": speedups[args.reference_library].std() if not speedups.empty else 0,
         "faster_transforms": len(speedups[speedups[args.reference_library] > 1.0]) if not speedups.empty else 0,
         "max_speedup": speedups[args.reference_library].max() if not speedups.empty else 0,
-        "max_speedup_transform": speedups[args.reference_library].idxmax() if not speedups.empty else "N/A",
+        "max_speedup_transform": "N/A" if speedups.empty else speedups[args.reference_library].idxmax(),
         "min_speedup": speedups[args.reference_library].min() if not speedups.empty else 0,
-        "min_speedup_transform": speedups[args.reference_library].idxmin() if not speedups.empty else "N/A",
+        "min_speedup_transform": "N/A" if speedups.empty else speedups[args.reference_library].idxmin(),
     }
 
     # Log summary
