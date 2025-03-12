@@ -54,8 +54,8 @@ def get_hardware_info(results: dict[str, dict[str, Any]]) -> dict[str, str]:
                 # For CPU (Albumentations)
                 if library.lower() == "albumentations":
                     cpu_info = result["metadata"]["system_info"].get("processor", "CPU")
-                    cpu_count = result["metadata"]["system_info"].get("cpu_count", "1")
-                    hardware_info[library] = f"{cpu_info} ({cpu_count} cores)"
+                    # Always use "1 core" for albumentations as we fix CPU thread in actual benchmark
+                    hardware_info[library] = f"{cpu_info} (1 core)"
 
                 # For GPU-based libraries (Kornia, TorchVision, etc.)
                 elif "pytorch" in thread_settings:
@@ -98,7 +98,9 @@ def get_hardware_info(results: dict[str, dict[str, Any]]) -> dict[str, str]:
                     hardware_info[library] = "Unknown hardware"
             # Default hardware info if thread_settings not found
             elif library.lower() == "albumentations":
-                hardware_info[library] = "CPU (1 core)"
+                # Always use "CPU (1 core)" for albumentations
+                cpu_info = result["metadata"]["system_info"].get("processor", "CPU")
+                hardware_info[library] = f"{cpu_info} (1 core)"
             elif library.lower() in ["kornia", "torchvision"]:
                 hardware_info[library] = "GPU (details unknown)"
             else:
