@@ -6,7 +6,8 @@ This directory contains benchmark results for image augmentation libraries.
 
 ## Overview
 
-The image benchmarks measure the performance of various image augmentation libraries on standard image transformations. The benchmarks are run on a single CPU thread to ensure consistent and comparable results.
+The image benchmarks measure the performance of various image augmentation libraries on standard image
+transformations. The benchmarks are run on a single CPU thread to ensure consistent and comparable results.
 
 ## Methodology
 
@@ -49,8 +50,6 @@ To run all libraries and generate a comparison:
 ## Benchmark Results
 
 <!-- BENCHMARK_RESULTS_START -->
-<!-- This file is auto-generated. Do not edit directly. -->
-
 # Image Benchmark Results
 
 ### System Information
@@ -139,7 +138,8 @@ library for each transform.
 
 ## Analysis
 
-The benchmark results show that Albumentations is generally the fastest library for most image transformations. This is due to its optimized implementation and use of OpenCV for many operations.
+The benchmark results show that Albumentations is generally the fastest library for most image
+transformations. This is due to its optimized implementation and use of OpenCV for many operations.
 
 Some key observations:
 - Albumentations is particularly fast for geometric transformations like resize, rotate, and affine

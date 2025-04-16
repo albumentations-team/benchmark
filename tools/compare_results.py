@@ -164,18 +164,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="Generate comparison table from benchmark results")
     parser.add_argument("-r", "--results-dir", type=Path, help="Directory containing benchmark result JSON files")
-    parser.add_argument("-o", "--output", type=Path, help="Output markdown file path")
     parser.add_argument("--update-readme", type=Path, help="Path to README file to update with results")
-    parser.add_argument(
-        "--start-marker",
-        default="<!-- BENCHMARK_RESULTS_START -->",
-        help="Marker for start of results section in README",
-    )
-    parser.add_argument(
-        "--end-marker",
-        default="<!-- BENCHMARK_RESULTS_END -->",
-        help="Marker for end of results section in README",
-    )
 
     args = parser.parse_args()
 
@@ -239,8 +228,6 @@ To run all libraries and generate a comparison:
 ## Benchmark Results
 
 <!-- BENCHMARK_RESULTS_START -->
-<!-- This file is auto-generated. Do not edit directly. -->
-
 # Image Benchmark Results
 
 {system_summary}
@@ -273,10 +260,6 @@ Based on the benchmark results, we recommend:
 2. Consider the specific transformations you need and check their relative performance
 3. For GPU acceleration, consider Kornia, especially for batch processing
 """
-
-    # Save to output file (e.g., results.md)
-    if args.output:
-        args.output.write_text(full_report)
 
     # Overwrite README if requested
     if args.update_readme:

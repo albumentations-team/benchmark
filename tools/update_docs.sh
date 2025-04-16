@@ -51,10 +51,7 @@ if [ -d "$IMAGE_RESULTS_DIR" ]; then
   # Generate markdown table and update image README
   python tools/compare_results.py \
     --results-dir "$IMAGE_RESULTS_DIR" \
-    --output "$DOCS_DIR/images/results.md" \
-    --update-readme "$DOCS_DIR/images/README.md" \
-    --start-marker "<!-- BENCHMARK_RESULTS_START -->" \
-    --end-marker "<!-- BENCHMARK_RESULTS_END -->"
+    --update-readme "$DOCS_DIR/images/README.md"
 
   # Generate speedup analysis plot
   python tools/generate_speedup_plots.py \
@@ -75,10 +72,7 @@ if [ -d "$VIDEO_RESULTS_DIR" ]; then
   # Generate markdown table and update video README
   python tools/compare_video_results.py \
     --results-dir "$VIDEO_RESULTS_DIR" \
-    --output "$DOCS_DIR/videos/results.md" \
-    --update-readme "$DOCS_DIR/videos/README.md" \
-    --start-marker "<!-- BENCHMARK_RESULTS_START -->" \
-    --end-marker "<!-- BENCHMARK_RESULTS_END -->"
+    --update-readme "$DOCS_DIR/videos/README.md"
 
   # Generate speedup analysis plot
   python tools/generate_speedup_plots.py \
