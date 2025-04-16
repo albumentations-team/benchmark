@@ -227,8 +227,7 @@ To run all libraries and generate a comparison:
 
 ## Benchmark Results
 
-<!-- BENCHMARK_RESULTS_START -->
-# Image Benchmark Results
+### Image Benchmark Results
 
 {system_summary}
 
@@ -239,8 +238,6 @@ The Speedup column shows how many times faster Albumentations is compared to the
 library for each transform.
 
 {markdown_table}
-
-<!-- BENCHMARK_RESULTS_END -->
 
 ## Analysis
 

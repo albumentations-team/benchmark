@@ -49,8 +49,7 @@ To run all libraries and generate a comparison:
 
 ## Benchmark Results
 
-<!-- BENCHMARK_RESULTS_START -->
-# Image Benchmark Results
+### Image Benchmark Results
 
 ### System Information
 
@@ -133,8 +132,6 @@ library for each transform.
 | Solarize             | **11756 ± 481**           | -                | 3843 ± 80         | 263 ± 6           | 1032 ± 14               | 3.06x                            |
 | ThinPlateSpline      | **82 ± 1**                | -                | -                 | 58 ± 0            | -                       | 1.41x                            |
 | VerticalFlip         | **32386 ± 936**           | 16830 ± 1653     | 19935 ± 1708      | 2872 ± 37         | 4696 ± 161              | 1.62x                            |
-
-<!-- BENCHMARK_RESULTS_END -->
 
 ## Analysis
 

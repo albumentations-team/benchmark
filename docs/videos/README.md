@@ -63,8 +63,7 @@ To run all libraries and generate a comparison:
 
 ## Benchmark Results
 
-<!-- BENCHMARK_RESULTS_START -->
-# Video Benchmark Results
+### Video Benchmark Results
 
 Number shows how many videos per second can be processed. Larger is better.
 The Speedup column shows how many times faster Albumentations is compared to the fastest other
