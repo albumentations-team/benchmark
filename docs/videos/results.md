@@ -8,67 +8,68 @@ library for each transform.
 
 | Transform | albumentations (videos per second)<br>arm (1 core) | kornia (videos per second)<br>NVIDIA GeForce RTX 4090 | torchvision (videos per second)<br>NVIDIA GeForce RTX 4090 | Speedup<br>(Alb/fastest other) |
 |---|---|---|---|---|
-| Affine | 4.45 ± 0.06 | 21.39 ± 0.05 | **452.58 ± 0.14** | 0.01x |
-| AutoContrast | 20.85 ± 0.10 | 21.41 ± 0.02 | **577.72 ± 16.86** | 0.04x |
-| Blur | **49.61 ± 1.95** | 20.61 ± 0.06 | N/A | 2.41x |
-| Brightness | 56.84 ± 1.94 | 21.85 ± 0.02 | **755.52 ± 435.17** | 0.08x |
-| CLAHE | **8.89 ± 0.09** | N/A | N/A | N/A |
-| CenterCrop128 | 733.66 ± 4.03 | 70.12 ± 1.29 | **1133.39 ± 234.60** | 0.65x |
-| ChannelDropout | **58.28 ± 2.96** | 21.81 ± 0.03 | N/A | 2.67x |
-| ChannelShuffle | 46.92 ± 2.29 | 19.99 ± 0.03 | **958.35 ± 0.20** | 0.05x |
-| CoarseDropout | **65.62 ± 1.82** | N/A | N/A | N/A |
-| ColorJitter | 10.67 ± 0.23 | 18.79 ± 0.03 | **68.75 ± 0.13** | 0.16x |
-| Contrast | 58.81 ± 1.10 | 21.69 ± 0.04 | **546.55 ± 13.23** | 0.11x |
-| CornerIllumination | **4.80 ± 0.47** | 2.60 ± 0.07 | N/A | 1.84x |
-| Elastic | 4.31 ± 0.07 | N/A | **126.83 ± 1.28** | 0.03x |
-| Equalize | 13.09 ± 0.22 | 4.21 ± 0.00 | **191.55 ± 1.25** | 0.07x |
-| Erasing | 69.44 ± 3.31 | N/A | **254.59 ± 6.57** | 0.27x |
-| GaussianBlur | 25.63 ± 0.42 | 21.61 ± 0.05 | **543.44 ± 11.50** | 0.05x |
-| GaussianIllumination | 7.10 ± 0.15 | **20.33 ± 0.08** | N/A | 0.35x |
-| GaussianNoise | 8.40 ± 0.19 | **22.38 ± 0.08** | N/A | 0.38x |
-| Grayscale | 152.01 ± 11.18 | 22.24 ± 0.04 | **838.40 ± 466.76** | 0.18x |
-| HSV | **6.48 ± 0.35** | N/A | N/A | N/A |
-| HorizontalFlip | 8.69 ± 0.21 | 21.86 ± 0.07 | **977.87 ± 49.03** | 0.01x |
-| Hue | 14.47 ± 0.33 | **19.53 ± 0.02** | N/A | 0.74x |
-| Invert | 67.77 ± 2.60 | 21.91 ± 0.23 | **843.27 ± 176.00** | 0.08x |
-| JpegCompression | **19.62 ± 0.20** | N/A | N/A | N/A |
-| LinearIllumination | **4.81 ± 0.25** | 4.29 ± 0.19 | N/A | 1.12x |
-| MedianBlur | **13.87 ± 0.33** | 8.39 ± 0.09 | N/A | 1.65x |
-| MotionBlur | **33.49 ± 0.66** | N/A | N/A | N/A |
-| Normalize | 21.70 ± 0.18 | 21.82 ± 0.02 | **460.80 ± 0.18** | 0.05x |
-| OpticalDistortion | **4.29 ± 0.10** | N/A | N/A | N/A |
-| Pad | 68.10 ± 0.91 | N/A | **759.68 ± 337.78** | 0.09x |
-| Perspective | 4.37 ± 0.08 | N/A | **434.75 ± 0.14** | 0.01x |
-| PlankianJitter | **21.29 ± 0.67** | 10.85 ± 0.01 | N/A | 1.96x |
-| PlasmaBrightness | 3.37 ± 0.03 | **16.94 ± 0.36** | N/A | 0.20x |
-| PlasmaContrast | 2.64 ± 0.01 | **16.97 ± 0.03** | N/A | 0.16x |
-| PlasmaShadow | 6.08 ± 0.05 | **19.03 ± 0.50** | N/A | 0.32x |
-| Posterize | 56.50 ± 2.44 | N/A | **631.46 ± 14.74** | 0.09x |
-| RGBShift | **31.73 ± 0.71** | 22.27 ± 0.04 | N/A | 1.42x |
-| Rain | **23.09 ± 1.52** | 3.77 ± 0.00 | N/A | 6.12x |
-| RandomCrop128 | 695.33 ± 29.37 | 65.33 ± 0.35 | **1132.79 ± 15.23** | 0.61x |
-| RandomGamma | **183.49 ± 6.45** | 21.63 ± 0.02 | N/A | 8.48x |
-| RandomResizedCrop | 15.48 ± 1.12 | 6.29 ± 0.03 | **182.09 ± 15.75** | 0.09x |
-| Resize | 15.67 ± 0.49 | 5.87 ± 0.03 | **139.96 ± 35.04** | 0.11x |
-| Rotate | 28.62 ± 0.76 | 21.53 ± 0.05 | **534.18 ± 0.16** | 0.05x |
-| SaltAndPepper | **9.88 ± 0.19** | 8.82 ± 0.12 | N/A | 1.12x |
-| Saturation | 8.42 ± 0.14 | **36.56 ± 0.12** | N/A | 0.23x |
-| Sharpen | 25.02 ± 0.30 | 17.86 ± 0.03 | **420.09 ± 8.99** | 0.06x |
-| Shear | **4.41 ± 0.08** | N/A | N/A | N/A |
-| Snow | **12.72 ± 0.21** | N/A | N/A | N/A |
-| Solarize | 52.02 ± 1.45 | 20.73 ± 0.02 | **628.42 ± 5.91** | 0.08x |
-| ThinPlateSpline | 4.30 ± 0.14 | **44.90 ± 0.67** | N/A | 0.10x |
-| VerticalFlip | 9.57 ± 0.27 | 21.96 ± 0.24 | **977.92 ± 5.22** | 0.01x |
+| Affine | 4.29 ± 0.07 | 21.39 ± 0.05 | **452.58 ± 0.14** | 0.01x |
+| AutoContrast | 20.51 ± 0.08 | 21.41 ± 0.02 | **577.72 ± 16.86** | 0.04x |
+| Blur | **50.11 ± 2.71** | 20.61 ± 0.06 | N/A | 2.43x |
+| Brightness | 177.33 ± 7.33 | 21.85 ± 0.02 | **755.52 ± 435.17** | 0.23x |
+| CLAHE | **8.79 ± 0.09** | N/A | N/A | N/A |
+| CenterCrop128 | 704.96 ± 15.03 | 70.12 ± 1.29 | **1133.39 ± 234.60** | 0.62x |
+| ChannelDropout | **58.73 ± 3.46** | 21.81 ± 0.03 | N/A | 2.69x |
+| ChannelShuffle | 49.64 ± 1.43 | 19.99 ± 0.03 | **958.35 ± 0.20** | 0.05x |
+| CoarseDropout | **66.85 ± 4.42** | N/A | N/A | N/A |
+| ColorJitter | 10.85 ± 0.53 | 18.79 ± 0.03 | **68.75 ± 0.13** | 0.16x |
+| Contrast | 188.99 ± 6.48 | 21.69 ± 0.04 | **546.55 ± 13.23** | 0.35x |
+| CornerIllumination | **5.43 ± 0.23** | 2.60 ± 0.07 | N/A | 2.09x |
+| Elastic | 4.28 ± 0.15 | N/A | **126.83 ± 1.28** | 0.03x |
+| Equalize | 13.23 ± 0.14 | 4.21 ± 0.00 | **191.55 ± 1.25** | 0.07x |
+| Erasing | 71.48 ± 2.52 | N/A | **254.59 ± 6.57** | 0.28x |
+| GaussianBlur | 26.76 ± 0.90 | 21.61 ± 0.05 | **543.44 ± 11.50** | 0.05x |
+| GaussianIllumination | 6.89 ± 0.53 | **20.33 ± 0.08** | N/A | 0.34x |
+| GaussianNoise | 8.82 ± 0.36 | **22.38 ± 0.08** | N/A | 0.39x |
+| Grayscale | 158.36 ± 2.82 | 22.24 ± 0.04 | **838.40 ± 466.76** | 0.19x |
+| HSV | **6.71 ± 0.33** | N/A | N/A | N/A |
+| HorizontalFlip | 27.26 ± 0.14 | 21.86 ± 0.07 | **977.87 ± 49.03** | 0.03x |
+| Hue | 14.22 ± 0.38 | **19.53 ± 0.02** | N/A | 0.73x |
+| Invert | 355.23 ± 2.36 | 21.91 ± 0.23 | **843.27 ± 176.00** | 0.42x |
+| JpegCompression | **19.69 ± 0.36** | N/A | N/A | N/A |
+| LinearIllumination | **4.90 ± 0.28** | 4.29 ± 0.19 | N/A | 1.14x |
+| MedianBlur | **13.36 ± 0.22** | 8.39 ± 0.09 | N/A | 1.59x |
+| MotionBlur | **35.66 ± 0.56** | N/A | N/A | N/A |
+| Normalize | 21.44 ± 0.34 | 21.82 ± 0.02 | **460.80 ± 0.18** | 0.05x |
+| OpticalDistortion | **4.50 ± 0.10** | N/A | N/A | N/A |
+| Pad | 66.10 ± 0.43 | N/A | **759.68 ± 337.78** | 0.09x |
+| Perspective | 4.21 ± 0.19 | N/A | **434.75 ± 0.14** | 0.01x |
+| PlankianJitter | **22.01 ± 1.27** | 10.85 ± 0.01 | N/A | 2.03x |
+| PlasmaBrightness | 3.31 ± 0.05 | **16.94 ± 0.36** | N/A | 0.20x |
+| PlasmaContrast | 2.66 ± 0.08 | **16.97 ± 0.03** | N/A | 0.16x |
+| PlasmaShadow | 5.97 ± 0.18 | **19.03 ± 0.50** | N/A | 0.31x |
+| Posterize | 65.56 ± 1.27 | N/A | **631.46 ± 14.74** | 0.10x |
+| RGBShift | **32.34 ± 0.70** | 22.27 ± 0.04 | N/A | 1.45x |
+| Rain | **23.19 ± 0.50** | 3.77 ± 0.00 | N/A | 6.15x |
+| RandomCrop128 | 604.41 ± 12.48 | 65.33 ± 0.35 | **1132.79 ± 15.23** | 0.53x |
+| RandomGamma | **190.73 ± 3.99** | 21.63 ± 0.02 | N/A | 8.82x |
+| RandomResizedCrop | 15.64 ± 0.33 | 6.29 ± 0.03 | **182.09 ± 15.75** | 0.09x |
+| Resize | 14.19 ± 0.88 | 5.87 ± 0.03 | **139.96 ± 35.04** | 0.10x |
+| Rotate | 26.87 ± 2.83 | 21.53 ± 0.05 | **534.18 ± 0.16** | 0.05x |
+| SaltAndPepper | **10.10 ± 0.04** | 8.82 ± 0.12 | N/A | 1.15x |
+| Saturation | 8.82 ± 0.15 | **36.56 ± 0.12** | N/A | 0.24x |
+| Sharpen | 25.33 ± 1.19 | 17.86 ± 0.03 | **420.09 ± 8.99** | 0.06x |
+| Shear | **4.44 ± 0.06** | N/A | N/A | N/A |
+| Snow | **12.58 ± 0.09** | N/A | N/A | N/A |
+| Solarize | 50.74 ± 4.14 | 20.73 ± 0.02 | **628.42 ± 5.91** | 0.08x |
+| ThinPlateSpline | 4.42 ± 0.14 | **44.90 ± 0.67** | N/A | 0.10x |
+| VerticalFlip | 381.54 ± 3.99 | 21.96 ± 0.24 | **977.92 ± 5.22** | 0.39x |
 
 ## Torchvision Metadata
 
-```
+```yaml
 system_info:
-  python_version: 3.12.9 | packaged by Anaconda, Inc. | (main, Feb  6 2025, 18:56:27) [GCC 11.2.0]
+  python_version: 3.12.9 | packaged by Anaconda, Inc. | (main, Feb  6 2025, 18:56:27)
+    [GCC 11.2.0]
   platform: Linux-5.15.0-131-generic-x86_64-with-glibc2.31
   processor: x86_64
-  cpu_count: 64
-  timestamp: 2025-03-11T11:14:57.765540+00:00
+  cpu_count: '64'
+  timestamp: '2025-03-11T11:14:57.765540+00:00'
 library_versions:
   torchvision: 0.21.0
   numpy: 2.2.3
@@ -77,10 +78,23 @@ library_versions:
   torch: 2.6.0
   opencv-python: not installed
 thread_settings:
-  environment: {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1', 'VECLIB_MAXIMUM_THREADS': '1', 'NUMEXPR_NUM_THREADS': '1'}
+  environment:
+    OMP_NUM_THREADS: '1'
+    OPENBLAS_NUM_THREADS: '1'
+    MKL_NUM_THREADS: '1'
+    VECLIB_MAXIMUM_THREADS: '1'
+    NUMEXPR_NUM_THREADS: '1'
   opencv: not installed
-  pytorch: {'threads': 32, 'gpu_available': True, 'gpu_device': 0, 'gpu_name': 'NVIDIA GeForce RTX 4090', 'gpu_memory_total': 23.55084228515625, 'gpu_memory_allocated': 15.05643081665039}
-  pillow: {'threads': 'unknown', 'simd': False}
+  pytorch:
+    threads: 32
+    gpu_available: true
+    gpu_device: 0
+    gpu_name: NVIDIA GeForce RTX 4090
+    gpu_memory_total: 23.55084228515625
+    gpu_memory_allocated: 15.05643081665039
+  pillow:
+    threads: unknown
+    simd: false
 benchmark_params:
   num_videos: 200
   num_runs: 10
@@ -89,47 +103,19 @@ benchmark_params:
   warmup_threshold: 0.05
   min_warmup_windows: 3
 precision: torch.float16
-```
 
-## Albumentations Metadata
-
-```
-system_info:
-  python_version: 3.12.8 | packaged by Anaconda, Inc. | (main, Dec 11 2024, 10:37:40) [Clang 14.0.6 ]
-  platform: macOS-15.1-arm64-arm-64bit
-  processor: arm
-  cpu_count: 16
-  timestamp: 2025-03-11T01:57:36.320659+00:00
-library_versions:
-  albumentations: 2.0.5
-  numpy: 2.2.3
-  pillow: 11.1.0
-  opencv-python-headless: 4.11.0.86
-  torch: 2.6.0
-  opencv-python: not installed
-thread_settings:
-  environment: {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1', 'VECLIB_MAXIMUM_THREADS': '1', 'NUMEXPR_NUM_THREADS': '1'}
-  opencv: {'threads': 1, 'opencl': False}
-  pytorch: {'threads': 1, 'gpu_available': False, 'gpu_device': None}
-  pillow: {'threads': 'unknown', 'simd': False}
-benchmark_params:
-  num_videos: 200
-  num_runs: 5
-  max_warmup_iterations: 100
-  warmup_window: 5
-  warmup_threshold: 0.05
-  min_warmup_windows: 3
 ```
 
 ## Kornia Metadata
 
-```
+```yaml
 system_info:
-  python_version: 3.12.9 | packaged by Anaconda, Inc. | (main, Feb  6 2025, 18:56:27) [GCC 11.2.0]
+  python_version: 3.12.9 | packaged by Anaconda, Inc. | (main, Feb  6 2025, 18:56:27)
+    [GCC 11.2.0]
   platform: Linux-5.15.0-131-generic-x86_64-with-glibc2.31
   processor: x86_64
-  cpu_count: 64
-  timestamp: 2025-03-11T00:46:14.791885+00:00
+  cpu_count: '64'
+  timestamp: '2025-03-11T00:46:14.791885+00:00'
 library_versions:
   kornia: 0.8.0
   numpy: 2.2.3
@@ -138,10 +124,23 @@ library_versions:
   torch: 2.6.0
   opencv-python: not installed
 thread_settings:
-  environment: {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1', 'VECLIB_MAXIMUM_THREADS': '1', 'NUMEXPR_NUM_THREADS': '1'}
+  environment:
+    OMP_NUM_THREADS: '1'
+    OPENBLAS_NUM_THREADS: '1'
+    MKL_NUM_THREADS: '1'
+    VECLIB_MAXIMUM_THREADS: '1'
+    NUMEXPR_NUM_THREADS: '1'
   opencv: not installed
-  pytorch: {'threads': 32, 'gpu_available': True, 'gpu_device': 0, 'gpu_name': 'NVIDIA GeForce RTX 4090', 'gpu_memory_total': 23.55084228515625, 'gpu_memory_allocated': 15.05643081665039}
-  pillow: {'threads': 'unknown', 'simd': False}
+  pytorch:
+    threads: 32
+    gpu_available: true
+    gpu_device: 0
+    gpu_name: NVIDIA GeForce RTX 4090
+    gpu_memory_total: 23.55084228515625
+    gpu_memory_allocated: 15.05643081665039
+  pillow:
+    threads: unknown
+    simd: false
 benchmark_params:
   num_videos: 200
   num_runs: 5
@@ -150,4 +149,49 @@ benchmark_params:
   warmup_threshold: 0.05
   min_warmup_windows: 3
 precision: torch.float16
+
+```
+
+## Albumentations Metadata
+
+```yaml
+system_info:
+  python_version: 3.12.8 | packaged by Anaconda, Inc. | (main, Dec 11 2024, 10:37:40)
+    [Clang 14.0.6 ]
+  platform: macOS-15.1-arm64-arm-64bit
+  processor: arm
+  cpu_count: '16'
+  timestamp: '2025-04-16T17:31:48.175211+00:00'
+library_versions:
+  albumentations: 2.0.5
+  numpy: 2.2.4
+  pillow: 11.2.1
+  opencv-python-headless: 4.11.0.86
+  torch: 2.6.0
+  opencv-python: not installed
+thread_settings:
+  environment:
+    OMP_NUM_THREADS: '1'
+    OPENBLAS_NUM_THREADS: '1'
+    MKL_NUM_THREADS: '1'
+    VECLIB_MAXIMUM_THREADS: '1'
+    NUMEXPR_NUM_THREADS: '1'
+  opencv:
+    threads: 1
+    opencl: false
+  pytorch:
+    threads: 1
+    gpu_available: false
+    gpu_device: null
+  pillow:
+    threads: unknown
+    simd: false
+benchmark_params:
+  num_videos: 200
+  num_runs: 5
+  max_warmup_iterations: 100
+  warmup_window: 5
+  warmup_threshold: 0.05
+  min_warmup_windows: 3
+
 ```

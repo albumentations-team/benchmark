@@ -68,6 +68,16 @@ repos:
       - id: mypy
         additional_dependencies:
         - types-setuptools  # Add the type stubs here
+        - types-PyYAML
         files: ^(benchmark|tools)/
         args:
           [ --config-file=pyproject.toml ]
+  - repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.399 # Specify a version or use the latest tag
+    hooks:
+      - id: pyright
+        # Optional: specify files/directories to check, defaults to project root
+        files: ^(benchmark|tools)/
+        additional_dependencies: [.]
+        # Tell pyright to use the project config
+        args: ["--project", "pyproject.toml"]

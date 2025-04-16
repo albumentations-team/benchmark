@@ -126,6 +126,7 @@ class BenchmarkRunner:
         min_iterations_before_stopping = 10
         max_time_per_transform = 60
         start_time = time.time()
+        time_per_image = 0.0  # Initialize here
 
         with tqdm(total=self.max_warmup_iterations, desc=f"Warming up {transform_spec.name}", leave=False) as pbar:
             for i in range(self.max_warmup_iterations):
