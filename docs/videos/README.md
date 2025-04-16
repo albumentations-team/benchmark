@@ -6,11 +6,15 @@ This directory contains benchmark results for video augmentation libraries.
 
 ## Overview
 
-The video benchmarks measure the performance of various augmentation libraries on video transformations. The benchmarks compare CPU-based processing (Albumentations) with GPU-accelerated processing (Kornia).
+The video benchmarks measure the performance of various augmentation libraries on video transformations.
+The benchmarks compare CPU-based processing (Albumentations) with GPU-accelerated processing (Kornia).
 
 ## Dataset
 
-The benchmarks use the [UCF101 dataset](https://www.crcv.ucf.edu/data/UCF101.php), which contains 13,320 videos from 101 action categories. The videos are realistic, collected from YouTube, and include a wide variety of camera motion, object appearance, pose, scale, viewpoint, and background. This makes it an excellent dataset for benchmarking video augmentation performance across diverse real-world scenarios.
+The benchmarks use the [UCF101 dataset](https://www.crcv.ucf.edu/data/UCF101.php), which contains 13,320 videos from
+101 action categories. The videos are realistic, collected from YouTube, and include a wide variety of camera
+motion, object appearance, pose, scale, viewpoint, and background. This makes it an excellent dataset for
+benchmarking video augmentation performance across diverse real-world scenarios.
 
 You can download the dataset from: https://www.crcv.ucf.edu/data/UCF101/UCF101.rar
 
@@ -60,8 +64,6 @@ To run all libraries and generate a comparison:
 ## Benchmark Results
 
 <!-- BENCHMARK_RESULTS_START -->
-<!-- This file is auto-generated. Do not edit directly. -->
-
 # Video Benchmark Results
 
 Number shows how many videos per second can be processed. Larger is better.
@@ -258,8 +260,6 @@ benchmark_params:
 
 ```
 
-
-<!-- BENCHMARK_RESULTS_END -->
 
 ## Analysis
 The benchmark results show interesting trade-offs between CPU and GPU processing:

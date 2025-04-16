@@ -278,22 +278,10 @@ def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(description="Compare video benchmark results")
     parser.add_argument("-r", "--results-dir", required=True, help="Directory containing benchmark results")
-    parser.add_argument("-o", "--output", required=True, help="Output markdown file")
     parser.add_argument("--update-readme", type=Path, help="Path to README file to update with results")
-    parser.add_argument(
-        "--start-marker",
-        default="<!-- BENCHMARK_RESULTS_START -->",
-        help="Marker for start of results section in README",
-    )
-    parser.add_argument(
-        "--end-marker",
-        default="<!-- BENCHMARK_RESULTS_END -->",
-        help="Marker for end of results section in README",
-    )
     args = parser.parse_args()
 
     results_dir = Path(args.results_dir)
-    output_file = Path(args.output)
 
     results = load_results(results_dir)
     table = generate_comparison_table(results)
@@ -303,8 +291,6 @@ def main() -> None:
     metadata_output_dir = None
     if args.update_readme:
         metadata_output_dir = args.update_readme.parent
-    elif args.output:
-        metadata_output_dir = Path(args.output).parent
 
     # Save metadata YAML files if an output directory is determined
     if metadata_output_dir:
@@ -379,8 +365,6 @@ To run all libraries and generate a comparison:
 ## Benchmark Results
 
 <!-- BENCHMARK_RESULTS_START -->
-<!-- This file is auto-generated. Do not edit directly. -->
-
 # Video Benchmark Results
 
 Number shows how many videos per second can be processed. Larger is better.
@@ -390,8 +374,6 @@ library for each transform.
 {table}
 
 {metadata_summary_str}
-
-<!-- BENCHMARK_RESULTS_END -->
 
 ## Analysis
 The benchmark results show interesting trade-offs between CPU and GPU processing:
@@ -410,11 +392,6 @@ Based on the benchmark results, we recommend:
 2. For complex transformations or batch processing, GPU acceleration provides significant benefits
 3. Consider the specific transformations you need and their relative performance on CPU vs GPU
 """
-
-    # Write to output file (e.g., results.md)
-    with output_file.open("w") as f:
-        f.write(full_report)
-    logger.info(f"Results written to {output_file}")
 
     # Overwrite README if requested
     if args.update_readme:
