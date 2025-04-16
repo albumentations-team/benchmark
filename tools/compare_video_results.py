@@ -38,6 +38,41 @@ def convert_thread_settings(settings: dict[str, Any]) -> dict[str, Any]:
     return updated
 
 
+# New helper function to process a metadata dictionary
+def process_metadata(metadata_dict: dict[str, Any]) -> dict[str, Any]:
+    """Processes a metadata dictionary, converting string literals."""
+    processed = metadata_dict.copy()
+    for key, value in processed.items():
+        if key == "thread_settings" and isinstance(value, dict):
+            processed[key] = convert_thread_settings(value)
+        else:
+            processed[key] = convert_literal(value)
+    return processed
+
+
+# New helper function to save individual metadata YAML files
+def save_metadata_files(results: dict[str, dict[str, Any]], output_dir: Path) -> None:
+    """Save individual metadata YAML files to the given output directory."""
+    output_dir.mkdir(parents=True, exist_ok=True)  # Ensure dir exists
+    for library, result in results.items():
+        if "metadata" in result:
+            try:
+                processed_metadata = process_metadata(result["metadata"])
+                yaml_filename = f"{library}_video_metadata.yaml"
+                yaml_output_path = output_dir / yaml_filename
+                with yaml_output_path.open("w") as f:
+                    yaml.dump(
+                        processed_metadata,
+                        f,
+                        default_flow_style=False,
+                        indent=2,
+                        sort_keys=False,
+                    )
+                logger.info(f"Saved metadata for {library} to {yaml_output_path}")
+            except Exception:
+                logger.exception(f"Failed to save metadata YAML for {library}")
+
+
 def load_results(results_dir: Path) -> dict[str, dict[str, Any]]:
     """Load all video benchmark results from the directory."""
     results = {}
@@ -222,61 +257,21 @@ def get_metadata_summary(results: dict[str, dict[str, Any]]) -> str:
     metadata_summary: list[str] = []
     for library, result in results.items():
         if "metadata" in result:
-            # Combine the two appends into a single extend
             metadata_summary.extend((f"## {library.capitalize()} Metadata\n", "```yaml"))
 
-            metadata_to_dump = result["metadata"].copy()
+            # Process the metadata first
+            processed_metadata = process_metadata(result["metadata"])
 
-            # Attempt to parse stringified Python literals using helpers
-            for key, value in metadata_to_dump.items():
-                if key == "thread_settings" and isinstance(value, dict):
-                    metadata_to_dump[key] = convert_thread_settings(value)
-                else:
-                    metadata_to_dump[key] = convert_literal(value)
-
-            # Dump the potentially modified metadata as YAML
+            # Dump the processed metadata as YAML for the summary
             try:
-                yaml_str = yaml.dump(metadata_to_dump, default_flow_style=False, indent=2, sort_keys=False)
+                yaml_str = yaml.dump(processed_metadata, default_flow_style=False, indent=2, sort_keys=False)
                 metadata_summary.append(yaml_str)
             except yaml.YAMLError:
-                logger.exception(f"Error dumping metadata to YAML for {library}")
-                metadata_summary.append(str(metadata_to_dump))
+                logger.exception(f"Error dumping metadata to YAML summary for {library}")
+                metadata_summary.append(str(processed_metadata))  # Dump processed version on error
 
             metadata_summary.append("```\n")
     return "\n".join(metadata_summary)
-
-
-def update_readme(readme_path: Path, content: str, start_marker: str, end_marker: str) -> None:
-    """Update a section of the README file between markers"""
-    auto_generated_comment = "<!-- This file is auto-generated. Do not edit directly. -->\n\n"
-
-    if not readme_path.exists():
-        # Create a new README if it doesn't exist
-        readme_path.write_text(f"{auto_generated_comment}{start_marker}\n{content}\n{end_marker}")
-        return
-
-    # Read the existing README
-    readme_content = readme_path.read_text()
-
-    # Add auto-generated comment at the top if it doesn't exist
-    if not readme_content.startswith(auto_generated_comment.strip()):
-        readme_content = auto_generated_comment + readme_content
-
-    # Find the section to update
-    start_index = readme_content.find(start_marker)
-    end_index = readme_content.find(end_marker)
-
-    if start_index == -1 or end_index == -1:
-        # If markers not found, append to the end
-        readme_content += f"\n\n{start_marker}\n{content}\n{end_marker}"
-    else:
-        # Replace the section between markers
-        readme_content = (
-            readme_content[: start_index + len(start_marker)] + "\n" + content + "\n" + readme_content[end_index:]
-        )
-
-    # Write the updated README
-    readme_path.write_text(readme_content)
 
 
 def main() -> None:
@@ -302,10 +297,89 @@ def main() -> None:
 
     results = load_results(results_dir)
     table = generate_comparison_table(results)
-    metadata = get_metadata_summary(results)
+    metadata_summary_str = get_metadata_summary(results)
 
-    # Create full report with auto-generated comment
+    # Determine the output directory for metadata YAML files
+    metadata_output_dir = None
+    if args.update_readme:
+        metadata_output_dir = args.update_readme.parent
+    elif args.output:
+        metadata_output_dir = Path(args.output).parent
+
+    # Save metadata YAML files if an output directory is determined
+    if metadata_output_dir:
+        save_metadata_files(results, metadata_output_dir)
+    else:
+        logger.warning("Could not determine output directory for metadata YAML files. Skipping save.")
+
+    # Create full report string, including introductory text
     full_report = f"""<!-- This file is auto-generated. Do not edit directly. -->
+
+# Video Augmentation Benchmarks
+
+This directory contains benchmark results for video augmentation libraries.
+
+## Overview
+
+The video benchmarks measure the performance of various augmentation libraries on video transformations.
+The benchmarks compare CPU-based processing (Albumentations) with GPU-accelerated processing (Kornia).
+
+## Dataset
+
+The benchmarks use the [UCF101 dataset](https://www.crcv.ucf.edu/data/UCF101.php), which contains 13,320 videos from
+101 action categories. The videos are realistic, collected from YouTube, and include a wide variety of camera
+motion, object appearance, pose, scale, viewpoint, and background. This makes it an excellent dataset for
+benchmarking video augmentation performance across diverse real-world scenarios.
+
+You can download the dataset from: https://www.crcv.ucf.edu/data/UCF101/UCF101.rar
+
+## Methodology
+
+1. **Video Loading**: Videos are loaded using library-specific loaders:
+   - OpenCV for Albumentations
+   - PyTorch tensors for Kornia
+
+2. **Warmup Phase**:
+   - Performs adaptive warmup until performance variance stabilizes
+   - Uses configurable parameters for stability detection
+   - Implements early stopping for slow transforms
+
+3. **Measurement Phase**:
+   - Multiple runs of each transform
+   - Measures throughput (videos/second)
+   - Calculates statistical metrics (median, standard deviation)
+
+4. **Environment Control**:
+   - CPU benchmarks are run single-threaded
+   - GPU benchmarks utilize the specified GPU device
+   - Thread settings are controlled for consistent results
+
+## Hardware Comparison
+
+The benchmarks compare:
+- Albumentations: CPU-based processing (single thread)
+- Kornia: GPU-accelerated processing (NVIDIA GPUs)
+
+This provides insights into the trade-offs between CPU and GPU processing for video augmentation.
+
+## Running the Benchmarks
+
+To run the video benchmarks:
+
+```bash
+./run_video_single.sh -l albumentations -d /path/to/videos -o /path/to/output
+```
+
+To run all libraries and generate a comparison:
+
+```bash
+./run_video_all.sh -d /path/to/videos -o /path/to/output
+```
+
+## Benchmark Results
+
+<!-- BENCHMARK_RESULTS_START -->
+<!-- This file is auto-generated. Do not edit directly. -->
 
 # Video Benchmark Results
 
@@ -315,19 +389,37 @@ library for each transform.
 
 {table}
 
-{metadata}
+{metadata_summary_str}
+
+<!-- BENCHMARK_RESULTS_END -->
+
+## Analysis
+The benchmark results show interesting trade-offs between CPU and GPU processing:
+- **CPU Advantages**:
+  - Better for simple transformations with low computational complexity
+  - No data transfer overhead between CPU and GPU
+  - More consistent performance across different transform types
+- **GPU Advantages**:
+  - Significantly faster for complex transformations
+  - Better scaling with video resolution
+  - More efficient for batch processing
+
+## Recommendations
+Based on the benchmark results, we recommend:
+1. For simple transformations on a small number of videos, CPU processing may be sufficient
+2. For complex transformations or batch processing, GPU acceleration provides significant benefits
+3. Consider the specific transformations you need and their relative performance on CPU vs GPU
 """
 
-    # Write to file
+    # Write to output file (e.g., results.md)
     with output_file.open("w") as f:
         f.write(full_report)
-
     logger.info(f"Results written to {output_file}")
 
-    # Update README if requested
+    # Overwrite README if requested
     if args.update_readme:
-        update_readme(args.update_readme, full_report, args.start_marker, args.end_marker)
-        logger.info(f"Updated {args.update_readme}")
+        args.update_readme.write_text(full_report)
+        logger.info(f"Overwrote {args.update_readme} with new content.")
 
 
 if __name__ == "__main__":
