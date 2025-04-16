@@ -104,6 +104,8 @@ benchmark_params:
   min_warmup_windows: 3
 precision: torch.float16
 
+```
+
 ## Kornia Metadata
 
 ```yaml
@@ -159,11 +161,11 @@ system_info:
   platform: macOS-15.1-arm64-arm-64bit
   processor: arm
   cpu_count: '16'
-  timestamp: '2025-04-16T17:31:48.175211+00:00'
+  timestamp: '2025-03-17T21:40:35.132413+00:00'
 library_versions:
   albumentations: 2.0.5
   numpy: 2.2.4
-  pillow: 11.2.1
+  pillow: 11.1.0
   opencv-python-headless: 4.11.0.86
   torch: 2.6.0
   opencv-python: not installed
@@ -192,34 +194,4 @@ benchmark_params:
   warmup_threshold: 0.05
   min_warmup_windows: 3
 
-```
-
-## Albumentations Metadata
-
-```
-system_info:
-  python_version: 3.12.8 | packaged by Anaconda, Inc. | (main, Dec 11 2024, 10:37:40) [Clang 14.0.6 ]
-  platform: macOS-15.1-arm64-arm-64bit
-  processor: arm
-  cpu_count: 16
-  timestamp: 2025-03-17T21:40:35.132413+00:00
-library_versions:
-  albumentations: 2.0.5
-  numpy: 2.2.4
-  pillow: 11.1.0
-  opencv-python-headless: 4.11.0.86
-  torch: 2.6.0
-  opencv-python: not installed
-thread_settings:
-  environment: {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1', 'VECLIB_MAXIMUM_THREADS': '1', 'NUMEXPR_NUM_THREADS': '1'}
-  opencv: {'threads': 1, 'opencl': False}
-  pytorch: {'threads': 1, 'gpu_available': False, 'gpu_device': None}
-  pillow: {'threads': 'unknown', 'simd': False}
-benchmark_params:
-  num_videos: 200
-  num_runs: 5
-  max_warmup_iterations: 100
-  warmup_window: 5
-  warmup_threshold: 0.05
-  min_warmup_windows: 3
 ```

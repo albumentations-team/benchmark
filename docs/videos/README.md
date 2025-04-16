@@ -1,64 +1,5 @@
 <!-- This file is auto-generated. Do not edit directly. -->
 
-# Video Augmentation Benchmarks
-
-This directory contains benchmark results for video augmentation libraries.
-
-## Overview
-
-The video benchmarks measure the performance of various augmentation libraries on video transformations. The benchmarks compare CPU-based processing (Albumentations) with GPU-accelerated processing (Kornia).
-
-## Dataset
-
-The benchmarks use the [UCF101 dataset](https://www.crcv.ucf.edu/data/UCF101.php), which contains 13,320 videos from 101 action categories. The videos are realistic, collected from YouTube, and include a wide variety of camera motion, object appearance, pose, scale, viewpoint, and background. This makes it an excellent dataset for benchmarking video augmentation performance across diverse real-world scenarios.
-
-You can download the dataset from: https://www.crcv.ucf.edu/data/UCF101/UCF101.rar
-
-## Methodology
-
-1. **Video Loading**: Videos are loaded using library-specific loaders:
-   - OpenCV for Albumentations
-   - PyTorch tensors for Kornia
-
-2. **Warmup Phase**:
-   - Performs adaptive warmup until performance variance stabilizes
-   - Uses configurable parameters for stability detection
-   - Implements early stopping for slow transforms
-
-3. **Measurement Phase**:
-   - Multiple runs of each transform
-   - Measures throughput (videos/second)
-   - Calculates statistical metrics (median, standard deviation)
-
-4. **Environment Control**:
-   - CPU benchmarks are run single-threaded
-   - GPU benchmarks utilize the specified GPU device
-   - Thread settings are controlled for consistent results
-
-## Hardware Comparison
-
-The benchmarks compare:
-- Albumentations: CPU-based processing (single thread)
-- Kornia: GPU-accelerated processing (NVIDIA GPUs)
-
-This provides insights into the trade-offs between CPU and GPU processing for video augmentation.
-
-## Running the Benchmarks
-
-To run the video benchmarks:
-
-```bash
-./run_video_single.sh -l albumentations -d /path/to/videos -o /path/to/output
-```
-
-To run all libraries and generate a comparison:
-
-```bash
-./run_video_all.sh -d /path/to/videos -o /path/to/output
-```
-
-## Benchmark Results
-
 <!-- BENCHMARK_RESULTS_START -->
 <!-- This file is auto-generated. Do not edit directly. -->
 
@@ -166,6 +107,8 @@ benchmark_params:
   min_warmup_windows: 3
 precision: torch.float16
 
+```
+
 ## Kornia Metadata
 
 ```yaml
@@ -221,11 +164,11 @@ system_info:
   platform: macOS-15.1-arm64-arm-64bit
   processor: arm
   cpu_count: '16'
-  timestamp: '2025-04-16T17:31:48.175211+00:00'
+  timestamp: '2025-03-17T21:40:35.132413+00:00'
 library_versions:
   albumentations: 2.0.5
   numpy: 2.2.4
-  pillow: 11.2.1
+  pillow: 11.1.0
   opencv-python-headless: 4.11.0.86
   torch: 2.6.0
   opencv-python: not installed
@@ -256,57 +199,5 @@ benchmark_params:
 
 ```
 
-## Albumentations Metadata
-
-```
-system_info:
-  python_version: 3.12.8 | packaged by Anaconda, Inc. | (main, Dec 11 2024, 10:37:40) [Clang 14.0.6 ]
-  platform: macOS-15.1-arm64-arm-64bit
-  processor: arm
-  cpu_count: 16
-  timestamp: 2025-03-17T21:40:35.132413+00:00
-library_versions:
-  albumentations: 2.0.5
-  numpy: 2.2.4
-  pillow: 11.1.0
-  opencv-python-headless: 4.11.0.86
-  torch: 2.6.0
-  opencv-python: not installed
-thread_settings:
-  environment: {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1', 'VECLIB_MAXIMUM_THREADS': '1', 'NUMEXPR_NUM_THREADS': '1'}
-  opencv: {'threads': 1, 'opencl': False}
-  pytorch: {'threads': 1, 'gpu_available': False, 'gpu_device': None}
-  pillow: {'threads': 'unknown', 'simd': False}
-benchmark_params:
-  num_videos: 200
-  num_runs: 5
-  max_warmup_iterations: 100
-  warmup_window: 5
-  warmup_threshold: 0.05
-  min_warmup_windows: 3
-```
-
 
 <!-- BENCHMARK_RESULTS_END -->
-
-## Analysis
-
-The benchmark results show interesting trade-offs between CPU and GPU processing:
-
-- **CPU Advantages**:
-  - Better for simple transformations with low computational complexity
-  - No data transfer overhead between CPU and GPU
-  - More consistent performance across different transform types
-
-- **GPU Advantages**:
-  - Significantly faster for complex transformations
-  - Better scaling with video resolution
-  - More efficient for batch processing
-
-## Recommendations
-
-Based on the benchmark results, we recommend:
-
-1. For simple transformations on a small number of videos, CPU processing may be sufficient
-2. For complex transformations or batch processing, GPU acceleration provides significant benefits
-3. Consider the specific transformations you need and their relative performance on CPU vs GPU

@@ -10,6 +10,9 @@ from typing import Any
 
 import yaml
 
+# Import the shared function
+from comparison_utils import update_readme
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -36,6 +39,18 @@ def convert_thread_settings(settings: dict[str, Any]) -> dict[str, Any]:
     for key, subvalue in settings.items():
         updated[key] = convert_literal(subvalue)
     return updated
+
+
+# New helper function to process a metadata dictionary
+def process_metadata(metadata_dict: dict[str, Any]) -> dict[str, Any]:
+    """Processes a metadata dictionary, converting string literals."""
+    processed = metadata_dict.copy()
+    for key, value in processed.items():
+        if key == "thread_settings" and isinstance(value, dict):
+            processed[key] = convert_thread_settings(value)
+        else:
+            processed[key] = convert_literal(value)
+    return processed
 
 
 def load_results(results_dir: Path) -> dict[str, dict[str, Any]]:
@@ -222,61 +237,21 @@ def get_metadata_summary(results: dict[str, dict[str, Any]]) -> str:
     metadata_summary: list[str] = []
     for library, result in results.items():
         if "metadata" in result:
-            # Combine the two appends into a single extend
             metadata_summary.extend((f"## {library.capitalize()} Metadata\n", "```yaml"))
 
-            metadata_to_dump = result["metadata"].copy()
+            # Process the metadata first
+            processed_metadata = process_metadata(result["metadata"])
 
-            # Attempt to parse stringified Python literals using helpers
-            for key, value in metadata_to_dump.items():
-                if key == "thread_settings" and isinstance(value, dict):
-                    metadata_to_dump[key] = convert_thread_settings(value)
-                else:
-                    metadata_to_dump[key] = convert_literal(value)
-
-            # Dump the potentially modified metadata as YAML
+            # Dump the processed metadata as YAML for the summary
             try:
-                yaml_str = yaml.dump(metadata_to_dump, default_flow_style=False, indent=2, sort_keys=False)
+                yaml_str = yaml.dump(processed_metadata, default_flow_style=False, indent=2, sort_keys=False)
                 metadata_summary.append(yaml_str)
             except yaml.YAMLError:
-                logger.exception(f"Error dumping metadata to YAML for {library}")
-                metadata_summary.append(str(metadata_to_dump))
+                logger.exception(f"Error dumping metadata to YAML summary for {library}")
+                metadata_summary.append(str(processed_metadata))  # Dump processed version on error
 
             metadata_summary.append("```\n")
     return "\n".join(metadata_summary)
-
-
-def update_readme(readme_path: Path, content: str, start_marker: str, end_marker: str) -> None:
-    """Update a section of the README file between markers"""
-    auto_generated_comment = "<!-- This file is auto-generated. Do not edit directly. -->\n\n"
-
-    if not readme_path.exists():
-        # Create a new README if it doesn't exist
-        readme_path.write_text(f"{auto_generated_comment}{start_marker}\n{content}\n{end_marker}")
-        return
-
-    # Read the existing README
-    readme_content = readme_path.read_text()
-
-    # Add auto-generated comment at the top if it doesn't exist
-    if not readme_content.startswith(auto_generated_comment.strip()):
-        readme_content = auto_generated_comment + readme_content
-
-    # Find the section to update
-    start_index = readme_content.find(start_marker)
-    end_index = readme_content.find(end_marker)
-
-    if start_index == -1 or end_index == -1:
-        # If markers not found, append to the end
-        readme_content += f"\n\n{start_marker}\n{content}\n{end_marker}"
-    else:
-        # Replace the section between markers
-        readme_content = (
-            readme_content[: start_index + len(start_marker)] + "\n" + content + "\n" + readme_content[end_index:]
-        )
-
-    # Write the updated README
-    readme_path.write_text(readme_content)
 
 
 def main() -> None:
@@ -302,7 +277,33 @@ def main() -> None:
 
     results = load_results(results_dir)
     table = generate_comparison_table(results)
-    metadata = get_metadata_summary(results)
+    metadata_summary_str = get_metadata_summary(results)
+
+    # Determine the output directory for metadata YAML files (should be docs/videos)
+    metadata_output_dir = None
+    if args.update_readme:
+        metadata_output_dir = args.update_readme.parent
+    elif args.output:
+        # Fallback to output file's directory if update_readme is not specified
+        metadata_output_dir = Path(args.output).parent
+
+    # Save individual metadata YAML files if output dir is determined
+    if metadata_output_dir:
+        metadata_output_dir.mkdir(parents=True, exist_ok=True)  # Ensure dir exists
+        for library, result in results.items():
+            if "metadata" in result:
+                try:
+                    processed_metadata = process_metadata(result["metadata"])
+                    yaml_filename = f"{library}_video_metadata.yaml"
+                    yaml_output_path = metadata_output_dir / yaml_filename  # Use docs dir
+                    with yaml_output_path.open("w") as f:
+                        yaml.dump(processed_metadata, f, default_flow_style=False, indent=2, sort_keys=False)
+                    logger.info(f"Saved metadata for {library} to {yaml_output_path}")
+                except Exception:
+                    # Use logger.exception to automatically include traceback
+                    logger.exception(f"Failed to save metadata YAML for {library}")
+    else:
+        logger.warning("Could not determine output directory for metadata YAML files. Skipping save.")
 
     # Create full report with auto-generated comment
     full_report = f"""<!-- This file is auto-generated. Do not edit directly. -->
@@ -315,7 +316,7 @@ library for each transform.
 
 {table}
 
-{metadata}
+{metadata_summary_str}
 """
 
     # Write to file

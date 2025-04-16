@@ -332,22 +332,6 @@ def main() -> None:
     speedups.to_csv(csv_path)
     logger.info(f"Speedup data saved to {csv_path}")
 
-    # Also save the raw throughputs for reference
-    throughputs = pd.DataFrame(
-        index=sorted({transform for lib_results in results.values() for transform in lib_results["results"]}),
-    )
-    for library, library_results in results.items():
-        library_throughputs = {}
-        for transform, transform_results in library_results["results"].items():
-            if transform_results.get("supported", False) and not transform_results.get("early_stopped", False):
-                library_throughputs[transform] = transform_results.get("median_throughput", 0)
-        throughputs[library] = pd.Series(library_throughputs)
-
-    # Save raw throughputs
-    throughputs_csv_path = args.output_dir / f"{args.type}_throughputs.csv"
-    throughputs.to_csv(throughputs_csv_path)
-    logger.info(f"Raw throughput data saved to {throughputs_csv_path}")
-
     # Generate a summary of the speedup analysis
     summary = {
         "total_transforms": len(speedups),
