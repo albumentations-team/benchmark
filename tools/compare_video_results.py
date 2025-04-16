@@ -50,6 +50,29 @@ def process_metadata(metadata_dict: dict[str, Any]) -> dict[str, Any]:
     return processed
 
 
+# New helper function to save individual metadata YAML files
+def save_metadata_files(results: dict[str, dict[str, Any]], output_dir: Path) -> None:
+    """Save individual metadata YAML files to the given output directory."""
+    output_dir.mkdir(parents=True, exist_ok=True)  # Ensure dir exists
+    for library, result in results.items():
+        if "metadata" in result:
+            try:
+                processed_metadata = process_metadata(result["metadata"])
+                yaml_filename = f"{library}_video_metadata.yaml"
+                yaml_output_path = output_dir / yaml_filename
+                with yaml_output_path.open("w") as f:
+                    yaml.dump(
+                        processed_metadata,
+                        f,
+                        default_flow_style=False,
+                        indent=2,
+                        sort_keys=False,
+                    )
+                logger.info(f"Saved metadata for {library} to {yaml_output_path}")
+            except Exception:
+                logger.exception(f"Failed to save metadata YAML for {library}")
+
+
 def load_results(results_dir: Path) -> dict[str, dict[str, Any]]:
     """Load all video benchmark results from the directory."""
     results = {}
@@ -276,29 +299,16 @@ def main() -> None:
     table = generate_comparison_table(results)
     metadata_summary_str = get_metadata_summary(results)
 
-    # Determine the output directory for metadata YAML files (should be docs/videos)
+    # Determine the output directory for metadata YAML files
     metadata_output_dir = None
     if args.update_readme:
         metadata_output_dir = args.update_readme.parent
     elif args.output:
-        # Fallback to output file's directory if update_readme is not specified
         metadata_output_dir = Path(args.output).parent
 
-    # Save individual metadata YAML files if output dir is determined
+    # Save metadata YAML files if an output directory is determined
     if metadata_output_dir:
-        metadata_output_dir.mkdir(parents=True, exist_ok=True)  # Ensure dir exists
-        for library, result in results.items():
-            if "metadata" in result:
-                try:
-                    processed_metadata = process_metadata(result["metadata"])
-                    yaml_filename = f"{library}_video_metadata.yaml"
-                    yaml_output_path = metadata_output_dir / yaml_filename  # Use docs dir
-                    with yaml_output_path.open("w") as f:
-                        yaml.dump(processed_metadata, f, default_flow_style=False, indent=2, sort_keys=False)
-                    logger.info(f"Saved metadata for {library} to {yaml_output_path}")
-                except Exception:
-                    # Use logger.exception to automatically include traceback
-                    logger.exception(f"Failed to save metadata YAML for {library}")
+        save_metadata_files(results, metadata_output_dir)
     else:
         logger.warning("Could not determine output directory for metadata YAML files. Skipping save.")
 
