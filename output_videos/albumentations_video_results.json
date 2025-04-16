@@ -33,7 +33,7 @@
   "results": {
     "Resize": {
       "supported": true,
-      "warmup_iterations": 16,
+      "warmup_iterations": 31,
       "throughputs": [
         16.08242209137268,
         16.14817359593628,
@@ -83,7 +83,7 @@
     },
     "RandomResizedCrop": {
       "supported": true,
-      "warmup_iterations": 16,
+      "warmup_iterations": 17,
       "throughputs": [
         17.771997403171056,
         17.44701024827247,
@@ -183,7 +183,7 @@
     },
     "Pad": {
       "supported": true,
-      "warmup_iterations": 16,
+      "warmup_iterations": 18,
       "throughputs": [
         61.89459668961499,
         56.92513813812684,
@@ -208,7 +208,7 @@
     },
     "Rotate": {
       "supported": true,
-      "warmup_iterations": 16,
+      "warmup_iterations": 19,
       "throughputs": [
         28.702132786195616,
         28.611301651636655,
@@ -333,7 +333,7 @@
     },
     "ChannelShuffle": {
       "supported": true,
-      "warmup_iterations": 16,
+      "warmup_iterations": 20,
       "throughputs": [
         50.126644449319066,
         49.54127974300465,
@@ -858,7 +858,7 @@
     },
     "CoarseDropout": {
       "supported": true,
-      "warmup_iterations": 16,
+      "warmup_iterations": 23,
       "throughputs": [
         73.99537861729277,
         75.44204561170207,
@@ -958,7 +958,7 @@
     },
     "LinearIllumination": {
       "supported": true,
-      "warmup_iterations": 16,
+      "warmup_iterations": 20,
       "throughputs": [
         4.977624494280829,
         4.846969137662868,
@@ -1183,7 +1183,7 @@
     },
     "Saturation": {
       "supported": true,
-      "warmup_iterations": 16,
+      "warmup_iterations": 18,
       "throughputs": [
         8.90514980805476,
         8.551160732277621,
