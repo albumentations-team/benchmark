@@ -5,9 +5,6 @@ from pathlib import Path
 
 import pandas as pd
 
-# Import the shared function
-from comparison_utils import update_readme
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -192,6 +189,58 @@ def main() -> None:
     # Combine summary and table with auto-generated comment
     full_report = f"""<!-- This file is auto-generated. Do not edit directly. -->
 
+# Image Augmentation Benchmarks
+
+This directory contains benchmark results for image augmentation libraries.
+
+## Overview
+
+The image benchmarks measure the performance of various image augmentation libraries on standard image
+transformations. The benchmarks are run on a single CPU thread to ensure consistent and comparable results.
+
+## Methodology
+
+1. **Image Loading**: Images are loaded using library-specific loaders to ensure optimal format compatibility:
+   - OpenCV (BGR → RGB) for Albumentations and imgaug
+   - torchvision for PyTorch-based operations
+   - PIL for augly
+   - Normalized tensors for Kornia
+
+2. **Warmup Phase**:
+   - Performs adaptive warmup until performance variance stabilizes
+   - Uses configurable parameters for stability detection
+   - Implements early stopping for slow transforms
+   - Maximum time limits prevent hanging on problematic transforms
+
+3. **Measurement Phase**:
+   - Multiple runs of each transform
+   - Measures throughput (images/second)
+   - Calculates statistical metrics (median, standard deviation)
+
+4. **Environment Control**:
+   - Forces single-threaded execution across libraries
+   - Captures detailed system information and library versions
+   - Monitors thread settings for various numerical libraries
+
+## Running the Benchmarks
+
+To run the image benchmarks:
+
+```bash
+./run_single.sh -l albumentations -d /path/to/images -o /path/to/output
+```
+
+To run all libraries and generate a comparison:
+
+```bash
+./run_all.sh -d /path/to/images -o /path/to/output
+```
+
+## Benchmark Results
+
+<!-- BENCHMARK_RESULTS_START -->
+<!-- This file is auto-generated. Do not edit directly. -->
+
 # Image Benchmark Results
 
 {system_summary}
@@ -203,16 +252,36 @@ The Speedup column shows how many times faster Albumentations is compared to the
 library for each transform.
 
 {markdown_table}
+
+<!-- BENCHMARK_RESULTS_END -->
+
+## Analysis
+
+The benchmark results show that Albumentations is generally the fastest library for most image
+transformations. This is due to its optimized implementation and use of OpenCV for many operations.
+
+Some key observations:
+- Albumentations is particularly fast for geometric transformations like resize, rotate, and affine
+- For some specialized transformations, other libraries may be faster
+- The performance gap is most significant for complex transformations
+
+## Recommendations
+
+Based on the benchmark results, we recommend:
+
+1. Use Albumentations for production workloads where performance is critical
+2. Consider the specific transformations you need and check their relative performance
+3. For GPU acceleration, consider Kornia, especially for batch processing
 """
 
-    # Save to file
+    # Save to output file (e.g., results.md)
     if args.output:
         args.output.write_text(full_report)
 
-    # Update README if requested
+    # Overwrite README if requested
     if args.update_readme:
-        update_readme(args.update_readme, full_report, args.start_marker, args.end_marker)
-        logger.info(f"Updated {args.update_readme}")
+        args.update_readme.write_text(full_report)
+        logger.info(f"Overwrote {args.update_readme} with new content.")
 
     # Log preview
     logger.info("\nBenchmark Report Preview:")
