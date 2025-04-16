@@ -130,6 +130,7 @@ class VideoBenchmarkRunner:
             - reason for early stopping (if any)
         """
         warmup_throughputs = []
+        time_per_video = 0.0  # Initialize here
         slow_transform_threshold = 2.0  # seconds per video
         min_iterations_before_stopping = 5
         max_time_per_transform = 120

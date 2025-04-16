@@ -2,10 +2,13 @@
 """Compare video benchmark results and generate a markdown table."""
 
 import argparse
+import ast  # Added import
 import json
 import logging
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 # Configure logging
 logging.basicConfig(
@@ -195,19 +198,49 @@ def generate_comparison_table(results: dict[str, dict[str, Any]]) -> str:
 
 
 def get_metadata_summary(results: dict[str, dict[str, Any]]) -> str:
-    """Generate a summary of metadata for each library."""
+    """Generate a summary of metadata for each library in YAML format."""
     metadata_summary = []
     for library, result in results.items():
         if "metadata" in result:
             metadata_summary.append(f"## {library.capitalize()} Metadata\n")
-            metadata_summary.append("```")
-            for key, value in result["metadata"].items():
-                if isinstance(value, dict):
-                    metadata_summary.append(f"{key}:")
-                    for subkey, subvalue in value.items():
-                        metadata_summary.append(f"  {subkey}: {subvalue}")
-                else:
-                    metadata_summary.append(f"{key}: {value}")
+            metadata_summary.append("```yaml")
+
+            metadata_to_dump = result["metadata"].copy()
+
+            # Attempt to parse stringified Python literals (like dicts)
+            for key, value in metadata_to_dump.items():
+                if isinstance(value, str):
+                    try:
+                        # Use ast.literal_eval for non-JSON dict-like strings
+                        parsed_value = ast.literal_eval(value)
+                        if isinstance(parsed_value, (dict, list)):
+                            metadata_to_dump[key] = parsed_value
+                    except (ValueError, SyntaxError):
+                        # If it's not a valid Python literal string, keep it as is
+                        pass
+                # Special handling for nested thread_settings
+                elif key == "thread_settings" and isinstance(value, dict):
+                    thread_settings_copy = value.copy()
+                    for subkey, subvalue in thread_settings_copy.items():
+                        if isinstance(subvalue, str):
+                            try:
+                                # Use ast.literal_eval here too
+                                parsed_subvalue = ast.literal_eval(subvalue)
+                                if isinstance(parsed_subvalue, (dict, list)):
+                                    thread_settings_copy[subkey] = parsed_subvalue
+                            except (ValueError, SyntaxError):
+                                pass
+                    metadata_to_dump[key] = thread_settings_copy
+
+            # Dump the potentially modified metadata as YAML
+            try:
+                yaml_str = yaml.dump(metadata_to_dump, default_flow_style=False, indent=2, sort_keys=False)
+                metadata_summary.append(yaml_str)
+            except yaml.YAMLError:
+                # Use logging.exception to include traceback automatically
+                logger.exception(f"Error dumping metadata to YAML for {library}")
+                metadata_summary.append(str(metadata_to_dump))
+
             metadata_summary.append("```\n")
     return "\n".join(metadata_summary)
 
