@@ -62,13 +62,14 @@ library for each transform.
 
 ## Torchvision Metadata
 
-```
+```yaml
 system_info:
-  python_version: 3.12.9 | packaged by Anaconda, Inc. | (main, Feb  6 2025, 18:56:27) [GCC 11.2.0]
+  python_version: 3.12.9 | packaged by Anaconda, Inc. | (main, Feb  6 2025, 18:56:27)
+    [GCC 11.2.0]
   platform: Linux-5.15.0-131-generic-x86_64-with-glibc2.31
   processor: x86_64
-  cpu_count: 64
-  timestamp: 2025-03-11T11:14:57.765540+00:00
+  cpu_count: '64'
+  timestamp: '2025-03-11T11:14:57.765540+00:00'
 library_versions:
   torchvision: 0.21.0
   numpy: 2.2.3
@@ -77,10 +78,23 @@ library_versions:
   torch: 2.6.0
   opencv-python: not installed
 thread_settings:
-  environment: {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1', 'VECLIB_MAXIMUM_THREADS': '1', 'NUMEXPR_NUM_THREADS': '1'}
+  environment:
+    OMP_NUM_THREADS: '1'
+    OPENBLAS_NUM_THREADS: '1'
+    MKL_NUM_THREADS: '1'
+    VECLIB_MAXIMUM_THREADS: '1'
+    NUMEXPR_NUM_THREADS: '1'
   opencv: not installed
-  pytorch: {'threads': 32, 'gpu_available': True, 'gpu_device': 0, 'gpu_name': 'NVIDIA GeForce RTX 4090', 'gpu_memory_total': 23.55084228515625, 'gpu_memory_allocated': 15.05643081665039}
-  pillow: {'threads': 'unknown', 'simd': False}
+  pytorch:
+    threads: 32
+    gpu_available: true
+    gpu_device: 0
+    gpu_name: NVIDIA GeForce RTX 4090
+    gpu_memory_total: 23.55084228515625
+    gpu_memory_allocated: 15.05643081665039
+  pillow:
+    threads: unknown
+    simd: false
 benchmark_params:
   num_videos: 200
   num_runs: 10
@@ -89,17 +103,17 @@ benchmark_params:
   warmup_threshold: 0.05
   min_warmup_windows: 3
 precision: torch.float16
-```
 
 ## Kornia Metadata
 
-```
+```yaml
 system_info:
-  python_version: 3.12.9 | packaged by Anaconda, Inc. | (main, Feb  6 2025, 18:56:27) [GCC 11.2.0]
+  python_version: 3.12.9 | packaged by Anaconda, Inc. | (main, Feb  6 2025, 18:56:27)
+    [GCC 11.2.0]
   platform: Linux-5.15.0-131-generic-x86_64-with-glibc2.31
   processor: x86_64
-  cpu_count: 64
-  timestamp: 2025-03-11T00:46:14.791885+00:00
+  cpu_count: '64'
+  timestamp: '2025-03-11T00:46:14.791885+00:00'
 library_versions:
   kornia: 0.8.0
   numpy: 2.2.3
@@ -108,10 +122,23 @@ library_versions:
   torch: 2.6.0
   opencv-python: not installed
 thread_settings:
-  environment: {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1', 'VECLIB_MAXIMUM_THREADS': '1', 'NUMEXPR_NUM_THREADS': '1'}
+  environment:
+    OMP_NUM_THREADS: '1'
+    OPENBLAS_NUM_THREADS: '1'
+    MKL_NUM_THREADS: '1'
+    VECLIB_MAXIMUM_THREADS: '1'
+    NUMEXPR_NUM_THREADS: '1'
   opencv: not installed
-  pytorch: {'threads': 32, 'gpu_available': True, 'gpu_device': 0, 'gpu_name': 'NVIDIA GeForce RTX 4090', 'gpu_memory_total': 23.55084228515625, 'gpu_memory_allocated': 15.05643081665039}
-  pillow: {'threads': 'unknown', 'simd': False}
+  pytorch:
+    threads: 32
+    gpu_available: true
+    gpu_device: 0
+    gpu_name: NVIDIA GeForce RTX 4090
+    gpu_memory_total: 23.55084228515625
+    gpu_memory_allocated: 15.05643081665039
+  pillow:
+    threads: unknown
+    simd: false
 benchmark_params:
   num_videos: 200
   num_runs: 5
@@ -120,6 +147,51 @@ benchmark_params:
   warmup_threshold: 0.05
   min_warmup_windows: 3
 precision: torch.float16
+
+```
+
+## Albumentations Metadata
+
+```yaml
+system_info:
+  python_version: 3.12.8 | packaged by Anaconda, Inc. | (main, Dec 11 2024, 10:37:40)
+    [Clang 14.0.6 ]
+  platform: macOS-15.1-arm64-arm-64bit
+  processor: arm
+  cpu_count: '16'
+  timestamp: '2025-04-16T17:31:48.175211+00:00'
+library_versions:
+  albumentations: 2.0.5
+  numpy: 2.2.4
+  pillow: 11.2.1
+  opencv-python-headless: 4.11.0.86
+  torch: 2.6.0
+  opencv-python: not installed
+thread_settings:
+  environment:
+    OMP_NUM_THREADS: '1'
+    OPENBLAS_NUM_THREADS: '1'
+    MKL_NUM_THREADS: '1'
+    VECLIB_MAXIMUM_THREADS: '1'
+    NUMEXPR_NUM_THREADS: '1'
+  opencv:
+    threads: 1
+    opencl: false
+  pytorch:
+    threads: 1
+    gpu_available: false
+    gpu_device: null
+  pillow:
+    threads: unknown
+    simd: false
+benchmark_params:
+  num_videos: 200
+  num_runs: 5
+  max_warmup_iterations: 100
+  warmup_window: 5
+  warmup_threshold: 0.05
+  min_warmup_windows: 3
+
 ```
 
 ## Albumentations Metadata

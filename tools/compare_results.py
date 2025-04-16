@@ -52,6 +52,10 @@ def create_comparison_table(results_dir: Path) -> pd.DataFrame:
     df_medians = pd.DataFrame(medians_data)
     df_stds = pd.DataFrame(stds_data)
 
+    # Sort DataFrame index (transform names) alphabetically
+    df_medians = df_medians.sort_index()
+    df_stds = df_stds.loc[df_medians.index]  # Ensure stds are sorted the same way
+
     # Find maximum values in each row
     max_values = df_medians.max(axis=1)
 

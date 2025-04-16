@@ -322,7 +322,7 @@ def main() -> None:
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     # Generate plot
-    output_path = args.output_dir / f"{args.type}_speedup_analysis.png"
+    output_path = args.output_dir / f"{args.type}_speedup_analysis.webp"
     plot_speedup_distribution(speedups, args.reference_library, output_path)
 
     logger.info(f"Speedup analysis plot saved to {output_path}")

@@ -164,6 +164,20 @@ no_implicit_reexport = true
 # for strict mypy: (this is the tricky one :-))
 disallow_untyped_defs = true
 
+[tool.pyright]
+# Define an execution environment that points to the project's virtual env
+# Assumes a standard .venv location relative to pyproject.toml
+executionEnvironments = [
+  { root = ".", pythonVersion = "3.13", venv = ".venv" }, # Adjusted to use venv field
+]
+# Include benchmark and tools directories for analysis
+include = [ "benchmark", "tools" ]
+# Exclude common directories and virtual envs
+exclude = [ "**/node_modules", "**/__pycache__", ".git", ".venv" ]
+# Disable the missing imports report
+reportMissingImports = false
+reportMissingModuleSource = false
+
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true

@@ -2,10 +2,13 @@
 """Compare video benchmark results and generate a markdown table."""
 
 import argparse
+import ast  # Added import
 import json
 import logging
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 # Configure logging
 logging.basicConfig(
@@ -13,6 +16,26 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+# Helper function to safely parse string literals
+def convert_literal(value: Any) -> Any:
+    if isinstance(value, str):
+        try:
+            parsed = ast.literal_eval(value)
+            if isinstance(parsed, (dict, list)):
+                return parsed
+        except (ValueError, SyntaxError):
+            pass  # Keep original string if not a valid literal dict/list
+    return value
+
+
+# Helper function specifically for thread_settings dictionary values
+def convert_thread_settings(settings: dict[str, Any]) -> dict[str, Any]:
+    updated: dict[str, Any] = {}
+    for key, subvalue in settings.items():
+        updated[key] = convert_literal(subvalue)
+    return updated
 
 
 def load_results(results_dir: Path) -> dict[str, dict[str, Any]]:
@@ -195,19 +218,30 @@ def generate_comparison_table(results: dict[str, dict[str, Any]]) -> str:
 
 
 def get_metadata_summary(results: dict[str, dict[str, Any]]) -> str:
-    """Generate a summary of metadata for each library."""
-    metadata_summary = []
+    """Generate a summary of metadata for each library in YAML format."""
+    metadata_summary: list[str] = []
     for library, result in results.items():
         if "metadata" in result:
-            metadata_summary.append(f"## {library.capitalize()} Metadata\n")
-            metadata_summary.append("```")
-            for key, value in result["metadata"].items():
-                if isinstance(value, dict):
-                    metadata_summary.append(f"{key}:")
-                    for subkey, subvalue in value.items():
-                        metadata_summary.append(f"  {subkey}: {subvalue}")
+            # Combine the two appends into a single extend
+            metadata_summary.extend((f"## {library.capitalize()} Metadata\n", "```yaml"))
+
+            metadata_to_dump = result["metadata"].copy()
+
+            # Attempt to parse stringified Python literals using helpers
+            for key, value in metadata_to_dump.items():
+                if key == "thread_settings" and isinstance(value, dict):
+                    metadata_to_dump[key] = convert_thread_settings(value)
                 else:
-                    metadata_summary.append(f"{key}: {value}")
+                    metadata_to_dump[key] = convert_literal(value)
+
+            # Dump the potentially modified metadata as YAML
+            try:
+                yaml_str = yaml.dump(metadata_to_dump, default_flow_style=False, indent=2, sort_keys=False)
+                metadata_summary.append(yaml_str)
+            except yaml.YAMLError:
+                logger.exception(f"Error dumping metadata to YAML for {library}")
+                metadata_summary.append(str(metadata_to_dump))
+
             metadata_summary.append("```\n")
     return "\n".join(metadata_summary)
 
