@@ -4,11 +4,11 @@ import sys
 from collections.abc import Callable
 from datetime import UTC, datetime
 from functools import cache
+from importlib import metadata
 from pathlib import Path
 from typing import Any
 
 import numpy as np
-import pkg_resources
 
 
 def read_img_cv2(path: Path) -> np.ndarray:
@@ -218,8 +218,8 @@ def get_library_versions(library: str) -> dict[str, str]:
 
     def get_version(package: str) -> str:
         try:
-            return str(pkg_resources.get_distribution(package).version)
-        except pkg_resources.DistributionNotFound:
+            return str(metadata.version(package))
+        except metadata.PackageNotFoundError:
             return "not installed"
 
     versions[library] = get_version(library)
