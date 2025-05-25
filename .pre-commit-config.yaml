@@ -66,10 +66,8 @@ repos:
     rev: v1.15.0
     hooks:
       - id: mypy
-        additional_dependencies:
-        - types-setuptools  # Add the type stubs here
-        - types-PyYAML
         files: ^(benchmark|tools)/
+        additional_dependencies: [types-setuptools, types-PyYAML]
         args:
           [ --config-file=pyproject.toml ]
   - repo: https://github.com/RobertCraigie/pyright-python
