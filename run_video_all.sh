@@ -89,7 +89,7 @@ fi
 mkdir -p "$OUTPUT_DIR"
 
 # Run benchmarks for each library
-LIBRARIES=("albumentations" "kornia")
+LIBRARIES=("albumentations" "kornia" "torchvision")
 
 for lib in "${LIBRARIES[@]}"; do
     echo "Running video benchmark for $lib..."
