@@ -1,16 +1,16 @@
 import importlib
+import importlib.util
 import json
 import logging
 import os
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import numpy as np
-import torch
 from tqdm import tqdm
 
-from .transforms.specs import TRANSFORM_SPECS
 from .utils import get_library_versions, get_system_info, get_video_loader, time_transform, verify_thread_settings
 
 # Set up logging
@@ -30,6 +30,8 @@ class VideoBenchmarkRunner:
         self,
         library: str,
         data_dir: Path,
+        transforms: list[dict[str, Any]],
+        call_fn: Callable[[Any, Any], Any],
         num_videos: int = 50,
         num_runs: int = 5,
         max_warmup_iterations: int = 100,
@@ -39,6 +41,8 @@ class VideoBenchmarkRunner:
     ):
         self.library = library
         self.data_dir = Path(data_dir)
+        self.transforms = transforms
+        self.call_fn = call_fn
         self.num_videos = num_videos
         self.num_runs = num_runs
         self.max_warmup_iterations = max_warmup_iterations
@@ -46,21 +50,21 @@ class VideoBenchmarkRunner:
         self.warmup_threshold = warmup_threshold
         self.min_warmup_windows = min_warmup_windows
 
-        # Load implementation
-        self.impl = self._get_implementation()
+        # Get video loader for the library
         self.video_loader = get_video_loader(library)
-
-    def _get_implementation(self) -> Any:
-        """Import library-specific implementation"""
-        try:
-            module = importlib.import_module(f".transforms.{self.library.lower()}_video_impl", package="benchmark")
-            return getattr(module, f"{self.library.capitalize()}VideoImpl")
-        except (ImportError, AttributeError) as e:
-            raise ValueError(f"Library {self.library} not supported for video: {e}")  # noqa: B904
 
     def load_videos(self) -> list[Any]:
         """Load videos using appropriate loader"""
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # Import torch only if needed (for GPU operations or tensor-based libraries)
+        try:
+            import torch
+
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            gpu_available = torch.cuda.is_available()
+        except ImportError:
+            torch = None
+            device = None
+            gpu_available = False
 
         # Search recursively for video files
         video_paths = []
@@ -76,8 +80,8 @@ class VideoBenchmarkRunner:
             for path in pbar:
                 try:
                     video = self.video_loader(path)
-                    # Move video to GPU if available
-                    if isinstance(video, torch.Tensor) and torch.cuda.is_available():
+                    # Move video to GPU if available and it's a torch tensor
+                    if torch and isinstance(video, torch.Tensor) and gpu_available:
                         # For Kornia, ensure we maintain float16 precision when moving to GPU
                         video = video.to(device, non_blocking=True) if self.library == "kornia" else video.to(device)
                     videos.append(video)
@@ -102,7 +106,7 @@ class VideoBenchmarkRunner:
         logger.info(f"Loaded {len(videos)} videos")
 
         # Log GPU memory usage if available
-        if torch.cuda.is_available():
+        if torch and gpu_available:
             allocated = torch.cuda.memory_allocated() / (1024**3)  # GB
             total = torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory / (1024**3)  # GB
             logger.info(f"GPU memory: {allocated:.2f}GB / {total:.2f}GB")
@@ -112,14 +116,14 @@ class VideoBenchmarkRunner:
     def _perform_warmup(
         self,
         transform: Any,
-        transform_spec: Any,
+        transform_name: str,
         warmup_subset: list[Any],
     ) -> tuple[list[float], float, bool, str | None]:
         """Perform adaptive warmup until performance stabilizes or early stopping conditions are met.
 
         Args:
             transform: The transform to benchmark
-            transform_spec: The transform specification containing name and parameters
+            transform_name: Name of the transform for display
             warmup_subset: Subset of videos to use for warmup
 
         Returns:
@@ -136,9 +140,9 @@ class VideoBenchmarkRunner:
         max_time_per_transform = 120
         start_time = time.time()
 
-        with tqdm(total=self.max_warmup_iterations, desc=f"Warming up {transform_spec.name}", leave=False) as pbar:
+        with tqdm(total=self.max_warmup_iterations, desc=f"Warming up {transform_name}", leave=False) as pbar:
             for i in range(self.max_warmup_iterations):
-                elapsed = time_transform(lambda x: self.impl.__call__(transform, x), warmup_subset)
+                elapsed = time_transform(lambda x: self.call_fn(transform, x), warmup_subset)
                 throughput = len(warmup_subset) / elapsed
                 time_per_video = elapsed / len(warmup_subset)
                 warmup_throughputs.append(throughput)
@@ -184,20 +188,16 @@ class VideoBenchmarkRunner:
 
         return warmup_throughputs, time_per_video, False, None
 
-    def run_transform(self, transform_spec: Any, videos: list[Any]) -> dict[str, Any]:
+    def run_transform(self, transform_dict: dict[str, Any], videos: list[Any]) -> dict[str, Any]:
         """Run benchmark for a single transform"""
-        if not hasattr(self.impl, transform_spec.name):
-            return {"supported": False}
-
-        # Create transform
-        transform_fn = getattr(self.impl, transform_spec.name)
-        transform = transform_fn(transform_spec.params)
+        transform = transform_dict["transform"]
+        transform_name = transform_dict["name"]
 
         # Perform warmup
         warmup_subset = videos[: min(3, len(videos))]
         warmup_throughputs, time_per_video, early_stopped, early_stop_reason = self._perform_warmup(
             transform,
-            transform_spec,
+            transform_name,
             warmup_subset,
         )
 
@@ -220,8 +220,8 @@ class VideoBenchmarkRunner:
         throughputs = []
         times = []
 
-        for _ in tqdm(range(self.num_runs), desc=f"Benchmarking {transform_spec.name}", leave=False):
-            elapsed = time_transform(lambda x: self.impl.__call__(transform, x), videos)
+        for _ in tqdm(range(self.num_runs), desc=f"Benchmarking {transform_name}", leave=False):
+            elapsed = time_transform(lambda x: self.call_fn(transform, x), videos)
             throughput = len(videos) / elapsed
             throughputs.append(throughput)
             times.append(elapsed)
@@ -250,8 +250,13 @@ class VideoBenchmarkRunner:
         logger.info(f"Loaded {len(videos)} videos")
 
         # Log precision information for Kornia
-        if self.library == "kornia" and isinstance(videos[0], torch.Tensor):
-            logger.info(f"Using {videos[0].dtype} precision for Kornia")
+        try:
+            import torch
+
+            if self.library == "kornia" and isinstance(videos[0], torch.Tensor):
+                logger.info(f"Using {videos[0].dtype} precision for Kornia")
+        except ImportError:
+            pass
 
         # Collect metadata
         metadata: dict[str, Any] = {
@@ -269,88 +274,22 @@ class VideoBenchmarkRunner:
         }
 
         # Add precision information for tensor-based libraries
-        if isinstance(videos[0], torch.Tensor):
-            metadata["precision"] = str(videos[0].dtype)
-            logger.info(f"Using {videos[0].dtype} precision for {self.library}")
+        try:
+            import torch
+
+            if isinstance(videos[0], torch.Tensor):
+                metadata["precision"] = str(videos[0].dtype)
+                logger.info(f"Using {videos[0].dtype} precision for {self.library}")
+        except ImportError:
+            pass
 
         # Run benchmarks
         results = {}
-        for transform_spec in TRANSFORM_SPECS:
-            # Skip problematic transforms for Kornia due to compatibility issues
-            problematic_cpu_transforms = ["Elastic", "GaussianBlur", "MotionBlur"]
-            problematic_gpu_transforms = [
-                "Perspective",
-                "Posterize",
-                "Erasing",
-                "JpegCompression",
-                "MotionBlur",
-                "CLAHE",
-                "Snow",
-                "Shear",
-                "Elastic",
-                "OpticalDistortion",
-            ]
 
-            # Skip Perspective on GPU for Kornia
-            if (
-                torch.cuda.is_available()
-                and self.library == "kornia"
-                and transform_spec.name in problematic_gpu_transforms
-            ):
-                logger.info(f"Skipping {transform_spec.name} for {self.library} on GPU due to compatibility issues...")
-                results[transform_spec.name] = {
-                    "skipped": True,
-                    "reason": "Compatibility issues with GPU tensors or float16 precision",
-                    "throughput": None,
-                    "time_per_video": None,
-                    "warmup_iterations": 0,
-                    "early_stopped": True,
-                    "early_stop_reason": "Skipped",
-                }
-                continue
-
-            # Skip problematic transforms for torchvision on GPU
-            torchvision_problematic_gpu_transforms = [
-                "JpegCompression",
-            ]
-            # Skip JpegCompression on GPU for torchvision
-            if (
-                torch.cuda.is_available()
-                and self.library == "torchvision"
-                and transform_spec.name in torchvision_problematic_gpu_transforms
-            ):
-                logger.info(f"Skipping {transform_spec.name} for {self.library} on GPU due to uint8 requirement...")
-                results[transform_spec.name] = {
-                    "skipped": True,
-                    "reason": "Requires uint8 input tensors which conflicts with float16 GPU processing",
-                    "throughput": None,
-                    "time_per_video": None,
-                    "warmup_iterations": 0,
-                    "early_stopped": True,
-                    "early_stop_reason": "Skipped",
-                }
-                continue
-
-            # Skip other problematic transforms for Kornia
-            if (
-                not torch.cuda.is_available()
-                and transform_spec.name in problematic_cpu_transforms
-                and self.library == "kornia"
-            ):
-                logger.info(f"Skipping {transform_spec.name} for {self.library} due to compatibility issues...")
-                results[transform_spec.name] = {
-                    "skipped": True,
-                    "reason": "Compatibility issues with video tensors",
-                    "throughput": None,
-                    "time_per_video": None,
-                    "warmup_iterations": 0,
-                    "early_stopped": True,
-                    "early_stop_reason": "Skipped",
-                }
-                continue
-
-            logger.info(f"Benchmarking {transform_spec.name}...")
-            results[transform_spec.name] = self.run_transform(transform_spec, videos)
+        for transform_dict in self.transforms:
+            transform_name = transform_dict["name"]
+            logger.info(f"Benchmarking {transform_name}...")
+            results[transform_name] = self.run_transform(transform_dict, videos)
 
         # Combine results and metadata
         output = {
@@ -366,16 +305,65 @@ class VideoBenchmarkRunner:
         return output
 
 
+def load_from_python_file(specs_file: Path) -> tuple[str, Callable[[Any, Any], Any], list[dict[str, Any]]]:
+    """Load library name, __call__ function, and transforms from a Python file
+
+    The Python file must define:
+    - LIBRARY: str (e.g., "albumentations")
+    - __call__: function to apply transforms to videos
+    - TRANSFORMS: list of dicts with 'name' and 'transform' keys
+
+    Returns:
+        tuple of (library name, __call__ function, list of transform dicts)
+    """
+    spec = importlib.util.spec_from_file_location("custom_transforms", specs_file)
+    if spec is None or spec.loader is None:
+        raise ValueError(f"Could not load from {specs_file}")
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    # Validate required attributes
+    if not hasattr(module, "LIBRARY"):
+        raise ValueError(f"Python file {specs_file} must define LIBRARY string")
+
+    if not callable(module):
+        raise TypeError(f"Python file {specs_file} must define __call__ function")
+
+    if not hasattr(module, "TRANSFORMS"):
+        raise ValueError(f"Python file {specs_file} must define TRANSFORMS list")
+
+    # Validate __call__ is callable
+    if not callable(module.__call__):
+        raise TypeError("__call__ must be a callable function")
+
+    # Validate transform structure
+    for i, t in enumerate(module.TRANSFORMS):
+        if not isinstance(t, dict):
+            raise TypeError(f"TRANSFORMS[{i}] must be a dictionary")
+
+        required_keys = {"name", "transform"}
+        missing = required_keys - t.keys()
+        if missing:
+            raise ValueError(f"TRANSFORMS[{i}] missing keys: {missing}")
+
+    return module.LIBRARY, module.__call__, module.TRANSFORMS
+
+
 def main() -> None:
     """Command-line entry point"""
     import argparse
 
-    import torch
-
     parser = argparse.ArgumentParser(description="Run video augmentation benchmarks")
-    parser.add_argument("-l", "--library", required=True, help="Library to benchmark")
     parser.add_argument("-d", "--data-dir", required=True, help="Directory containing videos")
     parser.add_argument("-o", "--output", required=True, help="Output JSON file")
+    parser.add_argument(
+        "-s",
+        "--specs-file",
+        type=Path,
+        required=True,
+        help="Python file defining LIBRARY and CUSTOM_TRANSFORMS",
+    )
     parser.add_argument("-n", "--num-videos", type=int, default=50, help="Number of videos to process")
     parser.add_argument("-r", "--num-runs", type=int, default=5, help="Number of benchmark runs")
     parser.add_argument("--max-warmup", type=int, default=100, help="Maximum warmup iterations")
@@ -386,20 +374,37 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Check if GPU is requested but not available
-    if args.gpu and not torch.cuda.is_available():
-        logger.warning("GPU requested but not available. Falling back to CPU.")
+    # Check if GPU is requested and available
+    try:
+        import torch
 
-    # Log GPU information if available
-    if torch.cuda.is_available():
-        logger.info(f"GPU: {torch.cuda.get_device_name(torch.cuda.current_device())}")
-        logger.info(f"CUDA Version: {torch.version.cuda}")
-        memory = torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory / (1024**3)
-        logger.info(f"Total GPU Memory: {memory:.2f} GB")
+        if args.gpu and not torch.cuda.is_available():
+            logger.warning("GPU requested but not available. Falling back to CPU.")
+
+        # Log GPU information if available
+        if torch.cuda.is_available():
+            logger.info(f"GPU: {torch.cuda.get_device_name(torch.cuda.current_device())}")
+            logger.info(f"CUDA Version: {torch.version.cuda}")
+            memory = torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory / (1024**3)
+            logger.info(f"Total GPU Memory: {memory:.2f} GB")
+    except ImportError:
+        if args.gpu:
+            logger.warning("GPU requested but PyTorch not installed. Falling back to CPU.")
+
+    # Load library and transforms from file
+    if not args.specs_file.exists():
+        raise ValueError(f"Specs file {args.specs_file} does not exist")
+
+    logger.info(f"Loading from {args.specs_file}")
+    library, call_fn, transforms = load_from_python_file(args.specs_file)
+    logger.info(f"Library: {library}")
+    logger.info(f"Loaded {len(transforms)} transforms")
 
     runner = VideoBenchmarkRunner(
-        library=args.library,
+        library=library,
         data_dir=args.data_dir,
+        transforms=transforms,
+        call_fn=call_fn,
         num_videos=args.num_videos,
         num_runs=args.num_runs,
         max_warmup_iterations=args.max_warmup,

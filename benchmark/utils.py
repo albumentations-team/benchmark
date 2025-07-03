@@ -123,6 +123,7 @@ def get_image_loader(library: str) -> Callable[[Path], Any]:
 def get_video_loader(library: str) -> Callable[[Path], Any]:
     """Get the appropriate video loader for the library"""
     loaders = {
+        "albumentationsx": read_video_cv2,
         "albumentations": read_video_cv2,
         "torchvision": read_video_torch_float16,
         "kornia": read_video_kornia,

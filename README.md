@@ -147,6 +147,59 @@ To run benchmarks for all supported libraries and generate a comparison:
 ./run_video_all.sh -d /path/to/videos -o /path/to/output --update-docs
 ```
 
+#### Using Custom Transforms
+
+To benchmark transforms, create a Python file defining `LIBRARY` and `CUSTOM_TRANSFORMS`:
+
+```python
+# my_transforms.py
+import albumentations as A
+
+# Specify the library
+LIBRARY = "albumentations"
+
+CUSTOM_TRANSFORMS = [
+    # Test different parameters of the same transform
+    A.ToGray(method="weighted_average", p=1),
+    A.ToGray(method="pca", p=1),
+
+    # Different noise levels
+    A.GaussNoise(var_limit=(10.0, 50.0), p=1),
+    A.GaussNoise(var_limit=(100.0, 200.0), p=1),
+
+    # Any other transforms...
+    A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=1),
+]
+```
+
+Then run:
+
+```bash
+# Using the shell script (recommended)
+./run_video_single.sh -d /path/to/videos -o output/ -s my_transforms.py
+
+# Or Python directly
+python -m benchmark.video_runner -d /path/to/videos -o output.json -s my_transforms.py
+```
+
+The results will show each transform with all its parameters:
+- `ToGray(method=weighted_average, p=1)`
+- `ToGray(method=pca, p=1)`
+- `GaussNoise(var_limit=(10.0, 50.0), mean=0, p=1, per_channel=True)`
+
+See `examples/custom_video_specs_template.py` and `example_direct_transforms.py` for more examples.
+
+To analyze parametric results:
+
+```bash
+python tools/analyze_parametric_results.py parametric_results.json
+```
+
+This will show:
+- Best and worst configurations for each transform
+- Performance differences between parameter choices
+- Optimal settings for your use case
+
 ## Methodology
 
 The benchmark methodology is designed to ensure fair and reproducible comparisons:
