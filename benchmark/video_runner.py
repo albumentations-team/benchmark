@@ -309,7 +309,7 @@ def load_from_python_file(specs_file: Path) -> tuple[str, Callable[[Any, Any], A
     """Load library name, __call__ function, and transforms from a Python file
 
     The Python file must define:
-    - LIBRARY: str (e.g., "albumentations")
+    - LIBRARY: str (e.g., "albumentationsx")
     - __call__: function to apply transforms to videos
     - TRANSFORMS: list of dicts with 'name' and 'transform' keys
 

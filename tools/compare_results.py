@@ -56,21 +56,26 @@ def create_comparison_table(results_dir: Path) -> pd.DataFrame:
     df_medians = df_medians.sort_index()
     df_stds = df_stds.loc[df_medians.index]  # Ensure stds are sorted the same way
 
+    # Filter out transforms that are only supported by one library
+    support_count = df_medians.notna().sum(axis=1)
+    df_medians = df_medians[support_count > 1]
+    df_stds = df_stds[support_count > 1]
+
     # Find maximum values in each row
     max_values = df_medians.max(axis=1)
 
-    # Calculate speedup: Albumentations / fastest among other libraries
+    # Calculate speedup: Albumentationsx / fastest among other libraries
     speedups = []
     for idx in df_medians.index:
-        if "albumentations" in df_medians.columns and not pd.isna(df_medians.loc[idx, "albumentations"]):
-            # Get all libraries except albumentations
-            other_libs = [col for col in df_medians.columns if col != "albumentations"]
+        if "albumentationsx" in df_medians.columns and not pd.isna(df_medians.loc[idx, "albumentationsx"]):
+            # Get all libraries except albumentationsx
+            other_libs = [col for col in df_medians.columns if col != "albumentationsx"]
             # Filter out NaN values
             other_values = [df_medians.loc[idx, lib] for lib in other_libs if not pd.isna(df_medians.loc[idx, lib])]
 
             if other_values:  # If there are other libraries with this transform
                 fastest_other = max(other_values)
-                speedup = df_medians.loc[idx, "albumentations"] / fastest_other
+                speedup = df_medians.loc[idx, "albumentationsx"] / fastest_other
                 speedups.append(f"{speedup:.2f}x")
             else:
                 speedups.append("N/A")
@@ -95,7 +100,7 @@ def create_comparison_table(results_dir: Path) -> pd.DataFrame:
         formatted_data[f"{library}<br>{versions[library]}"] = column_values
 
     # Add speedup column
-    formatted_data["Speedup<br>(Alb/fastest other)"] = speedups
+    formatted_data["Speedup<br>(Albx/fastest other)"] = speedups
 
     return pd.DataFrame(formatted_data)
 
@@ -168,9 +173,6 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Get system summary
-    system_summary = get_system_summary(args.results_dir)
-
     # Create comparison table
     df = create_comparison_table(args.results_dir)
     markdown_table = df.to_markdown(index=False)
@@ -190,7 +192,7 @@ transformations. The benchmarks are run on a single CPU thread to ensure consist
 ## Methodology
 
 1. **Image Loading**: Images are loaded using library-specific loaders to ensure optimal format compatibility:
-   - OpenCV (BGR → RGB) for Albumentations and imgaug
+   - OpenCV (BGR → RGB) for Albumentationsx and imgaug
    - torchvision for PyTorch-based operations
    - PIL for augly
    - Normalized tensors for Kornia
@@ -216,36 +218,22 @@ transformations. The benchmarks are run on a single CPU thread to ensure consist
 To run the image benchmarks:
 
 ```bash
-./run_single.sh -l albumentations -d /path/to/images -o /path/to/output
+./run_single.sh -l albumentationsx -d /path/to/images -o /path/to/output
 ```
-
-To run all libraries and generate a comparison:
-
-```bash
-./run_all.sh -d /path/to/images -o /path/to/output
-```
-
-## Benchmark Results
-
-### Image Benchmark Results
-
-{system_summary}
-
-## Performance Comparison
 
 Number shows how many uint8 images per second can be processed on one CPU thread. Larger is better.
-The Speedup column shows how many times faster Albumentations is compared to the fastest other
+The Speedup column shows how many times faster Albumentationsx is compared to the fastest other
 library for each transform.
 
 {markdown_table}
 
 ## Analysis
 
-The benchmark results show that Albumentations is generally the fastest library for most image
+The benchmark results show that Albumentationsx is generally the fastest library for most image
 transformations. This is due to its optimized implementation and use of OpenCV for many operations.
 
 Some key observations:
-- Albumentations is particularly fast for geometric transformations like resize, rotate, and affine
+- Albumentationsx is particularly fast for geometric transformations like resize, rotate, and affine
 - For some specialized transformations, other libraries may be faster
 - The performance gap is most significant for complex transformations
 
@@ -253,7 +241,7 @@ Some key observations:
 
 Based on the benchmark results, we recommend:
 
-1. Use Albumentations for production workloads where performance is critical
+1. Use Albumentationsx for production workloads where performance is critical
 2. Consider the specific transformations you need and check their relative performance
 3. For GPU acceleration, consider Kornia, especially for batch processing
 """

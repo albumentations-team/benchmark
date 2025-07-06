@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import yaml
 
 # Configure logging
@@ -141,10 +142,10 @@ def get_hardware_info(results: dict[str, dict[str, Any]]) -> dict[str, str]:
             if "thread_settings" in result["metadata"]:
                 thread_settings = result["metadata"]["thread_settings"]
 
-                # For CPU (Albumentations)
-                if library.lower() == "albumentations":
+                # For CPU (Albumentationsx)
+                if library.lower() in ["albumentationsx"]:
                     cpu_info = result["metadata"]["system_info"].get("processor", "CPU")
-                    # Always use "1 core" for albumentations as we fix CPU thread in actual benchmark
+                    # Always use "1 core" for albumentationsx as we fix CPU thread in actual benchmark
                     hardware_info[library] = f"{cpu_info} (1 core)"
 
                 # For GPU-based libraries (Kornia, TorchVision, etc.)
@@ -153,8 +154,8 @@ def get_hardware_info(results: dict[str, dict[str, Any]]) -> dict[str, str]:
                 else:
                     hardware_info[library] = "Unknown hardware"
             # Default hardware info if thread_settings not found
-            elif library.lower() == "albumentations":
-                # Always use "CPU (1 core)" for albumentations
+            elif library.lower() in ["albumentationsx"]:
+                # Always use "CPU (1 core)" for albumentationsx
                 cpu_info = result["metadata"]["system_info"].get("processor", "CPU")
                 hardware_info[library] = f"{cpu_info} (1 core)"
             elif library.lower() in ["kornia", "torchvision"]:
@@ -162,7 +163,7 @@ def get_hardware_info(results: dict[str, dict[str, Any]]) -> dict[str, str]:
             else:
                 hardware_info[library] = "Unknown"
         # Default hardware info if metadata not found
-        elif library.lower() == "albumentations":
+        elif library.lower() in ["albumentationsx"]:
             hardware_info[library] = "CPU (1 core)"
         elif library.lower() in ["kornia", "torchvision"]:
             hardware_info[library] = "GPU (details unknown)"
@@ -172,7 +173,7 @@ def get_hardware_info(results: dict[str, dict[str, Any]]) -> dict[str, str]:
 
 
 def generate_comparison_table(results: dict[str, dict[str, Any]]) -> str:
-    """Generate a markdown table comparing the results."""
+    """Generate a markdown table comparing the results using pandas DataFrame."""
     if not results:
         return "No results found."
 
@@ -196,60 +197,66 @@ def generate_comparison_table(results: dict[str, dict[str, Any]]) -> str:
     # Get hardware info
     hardware_info = get_hardware_info(results)
 
-    # Create table header with hardware info
-    header = (
-        "| Transform | "
-        + " | ".join(f"{lib} (videos per second)<br>{hardware_info.get(lib, 'Unknown')}" for lib in libraries)
-        + " | Speedup<br>(Alb/fastest other) |\n"
-    )
+    # Prepare data for DataFrame
+    data = []
 
-    # Create table separator
-    separator = "|" + "|".join("---" for _ in range(len(libraries) + 2)) + "|\n"
-
-    # Create table rows
-    rows = []
     for transform in sorted_transforms:
-        # Use clean transform name for display
         clean_name = clean_transforms[transform]
-        row = f"| {clean_name} |"
+        row_data = {"Transform": clean_name}
 
         # Get throughput values for each library
         throughputs = []
+        supported_count = 0
         for lib in libraries:
             lib_results = results[lib]["results"].get(transform, {})
             if lib_results.get("supported", False) and not lib_results.get("early_stopped", False):
                 throughput = lib_results.get("median_throughput", 0)
                 std = lib_results.get("std_throughput", 0)
                 throughputs.append((lib, throughput, std))
+                supported_count += 1
             else:
                 throughputs.append((lib, 0, 0))
+
+        # Skip transforms that are only supported by one library
+        if supported_count <= 1:
+            continue
 
         # Find the max throughput for this transform
         max_throughput = max((t for _, t, _ in throughputs if t > 0), default=0)
 
         # Add formatted throughput values to the row
-        for _, throughput, std in throughputs:
+        for lib, throughput, std in throughputs:
+            # Simplified column name for better formatting
+            column_name = f"{lib}<br>{hardware_info.get(lib, 'Unknown')}"
             if throughput > 0:
                 is_max = throughput == max_throughput
-                row += f" {format_throughput(throughput, std, is_max)} |"
+                value = format_throughput(throughput, std, is_max)
             else:
-                row += " N/A |"
+                value = "-"
+            row_data[column_name] = value
 
-        # Calculate speedup: Albumentations / fastest among other libraries
-        alb_throughput = next((t for lib, t, _ in throughputs if lib == "albumentations" and t > 0), 0)
-        other_throughputs = [t for lib, t, _ in throughputs if lib != "albumentations" and t > 0]
+        # Calculate speedup: Albumentationsx / fastest among other libraries
+        alb_throughput = next((t for lib, t, _ in throughputs if lib == "albumentationsx" and t > 0), 0)
+        other_throughputs = [t for lib, t, _ in throughputs if lib != "albumentationsx" and t > 0]
 
         if alb_throughput > 0 and other_throughputs:
             fastest_other = max(other_throughputs)
             speedup = alb_throughput / fastest_other
-            row += f" {speedup:.2f}x |"
+            row_data["Speedup<br>(Albx/fastest other)"] = f"{speedup:.2f}x"
         else:
-            row += " N/A |"
+            row_data["Speedup<br>(Albx/fastest other)"] = "N/A"
 
-        rows.append(row)
+        data.append(row_data)
 
-    # Combine all parts of the table
-    return header + separator + "\n".join(rows)
+    # Create DataFrame
+    df = pd.DataFrame(data)
+
+    # Generate markdown table with custom header
+    table_header = "Number shows how many videos per second can be processed. Larger is better.\n"
+    table_header += "The Speedup column shows how many times faster Albumentationsx is compared to the fastest other\n"
+    table_header += "library for each transform.\n\n"
+
+    return table_header + df.to_markdown(index=False)
 
 
 def get_metadata_summary(results: dict[str, dict[str, Any]]) -> str:
@@ -272,6 +279,95 @@ def get_metadata_summary(results: dict[str, dict[str, Any]]) -> str:
 
             metadata_summary.append("```\n")
     return "\n".join(metadata_summary)
+
+
+def generate_console_table(results: dict[str, dict[str, Any]]) -> str:
+    """Generate a console-friendly version of the table."""
+    if not results:
+        return "No results found."
+
+    # Extract all transform names from all libraries
+    all_transforms = set()
+    for library_results in results.values():
+        all_transforms.update(library_results["results"].keys())
+
+    # Clean transform names
+    clean_transforms = {}
+    for transform in all_transforms:
+        clean_name = transform.split("(")[0].strip()
+        clean_transforms[transform] = clean_name
+
+    # Sort transforms
+    sorted_transforms = sorted(all_transforms, key=lambda x: clean_transforms[x])
+
+    # Get libraries
+    libraries = sorted(results.keys())
+
+    # Prepare data
+    rows = []
+    headers = ["Transform", *libraries, "Speedup"]
+
+    for transform in sorted_transforms:
+        clean_name = clean_transforms[transform]
+        row = [clean_name]
+
+        # Get throughputs
+        throughputs = []
+        supported_count = 0
+        for lib in libraries:
+            lib_results = results[lib]["results"].get(transform, {})
+            if lib_results.get("supported", False) and not lib_results.get("early_stopped", False):
+                throughput = lib_results.get("median_throughput", 0)
+                std = lib_results.get("std_throughput", 0)
+                throughputs.append((lib, throughput, std))
+                supported_count += 1
+            else:
+                throughputs.append((lib, 0, 0))
+
+        # Skip transforms that are only supported by one library
+        if supported_count <= 1:
+            continue
+
+        # Find max throughput
+        max_throughput = max((t for _, t, _ in throughputs if t > 0), default=0)
+
+        # Format values
+        for _lib, throughput, std in throughputs:
+            if throughput > 0:
+                is_max = throughput == max_throughput
+                value = f"{throughput:.1f}±{std:.1f}"
+                if is_max:
+                    value = f"**{value}**"
+                row.append(value)
+            else:
+                row.append("-")
+
+        # Calculate speedup
+        alb_throughput = next((t for lib, t, _ in throughputs if lib == "albumentationsx" and t > 0), 0)
+        other_throughputs = [t for lib, t, _ in throughputs if lib != "albumentationsx" and t > 0]
+
+        if alb_throughput > 0 and other_throughputs:
+            fastest_other = max(other_throughputs)
+            speedup = alb_throughput / fastest_other
+            row.append(f"{speedup:.2f}x")
+        else:
+            row.append("N/A")
+
+        rows.append(row)
+
+    # Create DataFrame for console output
+    df = pd.DataFrame(rows, columns=headers)
+
+    # Format the table with proper alignment
+    console_output = "\nVideo Benchmark Results (videos/second):\n"
+    console_output += "=" * 100 + "\n\n"
+    console_output += df.to_string(index=False)
+    console_output += "\n\n" + "=" * 100 + "\n"
+    console_output += "\n** = Fastest implementation for this transform"
+    console_output += "\n- = Transform not supported"
+    console_output += "\nSpeedup = AlbumentationsX performance / fastest other library"
+
+    return console_output
 
 
 def main() -> None:
@@ -308,7 +404,7 @@ This directory contains benchmark results for video augmentation libraries.
 ## Overview
 
 The video benchmarks measure the performance of various augmentation libraries on video transformations.
-The benchmarks compare CPU-based processing (Albumentations) with GPU-accelerated processing (Kornia).
+The benchmarks compare CPU-based processing (Albumentationsx) with GPU-accelerated processing (Kornia).
 
 ## Dataset
 
@@ -322,7 +418,7 @@ You can download the dataset from: https://www.crcv.ucf.edu/data/UCF101/UCF101.r
 ## Methodology
 
 1. **Video Loading**: Videos are loaded using library-specific loaders:
-   - OpenCV for Albumentations
+   - OpenCV for Albumentationsx
    - PyTorch tensors for Kornia
 
 2. **Warmup Phase**:
@@ -343,7 +439,7 @@ You can download the dataset from: https://www.crcv.ucf.edu/data/UCF101/UCF101.r
 ## Hardware Comparison
 
 The benchmarks compare:
-- Albumentations: CPU-based processing (single thread)
+- Albumentationsx: CPU-based processing (single thread)
 - Kornia: GPU-accelerated processing (NVIDIA GPUs)
 
 This provides insights into the trade-offs between CPU and GPU processing for video augmentation.
@@ -353,7 +449,7 @@ This provides insights into the trade-offs between CPU and GPU processing for vi
 To run the video benchmarks:
 
 ```bash
-./run_video_single.sh -l albumentations -d /path/to/videos -o /path/to/output
+./run_video_single.sh -l albumentationsx -d /path/to/videos -o /path/to/output
 ```
 
 To run all libraries and generate a comparison:
@@ -365,10 +461,6 @@ To run all libraries and generate a comparison:
 ## Benchmark Results
 
 ### Video Benchmark Results
-
-Number shows how many videos per second can be processed. Larger is better.
-The Speedup column shows how many times faster Albumentations is compared to the fastest other
-library for each transform.
 
 {table}
 
@@ -396,6 +488,14 @@ Based on the benchmark results, we recommend:
     if args.update_readme:
         args.update_readme.write_text(full_report)
         logger.info(f"Overwrote {args.update_readme} with new content.")
+
+    # Log preview
+    logger.info("\nVideo Benchmark Report Preview:")
+    logger.info(full_report)
+
+    # Also log console-friendly table
+    console_table = generate_console_table(results)
+    logger.info("\n%s", console_table)
 
 
 if __name__ == "__main__":

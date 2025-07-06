@@ -23,7 +23,7 @@ def extract_library_info(data: dict[str, Any]) -> str:
     lib_versions = data.get("metadata", {}).get("library_versions", {})
 
     # Find the main library (not numpy, pillow, etc.)
-    main_libs = ["albumentations", "torchvision", "kornia", "imgaug", "augly"]
+    main_libs = ["albumentationsx", "torchvision", "kornia", "imgaug", "augly"]
     for lib in main_libs:
         if lib in lib_versions:
             return f"{lib} {lib_versions[lib]}"

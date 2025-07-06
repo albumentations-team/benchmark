@@ -12,7 +12,7 @@ import numpy as np
 
 
 def read_img_cv2(path: Path) -> np.ndarray:
-    """Read image using OpenCV (for Albumentations and imgaug)"""
+    """Read image using OpenCV (for AlbumentationsX and imgaug)"""
     import cv2
 
     img = cv2.imread(str(path))
@@ -25,8 +25,7 @@ def read_img_torch(path: Path) -> Any:  # torch.Tensor
     """Read image using torchvision"""
     import torchvision
 
-    img = torchvision.io.read_image(str(path))
-    return img.unsqueeze(0)
+    return torchvision.io.read_image(str(path))  # Shape: (C, H, W)
 
 
 def read_img_pillow(path: Path) -> Any:  # PIL.Image.Image
@@ -38,11 +37,11 @@ def read_img_pillow(path: Path) -> Any:  # PIL.Image.Image
 
 def read_img_kornia(path: Path) -> Any:  # torch.Tensor
     """Read image using kornia format"""
-    return (read_img_torch(path) / 255.0).half()  # Convert to float16
+    return read_img_torch(path) / 255.0  # Keep as float32 on CPU
 
 
 def read_video_cv2(path: Path) -> np.ndarray:
-    """Read video using OpenCV (for Albumentations)
+    """Read video using OpenCV (for AlbumentationsX)
 
     Returns a 4D NumPy array with shape (num_frames, height, width, num_channels)
     """
@@ -105,7 +104,7 @@ def time_transform(transform: Any, images: list[Any]) -> float:
 def get_image_loader(library: str) -> Callable[[Path], Any]:
     """Get the appropriate image loader for the library"""
     loaders = {
-        "albumentations": read_img_cv2,
+        "albumentationsx": read_img_cv2,  # AlbumentationsX uses same loader
         "ultralytics": read_img_cv2,
         "imgaug": read_img_cv2,
         "torchvision": read_img_torch,
@@ -124,7 +123,6 @@ def get_video_loader(library: str) -> Callable[[Path], Any]:
     """Get the appropriate video loader for the library"""
     loaders = {
         "albumentationsx": read_video_cv2,
-        "albumentations": read_video_cv2,
         "torchvision": read_video_torch_float16,
         "kornia": read_video_kornia,
     }
@@ -223,7 +221,12 @@ def get_library_versions(library: str) -> dict[str, str]:
         except metadata.PackageNotFoundError:
             return "not installed"
 
-    versions[library] = get_version(library)
+    # Handle library name mapping
+    package_name = library
+    if library == "albumentationsx":
+        package_name = "albumentations"
+
+    versions[library] = get_version(package_name)
 
     for extra_librarties in ["numpy", "pillow", "opencv-python-headless", "torch", "opencv-python"]:
         versions[extra_librarties] = get_version(extra_librarties)

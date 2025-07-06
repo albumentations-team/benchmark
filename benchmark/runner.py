@@ -1,8 +1,10 @@
 import importlib
+import importlib.util
 import json
 import logging
 import os
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from warnings import warn
@@ -10,7 +12,6 @@ from warnings import warn
 import numpy as np
 from tqdm import tqdm
 
-from .transforms.specs import TRANSFORM_SPECS
 from .utils import get_image_loader, get_library_versions, get_system_info, time_transform, verify_thread_settings
 
 # Configure logging
@@ -33,6 +34,8 @@ class BenchmarkRunner:
         self,
         library: str,
         data_dir: Path,
+        transforms: list[dict[str, Any]],
+        call_fn: Callable[[Any, Any], Any],
         num_images: int = 1000,
         num_runs: int = 5,
         max_warmup_iterations: int = 1000,
@@ -42,6 +45,8 @@ class BenchmarkRunner:
     ):
         self.library = library
         self.data_dir = Path(data_dir)
+        self.transforms = transforms
+        self.call_fn = call_fn
         self.num_images = num_images
         self.num_runs = num_runs
         self.max_warmup_iterations = max_warmup_iterations
@@ -49,69 +54,58 @@ class BenchmarkRunner:
         self.warmup_threshold = warmup_threshold
         self.min_warmup_windows = min_warmup_windows
 
-        # Load implementation
-        self.impl = self._get_implementation()
+        # Get image loader for the library
         self.image_loader = get_image_loader(library)
 
-    def _get_implementation(self) -> Any:
-        """Import library-specific implementation"""
-        try:
-            module = importlib.import_module(f".transforms.{self.library.lower()}_impl", package="benchmark")
-            return getattr(module, f"{self.library.capitalize()}Impl")
-        except (ImportError, AttributeError) as e:
-            raise ValueError(f"Library {self.library} not supported: {e}")  # noqa: B904
-
     def load_images(self) -> list[Any]:
-        """Load images using appropriate loader"""
+        """Load images using appropriate loader - only RGB images"""
         image_paths = sorted(self.data_dir.glob("*.*"))
-        rgb_images = []
+        images = []
 
-        with tqdm(image_paths, desc="Loading images") as pbar:
+        with tqdm(image_paths, desc="Loading RGB images") as pbar:
             for path in pbar:
                 try:
-                    img = self.image_loader(path)
-                    # Check if image is RGB (3 channels)
-                    if hasattr(img, "shape"):  # numpy array or tensor
-                        if len(img.shape) == 4:  # batched tensor (B,C,H,W)
-                            if img.shape[1] != 3:  # check channels
-                                continue
-                        elif len(img.shape) == 3:  # unbatched array/tensor
-                            if img.shape[0] != 3 and img.shape[-1] != 3:
-                                continue
-                        else:
-                            continue
-                    elif hasattr(img, "mode") and img.mode != "RGB":
+                    # Pre-check if image is RGB using OpenCV (works for all formats)
+                    import cv2
+
+                    img_check = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+                    if img_check is None:
+                        continue
+                    # Skip grayscale images (1 or 2 channels) - we only want RGB
+                    if img_check.ndim < 3 or img_check.shape[2] < 3:
                         continue
 
-                    rgb_images.append(img)
+                    # Load image using library-specific loader
+                    img = self.image_loader(path)
+                    images.append(img)
 
-                    if len(rgb_images) >= self.num_images:
+                    if len(images) >= self.num_images:
                         break
                 except Exception:  # noqa: S112
                     # Skip problematic images
                     continue
 
-                pbar.set_postfix({"loaded": len(rgb_images)})
+                pbar.set_postfix({"loaded": len(images)})
 
-        if not rgb_images:
-            raise ValueError("No valid RGB images found in the directory")
+        if not images:
+            raise ValueError("No valid RGB images found in the directory (only RGB images are used for benchmarking)")
 
-        if len(rgb_images) < self.num_images:
-            logger.warning("Only found %d valid RGB images, requested %d", len(rgb_images), self.num_images)
+        if len(images) < self.num_images:
+            logger.warning("Only found %d valid RGB images, requested %d", len(images), self.num_images)
 
-        return rgb_images
+        return images
 
     def _perform_warmup(
         self,
         transform: Any,
-        transform_spec: Any,
+        transform_name: str,
         warmup_subset: list[Any],
     ) -> tuple[list[float], float, bool, str | None]:
         """Perform adaptive warmup until performance stabilizes or early stopping conditions are met.
 
         Args:
             transform: The transform to benchmark
-            transform_spec: The transform specification containing name and parameters
+            transform_name: Name of the transform for display
             warmup_subset: Subset of images to use for warmup
 
         Returns:
@@ -128,9 +122,9 @@ class BenchmarkRunner:
         start_time = time.time()
         time_per_image = 0.0  # Initialize here
 
-        with tqdm(total=self.max_warmup_iterations, desc=f"Warming up {transform_spec.name}", leave=False) as pbar:
+        with tqdm(total=self.max_warmup_iterations, desc=f"Warming up {transform_name}", leave=False) as pbar:
             for i in range(self.max_warmup_iterations):
-                elapsed = time_transform(lambda x: self.impl.__call__(transform, x), warmup_subset)
+                elapsed = time_transform(lambda x: self.call_fn(transform, x), warmup_subset)
                 throughput = len(warmup_subset) / elapsed
                 time_per_image = elapsed / len(warmup_subset)
                 warmup_throughputs.append(throughput)
@@ -176,20 +170,16 @@ class BenchmarkRunner:
 
         return warmup_throughputs, time_per_image, False, None
 
-    def run_transform(self, transform_spec: Any, images: list[Any]) -> dict[str, Any]:
+    def run_transform(self, transform_dict: dict[str, Any], images: list[Any]) -> dict[str, Any]:
         """Run benchmark for a single transform"""
-        if not hasattr(self.impl, transform_spec.name):
-            return {"supported": False}
-
-        # Create transform
-        transform_fn = getattr(self.impl, transform_spec.name)
-        transform = transform_fn(transform_spec.params)
+        transform = transform_dict["transform"]
+        transform_name = transform_dict["name"]
 
         # Perform warmup
         warmup_subset = images[: min(10, len(images))]
         warmup_throughputs, time_per_image, early_stopped, early_stop_reason = self._perform_warmup(
             transform,
-            transform_spec,
+            transform_name,
             warmup_subset,
         )
 
@@ -212,8 +202,8 @@ class BenchmarkRunner:
         throughputs = []
         times = []
 
-        for _ in tqdm(range(self.num_runs), desc=f"Benchmarking {transform_spec.name}", leave=False):
-            elapsed = time_transform(lambda x: self.impl.__call__(transform, x), images)
+        for _ in tqdm(range(self.num_runs), desc=f"Benchmarking {transform_name}", leave=False):
+            elapsed = time_transform(lambda x: self.call_fn(transform, x), images)
             throughput = len(images) / elapsed
             throughputs.append(throughput)
             times.append(elapsed)
@@ -257,11 +247,13 @@ class BenchmarkRunner:
 
         # Run benchmarks
         results = {}
-        for spec in tqdm(TRANSFORM_SPECS, desc="Running transforms"):
+        for transform_dict in tqdm(self.transforms, desc="Running transforms"):
             try:
-                results[str(spec)] = self.run_transform(spec, images)
+                transform_name = transform_dict["name"]
+                results[transform_name] = self.run_transform(transform_dict, images)
             except Exception as e:
-                warn(f"Transform {spec} failed: {e}", stacklevel=2)
+                transform_name = transform_dict.get("name", "Unknown")
+                warn(f"Transform {transform_name} failed: {e}", stacklevel=2)
 
         # Combine results and metadata
         full_results = {
@@ -278,12 +270,63 @@ class BenchmarkRunner:
         return full_results
 
 
+def load_from_python_file(specs_file: Path) -> tuple[str, Callable[[Any, Any], Any], list[dict[str, Any]]]:
+    """Load library name, __call__ function, and transforms from a Python file
+
+    The Python file must define:
+    - LIBRARY: str (e.g., "albumentationsx")
+    - __call__: function to apply transforms to images
+    - TRANSFORMS: list of dicts with 'name' and 'transform' keys
+
+    Returns:
+        tuple of (library name, __call__ function, list of transform dicts)
+    """
+    spec = importlib.util.spec_from_file_location("custom_transforms", specs_file)
+    if spec is None or spec.loader is None:
+        raise ValueError(f"Could not load from {specs_file}")
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    # Validate required attributes
+    if not hasattr(module, "LIBRARY"):
+        raise ValueError(f"Python file {specs_file} must define LIBRARY string")
+
+    if not callable(module):
+        raise TypeError(f"Python file {specs_file} must define __call__ function")
+
+    if not hasattr(module, "TRANSFORMS"):
+        raise ValueError(f"Python file {specs_file} must define TRANSFORMS list")
+
+    # Validate __call__ is callable
+    if not callable(module.__call__):
+        raise TypeError("__call__ must be a callable function")
+
+    # Validate transform structure
+    for i, t in enumerate(module.TRANSFORMS):
+        if not isinstance(t, dict):
+            raise TypeError(f"TRANSFORMS[{i}] must be a dictionary")
+
+        required_keys = {"name", "transform"}
+        missing = required_keys - t.keys()
+        if missing:
+            raise ValueError(f"TRANSFORMS[{i}] missing keys: {missing}")
+
+    return module.LIBRARY, module.__call__, module.TRANSFORMS
+
+
 def main() -> None:
     """CLI entry point"""
     import argparse
 
     parser = argparse.ArgumentParser(description="Run augmentation benchmarks")
-    parser.add_argument("-l", "--library", required=True, help="Library to benchmark")
+    parser.add_argument(
+        "-s",
+        "--specs-file",
+        type=Path,
+        required=True,
+        help="Python file defining LIBRARY and TRANSFORMS",
+    )
     parser.add_argument("-d", "--data-dir", required=True, type=Path, help="Directory with images")
     parser.add_argument("-o", "--output", type=Path, help="Output JSON path")
     parser.add_argument("-n", "--num-images", type=int, default=1000, help="Number of images")
@@ -295,9 +338,20 @@ def main() -> None:
 
     args = parser.parse_args()
 
+    # Load library and transforms from file
+    if not args.specs_file.exists():
+        raise ValueError(f"Specs file {args.specs_file} does not exist")
+
+    logger.info(f"Loading from {args.specs_file}")
+    library, call_fn, transforms = load_from_python_file(args.specs_file)
+    logger.info(f"Library: {library}")
+    logger.info(f"Loaded {len(transforms)} transforms")
+
     runner = BenchmarkRunner(
-        library=args.library,
+        library=library,
         data_dir=args.data_dir,
+        transforms=transforms,
+        call_fn=call_fn,
         num_images=args.num_images,
         num_runs=args.num_runs,
         max_warmup_iterations=args.max_warmup,

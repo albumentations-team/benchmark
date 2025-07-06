@@ -27,11 +27,11 @@ def load_results_from_csv(csv_path: Path) -> dict[str, list[tuple[float, float]]
     results = {}
 
     # Select only the columns we want, using partial matches
-    albumentations_col = next(col for col in df.columns if col.startswith("albumentations"))
+    albumentationsx_col = next(col for col in df.columns if col.startswith("albumentationsx"))
     torchvision_col = next(col for col in df.columns if col.startswith("torchvision"))
     kornia_col = next(col for col in df.columns if col.startswith("kornia"))
 
-    columns = ["Transform", albumentations_col, torchvision_col, kornia_col]
+    columns = ["Transform", albumentationsx_col, torchvision_col, kornia_col]
     df = df[columns]
 
     for _, row in df.iterrows():
@@ -49,19 +49,19 @@ def format_throughput(value: float, std: float) -> str:
     return f"{int(value)} ± {int(std)}"
 
 
-def calculate_speedup(values: list[float]) -> float:
-    """Calculate speedup ratio between Albumentations and the best of other libraries.
+def calculate_speedup(values: list[tuple[float, float]]) -> float:
+    """Calculate speedup ratio between Albumentationsx and the best of other libraries.
 
-    Returns > 1 if Albumentations is faster, < 1 if another library is faster.
+    Returns > 1 if Albumentationsx is faster, < 1 if another library is faster.
     """
-    albumentations_value = values[0]  # First value is Albumentations
-    other_values = [v for v in values[1:] if v > 0]  # Rest are other libraries
+    albumentationsx_value = values[0][0]  # First value is Albumentationsx (get value, not tuple)
+    other_values = [v[0] for v in values[1:]]  # Skip std dev
 
-    if albumentations_value == 0 or not other_values:
+    if albumentationsx_value == 0 or not other_values:
         return 0
 
     best_other = max(other_values)
-    return albumentations_value / best_other
+    return albumentationsx_value / best_other
 
 
 # Sets of transform names to look for in results
@@ -131,7 +131,7 @@ def generate_comparison_tables(csv_path: Path) -> str:
         ("Pixel-Level Transformations", PIXEL_TRANSFORMS),
     ]:
         markdown += f"### {category}\n"
-        markdown += "| Transform | Albumentations | TorchVision | Kornia | Speedup* |\n"
+        markdown += "| Transform | Albumentationsx | TorchVision | Kornia | Speedup* |\n"
         markdown += "|-----------|---------------|-------------|--------|----------|\n"
 
         for transform_name in sorted(transforms):
@@ -153,7 +153,7 @@ def generate_comparison_tables(csv_path: Path) -> str:
                     formatted.append(format_throughput(val, std))
 
             # Calculate speedup
-            speedup = calculate_speedup(values)
+            speedup = calculate_speedup(throughputs)
             speedup_str = f"{speedup:.2f}x" if speedup > 0 else "-"
 
             markdown += f"| {transform_name} | {' | '.join(formatted)} | {speedup_str} |\n"

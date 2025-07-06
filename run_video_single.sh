@@ -142,8 +142,8 @@ uv pip install setuptools
 uv pip install -U -r "${SCRIPT_DIR}/requirements/requirements.txt"
 
 # Install library-specific requirements
-if [ "$LIBRARY" == "albumentations" ]; then
-    # For albumentations, use the default requirements file
+if [ "$LIBRARY" == "albumentationsx" ]; then
+    # For albumentationsx, use the default requirements file
     uv pip install -U --force-reinstall -r "${SCRIPT_DIR}/requirements/${LIBRARY}.txt"
 else
     # For video libraries (torchvision, kornia), use the video-specific requirements files

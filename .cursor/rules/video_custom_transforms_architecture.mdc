@@ -1,8 +1,3 @@
----
-description:
-globs:
-alwaysApply: false
----
 # Video Benchmark Redesign Technical Specification
 
 ## Overview
@@ -299,13 +294,39 @@ Results will use the user-defined transform names:
 }
 ```
 
-## Migration Path
+## Built-in Transform Sets vs Custom Transforms
 
-1. Remove `benchmark/transforms/*_video_impl.py` files
-2. Remove `_get_library_implementation()` from `VideoBenchmarkRunner`
-3. Update `run_transform()` to use the user-provided `__call__` function
-4. Update file loading to use new format with `LIBRARY`, `__call__`, and `TRANSFORMS`
-5. Create example files for each library showing the new format
+The benchmark system supports two modes:
+
+### 1. Built-in Transform Sets (`*_video_impl.py` files)
+- Located in `benchmark/transforms/`
+- Use centralized `TRANSFORM_SPECS` from `specs.py`
+- Provide standardized transforms for consistent benchmarking across libraries
+- Already converted to the new format with `LIBRARY`, `__call__`, and `TRANSFORMS`
+
+### 2. Custom Transform Files
+- User-created Python files
+- Complete control over transform definitions and parameters
+- Can test specific parameter combinations or custom transforms
+
+Users can choose either approach based on their needs:
+```bash
+# Use built-in transforms
+./run_video_single.sh -d /videos -o output.json -s benchmark/transforms/albumentations_video_impl.py
+
+# Use custom transforms
+./run_video_single.sh -d /videos -o output.json -s my_custom_transforms.py
+```
+
+## Migration Status
+
+1. ✅ Remove `_get_library_implementation()` from `VideoBenchmarkRunner`
+2. ✅ Update `run_transform()` to use the user-provided `__call__` function
+3. ✅ Update file loading to use new format with `LIBRARY`, `__call__`, and `TRANSFORMS`
+4. ✅ Convert `albumentations_video_impl.py` to new format
+5. ✅ Convert `torchvision_video_impl.py` to new format
+6. ✅ Convert `kornia_video_impl.py` to new format
+7. ✅ Create example files for custom transforms
 
 ## Benefits
 
@@ -315,10 +336,13 @@ Results will use the user-defined transform names:
 4. **Transparency**: No hidden library-specific logic in benchmark code
 5. **Extensibility**: Users can add custom pre/post-processing in __call__
 6. **Simplicity**: Fewer abstractions, more direct control
+7. **Standardization**: Built-in transform sets ensure consistent benchmarking
 
 ## Backward Compatibility
 
-This design explicitly breaks backward compatibility with the old system. Users must migrate their transform definitions to the new format.
+This design explicitly breaks backward compatibility with the old system. Users must either:
+1. Use the converted built-in transform sets (`*_video_impl.py`)
+2. Migrate their custom transform definitions to the new format
 
 ## Example Use Cases
 
@@ -379,11 +403,3 @@ def __call__(transform, video):
 
     return np.ascontiguousarray(result)
 ```
-
-## Implementation Priority
-
-1. Update `video_runner.py` to support new transform format with `__call__`
-2. Create example transform files for each library
-3. Update `run_video_single.sh` if needed
-4. Remove old implementation files
-5. Update documentation

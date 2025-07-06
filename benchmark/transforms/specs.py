@@ -118,7 +118,7 @@ TRANSFORM_SPECS = [
     TransformSpec(
         "Grayscale",
         {
-            "num_output_channels": 1,
+            "num_output_channels": 3,
         },
     ),
     TransformSpec(

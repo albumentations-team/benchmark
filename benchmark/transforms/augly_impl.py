@@ -1,112 +1,117 @@
+"""AugLy implementations of transforms for images in custom format."""
+
 from typing import Any
 
 import augly.image as imaugs
-from PIL import Image
 
-Image.MAX_IMAGE_PIXELS = None  # Disable image size check
-if hasattr(Image.core, "set_threads"):
-    Image.core.set_threads(1)
+from benchmark.transforms.specs import TRANSFORM_SPECS, TransformSpec
+
+# Required: Library name for dependency installation
+LIBRARY = "augly"
 
 
-class AuglyImpl:
-    """Augly implementations of transforms"""
+# Required: Define how to apply transforms to images
+def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
+    """Apply augly transform to a single image
 
-    @staticmethod
-    def HorizontalFlip(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
-        return imaugs.HFlip(p=1)
+    Args:
+        transform: AugLy transform instance
+        image: PIL Image
 
-    @staticmethod
-    def VerticalFlip(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
-        return imaugs.VFlip(p=1)
+    Returns:
+        Transformed image as PIL Image
+    """
+    # AugLy transforms may modify images in-place, so we copy
+    return transform(image.copy())
 
-    @staticmethod
-    def Rotate(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
-        # Augly uses nearest interpolation by default
-        return imaugs.RandomRotation(
-            min_degrees=params["angle"],
-            max_degrees=params["angle"],
-            p=1,
-        )
 
-    @staticmethod
-    def RandomCrop128(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
-        # Augly uses relative coordinates (0-1)
-        # Using fixed values as augly's crop works differently
-        return imaugs.Crop(
-            x1=0.25,
-            y1=0.25,
-            x2=0.75,
-            y2=0.75,
-            p=1,
-        )
+# Helper function to create transforms from specs
+def create_transform(spec: TransformSpec) -> Any | None:
+    """Create an AugLy transform from a TransformSpec."""
+    params = spec.params
 
-    @staticmethod
-    def Resize(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
-        return imaugs.Resize(
+    if spec.name == "Resize":
+        return lambda img: imaugs.resize(
+            img,
             width=params["target_size"],
             height=params["target_size"],
-            resample=Image.BILINEAR if params["interpolation"] == "bilinear" else Image.NEAREST,
-            p=1,
         )
-
-    @staticmethod
-    def Grayscale(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
-        return imaugs.Grayscale(p=1)
-
-    @staticmethod
-    def ColorJitter(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
-        return imaugs.ColorJitter(
-            brightness_factor=params["brightness"],
-            contrast_factor=params["contrast"],
-            saturation_factor=params["saturation"],
-            p=1,
+    if spec.name == "HorizontalFlip":
+        return lambda img: imaugs.hflip(img)
+    if spec.name == "VerticalFlip":
+        return lambda img: imaugs.vflip(img)
+    if spec.name == "Rotate":
+        return lambda img: imaugs.rotate(img, degrees=params["angle"])
+    if spec.name == "ColorJitter":
+        # AugLy doesn't have a direct ColorJitter, use brightness/contrast
+        return lambda img: imaugs.brightness(
+            imaugs.contrast(img, factor=1 + params["contrast"]),
+            factor=1 + params["brightness"],
         )
-
-    @staticmethod
-    def GaussianBlur(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
-        return imaugs.Blur(
-            radius=params["sigma"],
-            p=1,
+    if spec.name == "Grayscale":
+        return lambda img: imaugs.grayscale(img)
+    if spec.name == "Blur":
+        return lambda img: imaugs.blur(img, radius=params["radius"])
+    if spec.name == "Brightness":
+        brightness_val = params["brightness_limit"]
+        if isinstance(brightness_val, tuple):
+            brightness_val = brightness_val[0]  # Use first value if tuple
+        return lambda img: imaugs.brightness(img, factor=1 + brightness_val)
+    if spec.name == "Contrast":
+        contrast_val = params["contrast_limit"]
+        if isinstance(contrast_val, tuple):
+            contrast_val = contrast_val[0]  # Use first value if tuple
+        return lambda img: imaugs.contrast(img, factor=1 + contrast_val)
+    if spec.name == "Saturation":
+        return lambda img: imaugs.saturation(img, factor=params["saturation_factor"])
+    if spec.name == "JpegCompression":
+        return lambda img: imaugs.encoding_quality(img, quality=params["quality"])
+    if spec.name == "RandomGamma":
+        # AugLy's apply_lambda doesn't work well, skip this transform
+        # Would use gamma = params["gamma"] / 100 if supported
+        return None
+    if spec.name == "Sharpen":
+        alpha = params["alpha"]
+        if isinstance(alpha, tuple):
+            alpha = alpha[0]  # Use first value if tuple
+        return lambda img: imaugs.sharpen(
+            img,
+            factor=alpha,
         )
-
-    @staticmethod
-    def JpegCompression(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
-        return imaugs.EncodingQuality(
-            quality=params["quality"],
-            p=1,
+    if spec.name == "Pad":
+        # AugLy pad function has different API - use color instead of color_tuple
+        return lambda img: imaugs.pad(
+            img,
+            w_factor=params["padding"] / img.width,
+            h_factor=params["padding"] / img.height,
+            color=(params["fill"], params["fill"], params["fill"]),
         )
+    if spec.name == "Perspective":
+        # Skip - augly's perspective_transform has a bug with deprecated np.float
+        return None
+    if spec.name in {"Equalize", "AutoContrast"}:
+        # AugLy doesn't support these PIL filters properly, skip
+        return None
+    if spec.name == "Posterize":
+        # AugLy doesn't have posterize, use quantize as approximation
+        num_colors = 2 ** params["bits"]
+        return lambda img: img.quantize(colors=num_colors).convert("RGB")
+    if spec.name == "Invert":
+        # AugLy doesn't support these PIL filters properly, skip
+        return None
+    if spec.name == "Solarize":
+        # AugLy's apply_pil_filter doesn't accept 'p' parameter, skip
+        return None
+    # Skip transforms not supported by augly
+    return None
 
-    @staticmethod
-    def GaussianNoise(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
-        return imaugs.RandomNoise(
-            mean=params["mean"],
-            var=params["var"],
-            p=1,
-        )
 
-    @staticmethod
-    def Blur(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
-        return imaugs.Blur(
-            radius=params["radius"],
-            p=1,
-        )
-
-    @staticmethod
-    def Brightness(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
-        return imaugs.RandomBrightness(
-            min_factor=params["brightness_limit"][0],
-            max_factor=params["brightness_limit"][1],
-            p=1,
-        )
-
-    @staticmethod
-    def Contrast(params: dict[str, Any]) -> imaugs.transforms.BaseTransform:
-        return imaugs.Contrast(
-            factor=params["contrast_limit"][0],
-            p=1,
-        )
-
-    @staticmethod
-    def __call__(transform: imaugs.transforms.BaseTransform, image: Image.Image) -> Image.Image:
-        """Apply the transform to the image"""
-        return transform(image)
+# Required: Transform definitions from specs
+TRANSFORMS = [
+    {
+        "name": spec.name,
+        "transform": create_transform(spec),
+    }
+    for spec in TRANSFORM_SPECS
+    if create_transform(spec) is not None
+]
