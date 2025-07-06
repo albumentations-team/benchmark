@@ -1,4 +1,0 @@
-av
-numpy
-torch
-torchvision

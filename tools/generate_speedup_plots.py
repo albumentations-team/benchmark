@@ -51,6 +51,10 @@ def calculate_speedups(results: dict[str, dict[str, Any]], reference_library: st
                 library_throughputs[transform] = transform_results.get("median_throughput", 0)
         throughputs[library] = pd.Series(library_throughputs)
 
+    # Filter out transforms that only one library supports before calculating speedups
+    support_count = throughputs.notna().sum(axis=1)
+    throughputs = throughputs.loc[support_count > 1]
+
     # Calculate speedups
     if reference_library:
         # Calculate speedups relative to the reference library
@@ -83,11 +87,7 @@ def calculate_speedups(results: dict[str, dict[str, Any]], reference_library: st
                 fastest_other = max(other_throughputs)
                 speedups.loc[transform, reference_library] = reference_throughputs[transform] / fastest_other
 
-        # Filter out transforms that only the reference library supports
-        # Count how many libraries support each transform
-        support_count = throughputs.notna().sum(axis=1)
-        # Keep only transforms supported by more than one library
-        speedups = speedups.loc[support_count > 1]
+        # No need to filter again - already filtered above
     else:
         # For each transform, find the fastest library
         speedups = pd.DataFrame(index=throughputs.index)
@@ -102,9 +102,7 @@ def calculate_speedups(results: dict[str, dict[str, Any]], reference_library: st
                     if not pd.isna(throughputs.loc[transform, library]) and throughputs.loc[transform, library] > 0:
                         speedups.loc[transform, library] = throughputs.loc[transform, library] / fastest_throughput
 
-        # Filter out transforms that only one library supports
-        support_count = throughputs.notna().sum(axis=1)
-        speedups = speedups.loc[support_count > 1]
+        # No need to filter again - already filtered above
 
     return speedups
 
@@ -300,7 +298,7 @@ def main() -> None:
     parser.add_argument(
         "-l",
         "--reference-library",
-        default="albumentations",
+        default="albumentationsx",
         help="Reference library for speedup calculation",
     )
     args = parser.parse_args()

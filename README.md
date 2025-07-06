@@ -1,6 +1,6 @@
 # Image and Video Augmentation Library Benchmarks
 
-A comprehensive benchmarking suite for comparing the performance of popular image and video augmentation libraries including [Albumentations](https://albumentations.ai/), [imgaug](https://imgaug.readthedocs.io/en/latest/), [torchvision](https://pytorch.org/vision/stable/index.html), [Kornia](https://kornia.readthedocs.io/en/latest/), and [Augly](https://github.com/facebookresearch/AugLy).
+A comprehensive benchmarking suite for comparing the performance of popular image and video augmentation libraries including [AlbumentationsX](https://albumentations.ai/), [imgaug](https://imgaug.readthedocs.io/en/latest/), [torchvision](https://pytorch.org/vision/stable/index.html), [Kornia](https://kornia.readthedocs.io/en/latest/), and [Augly](https://github.com/facebookresearch/AugLy).
 
 <details>
 <summary>Table of Contents</summary>
@@ -49,7 +49,7 @@ The image benchmarks compare the performance of various libraries on standard im
 
 ### Video Benchmarks
 
-The video benchmarks compare CPU-based processing (Albumentations) with GPU-accelerated processing (Kornia) for video transformations. The benchmarks use the [UCF101 dataset](https://www.crcv.ucf.edu/data/UCF101.php), which contains realistic videos from 101 action categories.
+The video benchmarks compare CPU-based processing (AlbumentationsX) with GPU-accelerated processing (Kornia) for video transformations. The benchmarks use the [UCF101 dataset](https://www.crcv.ucf.edu/data/UCF101.php), which contains realistic videos from 101 action categories.
 
 [**Detailed Video Benchmark Results**](docs/videos/README.md)
 
@@ -60,13 +60,13 @@ The video benchmarks compare CPU-based processing (Albumentations) with GPU-acce
 ### Image Augmentation Performance
 
 <!-- IMAGE_SPEEDUP_SUMMARY_START -->
-Albumentations is generally the fastest library for image augmentation, with a median speedup of 4.1× compared to other libraries. For some transforms, the speedup can be as high as 119.7× (MedianBlur).
+AlbumentationsX is generally the fastest library for image augmentation, with a median speedup of 4.1× compared to other libraries. For some transforms, the speedup can be as high as 119.7× (MedianBlur).
 <!-- IMAGE_SPEEDUP_SUMMARY_END -->
 
 ### Video Augmentation Performance
 
 <!-- VIDEO_SPEEDUP_SUMMARY_START -->
-For video processing, the performance comparison between CPU (Albumentations) and GPU (Kornia) shows interesting trade-offs. While GPU acceleration provides significant benefits for complex transformations, CPU processing can be more efficient for simple operations.
+For video processing, the performance comparison between CPU (AlbumentationsX) and GPU (Kornia) shows interesting trade-offs. While GPU acceleration provides significant benefits for complex transformations, CPU processing can be more efficient for simple operations.
 <!-- VIDEO_SPEEDUP_SUMMARY_END -->
 
 ## Requirements
@@ -80,7 +80,7 @@ The benchmark automatically creates isolated virtual environments for each libra
 
 ## Supported Libraries
 
-- [Albumentations](https://albumentations.ai/)
+- [AlbumentationsX](https://albumentations.ai/)
 - [imgaug](https://imgaug.readthedocs.io/en/latest/)
 - [torchvision](https://pytorch.org/vision/stable/index.html)
 - [Kornia](https://kornia.readthedocs.io/en/latest/)
@@ -124,7 +124,7 @@ This will give you more relevant performance metrics for your specific use case.
 To benchmark a single library:
 
 ```bash
-./run_single.sh -l albumentations -d /path/to/images -o /path/to/output
+./run_single.sh -l albumentationsx -d /path/to/images -o /path/to/output
 ```
 
 To run benchmarks for all supported libraries and generate a comparison:
@@ -138,7 +138,7 @@ To run benchmarks for all supported libraries and generate a comparison:
 To benchmark a single library:
 
 ```bash
-./run_video_single.sh -l albumentations -d /path/to/videos -o /path/to/output
+./run_video_single.sh -l albumentationsx -d /path/to/videos -o /path/to/output
 ```
 
 To run benchmarks for all supported libraries and generate a comparison:
@@ -146,6 +146,59 @@ To run benchmarks for all supported libraries and generate a comparison:
 ```bash
 ./run_video_all.sh -d /path/to/videos -o /path/to/output --update-docs
 ```
+
+#### Using Custom Transforms
+
+To benchmark transforms, create a Python file defining `LIBRARY` and `CUSTOM_TRANSFORMS`:
+
+```python
+# my_transforms.py
+import albumentations as A
+
+# Specify the library
+LIBRARY = "albumentationsx"
+
+CUSTOM_TRANSFORMS = [
+    # Test different parameters of the same transform
+    A.ToGray(method="weighted_average", p=1),
+    A.ToGray(method="pca", p=1),
+
+    # Different noise levels
+    A.GaussNoise(var_limit=(10.0, 50.0), p=1),
+    A.GaussNoise(var_limit=(100.0, 200.0), p=1),
+
+    # Any other transforms...
+    A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=1),
+]
+```
+
+Then run:
+
+```bash
+# Using the shell script (recommended)
+./run_video_single.sh -d /path/to/videos -o output/ -s my_transforms.py
+
+# Or Python directly
+python -m benchmark.video_runner -d /path/to/videos -o output.json -s my_transforms.py
+```
+
+The results will show each transform with all its parameters:
+- `ToGray(method=weighted_average, p=1)`
+- `ToGray(method=pca, p=1)`
+- `GaussNoise(var_limit=(10.0, 50.0), mean=0, p=1, per_channel=True)`
+
+See `examples/custom_video_specs_template.py` and `example_direct_transforms.py` for more examples.
+
+To analyze parametric results:
+
+```bash
+python tools/analyze_parametric_results.py parametric_results.json
+```
+
+This will show:
+- Best and worst configurations for each transform
+- Performance differences between parameter choices
+- Optimal settings for your use case
 
 ## Methodology
 

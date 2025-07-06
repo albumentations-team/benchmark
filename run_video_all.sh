@@ -1,4 +1,8 @@
 #!/bin/bash
+# benchmark/run_video_all.sh
+#
+# Script to run all video augmentation benchmarks using built-in transforms.
+# Results are saved in a format compatible with update_docs.sh
 
 # Help message
 show_help() {
@@ -15,7 +19,6 @@ show_help() {
     echo "  --warmup-window Window size for variance check (default: 5)"
     echo "  --warmup-threshold Variance stability threshold (default: 0.05)"
     echo "  --min-warmup-windows Minimum windows to check (default: 3)"
-    echo "  --update-docs   Update documentation with results (default: false)"
     echo "  -h             Show this help message"
 }
 
@@ -26,7 +29,6 @@ MAX_WARMUP=100
 WARMUP_WINDOW=5
 WARMUP_THRESHOLD=0.05
 MIN_WARMUP_WINDOWS=3
-UPDATE_DOCS=false
 
 # Parse command line arguments
 while getopts "d:o:n:r:h-:" opt; do
@@ -44,9 +46,6 @@ while getopts "d:o:n:r:h-:" opt; do
                     ;;
                 min-warmup-windows)
                     MIN_WARMUP_WINDOWS="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                    ;;
-                update-docs)
-                    UPDATE_DOCS=true
                     ;;
                 *)
                     echo "Unknown option --${OPTARG}"
@@ -88,15 +87,31 @@ fi
 # Create output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
 
-# Run benchmarks for each library
-LIBRARIES=("albumentations" "kornia" "torchvision")
+# Get the directory where the script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-for lib in "${LIBRARIES[@]}"; do
+# Define libraries and their corresponding spec files
+LIBRARIES=("albumentationsx" "kornia" "torchvision")
+SPEC_FILES=(
+    "benchmark/transforms/albumentationsx_video_impl.py"
+    "benchmark/transforms/kornia_video_impl.py"
+    "benchmark/transforms/torchvision_video_impl.py"
+)
+
+# Run benchmarks for each library
+for i in "${!LIBRARIES[@]}"; do
+    lib="${LIBRARIES[$i]}"
+    spec_file="${SPEC_FILES[$i]}"
+
     echo "Running video benchmark for $lib..."
+
+    # Ensure output filename matches what update_docs.sh expects
+    output_file="${OUTPUT_DIR}/${lib}_video_results.json"
+
     ./run_video_single.sh \
-        -l "$lib" \
         -d "$DATA_DIR" \
-        -o "$OUTPUT_DIR" \
+        -o "$output_file" \
+        -s "$spec_file" \
         -n "$NUM_VIDEOS" \
         -r "$NUM_RUNS" \
         --max-warmup "$MAX_WARMUP" \
@@ -107,14 +122,8 @@ done
 
 # Generate comparison table
 echo "Generating video comparison table..."
-python -m tools.compare_video_results -r "$OUTPUT_DIR" -o"${OUTPUT_DIR}/video_comparison.md"
+python -m tools.compare_video_results -r "$OUTPUT_DIR" > "${OUTPUT_DIR}/video_comparison.md"
 
 echo "All video benchmarks complete."
 echo "Individual results saved in: $OUTPUT_DIR"
 echo "Comparison table saved as: ${OUTPUT_DIR}/video_comparison.md"
-
-# Update documentation if requested
-if [ "$UPDATE_DOCS" = true ]; then
-    echo "Updating documentation..."
-    ./tools/update_docs.sh --video-results "$OUTPUT_DIR"
-fi

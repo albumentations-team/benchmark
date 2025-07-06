@@ -1,0 +1,1310 @@
+{
+  "metadata": {
+    "system_info": {
+      "python_version": "3.12.8 | packaged by Anaconda, Inc. | (main, Dec 11 2024, 10:37:40) [Clang 14.0.6 ]",
+      "platform": "macOS-15.5-arm64-arm-64bit",
+      "processor": "arm",
+      "cpu_count": "16",
+      "timestamp": "2025-07-04T14:57:28.113173+00:00"
+    },
+    "library_versions": {
+      "albumentations": "not installed",
+      "numpy": "2.3.1",
+      "pillow": "not installed",
+      "opencv-python-headless": "4.11.0.86",
+      "torch": "not installed",
+      "opencv-python": "not installed"
+    },
+    "thread_settings": {
+      "environment": "{'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1', 'VECLIB_MAXIMUM_THREADS': '1', 'NUMEXPR_NUM_THREADS': '1'}",
+      "opencv": "{'threads': 1, 'opencl': False}",
+      "pytorch": "not installed",
+      "pillow": "not installed"
+    },
+    "benchmark_params": {
+      "num_images": 2000,
+      "num_runs": 5,
+      "max_warmup_iterations": 1000,
+      "warmup_window": 5,
+      "warmup_threshold": 0.05,
+      "min_warmup_windows": 10
+    }
+  },
+  "results": {
+    "Resize": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        3332.848220583248,
+        3490.2833777207306,
+        3433.1890672854747,
+        3508.2044146610133,
+        3427.332697542184
+      ],
+      "median_throughput": 3433.1890672854747,
+      "std_throughput": 68.65739997614645,
+      "times": [
+        0.6000873330049217,
+        0.5730193750932813,
+        0.5825487500987947,
+        0.5700922077521682,
+        0.5835441658273339
+      ],
+      "mean_time": 0.5825487500987947,
+      "std_time": 0.011649892201468838,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "RandomCrop128": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        104782.44366668741,
+        108989.8479053489,
+        107960.7574865951,
+        105446.53537609665,
+        108083.27896413606
+      ],
+      "median_throughput": 107960.7574865951,
+      "std_throughput": 1828.4578163339656,
+      "times": [
+        0.019087166991084814,
+        0.018350332975387573,
+        0.018525249790400267,
+        0.018966957926750183,
+        0.01850424986332655
+      ],
+      "mean_time": 0.018525249790400267,
+      "std_time": 0.00031374953795597723,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "RandomResizedCrop": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        4266.386419267255,
+        4270.328134671509,
+        4383.957606556048,
+        4284.659190081296,
+        4334.200050101917
+      ],
+      "median_throughput": 4284.659190081296,
+      "std_throughput": 50.37759831609447,
+      "times": [
+        0.46878079092130065,
+        0.4683480840176344,
+        0.4562087911181152,
+        0.4667815831489861,
+        0.46144616696983576
+      ],
+      "mean_time": 0.4667815831489861,
+      "std_time": 0.005488262672482032,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "CenterCrop128": {
+      "supported": true,
+      "warmup_iterations": 52,
+      "throughputs": [
+        112797.32553535016,
+        111032.97427831119,
+        112821.45318763223,
+        110448.67876272777,
+        113956.3284185368
+      ],
+      "median_throughput": 112797.32553535016,
+      "std_throughput": 1436.6734267831025,
+      "times": [
+        0.01773091685026884,
+        0.018012667074799538,
+        0.017727124970406294,
+        0.018107957672327757,
+        0.017550582997500896
+      ],
+      "mean_time": 0.01773091685026884,
+      "std_time": 0.00022583458384657092,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "HorizontalFlip": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        12709.383760432986,
+        12976.46261437245,
+        13360.80091030334,
+        13670.251928397074,
+        13395.219247585212
+      ],
+      "median_throughput": 13360.80091030334,
+      "std_throughput": 378.57083583520995,
+      "times": [
+        0.1573640420101583,
+        0.15412520803511143,
+        0.14969162503257394,
+        0.14630308281630278,
+        0.14930699998512864
+      ],
+      "mean_time": 0.14969162503257394,
+      "std_time": 0.004241428637890373,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "VerticalFlip": {
+      "supported": true,
+      "warmup_iterations": 52,
+      "throughputs": [
+        29775.622414557645,
+        28457.412789755814,
+        28910.50757942014,
+        30159.145976363616,
+        28545.380888204232
+      ],
+      "median_throughput": 28910.50757942014,
+      "std_throughput": 760.0087844363952,
+      "times": [
+        0.06716904090717435,
+        0.07028045784682035,
+        0.06917899986729026,
+        0.06631487514823675,
+        0.07006387505680323
+      ],
+      "mean_time": 0.06917899986729026,
+      "std_time": 0.0018185999485907107,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Pad": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        43975.73638955186,
+        38500.31650728206,
+        42900.73309071211,
+        41958.11582964571,
+        42601.34476855371
+      ],
+      "median_throughput": 42601.34476855371,
+      "std_throughput": 2081.177301777348,
+      "times": [
+        0.04547962499782443,
+        0.05194762488827109,
+        0.04661924997344613,
+        0.047666582744568586,
+        0.04694687481969595
+      ],
+      "mean_time": 0.04694687481969595,
+      "std_time": 0.002293466809438719,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Rotate": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        2709.8664554771003,
+        2790.7061111688877,
+        2771.4062686882808,
+        2840.464260177217,
+        2775.1322474304834
+      ],
+      "median_throughput": 2775.1322474304834,
+      "std_throughput": 46.78657514399417,
+      "times": [
+        0.738043749704957,
+        0.7166645000688732,
+        0.7216552919708192,
+        0.704110249876976,
+        0.7206863751634955
+      ],
+      "mean_time": 0.7206863751634955,
+      "std_time": 0.01215021276123321,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Affine": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        1400.4335918230734,
+        1390.867334080664,
+        1390.0690402027806,
+        1383.789647909512,
+        1372.838437714059
+      ],
+      "median_throughput": 1390.0690402027806,
+      "std_throughput": 10.172207405658353,
+      "times": [
+        1.4281291249208152,
+        1.4379516658373177,
+        1.438777457922697,
+        1.445306375157088,
+        1.456835666205734
+      ],
+      "mean_time": 1.438777457922697,
+      "std_time": 0.010528644469659258,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Perspective": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        1156.500015943531,
+        1181.230396397218,
+        1186.3914963326888,
+        1161.8540935765495,
+        1175.751737215437
+      ],
+      "median_throughput": 1175.751737215437,
+      "std_throughput": 12.737570634243765,
+      "times": [
+        1.729355791117996,
+        1.6931497920304537,
+        1.6857841666787863,
+        1.7213865416124463,
+        1.7010393748059869
+      ],
+      "mean_time": 1.7010393748059869,
+      "std_time": 0.018428302933692346,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Elastic": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        318.2946177688581,
+        315.4125515511657,
+        307.30735009282813,
+        314.96761545859056,
+        312.38487520982545
+      ],
+      "median_throughput": 314.96761545859056,
+      "std_throughput": 4.130441350323939,
+      "times": [
+        6.2834867080673575,
+        6.340901749674231,
+        6.508142416365445,
+        6.34985916595906,
+        6.4023586246185005
+      ],
+      "mean_time": 6.349859165959061,
+      "std_time": 0.08327116687734201,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "ColorJitter": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        968.8724101573987,
+        991.8007828441791,
+        978.5587980445057,
+        960.5050529405713,
+        940.8681425480181
+      ],
+      "median_throughput": 968.8724101573987,
+      "std_throughput": 19.17658239685265,
+      "times": [
+        2.0642552920617163,
+        2.016534000169486,
+        2.0438220002688468,
+        2.082237874623388,
+        2.1256963750347495
+      ],
+      "mean_time": 2.0642552920617163,
+      "std_time": 0.0408571461849448,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "ChannelShuffle": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        7828.147370394369,
+        7620.412033901401,
+        7653.736070871691,
+        7828.232907008958,
+        7618.024619042791
+      ],
+      "median_throughput": 7653.736070871691,
+      "std_throughput": 109.0739505595423,
+      "times": [
+        0.2554882918484509,
+        0.26245300006121397,
+        0.26131029101088643,
+        0.2554855002090335,
+        0.2625352502800524
+      ],
+      "mean_time": 0.26131029101088643,
+      "std_time": 0.0037239520018064725,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Grayscale": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        16866.001729597105,
+        16483.57875151119,
+        16344.77675068372,
+        16622.14463631469,
+        15740.698216438506
+      ],
+      "median_throughput": 16483.57875151119,
+      "std_throughput": 421.4751885559419,
+      "times": [
+        0.11858174996450543,
+        0.12133287498727441,
+        0.12236324977129698,
+        0.12032141722738743,
+        0.12705916678532958
+      ],
+      "mean_time": 0.1213328749872744,
+      "std_time": 0.0031024085930737378,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "RGBShift": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        970.1063545610443,
+        990.60687964552,
+        984.5986209992298,
+        990.420079724544,
+        962.1279384401745
+      ],
+      "median_throughput": 984.5986209992298,
+      "std_throughput": 12.83169950208147,
+      "times": [
+        2.0616296250373125,
+        2.0189643753692508,
+        2.0312845837324858,
+        2.019345165695995,
+        2.0787256248295307
+      ],
+      "mean_time": 2.0312845837324858,
+      "std_time": 0.026472547112866913,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "GaussianBlur": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        2335.363786024596,
+        2331.3996154187275,
+        2405.919887422482,
+        2422.7832473361236,
+        2398.121790559259
+      ],
+      "median_throughput": 2398.121790559259,
+      "std_throughput": 42.358036954198894,
+      "times": [
+        0.8563976250588894,
+        0.8578537916764617,
+        0.8312828745692968,
+        0.8254968752153218,
+        0.8339860001578927
+      ],
+      "mean_time": 0.8339860001578927,
+      "std_time": 0.014730698813146712,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "GaussianNoise": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        329.24286116733504,
+        331.68942298655315,
+        323.6323763964891,
+        332.77904358243467,
+        326.8416698935615
+      ],
+      "median_throughput": 329.24286116733504,
+      "std_throughput": 3.7050707431533936,
+      "times": [
+        6.074543250259012,
+        6.029737041331828,
+        6.179851417429745,
+        6.009993833955377,
+        6.119170791935176
+      ],
+      "mean_time": 6.074543250259012,
+      "std_time": 0.06835869544675043,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Invert": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        22610.73978939781,
+        29284.416943534925,
+        26603.43908713447,
+        27069.3687636064,
+        25372.070938251265
+      ],
+      "median_throughput": 26603.43908713447,
+      "std_throughput": 2449.475927045508,
+      "times": [
+        0.08845354104414582,
+        0.06829570839181542,
+        0.07517825020477176,
+        0.07388424966484308,
+        0.07882683305069804
+      ],
+      "mean_time": 0.07517825020477176,
+      "std_time": 0.0069219364274992114,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Posterize": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        11622.368915464607,
+        11447.391438263105,
+        11663.402978165497,
+        11699.361503641829,
+        11889.41946277076
+      ],
+      "median_throughput": 11663.402978165497,
+      "std_throughput": 158.67922574243858,
+      "times": [
+        0.17208195803686976,
+        0.17471229238435626,
+        0.17147654108703136,
+        0.17094950005412102,
+        0.16821679193526506
+      ],
+      "mean_time": 0.17147654108703136,
+      "std_time": 0.0023329181735055973,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Solarize": {
+      "supported": true,
+      "warmup_iterations": 61,
+      "throughputs": [
+        10393.020761672567,
+        10277.760755464193,
+        10307.657815774694,
+        10336.932301102599,
+        10692.671228662157
+      ],
+      "median_throughput": 10336.932301102599,
+      "std_throughput": 168.1809047295802,
+      "times": [
+        0.192436832934618,
+        0.19459491688758135,
+        0.19403050001710653,
+        0.19348100014030933,
+        0.18704400025308132
+      ],
+      "mean_time": 0.19348100014030933,
+      "std_time": 0.003147917457881616,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Sharpen": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        2229.696039364453,
+        2178.7199416416365,
+        2222.3399248639207,
+        2222.588639865741,
+        2214.822051139424
+      ],
+      "median_throughput": 2222.3399248639207,
+      "std_throughput": 20.21367572740936,
+      "times": [
+        0.8969832500442863,
+        0.9179702089168131,
+        0.8999523329548538,
+        0.8998516253195703,
+        0.903007083106786
+      ],
+      "mean_time": 0.8999523329548538,
+      "std_time": 0.008185671518990892,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "AutoContrast": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        1565.3709168143162,
+        1574.574660235262,
+        1608.2370143084565,
+        1536.2175286048134,
+        1593.2415229032595
+      ],
+      "median_throughput": 1574.574660235262,
+      "std_throughput": 27.536506981619077,
+      "times": [
+        1.2776524582877755,
+        1.2701842919923365,
+        1.2435977919958532,
+        1.3018989581614733,
+        1.2553024580702186
+      ],
+      "mean_time": 1.2701842919923365,
+      "std_time": 0.02221326146526702,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Equalize": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        1221.3373125092226,
+        1224.0539145004468,
+        1195.3800059577916,
+        1200.5258005386486,
+        1207.3972096549028
+      ],
+      "median_throughput": 1207.3972096549028,
+      "std_throughput": 12.6093751465065,
+      "times": [
+        1.637549249920994,
+        1.633914957754314,
+        1.673108124639839,
+        1.665936707984656,
+        1.6564557082019746
+      ],
+      "mean_time": 1.6564557082019746,
+      "std_time": 0.01729908871021879,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Normalize": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        1502.9302916257964,
+        1416.216415203646,
+        1358.8735890805378,
+        1478.4983819875538,
+        1505.2950168278596
+      ],
+      "median_throughput": 1478.4983819875538,
+      "std_throughput": 63.42072438413924,
+      "times": [
+        1.3307337081059813,
+        1.4122135420329869,
+        1.4718072498217225,
+        1.352723834104836,
+        1.3286432079039514
+      ],
+      "mean_time": 1.352723834104836,
+      "std_time": 0.058025579531098256,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Erasing": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        21518.391425716964,
+        22521.391583628432,
+        22756.93669165401,
+        26492.06902833469,
+        32102.428379964666
+      ],
+      "median_throughput": 22756.93669165401,
+      "std_throughput": 4357.079861099596,
+      "times": [
+        0.09294375032186508,
+        0.08880445919930935,
+        0.08788529084995389,
+        0.07549429219216108,
+        0.0623005828820169
+      ],
+      "mean_time": 0.08788529084995389,
+      "std_time": 0.016826659758193634,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "JpegCompression": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        1268.662454736094,
+        1255.5972168515432,
+        1292.5659467788748,
+        1291.2250151321975,
+        1271.1003994797993
+      ],
+      "median_throughput": 1271.1003994797993,
+      "std_throughput": 15.813022682395465,
+      "times": [
+        1.5764634576626122,
+        1.5928675001487136,
+        1.5473098335787654,
+        1.5489167082123458,
+        1.573439832776785
+      ],
+      "mean_time": 1.573439832776785,
+      "std_time": 0.01957425217965974,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "RandomGamma": {
+      "supported": true,
+      "warmup_iterations": 52,
+      "throughputs": [
+        11433.80380825981,
+        11311.06828667961,
+        10682.234245178775,
+        10594.07369566091,
+        10810.710995721813
+      ],
+      "median_throughput": 10810.710995721813,
+      "std_throughput": 381.0769819251285,
+      "times": [
+        0.1749199158512056,
+        0.17681795824319124,
+        0.18722674995660782,
+        0.18878479208797216,
+        0.1850017081014812
+      ],
+      "mean_time": 0.1850017081014812,
+      "std_time": 0.006521300273608775,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "PlankianJitter": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        2963.906472885782,
+        2977.565531870435,
+        2986.153579455436,
+        2989.918182956511,
+        2948.717925375184
+      ],
+      "median_throughput": 2977.565531870435,
+      "std_throughput": 16.971142110563413,
+      "times": [
+        0.6747851250693202,
+        0.6716896668076515,
+        0.6697579165920615,
+        0.6689146249555051,
+        0.6782608749344945
+      ],
+      "mean_time": 0.6716896668076515,
+      "std_time": 0.003828409708393169,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "MedianBlur": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        1167.690045446114,
+        1122.9411135907899,
+        1147.4213660099329,
+        1186.0264438447377,
+        1181.7373133009767
+      ],
+      "median_throughput": 1167.690045446114,
+      "std_throughput": 26.143070950777457,
+      "times": [
+        1.7127832919359207,
+        1.7810372919775546,
+        1.7430388340726495,
+        1.6863030418753624,
+        1.6924235001206398
+      ],
+      "mean_time": 1.7127832919359207,
+      "std_time": 0.03834700424056438,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "MotionBlur": {
+      "supported": true,
+      "warmup_iterations": 65,
+      "throughputs": [
+        4180.557587705411,
+        4346.995269569801,
+        4208.319536978562,
+        4325.49103617538,
+        4250.838811196952
+      ],
+      "median_throughput": 4250.838811196952,
+      "std_throughput": 72.27269248527725,
+      "times": [
+        0.4784050830639899,
+        0.4600879172794521,
+        0.47524908278137445,
+        0.4623752501793206,
+        0.4704953748732805
+      ],
+      "mean_time": 0.4704953748732805,
+      "std_time": 0.007999354728387597,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "CLAHE": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        626.4192146389433,
+        613.5835667450971,
+        617.9620718379774,
+        619.2247375510656,
+        617.5755516110108
+      ],
+      "median_throughput": 617.9620718379774,
+      "std_throughput": 4.677828515798011,
+      "times": [
+        3.192750083748251,
+        3.259539708029479,
+        3.2364445831626654,
+        3.2298451252281666,
+        3.238470167387277
+      ],
+      "mean_time": 3.2364445831626654,
+      "std_time": 0.024499129397843915,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Brightness": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        10937.535936572953,
+        10791.723596059439,
+        10810.258083272834,
+        11068.693984749894,
+        10785.49645092815
+      ],
+      "median_throughput": 10810.258083272834,
+      "std_throughput": 122.97912971697254,
+      "times": [
+        0.18285654205828905,
+        0.18532720766961575,
+        0.18500945903360844,
+        0.18068979075178504,
+        0.18543420871719718
+      ],
+      "mean_time": 0.18500945903360844,
+      "std_time": 0.002104695566571777,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Contrast": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        14073.452368013195,
+        14125.902420167356,
+        14272.427260668588,
+        11446.780004528215,
+        10864.206902455799
+      ],
+      "median_throughput": 14073.452368013195,
+      "std_throughput": 1658.5908193678508,
+      "times": [
+        0.14211154077202082,
+        0.1415838748216629,
+        0.14013033406808972,
+        0.1747216247022152,
+        0.18409075029194355
+      ],
+      "mean_time": 0.14211154077202082,
+      "std_time": 0.016748193029481162,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "CoarseDropout": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        15498.369438235617,
+        15489.132370527304,
+        16427.751333571596,
+        15314.688166470352,
+        15662.432686855393
+      ],
+      "median_throughput": 15498.369438235617,
+      "std_throughput": 436.5495060199207,
+      "times": [
+        0.12904583336785436,
+        0.12912279088050127,
+        0.12174520781263709,
+        0.13059358298778534,
+        0.1276940843090415
+      ],
+      "mean_time": 0.12904583336785436,
+      "std_time": 0.0036348917242663924,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Blur": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        7119.945113375703,
+        7012.395281018134,
+        6905.6153437940875,
+        7110.681312543357,
+        6924.22774233492
+      ],
+      "median_throughput": 7012.395281018134,
+      "std_throughput": 100.47246999253656,
+      "times": [
+        0.28090104181319475,
+        0.2852092501707375,
+        0.2896193750202656,
+        0.28126699989661574,
+        0.2888408750295639
+      ],
+      "mean_time": 0.2852092501707375,
+      "std_time": 0.004086432193424889,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "HSV": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        962.2073228255991,
+        969.5933895316605,
+        961.4995162580747,
+        939.8824735396166,
+        1012.6779903108477
+      ],
+      "median_throughput": 962.2073228255991,
+      "std_throughput": 26.731062722777647,
+      "times": [
+        2.0785541250370443,
+        2.0627203336916864,
+        2.080084249842912,
+        2.1279256250709295,
+        1.974961457774043
+      ],
+      "mean_time": 2.0785541250370443,
+      "std_time": 0.05774427129268907,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "ChannelDropout": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        10336.870030693903,
+        10207.992135332206,
+        10275.210796059346,
+        10376.3748955442,
+        11272.021829897003
+      ],
+      "median_throughput": 10336.870030693903,
+      "std_throughput": 439.74771355011535,
+      "times": [
+        0.19348216569051147,
+        0.19592491583898664,
+        0.19464320875704288,
+        0.1927455416880548,
+        0.17743045836687088
+      ],
+      "mean_time": 0.19348216569051147,
+      "std_time": 0.008231054441284818,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "LinearIllumination": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        443.25472415658373,
+        453.5946497553865,
+        464.74688181139993,
+        466.50650001120505,
+        461.7370174270884
+      ],
+      "median_throughput": 461.7370174270884,
+      "std_throughput": 9.600408738905337,
+      "times": [
+        4.512078249827027,
+        4.4092230829410255,
+        4.303417792078108,
+        4.287185708992183,
+        4.331469915807247
+      ],
+      "mean_time": 4.331469915807247,
+      "std_time": 0.09005966613579525,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "CornerIllumination": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        450.508907537393,
+        459.8942819804459,
+        424.04238703660957,
+        452.536897798422,
+        452.65146820994534
+      ],
+      "median_throughput": 452.536897798422,
+      "std_throughput": 13.819628959356645,
+      "times": [
+        4.439423874951899,
+        4.348825541790575,
+        4.716509625315666,
+        4.419529125094414,
+        4.418410500045866
+      ],
+      "mean_time": 4.419529125094414,
+      "std_time": 0.13496413879400548,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "GaussianIllumination": {
+      "supported": true,
+      "warmup_iterations": 52,
+      "throughputs": [
+        679.8216692083963,
+        629.5771735539354,
+        675.929501128556,
+        685.3019491222439,
+        670.890415573016
+      ],
+      "median_throughput": 675.929501128556,
+      "std_throughput": 22.283356332796743,
+      "times": [
+        2.9419479998759925,
+        3.1767352502793074,
+        2.958888459019363,
+        2.9184215841814876,
+        2.9811127921566367
+      ],
+      "mean_time": 2.9588884590193634,
+      "std_time": 0.09754562535181942,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Hue": {
+      "supported": true,
+      "warmup_iterations": 55,
+      "throughputs": [
+        1762.9913732140255,
+        1862.7155367324258,
+        1802.7488538944237,
+        1776.1890095270992,
+        1759.6097414636358
+      ],
+      "median_throughput": 1776.1890095270992,
+      "std_throughput": 42.58292354894999,
+      "times": [
+        1.1344355000182986,
+        1.0737012499012053,
+        1.1094168750569224,
+        1.1260062917135656,
+        1.13661566702649
+      ],
+      "mean_time": 1.1260062917135656,
+      "std_time": 0.026995235067039127,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "PlasmaBrightness": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        172.5830645964779,
+        173.32909523478529,
+        172.03645734448668,
+        170.850281670438,
+        157.21688640590096
+      ],
+      "median_throughput": 172.03645734448668,
+      "std_throughput": 6.761257925767016,
+      "times": [
+        11.58862258400768,
+        11.538743667304516,
+        11.625442832708359,
+        11.706155708059669,
+        12.72127979202196
+      ],
+      "mean_time": 11.625442832708359,
+      "std_time": 0.4568951180842236,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "PlasmaContrast": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        149.84357267261674,
+        147.45488944830157,
+        148.1009322995471,
+        153.56170294209258,
+        151.36161551158295
+      ],
+      "median_throughput": 149.84357267261674,
+      "std_throughput": 2.481300631185657,
+      "times": [
+        13.347252500243485,
+        13.563470207620412,
+        13.504303915891796,
+        13.0240806248039,
+        13.213389624841511
+      ],
+      "mean_time": 13.347252500243483,
+      "std_time": 0.2210207983081597,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "PlasmaShadow": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        192.70419509023273,
+        188.26924239076806,
+        193.0426232123885,
+        190.08068461265157,
+        192.92694528502963
+      ],
+      "median_throughput": 192.70419509023273,
+      "std_throughput": 2.1373360641798866,
+      "times": [
+        10.378601249773055,
+        10.623084124643356,
+        10.360406249761581,
+        10.521847625263035,
+        10.36661829194054
+      ],
+      "mean_time": 10.378601249773055,
+      "std_time": 0.11511196596677892,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Rain": {
+      "supported": true,
+      "warmup_iterations": 87,
+      "throughputs": [
+        1999.9885839130443,
+        2039.8096054287635,
+        2024.184109421351,
+        2041.7882593318488,
+        2038.9928491933558
+      ],
+      "median_throughput": 2038.9928491933558,
+      "std_throughput": 17.642902620310785,
+      "times": [
+        1.0000057080760598,
+        0.980483666062355,
+        0.9880524161271751,
+        0.9795335000380874,
+        0.9808764168992639
+      ],
+      "mean_time": 0.9808764168992639,
+      "std_time": 0.008487281901336385,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "SaltAndPepper": {
+      "supported": true,
+      "warmup_iterations": 54,
+      "throughputs": [
+        600.6904184607903,
+        599.9596977112327,
+        604.6791965976678,
+        603.5221627980752,
+        609.5040343768774
+      ],
+      "median_throughput": 603.5221627980752,
+      "std_throughput": 3.79870155028456,
+      "times": [
+        3.32950208382681,
+        3.3335572499781847,
+        3.3075389582663774,
+        3.313879958819598,
+        3.281356459017843
+      ],
+      "mean_time": 3.3138799588195975,
+      "std_time": 0.020858291066995573,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Saturation": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        1287.5343071074712,
+        1248.0289269957952,
+        1205.4172656987073,
+        1209.6798581396079,
+        1275.211359860975
+      ],
+      "median_throughput": 1248.0289269957952,
+      "std_throughput": 37.2331211488084,
+      "times": [
+        1.5533566670492291,
+        1.6025269581004977,
+        1.6591765000484884,
+        1.6533300001174212,
+        1.5683674588799477
+      ],
+      "mean_time": 1.6025269581004977,
+      "std_time": 0.04780905240619336,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Snow": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        722.8820186543632,
+        718.8807207142511,
+        704.108785694093,
+        708.2982540935825,
+        722.351575912
+      ],
+      "median_throughput": 718.8807207142511,
+      "std_throughput": 8.577600519991904,
+      "times": [
+        2.766703207977116,
+        2.7821027082391083,
+        2.840470166876912,
+        2.823669250123203,
+        2.7687348746694624
+      ],
+      "mean_time": 2.7821027082391083,
+      "std_time": 0.03319572350354949,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "OpticalDistortion": {
+      "supported": true,
+      "warmup_iterations": 53,
+      "throughputs": [
+        647.4413368232944,
+        640.2691265277267,
+        640.2174178330507,
+        647.8676617853363,
+        648.2475584745553
+      ],
+      "median_throughput": 647.4413368232944,
+      "std_throughput": 4.177360729889094,
+      "times": [
+        3.089082958176732,
+        3.1236864579841495,
+        3.123938750009984,
+        3.08705020789057,
+        3.085241083987057
+      ],
+      "mean_time": 3.089082958176732,
+      "std_time": 0.01993109353223001,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "Shear": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        1253.5688840844928,
+        1261.1620065992493,
+        1250.4137109692897,
+        1256.2836094731156,
+        1235.5165917059044
+      ],
+      "median_throughput": 1253.5688840844928,
+      "std_throughput": 9.70959947996352,
+      "times": [
+        1.5954448338598013,
+        1.5858390829525888,
+        1.59947062516585,
+        1.5919972090050578,
+        1.6187560842372477
+      ],
+      "mean_time": 1.5954448338598013,
+      "std_time": 0.0123576219271501,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    },
+    "ThinPlateSpline": {
+      "supported": true,
+      "warmup_iterations": 51,
+      "throughputs": [
+        85.41990903110134,
+        85.87507206336522,
+        84.78289189862981,
+        85.09699696036796,
+        85.22057250028077
+      ],
+      "median_throughput": 85.22057250028077,
+      "std_throughput": 0.4055303157660363,
+      "times": [
+        23.413745374884456,
+        23.28964566718787,
+        23.589664792176336,
+        23.502592000178993,
+        23.468511667102575
+      ],
+      "mean_time": 23.468511667102575,
+      "std_time": 0.11167717685641762,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    }
+  }
+}

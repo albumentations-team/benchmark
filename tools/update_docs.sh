@@ -58,7 +58,7 @@ if [ -d "$IMAGE_RESULTS_DIR" ]; then
     --results-dir "$IMAGE_RESULTS_DIR" \
     --output-dir "$DOCS_DIR/images" \
     --type images \
-    --reference-library albumentations
+    --reference-library albumentationsx
 
   echo "Image documentation updated."
 else
@@ -67,6 +67,7 @@ fi
 
 # Generate video benchmark results and plots
 if [ -d "$VIDEO_RESULTS_DIR" ]; then
+  echo ""  # Add blank line for separation
   echo "Processing video benchmark results..."
 
   # Generate markdown table and update video README
@@ -79,7 +80,7 @@ if [ -d "$VIDEO_RESULTS_DIR" ]; then
     --results-dir "$VIDEO_RESULTS_DIR" \
     --output-dir "$DOCS_DIR/videos" \
     --type videos \
-    --reference-library albumentations
+    --reference-library albumentationsx
 
   echo "Video documentation updated."
 else
@@ -89,11 +90,14 @@ fi
 # Update speedup summaries in main README
 if [ -f "$DOCS_DIR/images/images_speedups.csv" ]; then
   # Extract median speedup from CSV
-  MEDIAN_SPEEDUP=$(python -c "import pandas as pd; df = pd.read_csv('$DOCS_DIR/images/images_speedups.csv', index_col=0); print(f'{df[\"albumentations\"].median():.2f}')")
-  MAX_SPEEDUP=$(python -c "import pandas as pd; df = pd.read_csv('$DOCS_DIR/images/images_speedups.csv', index_col=0); max_val = df[\"albumentations\"].max(); max_transform = df[\"albumentations\"].idxmax(); print(f'{max_val:.2f}× ({max_transform})')")
+  # Check which column name exists (albumentations or albumentationsx)
+  COLUMN_NAME=$(python -c "import pandas as pd; df = pd.read_csv('$DOCS_DIR/images/images_speedups.csv', index_col=0); print('albumentationsx' if 'albumentationsx' in df.columns else 'albumentations')")
+
+  MEDIAN_SPEEDUP=$(python -c "import pandas as pd; df = pd.read_csv('$DOCS_DIR/images/images_speedups.csv', index_col=0); print(f\"{df['$COLUMN_NAME'].median():.2f}\")")
+  MAX_SPEEDUP=$(python -c "import pandas as pd; df = pd.read_csv('$DOCS_DIR/images/images_speedups.csv', index_col=0); max_val = df['$COLUMN_NAME'].max(); max_transform = df['$COLUMN_NAME'].idxmax(); print(f\"{max_val:.2f}× ({max_transform})\")")
 
   # Update image speedup summary in main README
-  IMAGE_SUMMARY="Albumentations is generally the fastest library for image augmentation, with a median speedup of ${MEDIAN_SPEEDUP}× compared to other libraries. For some transforms, the speedup can be as high as ${MAX_SPEEDUP}."
+  IMAGE_SUMMARY="AlbumentationsX is generally the fastest library for image augmentation, with a median speedup of ${MEDIAN_SPEEDUP}× compared to other libraries. For some transforms, the speedup can be as high as ${MAX_SPEEDUP}."
 
   # Use sed to replace the content between markers
   sed -i.bak "s|<!-- IMAGE_SPEEDUP_SUMMARY_START -->.*<!-- IMAGE_SPEEDUP_SUMMARY_END -->|<!-- IMAGE_SPEEDUP_SUMMARY_START -->\n${IMAGE_SUMMARY}\n<!-- IMAGE_SPEEDUP_SUMMARY_END -->|" "$MAIN_README"
@@ -103,13 +107,13 @@ fi
 # Update video speedup summary in main README
 if [ -f "$DOCS_DIR/videos/videos_speedups.csv" ]; then
   # Extract statistics from CSV
-  FASTER_CPU_COUNT=$(python -c "import pandas as pd; df = pd.read_csv('$DOCS_DIR/videos/videos_speedups.csv', index_col=0); print(len(df[df['albumentations'] > 1]))")
+  FASTER_CPU_COUNT=$(python -c "import pandas as pd; df = pd.read_csv('$DOCS_DIR/videos/videos_speedups.csv', index_col=0); print(len(df[df['albumentationsx'] > 1]))")
   TOTAL_TRANSFORMS=$(python -c "import pandas as pd; df = pd.read_csv('$DOCS_DIR/videos/videos_speedups.csv', index_col=0); print(len(df))")
-  FASTEST_CPU_TRANSFORM=$(python -c "import pandas as pd; df = pd.read_csv('$DOCS_DIR/videos/videos_speedups.csv', index_col=0); max_idx = df['albumentations'].idxmax(); print(f'{max_idx} ({df.loc[max_idx, \"albumentations\"]:.2f}×)')")
-  FASTEST_GPU_TRANSFORM=$(python -c "import pandas as pd; df = pd.read_csv('$DOCS_DIR/videos/videos_speedups.csv', index_col=0); min_idx = df['albumentations'].idxmin(); print(f'{min_idx} ({1/df.loc[min_idx, \"albumentations\"]:.2f}×)')")
+  FASTEST_CPU_TRANSFORM=$(python -c "import pandas as pd; df = pd.read_csv('$DOCS_DIR/videos/videos_speedups.csv', index_col=0); max_idx = df['albumentationsx'].idxmax(); print(f\"{max_idx} ({df.loc[max_idx, 'albumentationsx']:.2f}×)\")")
+  FASTEST_GPU_TRANSFORM=$(python -c "import pandas as pd; df = pd.read_csv('$DOCS_DIR/videos/videos_speedups.csv', index_col=0); min_idx = df['albumentationsx'].idxmin(); print(f\"{min_idx} ({1/df.loc[min_idx, 'albumentationsx']:.2f}×)\")")
 
   # Update video speedup summary in main README
-  VIDEO_SUMMARY="For video processing, the performance comparison between CPU (Albumentations) and GPU (Kornia) shows interesting trade-offs. CPU processing is faster for ${FASTER_CPU_COUNT} out of ${TOTAL_TRANSFORMS} transforms, with ${FASTEST_CPU_TRANSFORM} showing the highest CPU advantage. GPU excels at complex operations like ${FASTEST_GPU_TRANSFORM}."
+  VIDEO_SUMMARY="For video processing, the performance comparison between CPU (AlbumentationsX) and GPU (Kornia) shows interesting trade-offs. CPU processing is faster for ${FASTER_CPU_COUNT} out of ${TOTAL_TRANSFORMS} transforms, with ${FASTEST_CPU_TRANSFORM} showing the highest CPU advantage. GPU excels at complex operations like ${FASTEST_GPU_TRANSFORM}."
 
   # Use sed to replace the content between markers
   sed -i.bak "s|<!-- VIDEO_SPEEDUP_SUMMARY_START -->.*<!-- VIDEO_SPEEDUP_SUMMARY_END -->|<!-- VIDEO_SPEEDUP_SUMMARY_START -->\n${VIDEO_SUMMARY}\n<!-- VIDEO_SPEEDUP_SUMMARY_END -->|" "$MAIN_README"

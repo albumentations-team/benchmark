@@ -1,0 +1,405 @@
+# Video Benchmark Redesign Technical Specification
+
+## Overview
+
+This document outlines the redesigned architecture for video benchmarking that removes library-specific implementations and allows users to define transforms with custom parameters and application logic in a single Python file.
+
+## Goals
+
+1. **Simplicity**: Users define everything in one Python file - transforms, parameters, and application logic
+2. **Flexibility**: Support multiple instances of the same transform with different parameters
+3. **No Hidden Logic**: Remove library-specific implementations from the benchmark codebase
+4. **Direct Control**: Users have full control over how transforms are applied to videos
+
+## Architecture
+
+### 1. User-Defined Transform File
+
+Users create a Python file that must define:
+
+```python
+# Required: Library name for dependency installation
+LIBRARY = "albumentations"  # or "torchvision", "kornia", etc.
+
+# Required: Function to apply transforms to videos
+def __call__(transform, video):
+    """Apply transform to video using library-specific API"""
+    # Library-specific implementation
+    pass
+
+# Required: List of transform definitions
+TRANSFORMS = [
+    {
+        "name": "GaussianBlur_3x3",  # Unique name for this transform instance
+        "transform": transform_object,  # The actual transform instance
+    },
+    # ... more transforms
+]
+```
+
+### 2. Transform Definition Structure
+
+Each transform in the `TRANSFORMS` list is a dictionary with:
+
+- `name`: Unique identifier for the transform instance (appears in results)
+- `transform`: The instantiated transform object
+
+The `__call__` function is defined once for all transforms in the file.
+
+### 3. Example Transform File - Albumentations
+
+```python
+import albumentations as A
+import numpy as np
+import cv2
+
+# Required: Library name
+LIBRARY = "albumentations"
+
+# Required: Define how to apply transforms to videos
+def __call__(transform, video):
+    """Apply albumentations transform to video frames
+
+    Args:
+        transform: Albumentations transform instance
+        video: numpy array of shape (T, H, W, C) or (T, C, H, W)
+
+    Returns:
+        Transformed video as numpy array
+    """
+    # Albumentations expects 'images' parameter for video frames
+    result = transform(images=video)["images"]
+    # Ensure contiguous memory layout for performance
+    return np.ascontiguousarray(result)
+
+# Required: Transform definitions
+TRANSFORMS = [
+    {
+        "name": "GaussianBlur_3x3",
+        "transform": A.GaussianBlur(blur_limit=(3, 3), sigma_limit=(0.1, 2.0), p=1),
+    },
+    {
+        "name": "GaussianBlur_7x7",
+        "transform": A.GaussianBlur(blur_limit=(7, 7), sigma_limit=(0.1, 2.0), p=1),
+    },
+    {
+        "name": "Rotate_90",
+        "transform": A.Rotate(limit=90, interpolation=cv2.INTER_LINEAR, p=1),
+    },
+    {
+        "name": "HorizontalFlip",
+        "transform": A.HorizontalFlip(p=1),
+    },
+]
+```
+
+### 4. Example Transform File - Torchvision
+
+```python
+import torch
+import torchvision.transforms.v2 as v2
+
+# Required: Library name
+LIBRARY = "torchvision"
+
+# Device configuration
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Required: Define how to apply transforms to videos
+def __call__(transform, video):
+    """Apply torchvision transform to video tensor
+
+    Args:
+        transform: Torchvision transform instance
+        video: torch.Tensor of shape (T, C, H, W)
+
+    Returns:
+        Transformed video as torch.Tensor
+    """
+    # Set random seed for reproducibility
+    torch.manual_seed(42)
+
+    # Move to device
+    video = video.to(device)
+
+    # Convert to appropriate dtype for GPU
+    if device.type == "cuda" and not isinstance(transform, v2.JPEG):
+        # JPEG requires uint8, others can use float16 for speed
+        video = (video.float() / 255.0).half()
+
+    # Apply transform and ensure contiguous memory
+    return transform(video).contiguous()
+
+# Required: Transform definitions
+TRANSFORMS = [
+    {
+        "name": "ColorJitter_weak",
+        "transform": v2.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05),
+    },
+    {
+        "name": "ColorJitter_strong",
+        "transform": v2.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.2),
+    },
+    {
+        "name": "RandomHorizontalFlip_p05",
+        "transform": v2.RandomHorizontalFlip(p=0.5),
+    },
+    {
+        "name": "RandomHorizontalFlip_p1",
+        "transform": v2.RandomHorizontalFlip(p=1.0),
+    },
+]
+```
+
+### 5. Example Transform File - Kornia
+
+```python
+import torch
+import kornia.augmentation as K
+
+# Required: Library name
+LIBRARY = "kornia"
+
+# Device configuration
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Required: Define how to apply transforms to videos
+def __call__(transform, video):
+    """Apply kornia transform to video tensor
+
+    Args:
+        transform: Kornia augmentation instance
+        video: torch.Tensor of shape (T, C, H, W)
+
+    Returns:
+        Transformed video as torch.Tensor
+    """
+    # Move to device
+    video = video.to(device)
+
+    # Use float16 on GPU for performance
+    if device.type == "cuda":
+        video = video.half()
+
+    # Kornia treats time dimension as batch dimension
+    # Most transforms should have same_on_batch=True for consistent transform across frames
+    return transform(video)
+
+# Required: Transform definitions
+TRANSFORMS = [
+    {
+        "name": "RandomGrayscale",
+        "transform": K.RandomGrayscale(p=1, same_on_batch=True).to(device),
+    },
+    {
+        "name": "RandomSolarize_128",
+        "transform": K.RandomSolarize(thresholds=0.5, p=1, same_on_batch=True).to(device),
+    },
+    {
+        "name": "RandomSolarize_256",
+        "transform": K.RandomSolarize(thresholds=1.0, p=1, same_on_batch=True).to(device),
+    },
+]
+```
+
+### 6. Video Runner Changes
+
+The `VideoBenchmarkRunner` class will be simplified:
+
+```python
+class VideoBenchmarkRunner:
+    def __init__(self, library, data_dir, transforms, call_fn, ...):
+        self.library = library
+        self.transforms = transforms  # List of transform dicts
+        self.call_fn = call_fn  # The __call__ function from user file
+        # Remove: self.implementation = self._get_library_implementation()
+
+    def run_transform(self, transform_dict, videos):
+        """Run benchmark for a single transform"""
+        transform = transform_dict["transform"]
+        name = transform_dict["name"]
+
+        # Warmup
+        warmup_subset = videos[:3]
+        elapsed = time_transform(lambda x: self.call_fn(transform, x), warmup_subset)
+        # ... rest of benchmarking logic
+```
+
+### 7. Loading Transform File
+
+```python
+def load_transform_file(file_path):
+    """Load LIBRARY, __call__, and TRANSFORMS from Python file"""
+    spec = importlib.util.spec_from_file_location("transforms", file_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    # Validate required attributes
+    if not hasattr(module, 'LIBRARY'):
+        raise ValueError(f"File must define LIBRARY")
+
+    if not hasattr(module, '__call__'):
+        raise ValueError(f"File must define __call__ function")
+
+    if not hasattr(module, 'TRANSFORMS'):
+        raise ValueError(f"File must define TRANSFORMS list")
+
+    # Validate __call__ is callable
+    if not callable(module.__call__):
+        raise ValueError(f"__call__ must be a callable function")
+
+    # Validate transform structure
+    for i, t in enumerate(module.TRANSFORMS):
+        if not isinstance(t, dict):
+            raise ValueError(f"TRANSFORMS[{i}] must be a dictionary")
+
+        required_keys = {"name", "transform"}
+        missing = required_keys - t.keys()
+        if missing:
+            raise ValueError(f"TRANSFORMS[{i}] missing keys: {missing}")
+
+    return module.LIBRARY, module.__call__, module.TRANSFORMS
+```
+
+### 8. Script Interface
+
+```bash
+./run_video_single.sh \
+    -d /path/to/videos \
+    -o output/ \
+    -s my_transforms.py \
+    -n 100 \
+    -r 5
+```
+
+The script will:
+1. Extract LIBRARY from the Python file
+2. Create appropriate virtual environment
+3. Install library-specific dependencies
+4. Run the benchmark with user-defined transforms and __call__ function
+
+### 9. Output Format
+
+Results will use the user-defined transform names:
+
+```json
+{
+  "metadata": { ... },
+  "results": {
+    "GaussianBlur_3x3": { ... },
+    "GaussianBlur_7x7": { ... },
+    "Rotate_90": { ... },
+    "HorizontalFlip": { ... }
+  }
+}
+```
+
+## Built-in Transform Sets vs Custom Transforms
+
+The benchmark system supports two modes:
+
+### 1. Built-in Transform Sets (`*_video_impl.py` files)
+- Located in `benchmark/transforms/`
+- Use centralized `TRANSFORM_SPECS` from `specs.py`
+- Provide standardized transforms for consistent benchmarking across libraries
+- Already converted to the new format with `LIBRARY`, `__call__`, and `TRANSFORMS`
+
+### 2. Custom Transform Files
+- User-created Python files
+- Complete control over transform definitions and parameters
+- Can test specific parameter combinations or custom transforms
+
+Users can choose either approach based on their needs:
+```bash
+# Use built-in transforms
+./run_video_single.sh -d /videos -o output.json -s benchmark/transforms/albumentations_video_impl.py
+
+# Use custom transforms
+./run_video_single.sh -d /videos -o output.json -s my_custom_transforms.py
+```
+
+## Migration Status
+
+1. ✅ Remove `_get_library_implementation()` from `VideoBenchmarkRunner`
+2. ✅ Update `run_transform()` to use the user-provided `__call__` function
+3. ✅ Update file loading to use new format with `LIBRARY`, `__call__`, and `TRANSFORMS`
+4. ✅ Convert `albumentations_video_impl.py` to new format
+5. ✅ Convert `torchvision_video_impl.py` to new format
+6. ✅ Convert `kornia_video_impl.py` to new format
+7. ✅ Create example files for custom transforms
+
+## Benefits
+
+1. **User Control**: Users define exactly how transforms are applied for their library
+2. **Flexibility**: Easy to test same transform with different parameters
+3. **DRY Principle**: Define application logic once per file, not per transform
+4. **Transparency**: No hidden library-specific logic in benchmark code
+5. **Extensibility**: Users can add custom pre/post-processing in __call__
+6. **Simplicity**: Fewer abstractions, more direct control
+7. **Standardization**: Built-in transform sets ensure consistent benchmarking
+
+## Backward Compatibility
+
+This design explicitly breaks backward compatibility with the old system. Users must either:
+1. Use the converted built-in transform sets (`*_video_impl.py`)
+2. Migrate their custom transform definitions to the new format
+
+## Example Use Cases
+
+### 1. Testing Parameter Sensitivity
+```python
+TRANSFORMS = [
+    {
+        "name": f"Blur_radius_{r}",
+        "transform": A.Blur(blur_limit=(r, r), p=1),
+    }
+    for r in [3, 5, 7, 9, 11]
+]
+```
+
+### 2. Custom Application Logic for Specific Transforms
+```python
+def __call__(transform, video):
+    """Apply transform with special handling for certain types"""
+    if isinstance(transform, A.Normalize):
+        # Special preprocessing for normalize
+        video = video.astype(np.float32) / 255.0
+        result = transform(images=video)["images"]
+        return (result * 255).astype(np.uint8)
+    else:
+        # Standard application
+        return np.ascontiguousarray(transform(images=video)["images"])
+```
+
+### 3. Performance Optimizations
+```python
+def __call__(transform, video):
+    """Apply transform with performance optimizations"""
+    # Process large videos in chunks to manage memory
+    if video.shape[0] > 1000:  # More than 1000 frames
+        chunk_size = 500
+        chunks = []
+        for i in range(0, video.shape[0], chunk_size):
+            chunk = video[i:i+chunk_size]
+            chunks.append(transform(images=chunk)["images"])
+        return np.concatenate(chunks, axis=0)
+    else:
+        return np.ascontiguousarray(transform(images=video)["images"])
+```
+
+### 4. Debugging and Profiling
+```python
+import time
+
+def __call__(transform, video):
+    """Apply transform with timing information"""
+    start = time.time()
+    result = transform(images=video)["images"]
+    elapsed = time.time() - start
+
+    # Log slow transforms (optional - for debugging)
+    if elapsed > 1.0:
+        print(f"Warning: {transform.__class__.__name__} took {elapsed:.2f}s")
+
+    return np.ascontiguousarray(result)
+```

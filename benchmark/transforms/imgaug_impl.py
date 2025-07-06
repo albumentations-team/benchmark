@@ -1,166 +1,182 @@
 # benchmark/transforms/imgaug_impl.py
+
 from typing import Any
 
 import cv2
+import imgaug.augmenters as iaa
 import numpy as np
-from imgaug import augmenters as iaa
+
+from benchmark.transforms.specs import TRANSFORM_SPECS, TransformSpec
 
 # Ensure single thread
 cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
 
+# Required: Library name for dependency installation
+LIBRARY = "imgaug"
 
-class ImgaugImpl:
-    """Imgaug implementations of transforms"""
 
-    @staticmethod
-    def HorizontalFlip(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.Fliplr(p=1)
+# Required: Define how to apply transforms to images
+def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
+    """Apply imgaug transform to a single image
 
-    @staticmethod
-    def VerticalFlip(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.Flipud(p=1)
+    Args:
+        transform: ImgAug augmenter instance
+        image: numpy array of shape (H, W, C)
 
-    @staticmethod
-    def Rotate(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.Affine(
-            rotate=(params["angle"], params["angle"]),
-            order=1 if params["interpolation"] == "bilinear" else 0,
-            mode=params["mode"],
-        )
+    Returns:
+        Transformed image as numpy array
+    """
+    # ImgAug expects a list but we pass single image
+    augmented = transform(images=[image])
+    return np.ascontiguousarray(augmented[0])
 
-    @staticmethod
-    def Affine(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.Affine(
-            scale=(params["scale"], params["scale"]),
-            rotate=(params["angle"], params["angle"]),
-            translate_px=params["shift"],
-            order=1 if params["interpolation"] == "bilinear" else 0,
-            mode=params["mode"],
-        )
 
-    @staticmethod
-    def Equalize(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.AllChannelsHistogramEqualization()
+# Helper function to create transforms from specs
+def create_transform(spec: TransformSpec) -> Any | None:
+    """Create an ImgAug transform from a TransformSpec."""
+    params = spec.params
 
-    @staticmethod
-    def RandomCrop128(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.CropToFixedSize(width=params["width"], height=params["height"])
-
-    @staticmethod
-    def ShiftRGB(params: dict[str, Any]) -> iaa.Augmenter:
-        shift = params["pixel_shift"]
-        return iaa.Add(value=(-shift, shift), per_channel=params["per_channel"])
-
-    @staticmethod
-    def Resize(params: dict[str, Any]) -> iaa.Augmenter:
+    if spec.name == "Resize":
         return iaa.Resize(
             size=params["target_size"],
             interpolation="linear" if params["interpolation"] == "bilinear" else "nearest",
         )
-
-    @staticmethod
-    def RandomGamma(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.GammaContrast(
-            gamma=params["gamma"] / 100,  # Convert to imgaug scale
+    if spec.name == "RandomCrop128":
+        return iaa.CropToFixedSize(
+            width=params["width"],
+            height=params["height"],
         )
-
-    @staticmethod
-    def Grayscale(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.Grayscale(alpha=1.0)
-
-    @staticmethod
-    def Perspective(params: dict[str, Any]) -> iaa.Augmenter:
+    if spec.name == "CenterCrop128":
+        return iaa.CropToFixedSize(
+            width=params["width"],
+            height=params["height"],
+            position="center",
+        )
+    if spec.name == "HorizontalFlip":
+        return iaa.Fliplr(1.0)  # Always flip
+    if spec.name == "VerticalFlip":
+        return iaa.Flipud(1.0)  # Always flip
+    if spec.name == "Pad":
+        return iaa.Pad(
+            px=params["padding"],
+            pad_mode="constant" if params["border_mode"] == "constant" else "reflect",
+            pad_cval=params["fill"],
+        )
+    if spec.name == "Rotate":
+        return iaa.Rotate(
+            rotate=params["angle"],
+            mode="constant" if params["mode"] == "constant" else "reflect",
+            cval=params["fill"],
+        )
+    if spec.name == "Affine":
+        return iaa.Affine(
+            rotate=params["angle"],
+            translate_px={"x": params["shift"][0], "y": params["shift"][1]},
+            scale=params["scale"],
+            shear=params["shear"],
+            mode="constant" if params["mode"] == "constant" else "reflect",
+            cval=params["fill"],
+        )
+    if spec.name == "Perspective":
         return iaa.PerspectiveTransform(
             scale=params["scale"],
-            mode=params.get("mode", "replicate"),
+            mode="replicate",  # imgaug only supports 'replicate' or 'constant'
+            cval=params["fill"],
         )
-
-    @staticmethod
-    def GaussianBlur(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.GaussianBlur(sigma=params["sigma"])
-
-    @staticmethod
-    def MedianBlur(params: dict[str, Any]) -> iaa.Augmenter:
-        blur_limit = params["blur_limit"]
-        return iaa.MedianBlur(k=(blur_limit, blur_limit))
-
-    @staticmethod
-    def MotionBlur(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.MotionBlur(k=params["kernel_size"], angle=params["angle_range"])
-
-    @staticmethod
-    def Posterize(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.Posterize(nb_bits=params["bits"])
-
-    @staticmethod
-    def JpegCompression(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.JpegCompression(compression=params["quality"])
-
-    @staticmethod
-    def GaussianNoise(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.AdditiveGaussianNoise(
-            loc=params["mean"],
-            scale=(0, params["std"]),
-            per_channel=params["per_channel"],
-        )
-
-    @staticmethod
-    def Elastic(params: dict[str, Any]) -> iaa.Augmenter:
+    if spec.name == "Elastic":
         return iaa.ElasticTransformation(
             alpha=params["alpha"],
             sigma=params["sigma"],
-            order=1 if params["interpolation"] == "bilinear" else 0,
+            mode="linear" if params["interpolation"] == "bilinear" else "nearest",
         )
-
-    @staticmethod
-    def CLAHE(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.AllChannelsCLAHE(clip_limit=params["clip_limit"], tile_grid_size_px=params["tile_grid_size"])
-
-    @staticmethod
-    def CoarseDropout(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.CoarseDropout()
-
-    @staticmethod
-    def Blur(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.AverageBlur(k=params["radius"])
-
-    @staticmethod
-    def Brightness(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.AddToBrightness(add=params["brightness_limit"])
-
-    @staticmethod
-    def Contrast(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.AddToHueAndSaturation(value=int(params["contrast_limit"][0] * 100))
-
-    @staticmethod
-    def Invert(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.Invert(1.0)
-
-    @staticmethod
-    def Sharpen(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.Sharpen(
-            alpha=(params["alpha"][0], params["alpha"][1]),
-            lightness=(params["lightness"][0], params["lightness"][1]),
+    if spec.name == "ColorJitter":
+        return iaa.Sequential(
+            [
+                iaa.LinearContrast((1 - params["contrast"], 1 + params["contrast"])),
+                iaa.AddToBrightness(
+                    (-int(params["brightness"] * 255), int(params["brightness"] * 255)),
+                ),
+                iaa.AddToSaturation(
+                    (int(-params["saturation"] * 100), int(params["saturation"] * 100)),
+                ),
+                iaa.AddToHue((-int(params["hue"] * 179), int(params["hue"] * 179))),
+            ],
+            random_order=True,
         )
+    if spec.name == "Grayscale":
+        return iaa.Grayscale(alpha=1.0)
+    if spec.name == "GaussianBlur":
+        return iaa.GaussianBlur(sigma=(params["sigma"], params["sigma"]))
+    if spec.name == "GaussianNoise":
+        return iaa.AdditiveGaussianNoise(
+            loc=params["mean"] * 255,
+            scale=params["std"] * 255,
+            per_channel=params["per_channel"],
+        )
+    if spec.name == "Invert":
+        return iaa.Invert(p=1.0)
+    if spec.name == "Posterize":
+        return iaa.Posterize(nb_bits=params["bits"])
+    if spec.name == "Solarize":
+        return iaa.Solarize(p=1.0, threshold=params["threshold"])
+    if spec.name == "Sharpen":
+        return iaa.Sharpen(alpha=params["alpha"], lightness=params["lightness"][0])
+    if spec.name == "AutoContrast":
+        return iaa.AllChannelsCLAHE(clip_limit=40, tile_grid_size_px=8)
+    if spec.name == "Equalize":
+        return iaa.AllChannelsHistogramEqualization()
+    if spec.name == "JpegCompression":
+        return iaa.JpegCompression(compression=100 - params["quality"])
+    if spec.name == "RandomGamma":
+        gamma = params["gamma"] / 100
+        return iaa.GammaContrast(gamma=gamma)
+    if spec.name == "MedianBlur":
+        return iaa.MedianBlur(k=params["blur_limit"])
+    if spec.name == "MotionBlur":
+        return iaa.MotionBlur(
+            k=params["kernel_size"],
+            angle=params["angle_range"],
+            direction=params["direction_range"],
+        )
+    if spec.name == "CLAHE":
+        return iaa.CLAHE(
+            clip_limit=params["clip_limit"],
+            tile_grid_size_px=params["tile_grid_size"],
+        )
+    if spec.name == "Brightness":
+        brightness_val = params["brightness_limit"]
+        if isinstance(brightness_val, tuple):
+            brightness_val = brightness_val[0]  # Use first value if tuple
+        return iaa.AddToBrightness(
+            (int(-brightness_val * 255), int(brightness_val * 255)),
+        )
+    if spec.name == "Contrast":
+        contrast_val = params["contrast_limit"]
+        if isinstance(contrast_val, tuple):
+            contrast_val = contrast_val[0]  # Use first value if tuple
+        return iaa.LinearContrast((1 - contrast_val, 1 + contrast_val))
+    if spec.name == "CoarseDropout":
+        # imgaug CoarseDropout uses size_percent for hole sizes
+        # Convert pixel sizes to percentages (assuming 224x224 images)
+        size_percent = (
+            params["hole_height_range"][0] / 224.0,
+            params["hole_height_range"][1] / 224.0,
+        )
+        return iaa.CoarseDropout(
+            p=1.0,  # Always apply
+            size_percent=size_percent,
+        )
+    # Skip transforms not supported by imgaug
+    return None
 
-    @staticmethod
-    def Solarize(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.Solarize(threshold=params["threshold"] * 255)  # Convert from [0,1] to [0,255]
 
-    @staticmethod
-    def ChannelShuffle(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.ChannelShuffle(1.0)
-
-    @staticmethod
-    def Saturation(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.MultiplySaturation(mul=params["saturation_factor"])
-
-    @staticmethod
-    def Shear(params: dict[str, Any]) -> iaa.Augmenter:
-        return iaa.ShearX(shear=params["shear"])
-
-    @staticmethod
-    def __call__(transform: iaa.Augmenter, image: np.ndarray) -> np.ndarray:
-        """Apply the transform to the image"""
-        return np.ascontiguousarray(transform.augment_image(image))
+# Required: Transform definitions from specs
+TRANSFORMS = [
+    {
+        "name": spec.name,
+        "transform": create_transform(spec),
+    }
+    for spec in TRANSFORM_SPECS
+    if create_transform(spec) is not None
+]
