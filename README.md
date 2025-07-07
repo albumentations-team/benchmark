@@ -222,3 +222,5 @@ When contributing, please:
 2. Add tests for new functionality
 3. Update documentation as needed
 4. Ensure all tests pass
+
+<!-- GitAds-Verify: ROVYUM6GM9I4GUYXL61ND2O2ZT2SVPGP -->
