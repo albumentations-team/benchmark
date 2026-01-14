@@ -2,7 +2,7 @@
 
 from typing import Any
 
-import albumentations as A
+import albumentationsx as A
 import cv2
 import numpy as np
 
