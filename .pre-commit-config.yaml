@@ -12,7 +12,7 @@ ci:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-added-large-files
       - id: check-ast
@@ -37,11 +37,10 @@ repos:
       - id: requirements-txt-fixer
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.12.1
+    rev: v0.14.11
     hooks:
       # Run the linter.
-      - id: ruff
-        exclude: '__pycache__/'
+      - id: ruff-check
         args: [ --fix ]
       # Run the formatter.
       - id: ruff-format
@@ -59,23 +58,23 @@ repos:
       - id: codespell
         additional_dependencies: ["tomli"]
   - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: "v2.6.0"
+    rev: "v2.11.1"
     hooks:
       - id: pyproject-fmt
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.16.1
+    rev: v1.19.1
     hooks:
       - id: mypy
         files: ^(benchmark|tools)/
         additional_dependencies: [types-PyYAML]
         args:
-          [ --config-file=pyproject.toml ]
+          - "--config-file=pyproject.toml"
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.402 # Specify a version or use the latest tag
+    rev: v1.1.408 # Specify a version or use the latest tag
     hooks:
       - id: pyright
         # Optional: specify files/directories to check, defaults to project root
         files: ^(benchmark|tools)/
         additional_dependencies: [.]
         # Tell pyright to use the project config
-        args: ["--project", "pyproject.toml"]
+        args: ["--project=pyproject.toml"]
