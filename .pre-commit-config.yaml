@@ -75,5 +75,6 @@ repos:
       - id: pyright
         # Optional: specify files/directories to check, defaults to project root
         files: ^(benchmark|tools)/
+        additional_dependencies: [.]
         # Tell pyright to use the project config
         args: ["--project=pyproject.toml"]
