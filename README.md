@@ -1,6 +1,6 @@
 # Image and Video Augmentation Library Benchmarks
 
-A comprehensive benchmarking suite for comparing the performance of popular image and video augmentation libraries including [AlbumentationsX](https://albumentations.ai/), [imgaug](https://imgaug.readthedocs.io/en/latest/), [torchvision](https://pytorch.org/vision/stable/index.html), [Kornia](https://kornia.readthedocs.io/en/latest/), and [Augly](https://github.com/facebookresearch/AugLy).
+A comprehensive benchmarking suite for comparing the performance of popular image and video augmentation libraries including [AlbumentationsX](https://albumentations.ai/), [imgaug](https://imgaug.readthedocs.io/en/latest/), [torchvision](https://docs.pytorch.org/vision/stable/index.html), [Kornia](https://kornia.readthedocs.io/en/latest/), and [Augly](https://github.com/facebookresearch/AugLy).
 
 ## GitAds Sponsored
 [![Sponsored by GitAds](https://gitads.dev/v1/ad-serve?source=albumentations-team/benchmark@github)](https://gitads.dev/v1/ad-track?source=albumentations-team/benchmark@github)
@@ -48,7 +48,7 @@ The image benchmarks compare the performance of various libraries on standard im
 
 [**Detailed Image Benchmark Results**](docs/images/README.md)
 
-![Image Speedup Analysis](docs/images/images_speedup_analysis.png)
+![Image Speedup Analysis](docs/images/images_speedup_analysis.webp)
 
 ### Video Benchmarks
 
@@ -56,7 +56,7 @@ The video benchmarks compare CPU-based processing (AlbumentationsX) with GPU-acc
 
 [**Detailed Video Benchmark Results**](docs/videos/README.md)
 
-![Video Speedup Analysis](docs/videos/videos_speedup_analysis.png)
+![Video Speedup Analysis](docs/videos/videos_speedup_analysis.webp)
 
 ## Performance Highlights
 
@@ -85,7 +85,7 @@ The benchmark automatically creates isolated virtual environments for each libra
 
 - [AlbumentationsX](https://albumentations.ai/)
 - [imgaug](https://imgaug.readthedocs.io/en/latest/)
-- [torchvision](https://pytorch.org/vision/stable/index.html)
+- [torchvision](https://docs.pytorch.org/vision/stable/index.html)
 - [Kornia](https://kornia.readthedocs.io/en/latest/)
 - [Augly](https://github.com/facebookresearch/AugLy)
 
