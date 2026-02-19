@@ -7,7 +7,8 @@ import kornia.augmentation as Kaug
 import numpy as np
 import torch
 
-from benchmark.transforms.specs import TRANSFORM_SPECS, TransformSpec
+from benchmark.transforms.registry import build_transforms, register_library
+from benchmark.transforms.specs import TransformSpec
 
 # Get device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -360,12 +361,8 @@ def create_transform(spec: TransformSpec) -> Any | None:
     return None
 
 
+# Register with the central registry
+register_library(LIBRARY, create_video_fn=create_transform)
+
 # Required: Transform definitions from specs
-TRANSFORMS = [
-    {
-        "name": spec.name,
-        "transform": create_transform(spec),
-    }
-    for spec in TRANSFORM_SPECS
-    if create_transform(spec) is not None
-]
+TRANSFORMS = build_transforms(LIBRARY, media="video")

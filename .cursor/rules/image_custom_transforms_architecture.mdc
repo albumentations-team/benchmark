@@ -1,6 +1,6 @@
 ---
 description: Architecture of the image benchmark system — how transform spec files work, what BenchmarkRunner expects, and how built-in vs custom transforms differ.
-globs: benchmark/**/*.py, benchmark/transforms/**/*.py, run_single.sh, run_all.sh, examples/*.py
+globs: benchmark/**/*.py, benchmark/transforms/**/*.py, benchmark/cli.py, examples/*.py
 alwaysApply: false
 ---
 
@@ -30,18 +30,21 @@ Key details:
 
 ## BenchmarkRunner (`benchmark/runner.py`)
 
+`BenchmarkRunner` is unified for both image and video — parameterized by `MediaType`:
+
 ```python
 BenchmarkRunner(
     library=library,        # str, used for image loader selection
     data_dir=data_dir,      # Path to images (RGB only, grayscale skipped)
     transforms=transforms,  # list[{"name": str, "transform": Any}]
     call_fn=call_fn,        # the __call__ function from spec file
-    num_images=2000,
-    num_runs=5,
+    media_type=MediaType.IMAGE,
+    num_items=1000,
     max_warmup_iterations=1000,
-    warmup_window=5,
-    warmup_threshold=0.05,
-    min_warmup_windows=3,
+    warmup_subset_size=10,
+    slow_threshold=0.1,
+    min_iterations_before_stopping=10,
+    max_time_per_transform=60,
 )
 ```
 
@@ -61,12 +64,18 @@ Warmup early-stops if:
 - Full control over parameters; useful for parametric testing
 
 ```bash
-# Built-in
-./run_single.sh -d /images -o output/albumentationsx_results.json \
-  -s benchmark/transforms/albumentationsx_impl.py
+# Built-in (all libraries)
+python -m benchmark.cli run --media image -d /images -o output/
 
-# Custom
-./run_single.sh -d /images -o output/my_results.json -s my_transforms.py
+# Single library
+python -m benchmark.cli run --media image -d /images -o output/ --libraries albumentationsx
+
+# Custom spec
+python -m benchmark.cli run --media image -d /images -o output/ --spec my_transforms.py
+
+# Single transform regression check
+python -m benchmark.cli run --media image -d /images -o output/ \
+  --libraries albumentationsx --transforms HorizontalFlip
 ```
 
 ## Image Loading

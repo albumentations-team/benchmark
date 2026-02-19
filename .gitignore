@@ -170,3 +170,7 @@ data/
 .venv_*
 
 notebooks/
+
+output_custom/
+output_videos_custom/
+paper.md

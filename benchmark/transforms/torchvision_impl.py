@@ -5,7 +5,8 @@ from typing import Any
 import torch
 import torchvision.transforms.v2 as tv_transforms
 
-from benchmark.transforms.specs import TRANSFORM_SPECS, TransformSpec
+from benchmark.transforms.registry import build_transforms, register_library
+from benchmark.transforms.specs import TransformSpec
 
 # Force CPU only for fair benchmarking
 device = torch.device("cpu")
@@ -150,12 +151,8 @@ def create_transform(spec: TransformSpec) -> Any | None:
     return None
 
 
+# Register with the central registry
+register_library(LIBRARY, create_image_fn=create_transform)
+
 # Required: Transform definitions from specs
-TRANSFORMS = [
-    {
-        "name": spec.name,
-        "transform": create_transform(spec),
-    }
-    for spec in TRANSFORM_SPECS
-    if create_transform(spec) is not None
-]
+TRANSFORMS = build_transforms(LIBRARY, media="image")
