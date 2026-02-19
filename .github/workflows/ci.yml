@@ -28,3 +28,10 @@ jobs:
 
     - name: Check code formatting with pre-commit
       run: pre-commit run --all-files
+
+    - name: Run tests with coverage
+      run: |
+        uv pip install numpy
+        pytest -n auto --cov=benchmark --cov=tools --cov-report=xml --randomly-seed=random
+      env:
+        PYTEST_ADDOPTS: "--randomly-seed=random"

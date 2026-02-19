@@ -429,14 +429,14 @@ def load_from_python_file(specs_file: Path) -> tuple[str, Callable[[Any, Any], A
     if not hasattr(module, "LIBRARY"):
         raise ValueError(f"Python file {specs_file} must define LIBRARY string")
 
-    if not callable(module):
+    if "__call__" not in module.__dict__:
         raise TypeError(f"Python file {specs_file} must define __call__ function")
+
+    if not callable(module.__dict__["__call__"]):
+        raise TypeError("__call__ must be a callable function")
 
     if not hasattr(module, "TRANSFORMS"):
         raise ValueError(f"Python file {specs_file} must define TRANSFORMS list")
-
-    if not callable(module.__call__):
-        raise TypeError("__call__ must be a callable function")
 
     for i, t in enumerate(module.TRANSFORMS):
         if not isinstance(t, dict):
