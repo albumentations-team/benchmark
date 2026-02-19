@@ -1,15 +1,11 @@
 [build-system]
 build-backend = "setuptools.build_meta"
-
 requires = [ "setuptools>=61" ]
 
 [project]
 name = "image-augmentation-benchmark"
-
 version = "0.0.1"
-
 description = "Benchmark for image augmentation libraries"
-
 readme = "README.md"
 keywords = [
   "benchmark",
@@ -30,12 +26,9 @@ keywords = [
   "tensorflow",
 ]
 license = { file = "LICENSE" }
-
 maintainers = [ { name = "Vladimir Iglovikov" } ]
-
 authors = [ { name = "Vladimir Iglovikov" } ]
 requires-python = ">=3.13"
-
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
@@ -56,18 +49,14 @@ urls.Homepage = "https://albumentations.ai/docs/benchmarking_results/"
 
 [tool.setuptools]
 include-package-data = false
-
-[tool.setuptools.packages.find]
-include = [ "benchmark*", "tools*" ]
-exclude = [ "output*", "output_videos*", ".venv*", "tests*" ]
+packages.find.include = [ "benchmark*", "tools*" ]
+packages.find.exclude = [ "output*", "output_videos*", ".venv*", "tests*" ]
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
 target-version = "py313"
-
 line-length = 120
 indent-width = 4
-
 # Assume Python 3.13
 exclude = [
   ".bzr",
@@ -100,7 +89,6 @@ exclude = [
   "tests",
   "venv",
 ]
-
 format.indent-style = "space"
 # Like Black, respect magic trailing commas.
 format.quote-style = "double"
@@ -133,7 +121,6 @@ lint.ignore = [
   "G004",
   "N802",
   "N812",
-  "PD901",
   "PLC0415", # Allow imports inside functions for optional dependencies
   "PLR0911",
   "PLR0912",
@@ -142,13 +129,11 @@ lint.ignore = [
   "PLR2004",
   "TRY003",
 ]
-
 # Allow fix for all enabled rules (when `--fix`) is provided.
-
 lint.explicit-preview-rules = true
-lint.per-file-ignores."tools/*.py" = [ "T201" ] # Allow print statements in CLI tools
+lint.per-file-ignores."tools/*.py" = [ "T201" ]  # Allow print statements in CLI tools
 lint.fixable = [ "ALL" ]
-lint.unfixable = [  ]
+lint.unfixable = []
 # Allow unused variables when underscore-prefixed.
 lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # Like Black, use double quotes for strings.
@@ -163,7 +148,6 @@ warn_unused_ignores = true
 disallow_any_generics = true
 check_untyped_defs = true
 no_implicit_reexport = true
-
 # for strict mypy: (this is the tricky one :-))
 disallow_untyped_defs = true
 
@@ -171,7 +155,7 @@ disallow_untyped_defs = true
 # Define an execution environment that points to the project's virtual env
 # Assumes a standard .venv location relative to pyproject.toml
 executionEnvironments = [
-  { root = ".", pythonVersion = "3.13", venv = ".venv" }, # Adjusted to use venv field
+  { root = ".", pythonVersion = "3.13", venv = ".venv" },  # Adjusted to use venv field
 ]
 # Include benchmark and tools directories for analysis
 include = [ "benchmark", "tools" ]

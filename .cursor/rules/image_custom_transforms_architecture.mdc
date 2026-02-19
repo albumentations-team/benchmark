@@ -1,388 +1,143 @@
-# Image Benchmark Redesign Technical Specification
+---
+description: Architecture of the image benchmark system — how transform spec files work, what BenchmarkRunner expects, and how built-in vs custom transforms differ.
+globs: benchmark/**/*.py, benchmark/transforms/**/*.py, run_single.sh, run_all.sh, examples/*.py
+alwaysApply: false
+---
 
-## Overview
+# Image Benchmark Architecture
 
-This document outlines the redesigned architecture for image benchmarking that mirrors the video benchmarking system, removing library-specific class implementations and allowing users to define transforms with custom parameters and application logic in a single Python file.
+## Transform Spec File Contract
 
-## Goals
-
-1. **Consistency**: Match the video benchmark architecture for a unified experience
-2. **Simplicity**: Users define everything in one Python file - transforms, parameters, and application logic
-3. **Flexibility**: Support multiple instances of the same transform with different parameters
-4. **Direct Control**: Users have full control over how transforms are applied to images
-
-## Architecture
-
-### 1. User-Defined Transform File
-
-Users create a Python file that must define:
+Every spec file (built-in or custom) must define three things at module level:
 
 ```python
-# Required: Library name for dependency installation
-LIBRARY = "albumentations"  # or "torchvision", "kornia", "imgaug", "augly"
+LIBRARY = "albumentationsx"  # controls which venv/requirements are used
 
-# Required: Function to apply transforms to images
-def __call__(transform, images):
-    """Apply transform to batch of images using library-specific API"""
-    # Library-specific implementation
-    pass
+def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
+    """Called once per image during benchmarking."""
+    return transform(image=image)["image"]
 
-# Required: List of transform definitions
 TRANSFORMS = [
-    {
-        "name": "GaussianBlur_3x3",  # Unique name for this transform instance
-        "transform": transform_object,  # The actual transform instance
-    },
-    # ... more transforms
+    {"name": "HorizontalFlip", "transform": A.HorizontalFlip(p=1)},
 ]
 ```
 
-### 2. Transform Definition Structure
+Key details:
+- `__call__` receives **a single image**, not a batch — the runner loops over images itself
+- `name` appears verbatim in result JSON keys and comparison tables
+- All transforms must have `p=1` for deterministic benchmarking
+- The module is validated by `load_from_python_file()` in `benchmark/runner.py`
 
-Each transform in the `TRANSFORMS` list is a dictionary with:
-
-- `name`: Unique identifier for the transform instance (appears in results)
-- `transform`: The instantiated transform object
-
-The `__call__` function is defined once for all transforms in the file and handles batch processing.
-
-### 3. Example Transform File - Albumentations
+## BenchmarkRunner (`benchmark/runner.py`)
 
 ```python
-import albumentations as A
-import numpy as np
-import cv2
-
-# Required: Library name
-LIBRARY = "albumentations"
-
-# Required: Define how to apply transforms to images
-def __call__(transform, images):
-    """Apply albumentations transform to batch of images
-
-    Args:
-        transform: Albumentations transform instance
-        images: List of numpy arrays of shape (H, W, C)
-
-    Returns:
-        List of transformed images as numpy arrays
-    """
-    return [transform(image=img)["image"] for img in images]
-
-# Required: Transform definitions
-TRANSFORMS = [
-    {
-        "name": "GaussianBlur_3x3",
-        "transform": A.GaussianBlur(blur_limit=(3, 3), sigma_limit=(0.1, 2.0), p=1),
-    },
-    {
-        "name": "GaussianBlur_7x7",
-        "transform": A.GaussianBlur(blur_limit=(7, 7), sigma_limit=(0.1, 2.0), p=1),
-    },
-    {
-        "name": "Rotate_15",
-        "transform": A.Rotate(limit=15, interpolation=cv2.INTER_LINEAR, p=1),
-    },
-    {
-        "name": "Rotate_45",
-        "transform": A.Rotate(limit=45, interpolation=cv2.INTER_LINEAR, p=1),
-    },
-]
+BenchmarkRunner(
+    library=library,        # str, used for image loader selection
+    data_dir=data_dir,      # Path to images (RGB only, grayscale skipped)
+    transforms=transforms,  # list[{"name": str, "transform": Any}]
+    call_fn=call_fn,        # the __call__ function from spec file
+    num_images=2000,
+    num_runs=5,
+    max_warmup_iterations=1000,
+    warmup_window=5,
+    warmup_threshold=0.05,
+    min_warmup_windows=3,
+)
 ```
 
-### 4. Example Transform File - Torchvision
+Warmup early-stops if:
+- `time_per_image > 0.1` sec (after 10+ iterations)
+- total warmup time > 60 sec
 
-```python
-import torch
-import torchvision.transforms.v2 as v2
+## Built-in vs Custom Transform Files
 
-# Required: Library name
-LIBRARY = "torchvision"
+**Built-in** (`benchmark/transforms/*_impl.py`):
+- Import `TRANSFORM_SPECS` from `benchmark/transforms/specs.py`
+- Use a `create_transform(spec)` factory to build transforms from the shared spec
+- Ensure all libraries benchmark the same operations for fair comparison
 
-# Device configuration
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# Required: Define how to apply transforms to images
-def __call__(transform, images):
-    """Apply torchvision transform to batch of images
-
-    Args:
-        transform: Torchvision transform instance
-        images: List of torch.Tensor of shape (C, H, W)
-
-    Returns:
-        List of transformed images as torch.Tensor
-    """
-    # Set random seed for reproducibility
-    torch.manual_seed(42)
-
-    # Stack images into batch tensor for efficiency
-    batch = torch.stack(images).to(device)
-
-    # Apply transform
-    if device.type == "cuda" and not isinstance(transform, v2.JPEG):
-        batch = (batch.float() / 255.0).half()
-
-    transformed = transform(batch)
-
-    # Return as list of individual images
-    return [img.cpu() for img in transformed]
-
-# Required: Transform definitions
-TRANSFORMS = [
-    {
-        "name": "ColorJitter_weak",
-        "transform": v2.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05),
-    },
-    {
-        "name": "ColorJitter_strong",
-        "transform": v2.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.2),
-    },
-    {
-        "name": "RandomHorizontalFlip",
-        "transform": v2.RandomHorizontalFlip(p=1.0),
-    },
-    {
-        "name": "GaussianBlur_5x5",
-        "transform": v2.GaussianBlur(kernel_size=5, sigma=(0.1, 2.0)),
-    },
-]
-```
-
-### 5. Example Transform File - AugLy
-
-```python
-import augly.image as imaugs
-from PIL import Image
-
-# Required: Library name
-LIBRARY = "augly"
-
-# Required: Define how to apply transforms to images
-def __call__(transform, images):
-    """Apply augly transform to batch of images
-
-    Args:
-        transform: AugLy transform instance
-        images: List of PIL Images
-
-    Returns:
-        List of transformed images as PIL Images
-    """
-    # AugLy transforms modify images in-place, so we need to copy
-    return [transform(img.copy()) for img in images]
-
-# Required: Transform definitions
-TRANSFORMS = [
-    {
-        "name": "Blur_radius_3",
-        "transform": imaugs.Blur(radius=3),
-    },
-    {
-        "name": "Blur_radius_5",
-        "transform": imaugs.Blur(radius=5),
-    },
-    {
-        "name": "Brightness_0.5",
-        "transform": imaugs.Brightness(factor=0.5),
-    },
-    {
-        "name": "Brightness_1.5",
-        "transform": imaugs.Brightness(factor=1.5),
-    },
-]
-```
-
-### 6. Image Runner Changes
-
-The `BenchmarkRunner` class will be simplified:
-
-```python
-class BenchmarkRunner:
-    def __init__(self, library, data_dir, transforms, call_fn, ...):
-        self.library = library
-        self.transforms = transforms  # List of transform dicts
-        self.call_fn = call_fn  # The __call__ function from user file
-        # Remove: self.impl = self._get_implementation()
-
-    def run_transform(self, transform_dict, images):
-        """Run benchmark for a single transform"""
-        transform = transform_dict["transform"]
-        name = transform_dict["name"]
-
-        # Warmup
-        warmup_subset = images[:10]
-        elapsed = time_transform(lambda x: self.call_fn(transform, x), warmup_subset)
-        # ... rest of benchmarking logic
-```
-
-### 7. Loading Transform File
-
-```python
-def load_from_python_file(specs_file):
-    """Load LIBRARY, __call__, and TRANSFORMS from Python file"""
-    spec = importlib.util.spec_from_file_location("transforms", specs_file)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    # Validate required attributes
-    if not hasattr(module, 'LIBRARY'):
-        raise ValueError(f"File must define LIBRARY")
-
-    if not hasattr(module, '__call__'):
-        raise ValueError(f"File must define __call__ function")
-
-    if not hasattr(module, 'TRANSFORMS'):
-        raise ValueError(f"File must define TRANSFORMS list")
-
-    # Validate __call__ is callable
-    if not callable(module.__call__):
-        raise ValueError(f"__call__ must be a callable function")
-
-    # Validate transform structure
-    for i, t in enumerate(module.TRANSFORMS):
-        if not isinstance(t, dict):
-            raise ValueError(f"TRANSFORMS[{i}] must be a dictionary")
-
-        required_keys = {"name", "transform"}
-        missing = required_keys - t.keys()
-        if missing:
-            raise ValueError(f"TRANSFORMS[{i}] missing keys: {missing}")
-
-    return module.LIBRARY, module.__call__, module.TRANSFORMS
-```
-
-### 8. Script Interface
+**Custom** (user files, e.g. `examples/custom_image_transforms.py`):
+- Define `TRANSFORMS` directly with arbitrary transform instances
+- Full control over parameters; useful for parametric testing
 
 ```bash
-./run_single.sh \
-    -l my_transforms.py \
-    -d /path/to/images \
-    -o output/ \
-    -n 1000 \
-    -r 5
+# Built-in
+./run_single.sh -d /images -o output/albumentationsx_results.json \
+  -s benchmark/transforms/albumentationsx_impl.py
+
+# Custom
+./run_single.sh -d /images -o output/my_results.json -s my_transforms.py
 ```
 
-The script will:
-1. Extract LIBRARY from the Python file
-2. Create appropriate virtual environment
-3. Install library-specific dependencies
-4. Run the benchmark with user-defined transforms and __call__ function
+## Image Loading
 
-### 9. Output Format
+Images are loaded via `get_image_loader(library)` from `benchmark/utils.py`. The runner:
+1. Pre-checks each file with `cv2.IMREAD_UNCHANGED` — skips grayscale (< 3 channels)
+2. Loads with the library-specific loader (numpy array, PIL Image, torch Tensor, etc.)
+3. Only processes RGB images
 
-Results will use the user-defined transform names:
+## Output Format
 
 ```json
 {
-  "metadata": { ... },
+  "metadata": {
+    "system_info": {...},
+    "library_versions": {...},
+    "thread_settings": {"OMP_NUM_THREADS": "1", ...},
+    "benchmark_params": {"num_images": 2000, "num_runs": 5, ...}
+  },
   "results": {
-    "GaussianBlur_3x3": { ... },
-    "GaussianBlur_7x7": { ... },
-    "Rotate_15": { ... },
-    "Rotate_45": { ... }
+    "HorizontalFlip": {
+      "supported": true,
+      "median_throughput": 1234.5,
+      "std_throughput": 45.2,
+      "warmup_iterations": 12,
+      "variance_stable": true,
+      "early_stopped": false,
+      "early_stop_reason": null
+    }
   }
 }
 ```
 
-## Built-in Transform Sets vs Custom Transforms
+## Library-specific `__call__` patterns
 
-The benchmark system supports two modes:
-
-### 1. Built-in Transform Sets (`*_impl.py` files)
-- Located in `benchmark/transforms/`
-- Use centralized `TRANSFORM_SPECS` from `specs.py`
-- Provide standardized transforms for consistent benchmarking across libraries
-- Already converted to the new format with `LIBRARY`, `__call__`, and `TRANSFORMS`
-
-### 2. Custom Transform Files
-- User-created Python files
-- Complete control over transform definitions and parameters
-- Can test specific parameter combinations or custom transforms
-
-Users can choose either approach based on their needs:
-```bash
-# Use built-in transforms
-./run_single.sh -l benchmark/transforms/albumentations_impl.py -d /images -o output.json
-
-# Use custom transforms
-./run_single.sh -l my_custom_transforms.py -d /images -o output.json
+**AlbumentationsX** — single image, dict access:
+```python
+def __call__(transform, image):
+    return np.ascontiguousarray(transform(image=image)["image"])
 ```
 
-## Migration Status
+**torchvision** — expects `(C, H, W)` tensor:
+```python
+def __call__(transform, image):
+    return transform(image)
+```
 
-1. ✅ Remove `_get_implementation()` from `BenchmarkRunner`
-2. ✅ Update `run_transform()` to use the user-provided `__call__` function
-3. ✅ Update file loading to use new format with `LIBRARY`, `__call__`, and `TRANSFORMS`
-4. ✅ Convert `albumentations_impl.py` to new format
-5. ✅ Convert `torchvision_impl.py` to new format
-6. ✅ Convert `kornia_impl.py` to new format
-7. ✅ Convert `imgaug_impl.py` to new format
-8. ✅ Convert `augly_impl.py` to new format
-9. ✅ Create example files for custom transforms
-10. ✅ Update `run_single.sh` script
+**imgaug** — uses `augment_image`:
+```python
+def __call__(transform, image):
+    return transform.augment_image(image)
+```
 
-## Benefits
+**augly** — PIL Image, modifies in-place so copy first:
+```python
+def __call__(transform, image):
+    return transform(image.copy())
+```
 
-1. **Consistency**: Matches video benchmark architecture
-2. **User Control**: Users define exactly how transforms are applied
-3. **Flexibility**: Easy to test same transform with different parameters
-4. **DRY Principle**: Define application logic once per file
-5. **Transparency**: No hidden library-specific logic
-6. **Extensibility**: Users can add custom pre/post-processing
-7. **Simplicity**: Fewer abstractions, more direct control
-8. **Standardization**: Built-in transform sets ensure consistent benchmarking
+**kornia** — GPU tensor `(C, H, W)`, unsqueeze for batch dim:
+```python
+def __call__(transform, image):
+    return transform(image.unsqueeze(0)).squeeze(0)
+```
 
 ## Differences from Video Benchmark
 
-1. **Batch Processing**: Images are processed as a list/batch rather than as a single video tensor
-2. **Memory Management**: May need different strategies for large image batches
-3. **Libraries**: Includes additional libraries like imgaug and augly not used for video
-
-## Example Use Cases
-
-### 1. Testing Parameter Sensitivity
-```python
-TRANSFORMS = [
-    {
-        "name": f"Blur_sigma_{s}",
-        "transform": A.GaussianBlur(blur_limit=(5, 5), sigma_limit=(s, s), p=1),
-    }
-    for s in [0.5, 1.0, 1.5, 2.0, 2.5]
-]
-```
-
-### 2. Custom Batch Processing
-```python
-def __call__(transform, images):
-    """Apply transform with custom batch processing"""
-    # Process in smaller batches for memory efficiency
-    batch_size = 32
-    results = []
-
-    for i in range(0, len(images), batch_size):
-        batch = images[i:i+batch_size]
-        # Apply transforms
-        transformed = [transform(image=img)["image"] for img in batch]
-        results.extend(transformed)
-
-    return results
-```
-
-### 3. Performance Optimizations
-```python
-def __call__(transform, images):
-    """Apply transform with performance optimizations"""
-    if len(images) > 100:
-        # Use multiprocessing for large batches
-        import multiprocessing as mp
-        with mp.Pool() as pool:
-            return pool.map(lambda img: transform(image=img)["image"], images)
-    else:
-        # Standard processing for small batches
-        return [transform(image=img)["image"] for img in images]
-```
-description:
-globs:
-alwaysApply: false
----
+| Aspect | Image | Video |
+|--------|-------|-------|
+| `__call__` receives | single image | single video `(T, H, W, C)` |
+| Slow threshold | 0.1 sec/image | 2.0 sec/video |
+| Default num items | 2000 images | 50 videos |
+| Warmup subset | 10 images | 3 videos |
+| Extra libraries | imgaug, augly | — |

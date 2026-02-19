@@ -143,7 +143,7 @@ def get_hardware_info(results: dict[str, dict[str, Any]]) -> dict[str, str]:
                 thread_settings = result["metadata"]["thread_settings"]
 
                 # For CPU (Albumentationsx)
-                if library.lower() in ["albumentationsx"]:
+                if library.lower() == "albumentationsx":
                     cpu_info = result["metadata"]["system_info"].get("processor", "CPU")
                     # Always use "1 core" for albumentationsx as we fix CPU thread in actual benchmark
                     hardware_info[library] = f"{cpu_info} (1 core)"
@@ -154,18 +154,18 @@ def get_hardware_info(results: dict[str, dict[str, Any]]) -> dict[str, str]:
                 else:
                     hardware_info[library] = "Unknown hardware"
             # Default hardware info if thread_settings not found
-            elif library.lower() in ["albumentationsx"]:
+            elif library.lower() == "albumentationsx":
                 # Always use "CPU (1 core)" for albumentationsx
                 cpu_info = result["metadata"]["system_info"].get("processor", "CPU")
                 hardware_info[library] = f"{cpu_info} (1 core)"
-            elif library.lower() in ["kornia", "torchvision"]:
+            elif library.lower() in {"kornia", "torchvision"}:
                 hardware_info[library] = "GPU (details unknown)"
             else:
                 hardware_info[library] = "Unknown"
         # Default hardware info if metadata not found
-        elif library.lower() in ["albumentationsx"]:
+        elif library.lower() == "albumentationsx":
             hardware_info[library] = "CPU (1 core)"
-        elif library.lower() in ["kornia", "torchvision"]:
+        elif library.lower() in {"kornia", "torchvision"}:
             hardware_info[library] = "GPU (details unknown)"
         else:
             hardware_info[library] = "Unknown"

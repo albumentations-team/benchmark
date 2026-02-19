@@ -1,9 +1,12 @@
 ---
-description: My custom rules for all of the project.
+description: Project-wide configuration and constraints
 globs: *.py
-alwaysApply: false
+alwaysApply: true
 ---
 
-# Your rule content
+# Project Configuration
 
-- I use python 3.12
+- Python 3.13+ (see pyproject.toml)
+- Line length: 120 characters
+- Type checking: mypy + pyright (strict mode)
+- Code formatting: ruff with double quotes, 4-space indent

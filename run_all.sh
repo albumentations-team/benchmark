@@ -91,7 +91,8 @@ mkdir -p "$OUTPUT_DIR"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Define libraries and their corresponding spec files
-LIBRARIES=("albumentationsx" "imgaug" "torchvision" "kornia" "augly")
+# LIBRARIES=("albumentationsx" "imgaug" "torchvision" "kornia" "augly")
+LIBRARIES=("albumentationsx")
 SPEC_FILES=(
     "benchmark/transforms/albumentationsx_impl.py"
     "benchmark/transforms/imgaug_impl.py"
