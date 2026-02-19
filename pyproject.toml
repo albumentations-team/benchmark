@@ -86,7 +86,6 @@ exclude = [
   "node_modules",
   "site",
   "site-packages",
-  "tests",
   "venv",
 ]
 format.indent-style = "space"
@@ -140,6 +139,10 @@ lint.per-file-ignores."benchmark/cloud/gcp.py" = [
   "S603",
   "S607"
 ]  # Cloud: subprocess calls to gcloud with known args
+lint.per-file-ignores."tests/**/*.py" = [
+  "S101",   # allow assert in tests
+  "SLF001", # allow private member access in tests
+]
 lint.per-file-ignores."tools/*.py" = [ "T201" ]  # Allow print statements in CLI tools
 lint.fixable = [ "ALL" ]
 lint.unfixable = []
@@ -147,6 +150,11 @@ lint.unfixable = []
 lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # Like Black, use double quotes for strings.
 lint.pydocstyle.convention = "google"
+
+[tool.pytest]
+ini_options.testpaths = [ "tests" ]
+ini_options.addopts = "-v --tb=short -p randomly"
+ini_options.timeout = 30
 
 [tool.mypy]
 python_version = "3.13"

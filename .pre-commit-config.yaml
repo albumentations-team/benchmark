@@ -21,9 +21,11 @@ repos:
       - id: check-docstring-first
       - id: check-executables-have-shebangs
       - id: check-shebang-scripts-are-executable
+      - id: check-merge-conflict
       - id: check-symlinks
       - id: check-toml
       - id: check-xml
+      - id: check-yaml
       - id: detect-private-key
       - id: forbid-new-submodules
       - id: forbid-submodules
@@ -33,6 +35,8 @@ repos:
       - id: check-json
       - id: debug-statements
       - id: end-of-file-fixer
+      - id: no-commit-to-branch
+        args: [--branch, main]
       - id: trailing-whitespace
       - id: requirements-txt-fixer
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -50,7 +54,6 @@ repos:
       - id: python-check-mock-methods
       - id: python-use-type-annotations
       - id: python-check-blanket-noqa
-      - id: python-use-type-annotations
       - id: text-unicode-replacement-char
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
@@ -78,3 +81,12 @@ repos:
         additional_dependencies: [.]
         # Tell pyright to use the project config
         args: ["--project=pyproject.toml"]
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: v0.23
+    hooks:
+      - id: validate-pyproject
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.9.0
+    hooks:
+      - id: pip-audit
+        args: [--requirement, requirements/requirements.txt]
