@@ -6,7 +6,8 @@ import albumentations as A
 import cv2
 import numpy as np
 
-from benchmark.transforms.specs import TRANSFORM_SPECS, TransformSpec
+from benchmark.transforms.registry import build_transforms, register_library
+from benchmark.transforms.specs import TransformSpec
 
 # Ensure single thread
 cv2.setNumThreads(0)
@@ -293,11 +294,8 @@ def create_transform(spec: TransformSpec) -> Any:
     raise ValueError(f"Unknown transform: {spec.name}")
 
 
+# Register with the central registry
+register_library(LIBRARY, create_image_fn=create_transform)
+
 # Required: Transform definitions from specs
-TRANSFORMS = [
-    {
-        "name": spec.name,
-        "transform": create_transform(spec),
-    }
-    for spec in TRANSFORM_SPECS
-]
+TRANSFORMS = build_transforms(LIBRARY, media="image")

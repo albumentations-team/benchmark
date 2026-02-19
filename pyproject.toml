@@ -131,6 +131,15 @@ lint.ignore = [
 ]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 lint.explicit-preview-rules = true
+lint.per-file-ignores."benchmark/cli.py" = [
+  "S603",
+  "S607",
+  "T201"
+]  # CLI: print output + subprocess with known commands
+lint.per-file-ignores."benchmark/cloud/gcp.py" = [
+  "S603",
+  "S607"
+]  # Cloud: subprocess calls to gcloud with known args
 lint.per-file-ignores."tools/*.py" = [ "T201" ]  # Allow print statements in CLI tools
 lint.fixable = [ "ALL" ]
 lint.unfixable = []
