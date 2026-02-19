@@ -109,7 +109,7 @@ class TestIsVarianceStable:
         # Exactly window * min_windows → should evaluate, not short-circuit
         data = [500.0] * 15
         result = is_variance_stable(data, window=5, threshold=0.05, min_windows=3)
-        assert isinstance(result, bool)
+        assert result is True
 
     @pytest.mark.parametrize("n", [0, 1, 5, 14])
     def test_short_inputs_always_false(self, n: int) -> None:

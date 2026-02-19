@@ -432,7 +432,8 @@ def load_from_python_file(specs_file: Path) -> tuple[str, Callable[[Any, Any], A
     if "__call__" not in module.__dict__:
         raise TypeError(f"Python file {specs_file} must define __call__ function")
 
-    if not callable(module.__dict__["__call__"]):
+    call_attr = module.__dict__["__call__"]
+    if not callable(call_attr):
         raise TypeError("__call__ must be a callable function")
 
     if not hasattr(module, "TRANSFORMS"):
@@ -447,7 +448,7 @@ def load_from_python_file(specs_file: Path) -> tuple[str, Callable[[Any, Any], A
         if missing:
             raise ValueError(f"TRANSFORMS[{i}] missing keys: {missing}")
 
-    return module.LIBRARY, module.__call__, module.TRANSFORMS
+    return module.LIBRARY, call_attr, module.TRANSFORMS
 
 
 # ------------------------------------------------------------------

@@ -33,5 +33,3 @@ jobs:
       run: |
         uv pip install numpy
         pytest -n auto --cov=benchmark --cov=tools --cov-report=xml --randomly-seed=random
-      env:
-        PYTEST_ADDOPTS: "--randomly-seed=random"

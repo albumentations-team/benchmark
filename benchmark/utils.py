@@ -254,8 +254,10 @@ def is_variance_stable(
 
     # Check if all variance ratios are below threshold
     for i in range(len(variances) - 1):
-        var_ratio = abs(variances[i] - variances[i + 1]) / max(variances[i], variances[i + 1])
-        if var_ratio > threshold:
+        denom = max(variances[i], variances[i + 1])
+        if denom == 0:
+            continue
+        if abs(variances[i] - variances[i + 1]) / denom > threshold:
             return False
 
     return True
