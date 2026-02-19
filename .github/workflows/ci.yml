@@ -32,4 +32,4 @@ jobs:
     - name: Run tests with coverage
       run: |
         uv pip install numpy
-        pytest -n auto --cov=benchmark --cov=tools --cov-report=xml --randomly-seed=random
+        pytest -n auto --cov=benchmark --cov=tools --cov-report=xml
