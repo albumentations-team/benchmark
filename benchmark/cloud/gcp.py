@@ -172,28 +172,77 @@ class GCPRunner:
     # ------------------------------------------------------------------
 
     def upload_repo(self, repo_root: Path, remote_dir: str = "~/benchmark") -> None:
-        """Rsync the repo to the remote instance, excluding venvs and outputs."""
+        """Upload the repo to the remote instance via a tar archive, excluding venvs and outputs."""
         cfg = self.config
-        source = str(repo_root).rstrip("/") + "/"
-        dest = f"{cfg.instance_name}:{remote_dir}"
+        archive_path = repo_root / ".upload_repo.tar.gz"
 
-        logger.info("Uploading repo to %s:%s...", cfg.instance_name, remote_dir)
-        _run_stream(
-            [
-                _GCLOUD,
-                "compute",
-                "scp",
-                "--project",
-                cfg.project,
-                "--zone",
-                cfg.zone,
-                "--recurse",
-                "--compress",
-                source,
-                dest,
-            ],
-        )
-        logger.info("Repo uploaded.")
+        exclude_patterns = [
+            ".venv*",
+            "venv*",
+            "__pycache__",
+            "*.pyc",
+            "*.pyo",
+            "outputs",
+            "output",
+            "results",
+            ".git",
+        ]
+        exclude_flags = [flag for pattern in exclude_patterns for flag in ("--exclude", pattern)]
+
+        try:
+            archive_path.unlink(missing_ok=True)
+            logger.info("Creating repo archive for upload (excluding venvs and outputs)...")
+            subprocess.run(
+                ["tar", "czf", str(archive_path), *exclude_flags, "-C", str(repo_root), "."],
+                check=True,
+            )
+
+            logger.info("Uploading repo archive to %s:%s...", cfg.instance_name, remote_dir)
+            _run_stream(
+                [
+                    _GCLOUD,
+                    "compute",
+                    "ssh",
+                    cfg.instance_name,
+                    "--project",
+                    cfg.project,
+                    "--zone",
+                    cfg.zone,
+                    "--command",
+                    f"mkdir -p {shlex.quote(remote_dir)}",
+                ],
+            )
+            remote_archive = f"{cfg.instance_name}:{remote_dir}/repo.tar.gz"
+            _run_stream(
+                [
+                    _GCLOUD,
+                    "compute",
+                    "scp",
+                    "--project",
+                    cfg.project,
+                    "--zone",
+                    cfg.zone,
+                    str(archive_path),
+                    remote_archive,
+                ],
+            )
+            _run_stream(
+                [
+                    _GCLOUD,
+                    "compute",
+                    "ssh",
+                    cfg.instance_name,
+                    "--project",
+                    cfg.project,
+                    "--zone",
+                    cfg.zone,
+                    "--command",
+                    f"cd {shlex.quote(remote_dir)} && tar xzf repo.tar.gz && rm repo.tar.gz",
+                ],
+            )
+            logger.info("Repo uploaded.")
+        finally:
+            archive_path.unlink(missing_ok=True)
 
     def download_results(self, local_output_dir: Path, remote_output_dir: str = "~/benchmark/results") -> None:
         """Download result JSON files from the instance."""
@@ -232,11 +281,11 @@ class GCPRunner:
         cfg = self.config
         cli_args = shlex.join(remote_cli_args)
         cmd_str = (
-            f"cd {remote_repo_dir} && "
+            f"cd {shlex.quote(remote_repo_dir)} && "
             f"python -m pip install -e . -q && "
             f"python -m benchmark.cli run "
-            f"--data-dir {remote_data_dir} "
-            f"--output {remote_repo_dir}/results "
+            f"--data-dir {shlex.quote(remote_data_dir)} "
+            f"--output {shlex.quote(remote_repo_dir + '/results')} "
             f"{cli_args}"
         )
 
