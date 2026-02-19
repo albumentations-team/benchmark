@@ -153,7 +153,7 @@ lint.pydocstyle.convention = "google"
 
 [tool.pytest]
 ini_options.testpaths = [ "tests" ]
-ini_options.addopts = "-v --tb=short -p randomly --randomly-seed=last"
+ini_options.addopts = "-v --tb=short -p randomly"
 ini_options.timeout = 30
 
 [tool.mypy]
