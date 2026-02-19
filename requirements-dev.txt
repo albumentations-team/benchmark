@@ -10,3 +10,4 @@ pytest-timeout>=2.3.0
 pytest-xdist>=3.6.0
 seaborn
 tabulate
+tqdm
