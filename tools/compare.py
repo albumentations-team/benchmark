@@ -106,17 +106,17 @@ def print_comparison_table(
     sorted_transforms = sorted(all_transforms)
     lib_keys = sorted(loaded.keys())
 
-    # Build header
+    # Build header — embed unit in each column so mixed image/video tables are unambiguous
     def col_header(key: str) -> str:
         entry = loaded[key]
         version = _extract_version(entry["metadata"], entry["library"])
+        unit = "vid/s" if entry["media"] == "video" else "img/s"
         suffix = " (video)" if entry["media"] == "video" else ""
-        return f"{entry['library']}{suffix} {version}"
+        return f"{entry['library']}{suffix} {version} [{unit}]"
 
     headers = ["Transform", *[col_header(k) for k in lib_keys], "Speedup (albx/fastest other)"]
 
     # Build rows
-    unit_label = "vid/s" if any(v["media"] == "video" for v in loaded.values()) else "img/s"
     rows: list[list[str]] = []
 
     for transform in sorted_transforms:
@@ -179,7 +179,7 @@ def print_comparison_table(
         for row in rows:
             print(fmt_row(row))
 
-    print(f"\n({unit_label}, single CPU thread, median ± std)")
+    print("\n(single CPU thread, median ± std; units shown per column)")
 
 
 # ---------------------------------------------------------------------------

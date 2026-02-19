@@ -53,6 +53,7 @@ class BenchmarkRunner:
             "min_iterations_before_stopping": 10,
             "max_time_per_transform": 60,
             "item_label": "images",
+            "item_label_singular": "image",
         },
         MediaType.VIDEO: {
             "num_items": 50,
@@ -62,6 +63,7 @@ class BenchmarkRunner:
             "min_iterations_before_stopping": 5,
             "max_time_per_transform": 120,
             "item_label": "videos",
+            "item_label_singular": "video",
         },
     }
 
@@ -99,6 +101,7 @@ class BenchmarkRunner:
         self._min_iterations_before_stopping: int = defaults["min_iterations_before_stopping"]
         self._max_time_per_transform: int = defaults["max_time_per_transform"]
         self._item_label: str = defaults["item_label"]
+        self._item_label_singular: str = defaults["item_label_singular"]
 
         if media_type == MediaType.IMAGE:
             self._loader = get_image_loader(library)
@@ -230,8 +233,8 @@ class BenchmarkRunner:
                         time_per_item,
                         True,
                         (
-                            f"Transform too slow: {time_per_item:.3f} sec/{self._item_label[:-1]}"
-                            f" > {self._slow_threshold} sec/{self._item_label[:-1]} threshold"
+                            f"Transform too slow: {time_per_item:.3f} sec/{self._item_label_singular}"
+                            f" > {self._slow_threshold} sec/{self._item_label_singular} threshold"
                         ),
                     )
 
@@ -324,8 +327,12 @@ class BenchmarkRunner:
         transforms: list[dict[str, Any]],
         names: list[str] | None,
     ) -> list[dict[str, Any]]:
-        """Keep only transforms whose name is in *names*. None means keep all."""
-        if not names:
+        """Keep only transforms whose name is in *names*.
+
+        - None means keep all transforms.
+        - [] means keep none.
+        """
+        if names is None:
             return transforms
         allowed = set(names)
         return [t for t in transforms if t["name"] in allowed]

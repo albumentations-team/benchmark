@@ -23,12 +23,10 @@ Usage examples:
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -294,24 +292,6 @@ def cmd_run(args: argparse.Namespace) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _load_result_dir(directory: Path) -> dict[str, dict[str, Any]]:
-    """Load all *_results.json files from a directory.
-
-    Returns: {library: {transform_name: result_dict}}
-    """
-    data: dict[str, dict[str, Any]] = {}
-    for f in sorted(directory.glob("*.json")):
-        try:
-            with f.open() as fp:
-                raw = json.load(fp)
-            # Strip _results / _video_results suffixes to get a clean library key
-            key = f.stem.replace("_video_results", "").replace("_results", "")
-            data[key] = raw.get("results", {})
-        except Exception as e:
-            logger.warning("Could not load %s: %s", f, e)
-    return data
-
-
 def cmd_compare(args: argparse.Namespace) -> None:
     baseline_dir = Path(args.baseline)
     current_dir = Path(args.current)
@@ -323,116 +303,16 @@ def cmd_compare(args: argparse.Namespace) -> None:
         logger.error("Current directory not found: %s", current_dir)
         sys.exit(1)
 
-    baseline = _load_result_dir(baseline_dir)
-    current = _load_result_dir(current_dir)
+    from tools.compare import compare_regression
 
-    libraries_filter: set[str] | None = set(args.libraries) if args.libraries else None
-    transforms_filter: set[str] | None = set(args.transforms) if args.transforms else None
-    threshold: float = args.threshold
-
-    # Collect rows
-    rows: list[dict[str, Any]] = []
-    regression_found = False
-
-    all_libs = sorted(set(baseline) & set(current))
-    for lib in all_libs:
-        if libraries_filter and lib not in libraries_filter:
-            continue
-
-        b_results = baseline[lib]
-        c_results = current[lib]
-
-        all_transforms = sorted(set(b_results) & set(c_results))
-        for transform in all_transforms:
-            if transforms_filter and transform not in transforms_filter:
-                continue
-
-            b = b_results[transform]
-            c = c_results[transform]
-
-            if not b.get("supported") or not c.get("supported"):
-                continue
-            if b.get("early_stopped") or c.get("early_stopped"):
-                continue
-
-            b_tps = b.get("median_throughput", 0.0)
-            c_tps = c.get("median_throughput", 0.0)
-
-            if b_tps == 0:
-                continue
-
-            delta = (c_tps - b_tps) / b_tps
-            is_regression = delta < -threshold
-            if is_regression:
-                regression_found = True
-
-            status = "REGRESSION" if is_regression else ("faster" if delta > threshold else "same")
-
-            rows.append(
-                {
-                    "library": lib,
-                    "transform": transform,
-                    "baseline": b_tps,
-                    "current": c_tps,
-                    "delta_pct": delta * 100,
-                    "status": status,
-                },
-            )
-
-    if not rows:
-        logger.info("No common transforms found between baseline and current.")
-        sys.exit(0)
-
-    # Print table
-    lw = max(len(r["library"]) for r in rows)
-    tw = max(len(r["transform"]) for r in rows)
-    col_widths = {
-        "library": max(len("library"), lw),
-        "transform": max(len("transform"), tw),
-        "baseline": 12,
-        "current": 12,
-        "delta": 10,
-        "status": 12,
-    }
-
-    header = (
-        f"{'library':<{col_widths['library']}}  "
-        f"{'transform':<{col_widths['transform']}}  "
-        f"{'baseline':>{col_widths['baseline']}}  "
-        f"{'current':>{col_widths['current']}}  "
-        f"{'delta %':>{col_widths['delta']}}  "
-        f"{'status':<{col_widths['status']}}"
+    compare_regression(
+        baseline_dir=baseline_dir,
+        current_dir=current_dir,
+        libraries_filter=args.libraries,
+        transforms_filter=args.transforms,
+        threshold=args.threshold,
+        fail_on_regression=args.fail_on_regression,
     )
-    sep = "-" * len(header)
-    print(sep)
-    print(header)
-    print(sep)
-
-    for r in sorted(rows, key=lambda x: x["delta_pct"]):
-        unit = "img/s" if "video" not in r["library"] else "vid/s"
-        print(
-            f"{r['library']:<{col_widths['library']}}  "
-            f"{r['transform']:<{col_widths['transform']}}  "
-            f"{r['baseline']:>{col_widths['baseline']}.1f}  "
-            f"{r['current']:>{col_widths['current']}.1f}  "
-            f"{r['delta_pct']:>+{col_widths['delta']}.1f}  "
-            f"{r['status']:<{col_widths['status']}}"
-            f"  ({unit})",
-        )
-
-    print(sep)
-
-    # Summary
-    regressions = [r for r in rows if r["status"] == "REGRESSION"]
-    faster = [r for r in rows if r["status"] == "faster"]
-    print(
-        f"\nSummary: {len(faster)} faster, {len(regressions)} regressions, "
-        f"{len(rows) - len(faster) - len(regressions)} same",
-    )
-
-    if regression_found and args.fail_on_regression:
-        print(f"\n{len(regressions)} regression(s) exceed threshold {threshold:.0%} — exiting with code 1")
-        sys.exit(1)
 
 
 # ---------------------------------------------------------------------------

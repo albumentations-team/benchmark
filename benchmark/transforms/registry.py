@@ -16,10 +16,13 @@ Adding a new library:
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any
 
 from benchmark.transforms.specs import TRANSFORM_SPECS
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -76,11 +79,13 @@ def register_library(
             try:
                 td.image_impls[library] = create_image_fn(spec)
             except Exception:
+                logger.warning("Failed to build image transform %r for library %r", spec.name, library, exc_info=True)
                 td.image_impls[library] = None
         if create_video_fn is not None:
             try:
                 td.video_impls[library] = create_video_fn(spec)
             except Exception:
+                logger.warning("Failed to build video transform %r for library %r", spec.name, library, exc_info=True)
                 td.video_impls[library] = None
 
 
