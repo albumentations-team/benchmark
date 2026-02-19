@@ -43,7 +43,7 @@ spec.loader.exec_module(module)
 assert hasattr(module, 'LIBRARY'), 'Missing LIBRARY'
 assert hasattr(module, '__call__'), 'Missing __call__'
 assert hasattr(module, 'TRANSFORMS'), 'Missing TRANSFORMS'
-assert callable(module), 'Module not callable'
+assert callable(module.__call__), 'Module.__call__ not callable'
 
 print('✓ Valid spec file')
 "
@@ -161,7 +161,7 @@ for t in module.TRANSFORMS:
     transform = t['transform']
 
     try:
-        result = module(transform, test_image)
+        result = module.__call__(transform, test_image)
         assert result is not None
         assert result.shape == test_image.shape
         print(f"✓ {name}")
