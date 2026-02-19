@@ -37,9 +37,9 @@ def create_transform(spec: TransformSpec) -> Any | None:
             height=params["target_size"],
         )
     if spec.name == "HorizontalFlip":
-        return lambda img: imaugs.hflip(img)
+        return imaugs.hflip
     if spec.name == "VerticalFlip":
-        return lambda img: imaugs.vflip(img)
+        return imaugs.vflip
     if spec.name == "Rotate":
         return lambda img: imaugs.rotate(img, degrees=params["angle"])
     if spec.name == "ColorJitter":
@@ -49,7 +49,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
             factor=1 + params["brightness"],
         )
     if spec.name == "Grayscale":
-        return lambda img: imaugs.grayscale(img)
+        return imaugs.grayscale
     if spec.name == "Blur":
         return lambda img: imaugs.blur(img, radius=params["radius"])
     if spec.name == "Brightness":
