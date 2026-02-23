@@ -212,12 +212,20 @@ def get_library_versions(library: str) -> dict[str, str]:
         except metadata.PackageNotFoundError:
             return "not installed"
 
-    # Handle library name mapping
-    package_name = library
-    if library == "albumentationsx":
-        package_name = "albumentations"
-
-    versions[library] = get_version(package_name)
+    # PyPI package names (may differ from import: e.g. albumentationsx → import albumentations)
+    _pkg_names: dict[str, list[str]] = {
+        "albumentationsx": ["albumentationsx", "albumentations"],  # try PyPI name first
+    }
+    if library in _pkg_names:
+        for pkg in _pkg_names[library]:
+            v = get_version(pkg)
+            if v != "not installed":
+                versions[library] = v
+                break
+        else:
+            versions[library] = "not installed"
+    else:
+        versions[library] = get_version(library)
 
     for extra_librarties in ["numpy", "pillow", "opencv-python-headless", "torch", "opencv-python"]:
         versions[extra_librarties] = get_version(extra_librarties)

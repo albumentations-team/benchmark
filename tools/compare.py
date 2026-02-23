@@ -80,22 +80,19 @@ def _extract_version(metadata: dict[str, Any], library: str) -> str:
     return metadata.get("library_versions", {}).get(library, "?")
 
 
-def print_comparison_table(
+def format_comparison_table(
     loaded: dict[str, dict[str, Any]],
     libraries_filter: list[str] | None = None,
     transforms_filter: list[str] | None = None,
-) -> None:
-    """Print a side-by-side comparison table for all results in *loaded*."""
+) -> str:
+    """Return markdown table string for all results in *loaded*."""
     if not loaded:
-        print("No results found.")
-        return
+        return ""
 
-    # Filter libraries
     if libraries_filter:
         allowed = set(libraries_filter)
         loaded = {k: v for k, v in loaded.items() if v["library"] in allowed}
 
-    # Gather all transform names
     all_transforms: set[str] = set()
     for entry in loaded.values():
         all_transforms.update(entry["results"].keys())
@@ -106,7 +103,6 @@ def print_comparison_table(
     sorted_transforms = sorted(all_transforms)
     lib_keys = sorted(loaded.keys())
 
-    # Build header — embed unit in each column so mixed image/video tables are unambiguous
     def col_header(key: str) -> str:
         entry = loaded[key]
         version = _extract_version(entry["metadata"], entry["library"])
@@ -116,9 +112,7 @@ def print_comparison_table(
 
     headers = ["Transform", *[col_header(k) for k in lib_keys], "Speedup (albx/fastest other)"]
 
-    # Build rows
     rows: list[list[str]] = []
-
     for transform in sorted_transforms:
         row_vals: dict[str, float] = {}
         row_stds: dict[str, float] = {}
@@ -128,7 +122,6 @@ def print_comparison_table(
                 row_vals[key] = r.get("median_throughput", 0.0)
                 row_stds[key] = r.get("std_throughput", 0.0)
 
-        # Need at least 2 libraries to compare
         if len(row_vals) < 2:
             continue
 
@@ -146,7 +139,6 @@ def print_comparison_table(
                 cell = "-"
             row.append(cell)
 
-        # Speedup: albumentationsx vs fastest other
         alb_key = next((k for k in lib_keys if loaded[k]["library"] == "albumentationsx" and k in row_vals), None)
         if alb_key:
             alb_val = row_vals[alb_key]
@@ -162,24 +154,32 @@ def print_comparison_table(
         rows.append(row)
 
     if not rows:
-        print("No transforms with multi-library support found.")
-        return
+        return ""
 
-    # Print as markdown table (or plain if pandas unavailable)
     if _HAVE_PANDAS:
         import pandas as pd
 
         df = pd.DataFrame(rows, columns=headers)
-        print(df.to_markdown(index=False))
-    else:
-        col_widths = [max(len(h), max((len(r[i]) for r in rows), default=0)) for i, h in enumerate(headers)]
-        fmt_row = lambda cells: " | ".join(c.ljust(col_widths[i]) for i, c in enumerate(cells))  # noqa: E731
-        print(fmt_row(headers))
-        print("-+-".join("-" * w for w in col_widths))
-        for row in rows:
-            print(fmt_row(row))
+        return df.to_markdown(index=False)
+    col_widths = [max(len(h), max((len(r[i]) for r in rows), default=0)) for i, h in enumerate(headers)]
+    fmt_row = lambda cells: " | ".join(c.ljust(col_widths[i]) for i, c in enumerate(cells))  # noqa: E731
+    lines = [fmt_row(headers), "-+-".join("-" * w for w in col_widths)]
+    lines.extend(fmt_row(row) for row in rows)
+    return "\n".join(lines)
 
-    print("\n(single CPU thread, median ± std; units shown per column)")
+
+def print_comparison_table(
+    loaded: dict[str, dict[str, Any]],
+    libraries_filter: list[str] | None = None,
+    transforms_filter: list[str] | None = None,
+) -> None:
+    """Print a side-by-side comparison table for all results in *loaded*."""
+    table = format_comparison_table(loaded, libraries_filter, transforms_filter)
+    if table:
+        print(table)
+        print("\n(single CPU thread, median ± std; units shown per column)")
+    else:
+        print("No results found.")
 
 
 # ---------------------------------------------------------------------------
