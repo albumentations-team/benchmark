@@ -16,6 +16,9 @@ from benchmark.transforms.specs import TransformSpec
 # Required: Library name for dependency installation
 LIBRARY = "kornia"
 
+# Force single thread for fair comparison with albumentationsx and torchvision
+torch.set_num_threads(1)
+
 
 # Required: Define how to apply transforms to images
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
