@@ -123,18 +123,6 @@ def __call__(transform, image):
     return transform(image)
 ```
 
-**imgaug** — uses `augment_image`:
-```python
-def __call__(transform, image):
-    return transform.augment_image(image)
-```
-
-**augly** — PIL Image, modifies in-place so copy first:
-```python
-def __call__(transform, image):
-    return transform(image.copy())
-```
-
 **kornia** — GPU tensor `(C, H, W)`, unsqueeze for batch dim:
 ```python
 def __call__(transform, image):
@@ -149,4 +137,4 @@ def __call__(transform, image):
 | Slow threshold | 0.1 sec/image | 2.0 sec/video |
 | Default num items | 2000 images | 50 videos |
 | Warmup subset | 10 images | 3 videos |
-| Extra libraries | imgaug, augly | — |
+| Extra libraries | — | — |

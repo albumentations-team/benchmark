@@ -153,4 +153,4 @@ Use `same_on_batch=True` on Kornia transforms so all frames get the same spatial
 | Warmup subset | 3 videos | 10 images |
 | GPU support | yes (kornia, torchvision) | no |
 | File discovery | recursive `.mp4/.avi/.mov` | flat dir glob |
-| Extra libraries | — | imgaug, augly |
+| Extra libraries | — | — |

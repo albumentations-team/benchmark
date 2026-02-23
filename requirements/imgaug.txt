@@ -1,2 +1,0 @@
-imgaug
-numpy<2

@@ -12,7 +12,7 @@ import numpy as np
 
 
 def read_img_cv2(path: Path) -> np.ndarray:
-    """Read image using OpenCV (for AlbumentationsX and imgaug)"""
+    """Read image using OpenCV (for AlbumentationsX)"""
     import cv2
 
     img = cv2.imread(str(path))
@@ -26,13 +26,6 @@ def read_img_torch(path: Path) -> Any:  # torch.Tensor
     import torchvision
 
     return torchvision.io.read_image(str(path))  # Shape: (C, H, W)
-
-
-def read_img_pillow(path: Path) -> Any:  # PIL.Image.Image
-    """Read image using PIL (for augly)"""
-    from PIL import Image
-
-    return Image.open(path).convert("RGB")
 
 
 def read_img_kornia(path: Path) -> Any:  # torch.Tensor
@@ -104,12 +97,10 @@ def time_transform(transform: Any, images: list[Any]) -> float:
 def get_image_loader(library: str) -> Callable[[Path], Any]:
     """Get the appropriate image loader for the library"""
     loaders = {
-        "albumentationsx": read_img_cv2,  # AlbumentationsX uses same loader
+        "albumentationsx": read_img_cv2,
         "ultralytics": read_img_cv2,
-        "imgaug": read_img_cv2,
         "torchvision": read_img_torch,
         "kornia": read_img_kornia,
-        "augly": read_img_pillow,
     }
 
     if library not in loaders:

@@ -71,9 +71,10 @@ def create_transform(spec: TransformSpec) -> Any | None:
             fill=params["fill"],
         )
     if spec.name == "Affine":
+        ref = float(params.get("reference_size", 512))
         return tv_transforms.RandomAffine(
             degrees=params["angle"],
-            translate=[x / 100 for x in params["shift"]],  # Convert to relative coordinates
+            translate=[x / ref for x in params["shift"]],  # shift in px -> fraction of reference_size
             scale=(params["scale"], params["scale"]),
             shear=params["shear"],
             interpolation=tv_transforms.InterpolationMode.BILINEAR

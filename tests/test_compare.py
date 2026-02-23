@@ -44,13 +44,13 @@ class TestLoadResultFile:
         assert "HorizontalFlip" in results
 
     def test_missing_metadata_key_returns_empty_dict(self, tmp_path: Path) -> None:
-        path = tmp_path / "augly_results.json"
+        path = tmp_path / "torchvision_results.json"
         path.write_text(json.dumps({"results": {}}))
         _, _, metadata, _results = load_result_file(path)
         assert metadata == {}
 
     def test_missing_results_key_returns_empty_dict(self, tmp_path: Path) -> None:
-        path = tmp_path / "augly_results.json"
+        path = tmp_path / "torchvision_results.json"
         path.write_text(json.dumps({"metadata": {}}))
         _, _, _metadata, results = load_result_file(path)
         assert results == {}

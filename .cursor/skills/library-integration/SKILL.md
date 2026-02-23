@@ -89,15 +89,13 @@ Edit `run_all.sh`:
 
 ```bash
 # Add to LIBRARIES array (line ~95)
-LIBRARIES=("albumentationsx" "imgaug" "torchvision" "kornia" "augly" "newlib")
+LIBRARIES=("albumentationsx" "torchvision" "kornia" "newlib")
 
 # Add to SPEC_FILES array
 SPEC_FILES=(
     "benchmark/transforms/albumentationsx_impl.py"
-    "benchmark/transforms/imgaug_impl.py"
     "benchmark/transforms/torchvision_impl.py"
     "benchmark/transforms/kornia_impl.py"
-    "benchmark/transforms/augly_impl.py"
     "benchmark/transforms/newlib_impl.py"
 )
 ```

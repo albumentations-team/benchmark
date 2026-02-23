@@ -1,6 +1,6 @@
 # Image and Video Augmentation Library Benchmarks
 
-A comprehensive benchmarking suite for comparing the performance of popular image and video augmentation libraries including [AlbumentationsX](https://albumentations.ai/), [imgaug](https://imgaug.readthedocs.io/en/latest/), [torchvision](https://docs.pytorch.org/vision/stable/index.html), [Kornia](https://kornia.readthedocs.io/en/latest/), and [Augly](https://github.com/facebookresearch/AugLy).
+A comprehensive benchmarking suite for comparing the performance of popular image and video augmentation libraries including [AlbumentationsX](https://albumentations.ai/), [torchvision](https://docs.pytorch.org/vision/stable/index.html), and [Kornia](https://kornia.readthedocs.io/en/latest/).
 
 ## GitAds Sponsored
 [![Sponsored by GitAds](https://gitads.dev/v1/ad-serve?source=albumentations-team/benchmark@github)](https://gitads.dev/v1/ad-track?source=albumentations-team/benchmark@github)
@@ -84,10 +84,8 @@ The benchmark automatically creates isolated virtual environments for each libra
 ## Supported Libraries
 
 - [AlbumentationsX](https://albumentations.ai/)
-- [imgaug](https://imgaug.readthedocs.io/en/latest/)
 - [torchvision](https://docs.pytorch.org/vision/stable/index.html)
 - [Kornia](https://kornia.readthedocs.io/en/latest/)
-- [Augly](https://github.com/facebookresearch/AugLy)
 
 Each library's specific dependencies are managed through separate requirements files in the `requirements/` directory.
 
