@@ -50,6 +50,61 @@ The image benchmarks compare the performance of various libraries on standard im
 
 ![Image Speedup Analysis](docs/images/images_speedup_analysis.webp)
 
+<!-- IMAGE_BENCHMARK_TABLE_START -->
+| Transform            | albumentationsx 2.0.18 [img/s]   | kornia 0.8.2 [img/s]   | torchvision 0.25.0 [img/s]   | Speedup (albx/fastest other)   |
+|:---------------------|:---------------------------------|:-----------------------|:-----------------------------|:-------------------------------|
+| Affine               | **1345 ± 39**                    | -                      | 264 ± 16                     | 5.09x                          |
+| AutoContrast         | **1598 ± 19**                    | 576 ± 18               | 178 ± 2                      | 2.78x                          |
+| Blur                 | **7411 ± 299**                   | 365 ± 8                | -                            | 20.31x                         |
+| Brightness           | **11809 ± 1365**                 | 2276 ± 169             | 1681 ± 21                    | 5.19x                          |
+| CLAHE                | **619 ± 8**                      | 109 ± 2                | -                            | 5.68x                          |
+| CenterCrop128        | 107145 ± 5452                    | -                      | **203348 ± 7429**            | 0.53x                          |
+| ChannelDropout       | **11815 ± 611**                  | 3065 ± 179             | -                            | 3.85x                          |
+| ChannelShuffle       | **8085 ± 225**                   | 1446 ± 115             | 4290 ± 303                   | 1.88x                          |
+| ColorJitter          | **1132 ± 10**                    | 100 ± 3                | 88 ± 3                       | 11.33x                         |
+| Contrast             | **12680 ± 553**                  | 2159 ± 193             | 870 ± 26                     | 5.87x                          |
+| CornerIllumination   | **447 ± 10**                     | 350 ± 4                | -                            | 1.28x                          |
+| Equalize             | **1198 ± 11**                    | 310 ± 17               | 588 ± 17                     | 2.04x                          |
+| Erasing              | **27290 ± 6206**                 | 776 ± 45               | 10421 ± 629                  | 2.62x                          |
+| GaussianBlur         | **2509 ± 13**                    | 353 ± 13               | 124 ± 17                     | 7.12x                          |
+| GaussianIllumination | **622 ± 54**                     | 428 ± 16               | -                            | 1.45x                          |
+| GaussianNoise        | **320 ± 13**                     | 121 ± 2                | -                            | 2.64x                          |
+| Grayscale            | **19884 ± 2088**                 | 1574 ± 77              | 2206 ± 179                   | 9.02x                          |
+| HorizontalFlip       | **12947 ± 578**                  | 1128 ± 42              | 2234 ± 27                    | 5.79x                          |
+| Hue                  | **1689 ± 58**                    | 123 ± 7                | -                            | 13.70x                         |
+| Invert               | **33874 ± 5105**                 | 4412 ± 293             | 22891 ± 2484                 | 1.48x                          |
+| JpegCompression      | **1277 ± 32**                    | 117 ± 5                | 826 ± 11                     | 1.55x                          |
+| LinearIllumination   | 442 ± 9                          | **849 ± 22**           | -                            | 0.52x                          |
+| LongestMaxSize       | **3544 ± 123**                   | 481 ± 36               | -                            | 7.38x                          |
+| MotionBlur           | **4187 ± 90**                    | 117 ± 6                | -                            | 35.85x                         |
+| Normalize            | **1510 ± 60**                    | 1173 ± 39              | 947 ± 33                     | 1.29x                          |
+| OpticalDistortion    | **729 ± 15**                     | 193 ± 4                | -                            | 3.77x                          |
+| Pad                  | **34558 ± 4740**                 | -                      | 4480 ± 129                   | 7.71x                          |
+| Perspective          | **1153 ± 16**                    | 170 ± 5                | 217 ± 8                      | 5.30x                          |
+| PhotoMetricDistort   | **859 ± 57**                     | -                      | 80 ± 3                       | 10.70x                         |
+| PlankianJitter       | **2994 ± 124**                   | 1578 ± 100             | -                            | 1.90x                          |
+| PlasmaBrightness     | **142 ± 4**                      | 76 ± 2                 | -                            | 1.87x                          |
+| PlasmaContrast       | **136 ± 6**                      | 75 ± 6                 | -                            | 1.81x                          |
+| PlasmaShadow         | 178 ± 7                          | **211 ± 5**            | -                            | 0.84x                          |
+| Posterize            | 12776 ± 728                      | 709 ± 27               | **17723 ± 1380**             | 0.72x                          |
+| RGBShift             | **2308 ± 9**                     | 1787 ± 71              | -                            | 1.29x                          |
+| Rain                 | **1970 ± 82**                    | 1591 ± 61              | -                            | 1.24x                          |
+| RandomCrop128        | 103591 ± 1101                    | 2802 ± 40              | **112838 ± 2384**            | 0.92x                          |
+| RandomGamma          | **12351 ± 418**                  | 226 ± 5                | -                            | 54.54x                         |
+| RandomResizedCrop    | **4292 ± 40**                    | 579 ± 6                | 789 ± 27                     | 5.44x                          |
+| Resize               | **3365 ± 76**                    | 648 ± 15               | 271 ± 4                      | 5.19x                          |
+| Rotate               | **2805 ± 119**                   | 330 ± 7                | 319 ± 8                      | 8.49x                          |
+| SaltAndPepper        | **578 ± 7**                      | 450 ± 5                | -                            | 1.29x                          |
+| Saturation           | **1179 ± 46**                    | 132 ± 4                | -                            | 8.95x                          |
+| Sharpen              | **2205 ± 39**                    | 263 ± 14               | 274 ± 9                      | 8.04x                          |
+| Shear                | **1235 ± 29**                    | 358 ± 11               | -                            | 3.45x                          |
+| SmallestMaxSize      | **2447 ± 160**                   | 375 ± 10               | -                            | 6.53x                          |
+| Snow                 | **667 ± 18**                     | 129 ± 4                | -                            | 5.16x                          |
+| Solarize             | **11959 ± 707**                  | 262 ± 3                | 1117 ± 35                    | 10.71x                         |
+| ThinPlateSpline      | **80 ± 1**                       | 61 ± 2                 | -                            | 1.31x                          |
+| VerticalFlip         | **27128 ± 1197**                 | 2387 ± 58              | 26928 ± 4799                 | 1.01x                          |
+<!-- IMAGE_BENCHMARK_TABLE_END -->
+
 ### Video Benchmarks
 
 The video benchmarks compare CPU-based processing (AlbumentationsX) with GPU-accelerated processing (Kornia) for video transformations. The benchmarks use the [UCF101 dataset](https://www.crcv.ucf.edu/data/UCF101.php), which contains realistic videos from 101 action categories.
@@ -58,18 +113,63 @@ The video benchmarks compare CPU-based processing (AlbumentationsX) with GPU-acc
 
 ![Video Speedup Analysis](docs/videos/videos_speedup_analysis.webp)
 
+<!-- VIDEO_BENCHMARK_TABLE_START -->
+| Transform            | albumentationsx (video) 2.0.18 [vid/s]   | kornia (video) 0.8.0 [vid/s]   | torchvision (video) 0.21.0 [vid/s]   | Speedup (albx/fastest other)   |
+|:---------------------|:-----------------------------------------|:-------------------------------|:-------------------------------------|:-------------------------------|
+| Affine               | -                                        | 21 ± 0                         | **453 ± 0**                          | N/A                            |
+| AutoContrast         | 19 ± 0                                   | 21 ± 0                         | **578 ± 17**                         | 0.03x                          |
+| Blur                 | **90 ± 7**                               | 21 ± 0                         | -                                    | 4.34x                          |
+| Brightness           | 166 ± 3                                  | 22 ± 0                         | **756 ± 435**                        | 0.22x                          |
+| CenterCrop128        | 687 ± 125                                | 70 ± 1                         | **1133 ± 235**                       | 0.61x                          |
+| ChannelDropout       | **126 ± 3**                              | 22 ± 0                         | -                                    | 5.78x                          |
+| ChannelShuffle       | 24 ± 0                                   | 20 ± 0                         | **958 ± 0**                          | 0.02x                          |
+| ColorJitter          | 15 ± 0                                   | 19 ± 0                         | **69 ± 0**                           | 0.21x                          |
+| Contrast             | 162 ± 9                                  | 22 ± 0                         | **547 ± 13**                         | 0.30x                          |
+| CornerIllumination   | **7 ± 0**                                | 3 ± 0                          | -                                    | 2.65x                          |
+| Equalize             | 13 ± 0                                   | 4 ± 0                          | **192 ± 1**                          | 0.07x                          |
+| Erasing              | **297 ± 14**                             | -                              | 255 ± 7                              | 1.17x                          |
+| GaussianBlur         | 39 ± 1                                   | 22 ± 0                         | **543 ± 11**                         | 0.07x                          |
+| GaussianIllumination | 9 ± 0                                    | **20 ± 0**                     | -                                    | 0.46x                          |
+| GaussianNoise        | 9 ± 0                                    | **22 ± 0**                     | -                                    | 0.38x                          |
+| Grayscale            | 73 ± 3                                   | 22 ± 0                         | **838 ± 467**                        | 0.09x                          |
+| HorizontalFlip       | 27 ± 0                                   | 22 ± 0                         | **978 ± 49**                         | 0.03x                          |
+| Hue                  | **22 ± 0**                               | 20 ± 0                         | -                                    | 1.11x                          |
+| Invert               | 345 ± 7                                  | 22 ± 0                         | **843 ± 176**                        | 0.41x                          |
+| LinearIllumination   | **6 ± 0**                                | 4 ± 0                          | -                                    | 1.48x                          |
+| MedianBlur           | **21 ± 0**                               | 8 ± 0                          | -                                    | 2.50x                          |
+| Normalize            | 17 ± 0                                   | 22 ± 0                         | **461 ± 0**                          | 0.04x                          |
+| Pad                  | 211 ± 12                                 | -                              | **760 ± 338**                        | 0.28x                          |
+| PlankianJitter       | **48 ± 1**                               | 11 ± 0                         | -                                    | 4.45x                          |
+| PlasmaBrightness     | 3 ± 0                                    | **17 ± 0**                     | -                                    | 0.18x                          |
+| PlasmaContrast       | 2 ± 0                                    | **17 ± 0**                     | -                                    | 0.14x                          |
+| PlasmaShadow         | 5 ± 0                                    | **19 ± 0**                     | -                                    | 0.29x                          |
+| Posterize            | 181 ± 8                                  | -                              | **631 ± 15**                         | 0.29x                          |
+| RGBShift             | 7 ± 0                                    | **22 ± 0**                     | -                                    | 0.32x                          |
+| Rain                 | **24 ± 1**                               | 4 ± 0                          | -                                    | 6.24x                          |
+| RandomCrop128        | 700 ± 36                                 | 65 ± 0                         | **1133 ± 15**                        | 0.62x                          |
+| RandomGamma          | **163 ± 1**                              | 22 ± 0                         | -                                    | 7.53x                          |
+| RandomResizedCrop    | 23 ± 0                                   | 6 ± 0                          | **182 ± 16**                         | 0.12x                          |
+| Resize               | 21 ± 1                                   | 6 ± 0                          | **140 ± 35**                         | 0.15x                          |
+| Rotate               | 46 ± 1                                   | 22 ± 0                         | **534 ± 0**                          | 0.09x                          |
+| SaltAndPepper        | **11 ± 0**                               | 9 ± 0                          | -                                    | 1.27x                          |
+| Saturation           | 15 ± 0                                   | **37 ± 0**                     | -                                    | 0.42x                          |
+| Sharpen              | 36 ± 1                                   | 18 ± 0                         | **420 ± 9**                          | 0.09x                          |
+| Solarize             | 191 ± 1                                  | 21 ± 0                         | **628 ± 6**                          | 0.30x                          |
+| VerticalFlip         | 374 ± 7                                  | 22 ± 0                         | **978 ± 5**                          | 0.38x                          |
+<!-- VIDEO_BENCHMARK_TABLE_END -->
+
 ## Performance Highlights
 
 ### Image Augmentation Performance
 
 <!-- IMAGE_SPEEDUP_SUMMARY_START -->
-AlbumentationsX is generally the fastest library for image augmentation, with a median speedup of 4.1× compared to other libraries. For some transforms, the speedup can be as high as 119.7× (MedianBlur).
+See the full benchmark table above for image results.
 <!-- IMAGE_SPEEDUP_SUMMARY_END -->
 
 ### Video Augmentation Performance
 
 <!-- VIDEO_SPEEDUP_SUMMARY_START -->
-For video processing, the performance comparison between CPU (AlbumentationsX) and GPU (Kornia) shows interesting trade-offs. While GPU acceleration provides significant benefits for complex transformations, CPU processing can be more efficient for simple operations.
+See the full benchmark table above for video results.
 <!-- VIDEO_SPEEDUP_SUMMARY_END -->
 
 ## Requirements

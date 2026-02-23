@@ -22,9 +22,10 @@ from .utils import (
     verify_thread_settings,
 )
 
-# Configure logging
+# Configure logging (BENCHMARK_VERBOSE=1 for DEBUG)
+_log_level = logging.DEBUG if os.environ.get("BENCHMARK_VERBOSE") == "1" else logging.INFO
 logging.basicConfig(
-    level=logging.INFO,
+    level=_log_level,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
@@ -118,10 +119,11 @@ class BenchmarkRunner:
         return self._load_videos()
 
     def _load_images(self) -> list[Any]:
-        image_paths = sorted(self.data_dir.glob("*.*"))
+        image_paths = sorted(self.data_dir.rglob("*.*"))
+        logger.info("Found %d image paths in %s (searching recursively)", len(image_paths), self.data_dir)
         images: list[Any] = []
 
-        with tqdm(image_paths, desc="Loading RGB images") as pbar:
+        with tqdm(image_paths, desc="Loading RGB images", unit="img") as pbar:
             for path in pbar:
                 try:
                     import cv2
@@ -148,6 +150,7 @@ class BenchmarkRunner:
         if len(images) < self.num_items:
             logger.warning("Only found %d valid RGB images, requested %d", len(images), self.num_items)
 
+        logger.info("Loaded %d images for benchmarking", len(images))
         return images
 
     def _load_videos(self) -> list[Any]:
@@ -218,7 +221,13 @@ class BenchmarkRunner:
         time_per_item = 0.0
         start_time = time.time()
 
-        with tqdm(total=self.max_warmup_iterations, desc=f"Warming up {transform_name}", leave=False) as pbar:
+        logger.debug(
+            "Warmup: %s (max %d iters, subset size %d)",
+            transform_name,
+            self.max_warmup_iterations,
+            len(warmup_subset),
+        )
+        with tqdm(total=self.max_warmup_iterations, desc=f"Warmup {transform_name}", unit="iter", leave=False) as pbar:
             for i in range(self.max_warmup_iterations):
                 elapsed = time_transform(lambda x: self.call_fn(transform, x), warmup_subset)
                 throughput = len(warmup_subset) / elapsed
@@ -228,23 +237,17 @@ class BenchmarkRunner:
                 total_time = time.time() - start_time
 
                 if i >= self._min_iterations_before_stopping and time_per_item > self._slow_threshold:
-                    return (
-                        warmup_throughputs,
-                        time_per_item,
-                        True,
-                        (
-                            f"Transform too slow: {time_per_item:.3f} sec/{self._item_label_singular}"
-                            f" > {self._slow_threshold} sec/{self._item_label_singular} threshold"
-                        ),
+                    reason = (
+                        f"Transform too slow: {time_per_item:.3f} sec/{self._item_label_singular}"
+                        f" > {self._slow_threshold} sec/{self._item_label_singular} threshold"
                     )
+                    logger.warning("Warmup %s: early stopped — %s", transform_name, reason)
+                    return (warmup_throughputs, time_per_item, True, reason)
 
                 if total_time > self._max_time_per_transform:
-                    return (
-                        warmup_throughputs,
-                        time_per_item,
-                        True,
-                        f"Transform timeout: {total_time:.1f} sec > {self._max_time_per_transform} sec limit",
-                    )
+                    reason = f"Transform timeout: {total_time:.1f} sec > {self._max_time_per_transform} sec limit"
+                    logger.warning("Warmup %s: early stopped — %s", transform_name, reason)
+                    return (warmup_throughputs, time_per_item, True, reason)
 
                 if (
                     i >= self.warmup_window * self.min_warmup_windows
@@ -255,6 +258,13 @@ class BenchmarkRunner:
                     relative_diff = abs(recent_mean - overall_mean) / overall_mean
 
                     if relative_diff < self.warmup_threshold:
+                        logger.info(
+                            "Warmup %s: stable after %d iters (%.1f %s/s)",
+                            transform_name,
+                            i + 1,
+                            recent_mean,
+                            self._item_label_singular,
+                        )
                         pbar.update(self.max_warmup_iterations - i - 1)
                         break
 
@@ -278,11 +288,19 @@ class BenchmarkRunner:
         )
 
         if early_stopped:
+            median = float(np.median(warmup_throughputs))
+            logger.warning(
+                "%s: early stopped (%.1f %s/s from warmup) — %s",
+                transform_name,
+                median,
+                self._item_label_singular,
+                early_stop_reason,
+            )
             return {
                 "supported": True,
                 "warmup_iterations": len(warmup_throughputs),
                 "throughputs": [],
-                "median_throughput": float(np.median(warmup_throughputs)),
+                "median_throughput": median,
                 "std_throughput": float(np.std(warmup_throughputs, ddof=1)),
                 "times": [],
                 "mean_time": time_per_item,
@@ -303,6 +321,14 @@ class BenchmarkRunner:
 
         median_throughput = float(np.median(throughputs))
         std_throughput = float(np.std(throughputs, ddof=1))
+        logger.info(
+            "%s: %.1f %s/s (median, std=%.1f, %d runs)",
+            transform_name,
+            median_throughput,
+            self._item_label_singular,
+            std_throughput,
+            self.num_runs,
+        )
 
         return {
             "supported": True,
@@ -342,7 +368,15 @@ class BenchmarkRunner:
     # ------------------------------------------------------------------
 
     def run(self, output_path: Path | None = None) -> dict[str, Any]:
-        logger.info("Running %s benchmarks for %s", self.media_type.value, self.library)
+        logger.info(
+            "Running %s benchmarks for %s: %d %s, %d transforms, %d runs each",
+            self.media_type.value,
+            self.library,
+            self.num_items,
+            self._item_label,
+            len(self.transforms),
+            self.num_runs,
+        )
         media = self.load_media()
 
         if self.media_type == MediaType.VIDEO:
@@ -380,7 +414,11 @@ class BenchmarkRunner:
                 pass
 
         results: dict[str, Any] = {}
-        for transform_dict in tqdm(self.transforms, desc="Running transforms"):
+        for transform_dict in tqdm(
+            self.transforms,
+            desc=f"Transforms ({self.library})",
+            unit="transform",
+        ):
             try:
                 transform_name = transform_dict["name"]
                 logger.info("Benchmarking %s...", transform_name)
@@ -399,6 +437,7 @@ class BenchmarkRunner:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             with output_path.open("w") as f:
                 json.dump(full_results, f, indent=2)
+            logger.info("Results written to %s", output_path)
 
         return full_results
 

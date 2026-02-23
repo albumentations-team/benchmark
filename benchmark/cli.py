@@ -28,6 +28,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tqdm import tqdm
+
 logger = logging.getLogger(__name__)
 
 # Built-in library → spec file mapping (image / video)
@@ -88,23 +90,22 @@ def _ensure_venv(library: str, media: str, repo_root: Path) -> Path:
 
     python = _venv_python(venv_dir)
 
-    # Install / upgrade uv
+    logger.info("Installing dependencies for %s (%s)...", library, media)
     subprocess.run([str(python), "-m", "pip", "install", "-q", "-U", "uv"], check=True)
 
-    # Base requirements
     base_req = repo_root / "requirements" / "requirements.txt"
     subprocess.run(
         [str(python), "-m", "uv", "pip", "install", "-q", "-U", "-r", str(base_req)],
         check=True,
     )
 
-    # Library-specific requirements
     req_map = _VIDEO_REQUIREMENTS if media == "video" else _REQUIREMENTS
     lib_req = repo_root / req_map[library]
     subprocess.run(
         [str(python), "-m", "uv", "pip", "install", "-q", "-U", "--force-reinstall", "-r", str(lib_req)],
         check=True,
     )
+    logger.info("Dependencies ready for %s", library)
 
     return python
 
@@ -123,6 +124,7 @@ def _run_single(
     min_warmup_windows: int,
     repo_root: Path,
     transforms_filter: list[str] | None = None,
+    verbose: bool = False,
 ) -> None:
     python = _ensure_venv(library, media, repo_root)
 
@@ -152,11 +154,13 @@ def _run_single(
     if max_warmup is not None:
         cmd += ["--max-warmup", str(max_warmup)]
 
+    import os
+
     env_extra: dict[str, str] = {}
     if transforms_filter:
         env_extra["BENCHMARK_TRANSFORMS_FILTER"] = ",".join(transforms_filter)
-
-    import os
+    if verbose:
+        env_extra["BENCHMARK_VERBOSE"] = "1"
 
     env = {**os.environ, **env_extra}
 
@@ -247,6 +251,7 @@ def cmd_run(args: argparse.Namespace) -> None:
             min_warmup_windows=args.min_warmup_windows,
             repo_root=repo_root,
             transforms_filter=args.transforms,
+            verbose=args.verbose,
         )
         return
 
@@ -261,7 +266,8 @@ def cmd_run(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     suffix = "_video" if media == "video" else ""
-    for library in requested:
+    logger.info("Running %s benchmarks for %d libraries: %s", media, len(requested), requested)
+    for library in tqdm(requested, desc="Libraries", unit="lib"):
         spec_file = repo_root / spec_map[library]
         output_file = output_dir / f"{library}{suffix}_results.json"
         _run_single(
@@ -278,6 +284,7 @@ def cmd_run(args: argparse.Namespace) -> None:
             min_warmup_windows=args.min_warmup_windows,
             repo_root=repo_root,
             transforms_filter=args.transforms,
+            verbose=args.verbose,
         )
 
     logger.info("All benchmarks complete. Results in: %s", output_dir)
