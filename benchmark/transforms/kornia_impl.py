@@ -1,4 +1,8 @@
-"""Kornia implementations of transforms for images in custom format."""
+"""Kornia implementations of transforms for images in custom format.
+
+Param conversions (additive->multiplicative, degrees->fraction, etc.) follow rules
+documented in benchmark.transforms.specs module docstring.
+"""
 
 from typing import Any
 
@@ -307,11 +311,13 @@ def create_transform(spec: TransformSpec) -> Any | None:
     if spec.name == "LongestMaxSize":
         return Kaug.LongestMaxSize(
             max_size=params["max_size"],
+            resample=params["interpolation"],
             p=1,
         )
     if spec.name == "SmallestMaxSize":
         return Kaug.SmallestMaxSize(
             max_size=params["max_size"],
+            resample=params["interpolation"],
             p=1,
         )
     # Skip transforms not supported by kornia

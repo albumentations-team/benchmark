@@ -74,8 +74,9 @@ def create_transform(spec: TransformSpec) -> Any | None:
             fill=params["fill"],
         )
     if spec.name == "Affine":
-        # TV translate is a fraction of image size; spec shift is in pixels for ~512px images
-        translate_fraction = [x / 512.0 for x in params["shift"]]
+        # TV translate is a fraction of image size; spec shift is in pixels for reference_size
+        ref = float(params.get("reference_size", 512))
+        translate_fraction = [x / ref for x in params["shift"]]
         return tv_transforms.RandomAffine(
             degrees=params["angle"],
             translate=translate_fraction,

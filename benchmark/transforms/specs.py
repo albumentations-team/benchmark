@@ -1,3 +1,30 @@
+"""Transform specifications shared across augmentation libraries.
+
+PARAM CONVERSION RULES (library-specific):
+When implementations reinterpret spec params, conversion rules live here. Keep in sync
+when changing specs.
+
+  Brightness: spec brightness_limit is additive offset (e.g. 0.2). Kornia/TorchVision
+    use multiplicative factor -> (1.0 + offset, 1.0 + offset). AlbumentationsX uses
+    additive directly.
+
+  Contrast: same as Brightness; spec contrast_limit additive -> Kornia multiplicative.
+
+  Saturation: spec saturation_factor is additive-style offset (0.5). Kornia uses
+    multiplicative -> (1.0 + factor, 1.0 + factor). AlbumentationsX uses sat_shift_limit.
+
+  Hue: spec hue in degrees (e.g. 20). Kornia expects fraction of 360° in [-0.5, 0.5]
+    -> hue_degrees / 360.0. AlbumentationsX uses degrees directly.
+
+  Affine: spec shift in pixels (for reference_size images). TorchVision translate is
+    fraction of image size -> shift_px / reference_size. Kornia/Albumentations use
+    pixels directly (translate_px). reference_size in spec controls the conversion.
+
+  RandomGamma: spec gamma as int (e.g. 120). Kornia expects float -> gamma / 100.
+
+  RGBShift: spec pixel_shift in [0,255]. Kornia expects normalized [0,1] -> /255.
+"""
+
 from dataclasses import dataclass
 from typing import Any
 
@@ -82,6 +109,9 @@ TRANSFORM_SPECS = [
             "interpolation": "bilinear",
             "mode": "constant",
             "fill": 0,
+            # reference_size: image size (px) for which shift is defined; used to convert
+            # pixel shift -> fraction (e.g. torchvision). Set to your typical input size.
+            "reference_size": 512,
         },
     ),
     TransformSpec(
