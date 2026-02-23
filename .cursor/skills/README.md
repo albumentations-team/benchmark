@@ -89,7 +89,7 @@ To update a skill:
 ## Project Context
 
 These skills are tailored for a benchmark suite that:
-- Tests 5+ augmentation libraries (AlbumentationsX, imgaug, torchvision, Kornia, Augly)
+- Tests 3 augmentation libraries (AlbumentationsX, torchvision, Kornia)
 - Uses Python 3.13+ with strict type checking
 - Manages separate virtual environments per library
 - Generates performance comparisons and documentation

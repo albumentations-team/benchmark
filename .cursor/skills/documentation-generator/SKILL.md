@@ -116,7 +116,6 @@ docs/
 │   ├── images_speedup_analysis.webp   # Main visualization
 │   ├── images_speedups.csv            # Speedup data
 │   ├── albumentationsx_metadata.yaml  # Library info
-│   ├── imgaug_metadata.yaml
 │   └── ...
 └── videos/
     ├── README.md
@@ -134,7 +133,7 @@ python tools/compare_results.py --results-dir output/
 
 Output format:
 ```markdown
-| Transform | albumentationsx | imgaug | torchvision | kornia | augly |
+| Transform | albumentationsx | torchvision | kornia |
 |-----------|-----------------|--------|-------------|--------|-------|
 | HorizontalFlip | 1234 ± 45 | 567 ± 23 | ... | ... | ... |
 ```

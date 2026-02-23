@@ -9,7 +9,7 @@ import albumentations as A
 import numpy as np
 
 # Required: Specify which library (for dependency installation)
-LIBRARY = "albumentationsx"  # Options: "albumentationsx", "torchvision", "kornia", "imgaug", "augly"
+LIBRARY = "albumentationsx"  # Options: "albumentationsx", "torchvision", "kornia"
 
 
 # Required: Define how to apply transforms to videos

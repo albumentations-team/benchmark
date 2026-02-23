@@ -352,6 +352,29 @@ TRANSFORM_SPECS = [
             "distortion_scale": 0.5,
         },
     ),
+    TransformSpec(
+        "PhotoMetricDistort",
+        {
+            "brightness_range": (0.875, 1.125),
+            "contrast_range": (0.5, 1.5),
+            "saturation_range": (0.5, 1.5),
+            "hue_range": (-0.05, 0.05),
+        },
+    ),
+    TransformSpec(
+        "LongestMaxSize",
+        {
+            "max_size": 512,
+            "interpolation": "bilinear",
+        },
+    ),
+    TransformSpec(
+        "SmallestMaxSize",
+        {
+            "max_size": 512,
+            "interpolation": "bilinear",
+        },
+    ),
 ]
 
 # Use the same TRANSFORM_SPECS for both images and videos

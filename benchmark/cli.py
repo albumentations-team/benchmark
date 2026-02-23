@@ -35,8 +35,6 @@ _IMAGE_SPECS: dict[str, str] = {
     "albumentationsx": "benchmark/transforms/albumentationsx_impl.py",
     "torchvision": "benchmark/transforms/torchvision_impl.py",
     "kornia": "benchmark/transforms/kornia_impl.py",
-    "imgaug": "benchmark/transforms/imgaug_impl.py",
-    "augly": "benchmark/transforms/augly_impl.py",
 }
 
 _VIDEO_SPECS: dict[str, str] = {
@@ -49,8 +47,6 @@ _REQUIREMENTS: dict[str, str] = {
     "albumentationsx": "requirements/albumentationsx.txt",
     "torchvision": "requirements/torchvision.txt",
     "kornia": "requirements/kornia.txt",
-    "imgaug": "requirements/imgaug.txt",
-    "augly": "requirements/augly.txt",
 }
 
 _VIDEO_REQUIREMENTS: dict[str, str] = {

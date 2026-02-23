@@ -144,8 +144,7 @@ class TestExtractLibrary:
         ("content", "expected"),
         [
             ('LIBRARY = "torchvision"\n', "torchvision"),
-            ("LIBRARY = 'imgaug'\n", "imgaug"),
-            ('LIBRARY = "augly"\n', "augly"),
+            ('LIBRARY = "kornia"\n', "kornia"),
         ],
     )
     def test_various_library_names(self, tmp_path: Path, content: str, expected: str) -> None:

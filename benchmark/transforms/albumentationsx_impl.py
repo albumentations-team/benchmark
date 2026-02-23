@@ -291,6 +291,27 @@ def create_transform(spec: TransformSpec) -> Any:
             num_control_points=params["num_control_points"],
             scale_range=(params["distortion_scale"], params["distortion_scale"]),
         )
+    if spec.name == "PhotoMetricDistort":
+        return A.PhotoMetricDistort(
+            brightness_range=params["brightness_range"],
+            contrast_range=params["contrast_range"],
+            saturation_range=params["saturation_range"],
+            hue_range=params["hue_range"],
+            distort_p=1.0,
+            p=1,
+        )
+    if spec.name == "LongestMaxSize":
+        return A.LongestMaxSize(
+            max_size=params["max_size"],
+            interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
+            p=1,
+        )
+    if spec.name == "SmallestMaxSize":
+        return A.SmallestMaxSize(
+            max_size=params["max_size"],
+            interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
+            p=1,
+        )
     raise ValueError(f"Unknown transform: {spec.name}")
 
 

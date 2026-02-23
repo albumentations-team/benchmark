@@ -60,9 +60,9 @@ def create_transform(spec: TransformSpec) -> Any | None:
     if spec.name == "CenterCrop128":
         return tv_transforms.CenterCrop(size=(params["height"], params["width"]))
     if spec.name == "HorizontalFlip":
-        return tv_transforms.RandomHorizontalFlip(**params)
+        return tv_transforms.RandomHorizontalFlip(p=1)
     if spec.name == "VerticalFlip":
-        return tv_transforms.RandomVerticalFlip(**params)
+        return tv_transforms.RandomVerticalFlip(p=1)
     if spec.name == "Pad":
         return tv_transforms.Pad(padding=params["padding"], fill=params["fill"], padding_mode=params["border_mode"])
     if spec.name == "Rotate":
@@ -74,9 +74,11 @@ def create_transform(spec: TransformSpec) -> Any | None:
             fill=params["fill"],
         )
     if spec.name == "Affine":
+        # TV translate is a fraction of image size; spec shift is in pixels for ~512px images
+        translate_fraction = [x / 512.0 for x in params["shift"]]
         return tv_transforms.RandomAffine(
             degrees=params["angle"],
-            translate=[x / 100 for x in params["shift"]],  # Convert to relative coordinates
+            translate=translate_fraction,
             scale=(params["scale"], params["scale"]),
             shear=params["shear"],
             interpolation=tv_transforms.InterpolationMode.BILINEAR
@@ -122,7 +124,8 @@ def create_transform(spec: TransformSpec) -> Any | None:
     if spec.name == "Solarize":
         return tv_transforms.RandomSolarize(threshold=params["threshold"], p=1)
     if spec.name == "Sharpen":
-        return tv_transforms.RandomAdjustSharpness(sharpness_factor=params["lightness"][0], p=1)
+        # sharpness_factor=2.0 corresponds to maximum sharpening (1.0=original, 0.0=blurred)
+        return tv_transforms.RandomAdjustSharpness(sharpness_factor=2.0, p=1)
     if spec.name == "AutoContrast":
         return tv_transforms.RandomAutocontrast(p=1)
     if spec.name == "Equalize":
@@ -144,9 +147,22 @@ def create_transform(spec: TransformSpec) -> Any | None:
     if spec.name == "JpegCompression":
         return tv_transforms.JPEG(quality=params["quality"])
     if spec.name == "Brightness":
-        return tv_transforms.ColorJitter(brightness=params["brightness_limit"], contrast=0.0, saturation=0.0, hue=0.0)
+        # Use scalar so TV picks factor in [1-limit, 1+limit], matching albumentations additive semantics
+        limit = params["brightness_limit"]
+        brightness_scalar = limit[0] if isinstance(limit, (list, tuple)) else limit
+        return tv_transforms.ColorJitter(brightness=brightness_scalar, contrast=0.0, saturation=0.0, hue=0.0)
     if spec.name == "Contrast":
-        return tv_transforms.ColorJitter(brightness=0.0, contrast=params["contrast_limit"], saturation=0.0, hue=0.0)
+        limit = params["contrast_limit"]
+        contrast_scalar = limit[0] if isinstance(limit, (list, tuple)) else limit
+        return tv_transforms.ColorJitter(brightness=0.0, contrast=contrast_scalar, saturation=0.0, hue=0.0)
+    if spec.name == "PhotoMetricDistort":
+        return tv_transforms.RandomPhotometricDistort(
+            brightness=params["brightness_range"],
+            contrast=params["contrast_range"],
+            saturation=params["saturation_range"],
+            hue=params["hue_range"],
+            p=1,
+        )
     # Skip transforms not supported by torchvision
     return None
 

@@ -48,7 +48,7 @@ class TestGetSystemInfo:
 class TestGetImageLoader:
     @pytest.mark.parametrize(
         "library",
-        ["albumentationsx", "ultralytics", "imgaug", "torchvision", "kornia", "augly"],
+        ["albumentationsx", "ultralytics", "torchvision", "kornia"],
     )
     def test_known_library_returns_callable(self, library: str) -> None:
         loader = get_image_loader(library)
@@ -75,11 +75,7 @@ class TestGetVideoLoader:
 
     def test_unknown_library_raises_value_error(self) -> None:
         with pytest.raises(ValueError, match="Unsupported library"):
-            get_video_loader("augly")
-
-    def test_imgaug_not_supported_for_video(self) -> None:
-        with pytest.raises(ValueError, match="Unsupported library"):
-            get_video_loader("imgaug")
+            get_video_loader("nonexistent_lib")
 
 
 class TestIsVarianceStable:

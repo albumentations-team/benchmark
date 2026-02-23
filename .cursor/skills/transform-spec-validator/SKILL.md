@@ -58,7 +58,6 @@ Must be a string matching library name:
 ```python
 # ✓ Good
 LIBRARY = "albumentationsx"
-LIBRARY = "imgaug"
 
 # ✗ Bad
 LIBRARY = None
@@ -254,7 +253,6 @@ transform = A.HorizontalFlip(p=0.5)
 
 See:
 - `benchmark/transforms/albumentationsx_impl.py`
-- `benchmark/transforms/imgaug_impl.py`
 - `examples/custom_image_transforms.py`
 
 ### Video Transforms
