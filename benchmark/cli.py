@@ -39,6 +39,12 @@ _IMAGE_SPECS: dict[str, str] = {
     "kornia": "benchmark/transforms/kornia_impl.py",
 }
 
+_MULTICHANNEL_IMAGE_SPECS: dict[str, str] = {
+    "albumentationsx": "benchmark/transforms/albumentationsx_multichannel_impl.py",
+    "torchvision": "benchmark/transforms/torchvision_multichannel_impl.py",
+    "kornia": "benchmark/transforms/kornia_multichannel_impl.py",
+}
+
 _VIDEO_SPECS: dict[str, str] = {
     "albumentationsx": "benchmark/transforms/albumentationsx_video_impl.py",
     "torchvision": "benchmark/transforms/torchvision_video_impl.py",
@@ -125,6 +131,7 @@ def _run_single(
     repo_root: Path,
     transforms_filter: list[str] | None = None,
     verbose: bool = False,
+    num_channels: int = 3,
 ) -> None:
     python = _ensure_venv(library, media, repo_root)
 
@@ -153,6 +160,8 @@ def _run_single(
         cmd += ["--num-items", str(num_items)]
     if max_warmup is not None:
         cmd += ["--max-warmup", str(max_warmup)]
+    if num_channels != 3:
+        cmd += ["--num-channels", str(num_channels)]
 
     import os
 
@@ -225,6 +234,12 @@ def cmd_run(args: argparse.Namespace) -> None:
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # --multichannel: use 9ch specs, output to output/multichannel/
+    if getattr(args, "multichannel", False) and media == "image":
+        output_dir = output_dir / "multichannel"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        args.num_channels = 9
+
     # ------------------------------------------------------------------
     # Cloud path: delegate the whole run to a GCP instance
     # ------------------------------------------------------------------
@@ -252,11 +267,15 @@ def cmd_run(args: argparse.Namespace) -> None:
             repo_root=repo_root,
             transforms_filter=args.transforms,
             verbose=args.verbose,
+            num_channels=args.num_channels,
         )
         return
 
     # Built-in libraries
-    spec_map = _VIDEO_SPECS if media == "video" else _IMAGE_SPECS
+    if getattr(args, "multichannel", False) and media == "image":
+        spec_map = _MULTICHANNEL_IMAGE_SPECS
+    else:
+        spec_map = _VIDEO_SPECS if media == "video" else _IMAGE_SPECS
     available = list(spec_map.keys())
 
     requested: list[str] = args.libraries or available
@@ -285,6 +304,7 @@ def cmd_run(args: argparse.Namespace) -> None:
             repo_root=repo_root,
             transforms_filter=args.transforms,
             verbose=args.verbose,
+            num_channels=args.num_channels,
         )
 
     logger.info("All benchmarks complete. Results in: %s", output_dir)
@@ -381,6 +401,23 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument("--warmup-window", type=int, default=5)
     run_p.add_argument("--warmup-threshold", type=float, default=0.05)
     run_p.add_argument("--min-warmup-windows", type=int, default=3)
+    run_p.add_argument(
+        "--num-channels",
+        type=int,
+        default=3,
+        help=(
+            "Number of image channels (must be multiple of 3). Values > 3 stack the RGB source image "
+            "to synthesize multi-channel data, e.g. 9 for 3x stacked RGB (default: 3)"
+        ),
+    )
+    run_p.add_argument(
+        "--multichannel",
+        action="store_true",
+        help=(
+            "Use multi-channel specs (9ch) and output to <output>/multichannel/. "
+            "Implies --num-channels 9 for image mode."
+        ),
+    )
 
     # ------------------------------------------------------------------
     # compare

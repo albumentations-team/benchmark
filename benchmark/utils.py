@@ -81,6 +81,31 @@ def read_video_kornia(path: Path) -> Any:  # torch.Tensor
     return (video.float() / 255.0).half()  # Convert to float16
 
 
+def make_multichannel_loader(base_loader: Callable[[Path], Any], num_channels: int) -> Callable[[Path], Any]:
+    """Wrap a base loader to produce images with num_channels by stacking the RGB source.
+
+    num_channels must be a multiple of 3. The loader reads a standard RGB image and
+    concatenates it (num_channels // 3) times along the channel axis.
+    Supports numpy (H, W, C) and torch (C, H, W) outputs.
+    """
+    if num_channels % 3 != 0:
+        raise ValueError(f"num_channels must be a multiple of 3, got {num_channels}")
+    repeats = num_channels // 3
+
+    def load(path: Path) -> Any:
+        img = base_loader(path)
+        try:
+            import torch
+
+            if isinstance(img, torch.Tensor):
+                return torch.cat([img] * repeats, dim=0)  # (C, H, W) -> (num_channels, H, W)
+        except ImportError:
+            pass
+        return np.concatenate([img] * repeats, axis=-1)  # (H, W, C) -> (H, W, num_channels)
+
+    return load
+
+
 def time_transform(transform: Any, images: list[Any]) -> float:
     """Time the execution of a transform on a list of images"""
     import time

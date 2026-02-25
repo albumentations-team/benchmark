@@ -46,10 +46,6 @@ This benchmark suite measures the throughput and performance characteristics of 
 
 The image benchmarks compare the performance of various libraries on standard image transformations. All benchmarks are run on a single CPU thread to ensure consistent and comparable results.
 
-[**Detailed Image Benchmark Results**](docs/images/README.md)
-
-![Image Speedup Analysis](docs/images/images_speedup_analysis.webp)
-
 <!-- IMAGE_BENCHMARK_TABLE_START -->
 | Transform            | albumentationsx 2.0.18 [img/s]   | kornia 0.8.2 [img/s]   | torchvision 0.25.0 [img/s]   | Speedup (albx/fastest other)   |
 |:---------------------|:---------------------------------|:-----------------------|:-----------------------------|:-------------------------------|
@@ -105,13 +101,55 @@ The image benchmarks compare the performance of various libraries on standard im
 | VerticalFlip         | **27128 ± 1197**                 | 2387 ± 58              | 26928 ± 4799                 | 1.01x                          |
 <!-- IMAGE_BENCHMARK_TABLE_END -->
 
+### Multi-Channel Image Benchmarks (9ch)
+
+Benchmarks on 9-channel images (3x stacked RGB) to test OpenCV chunking and library support for >4 channels.
+
+<!-- MULTICHANNEL_BENCHMARK_TABLE_START -->
+| Transform            | albumentationsx 2.0.18 [img/s]   | kornia 0.8.2 [img/s]   | torchvision 0.25.0 [img/s]   | Speedup (albx/fastest other)   |
+|:---------------------|:---------------------------------|:-----------------------|:-----------------------------|:-------------------------------|
+| Affine               | **640 ± 6**                      | 228 ± 3                | 143 ± 3                      | 2.81x                          |
+| AutoContrast         | **428 ± 8**                      | 374 ± 3                | -                            | 1.14x                          |
+| Blur                 | **2418 ± 154**                   | 186 ± 3                | -                            | 12.97x                         |
+| Brightness           | **3650 ± 162**                   | 1350 ± 40              | -                            | 2.70x                          |
+| CenterCrop128        | 51247 ± 435                      | -                      | **223574 ± 5049**            | 0.23x                          |
+| ChannelDropout       | **6387 ± 176**                   | 2179 ± 95              | -                            | 2.93x                          |
+| ChannelShuffle       | **2427 ± 164**                   | 929 ± 25               | 1600 ± 41                    | 1.52x                          |
+| Contrast             | **3837 ± 368**                   | 1346 ± 31              | -                            | 2.85x                          |
+| CornerIllumination   | **203 ± 2**                      | 181 ± 3                | -                            | 1.12x                          |
+| Erasing              | **9956 ± 359**                   | 426 ± 10               | 4321 ± 384                   | 2.30x                          |
+| GaussianBlur         | **746 ± 9**                      | 188 ± 2                | 49 ± 6                       | 3.97x                          |
+| GaussianIllumination | **240 ± 2**                      | 212 ± 15               | -                            | 1.13x                          |
+| GaussianNoise        | **95 ± 3**                       | 65 ± 0                 | -                            | 1.45x                          |
+| HorizontalFlip       | 2531 ± 234                       | 2286 ± 557             | **15102 ± 3640**             | 0.17x                          |
+| Invert               | 10141 ± 2159                     | 2774 ± 169             | **15806 ± 3070**             | 0.64x                          |
+| LinearIllumination   | 140 ± 1                          | **491 ± 12**           | -                            | 0.29x                          |
+| LongestMaxSize       | 350 ± 1                          | **376 ± 2**            | -                            | 0.93x                          |
+| MotionBlur           | **1443 ± 56**                    | 63 ± 1                 | -                            | 22.95x                         |
+| Normalize            | 387 ± 5                          | **1402 ± 64**          | 795 ± 22                     | 0.28x                          |
+| OpticalDistortion    | **457 ± 8**                      | 157 ± 4                | -                            | 2.91x                          |
+| Pad                  | 8358 ± 319                       | -                      | **9112 ± 704**               | 0.92x                          |
+| Perspective          | **579 ± 2**                      | 149 ± 1                | 129 ± 2                      | 3.90x                          |
+| PlasmaBrightness     | **83 ± 1**                       | 24 ± 1                 | -                            | 3.44x                          |
+| PlasmaContrast       | **68 ± 0**                       | 24 ± 1                 | -                            | 2.82x                          |
+| PlasmaShadow         | 125 ± 1                          | **224 ± 2**            | -                            | 0.56x                          |
+| Posterize            | 4375 ± 187                       | 317 ± 16               | **12018 ± 1989**             | 0.36x                          |
+| RandomCrop128        | 49313 ± 715                      | 2566 ± 75              | **124539 ± 2345**            | 0.40x                          |
+| RandomGamma          | **4383 ± 62**                    | 83 ± 0                 | -                            | 53.12x                         |
+| RandomResizedCrop    | **369 ± 12**                     | 309 ± 2                | 297 ± 3                      | 1.19x                          |
+| Resize               | 287 ± 4                          | **297 ± 3**            | 194 ± 1                      | 0.97x                          |
+| Rotate               | **1713 ± 27**                    | 172 ± 1                | 152 ± 10                     | 9.96x                          |
+| Sharpen              | **713 ± 9**                      | 140 ± 6                | -                            | 5.09x                          |
+| Shear                | **642 ± 11**                     | 250 ± 2                | 163 ± 6                      | 2.57x                          |
+| SmallestMaxSize      | **253 ± 4**                      | 187 ± 3                | -                            | 1.35x                          |
+| Solarize             | **4220 ± 26**                    | 339 ± 4                | 456 ± 11                     | 9.26x                          |
+| ThinPlateSpline      | **73 ± 2**                       | 62 ± 0                 | -                            | 1.17x                          |
+| VerticalFlip         | 8698 ± 122                       | 2296 ± 118             | **15409 ± 890**              | 0.56x                          |
+<!-- MULTICHANNEL_BENCHMARK_TABLE_END -->
+
 ### Video Benchmarks
 
 The video benchmarks compare CPU-based processing (AlbumentationsX) with GPU-accelerated processing (Kornia) for video transformations. The benchmarks use the [UCF101 dataset](https://www.crcv.ucf.edu/data/UCF101.php), which contains realistic videos from 101 action categories.
-
-[**Detailed Video Benchmark Results**](docs/videos/README.md)
-
-![Video Speedup Analysis](docs/videos/videos_speedup_analysis.webp)
 
 <!-- VIDEO_BENCHMARK_TABLE_START -->
 | Transform            | albumentationsx (video) 2.0.18 [vid/s]   | kornia (video) 0.8.0 [vid/s]   | torchvision (video) 0.21.0 [vid/s]   | Speedup (albx/fastest other)   |
@@ -309,10 +347,6 @@ The benchmark methodology is designed to ensure fair and reproducible comparison
 2. **Warmup Phase**: Adaptive warmup until performance variance stabilizes
 3. **Measurement Phase**: Multiple runs with statistical analysis
 4. **Environment Control**: Consistent thread settings and hardware utilization
-
-For detailed methodology, see the specific benchmark READMEs:
-- [Image Benchmark Methodology](docs/images/README.md#methodology)
-- [Video Benchmark Methodology](docs/videos/README.md#methodology)
 
 ## Contributing
 
