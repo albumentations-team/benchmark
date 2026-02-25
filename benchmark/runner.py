@@ -18,6 +18,7 @@ from .utils import (
     get_library_versions,
     get_system_info,
     get_video_loader,
+    make_multichannel_loader,
     time_transform,
     verify_thread_settings,
 )
@@ -81,6 +82,7 @@ class BenchmarkRunner:
         warmup_window: int = 5,
         warmup_threshold: float = 0.05,
         min_warmup_windows: int = 3,
+        num_channels: int = 3,
     ):
         self.library = library
         self.data_dir = Path(data_dir)
@@ -106,8 +108,11 @@ class BenchmarkRunner:
 
         if media_type == MediaType.IMAGE:
             self._loader = get_image_loader(library)
+            if num_channels != 3:
+                self._loader = make_multichannel_loader(self._loader, num_channels)
         else:
             self._loader = get_video_loader(library)
+        self.num_channels = num_channels
 
     # ------------------------------------------------------------------
     # Media loading
@@ -131,6 +136,8 @@ class BenchmarkRunner:
                     img_check = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
                     if img_check is None:
                         continue
+                    # Check the on-disk image (always 3-channel RGB); the loader may
+                    # later stack channels to produce num_channels > 3 in memory.
                     if img_check.ndim < 3 or img_check.shape[2] < 3:
                         continue
 
@@ -400,6 +407,7 @@ class BenchmarkRunner:
                 "warmup_window": self.warmup_window,
                 "warmup_threshold": self.warmup_threshold,
                 "min_warmup_windows": self.min_warmup_windows,
+                "num_channels": self.num_channels,
             },
         }
 
@@ -515,6 +523,15 @@ def main() -> None:
     parser.add_argument("--warmup-window", type=int, default=5, help="Window size for variance check")
     parser.add_argument("--warmup-threshold", type=float, default=0.05, help="Variance stability threshold")
     parser.add_argument("--min-warmup-windows", type=int, default=3, help="Minimum windows to check")
+    parser.add_argument(
+        "--num-channels",
+        type=int,
+        default=3,
+        help=(
+            "Number of image channels. Must be a multiple of 3. "
+            "Values > 3 stack the RGB image to synthesize multi-channel data (default: 3)"
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -547,6 +564,7 @@ def main() -> None:
         warmup_window=args.warmup_window,
         warmup_threshold=args.warmup_threshold,
         min_warmup_windows=args.min_warmup_windows,
+        num_channels=args.num_channels,
     )
 
     runner.run(args.output)
