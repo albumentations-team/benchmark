@@ -49,6 +49,8 @@ def read_video_cv2(path: Path) -> np.ndarray:
         ret, frame = cap.read()
         if not ret:
             break
+        if frame is None or frame.ndim < 2 or frame.shape[0] == 0 or frame.shape[1] == 0:
+            continue
         frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
     cap.release()

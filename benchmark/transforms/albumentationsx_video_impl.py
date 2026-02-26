@@ -28,10 +28,11 @@ def __call__(transform: Any, video: Any) -> Any:  # noqa: N807
     Returns:
         Transformed video as numpy array
     """
-    # AlbumentationsX expects 'images' parameter for video frames
-    result = transform(images=video)["images"]
-    # Ensure contiguous memory layout for performance
-    return np.ascontiguousarray(result)
+    # albucore's batch_transform reshapes (T,H,W,C) → (H,W,T*C) for spatial transforms,
+    # then calls cv2.warpAffine on the merged array. OpenCV fails when T*C > ~512 channels.
+    # Apply frame-by-frame to avoid the XHWC reshape path entirely.
+    frames = [transform(image=frame)["image"] for frame in video]
+    return np.ascontiguousarray(frames)
 
 
 # Helper function to create transforms from specs
@@ -293,6 +294,27 @@ def create_transform(spec: TransformSpec) -> Any:
             p=1,
             num_control_points=params["num_control_points"],
             scale_range=(params["distortion_scale"], params["distortion_scale"]),
+        )
+    if spec.name == "PhotoMetricDistort":
+        return A.PhotoMetricDistort(
+            brightness_range=params["brightness_range"],
+            contrast_range=params["contrast_range"],
+            saturation_range=params["saturation_range"],
+            hue_range=params["hue_range"],
+            distort_p=1.0,
+            p=1,
+        )
+    if spec.name == "LongestMaxSize":
+        return A.LongestMaxSize(
+            max_size=params["max_size"],
+            interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
+            p=1,
+        )
+    if spec.name == "SmallestMaxSize":
+        return A.SmallestMaxSize(
+            max_size=params["max_size"],
+            interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
+            p=1,
         )
     raise ValueError(f"Unknown transform: {spec.name}")
 
