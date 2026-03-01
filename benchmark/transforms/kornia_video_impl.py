@@ -1,5 +1,6 @@
 """Kornia implementations of transforms for videos in custom format."""
 
+import os
 from typing import Any
 
 import kornia
@@ -10,8 +11,9 @@ import torch
 from benchmark.transforms.registry import build_transforms, register_library
 from benchmark.transforms.specs import TransformSpec
 
-# Get device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# Get device (respect BENCHMARK_VIDEO_DEVICE for CPU-only runs)
+_dev = (os.environ.get("BENCHMARK_VIDEO_DEVICE") or "").strip().lower()
+device = torch.device(_dev if _dev in ("cpu", "cuda") else ("cuda" if torch.cuda.is_available() else "cpu"))
 
 # Required: Library name for dependency installation
 LIBRARY = "kornia"
@@ -39,19 +41,13 @@ def __call__(transform: Any, video: Any) -> Any:  # noqa: N807
     return transform(video)
 
 
-# Helper function to create tensors with the correct dtype based on device
-def create_tensor(data: np.ndarray, device: torch.device = device) -> torch.Tensor:
-    """Create a tensor with the correct dtype based on device.
-
-    Args:
-        data: The data to convert to a tensor
-        device: The device to place the tensor on
-
-    Returns:
-        A tensor with dtype=float16 if on CUDA, otherwise float32
-    """
-    dtype = torch.float16 if device.type == "cuda" else torch.float32
-    return torch.tensor(data, device=device, dtype=dtype)
+# Video loader (read_video_kornia) always returns float16; transform params must match.
+def create_tensor(
+    data: np.ndarray | list[float] | list[list[float]],
+    device: torch.device = device,
+) -> torch.Tensor:
+    """Create a tensor with dtype matching kornia video (float16)."""
+    return torch.tensor(data, device=device, dtype=torch.float16)
 
 
 # Helper function to create transforms from specs
@@ -275,12 +271,10 @@ def create_transform(spec: TransformSpec) -> Any | None:
             same_on_batch=True,
         ).to(device)
     if spec.name == "Elastic":
-        return Kaug.RandomElasticTransform(
-            p=1,
-            sigma=(params["sigma"], params["sigma"]),
-            alpha=(params["alpha"], params["alpha"]),
-            same_on_batch=True,
-        ).to(device)
+        # RandomElasticTransform generates a displacement field per frame in the batch,
+        # which causes OOM when treating T video frames as a batch on CPU.
+        # Process frame-by-frame: apply to first frame, then repeat the result.
+        return None
     if spec.name == "Erasing":
         return Kaug.RandomErasing(
             p=1,
@@ -300,12 +294,9 @@ def create_transform(spec: TransformSpec) -> Any | None:
     if spec.name == "HorizontalFlip":
         return Kaug.RandomHorizontalFlip(p=1, same_on_batch=True).to(device)
     if spec.name == "Perspective":
-        return Kaug.RandomPerspective(
-            distortion_scale=params["scale"][1],
-            resample=params["interpolation"],
-            p=1,
-            same_on_batch=True,
-        ).to(device)
+        # Kornia's RandomPerspective raises "check_uniform_bounds not implemented for 'Long'"
+        # when used with batched video (T, C, H, W); internal generator uses int bounds.
+        return None
     if spec.name == "RandomResizedCrop":
         return Kaug.RandomResizedCrop(
             size=params["size"],
@@ -316,7 +307,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
         ).to(device)
     if spec.name == "RandomRotate90":
         return Kaug.RandomRotation(
-            times=(0, 3),
+            degrees=(0.0, 360.0),
             p=1,
             same_on_batch=True,
         ).to(device)

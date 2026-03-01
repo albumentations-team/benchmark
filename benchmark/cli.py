@@ -99,7 +99,11 @@ def _ensure_venv(library: str, media: str, repo_root: Path) -> Path:
     logger.info("Installing dependencies for %s (%s)...", library, media)
     subprocess.run([str(python), "-m", "pip", "install", "-q", "-U", "uv"], check=True)
 
-    base_req = repo_root / "requirements" / "requirements.txt"
+    # Torch video venvs use a base without opencv to avoid duplicate libavdevice (av vs cv2)
+    if media == "video" and library in ("torchvision", "kornia"):
+        base_req = repo_root / "requirements" / "requirements-base-video-torch.txt"
+    else:
+        base_req = repo_root / "requirements" / "requirements.txt"
     subprocess.run(
         [str(python), "-m", "uv", "pip", "install", "-q", "-U", "-r", str(base_req)],
         check=True,
@@ -132,6 +136,7 @@ def _run_single(
     transforms_filter: list[str] | None = None,
     verbose: bool = False,
     num_channels: int = 3,
+    video_device: str | None = None,
 ) -> None:
     python = _ensure_venv(library, media, repo_root)
 
@@ -162,6 +167,8 @@ def _run_single(
         cmd += ["--max-warmup", str(max_warmup)]
     if num_channels != 3:
         cmd += ["--num-channels", str(num_channels)]
+    if media == "video" and video_device is not None:
+        cmd += ["--video-device", video_device]
 
     import os
 
@@ -212,6 +219,8 @@ def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Pa
         remote_args += ["--num-items", str(args.num_items)]
     if args.num_runs != 5:
         remote_args += ["--num-runs", str(args.num_runs)]
+    if media == "video" and getattr(args, "video_device", None):
+        remote_args += ["--video-device", args.video_device]
 
     runner = GCPRunner(config)
     runner.run(
@@ -268,6 +277,7 @@ def cmd_run(args: argparse.Namespace) -> None:
             transforms_filter=args.transforms,
             verbose=args.verbose,
             num_channels=args.num_channels,
+            video_device=getattr(args, "video_device", None),
         )
         return
 
@@ -305,6 +315,7 @@ def cmd_run(args: argparse.Namespace) -> None:
             transforms_filter=args.transforms,
             verbose=args.verbose,
             num_channels=args.num_channels,
+            video_device=getattr(args, "video_device", None),
         )
 
     logger.info("All benchmarks complete. Results in: %s", output_dir)
@@ -417,6 +428,12 @@ def build_parser() -> argparse.ArgumentParser:
             "Use multi-channel specs (9ch) and output to <output>/multichannel/. "
             "Implies --num-channels 9 for image mode."
         ),
+    )
+    run_p.add_argument(
+        "--video-device",
+        choices=["cpu", "cuda"],
+        default=None,
+        help="Force device for video benchmarks (default: cuda if available else cpu). Only with --media video.",
     )
 
     # ------------------------------------------------------------------

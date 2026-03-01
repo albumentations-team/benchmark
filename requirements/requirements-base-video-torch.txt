@@ -1,0 +1,6 @@
+# Base deps for torch-based video venvs (torchvision, kornia).
+# No opencv: avoids duplicate libavdevice with PyAV (av), preventing
+# "AVFFrameReceiver/AVFAudioReceiver implemented in both..." conflict on macOS.
+pandas
+tabulate
+tqdm

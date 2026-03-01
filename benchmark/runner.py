@@ -83,8 +83,10 @@ class BenchmarkRunner:
         warmup_threshold: float = 0.05,
         min_warmup_windows: int = 3,
         num_channels: int = 3,
+        video_device: str | None = None,
     ):
         self.library = library
+        self._video_device = video_device
         self.data_dir = Path(data_dir)
         self.transforms = transforms
         self.call_fn = call_fn
@@ -164,8 +166,12 @@ class BenchmarkRunner:
         try:
             import torch
 
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            gpu_available = torch.cuda.is_available()
+            if self._video_device:
+                device = torch.device(self._video_device)
+                gpu_available = device.type == "cuda" and torch.cuda.is_available()
+            else:
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                gpu_available = torch.cuda.is_available()
         except ImportError:
             torch = None
             device = None
@@ -410,6 +416,8 @@ class BenchmarkRunner:
                 "num_channels": self.num_channels,
             },
         }
+        if self.media_type == MediaType.VIDEO and self._video_device:
+            metadata["benchmark_params"]["video_device"] = self._video_device
 
         if self.media_type == MediaType.VIDEO:
             try:
@@ -532,11 +540,21 @@ def main() -> None:
             "Values > 3 stack the RGB image to synthesize multi-channel data (default: 3)"
         ),
     )
+    parser.add_argument(
+        "--video-device",
+        choices=["cpu", "cuda"],
+        default=None,
+        help="Force video benchmark device (default: cuda if available else cpu). Only applies when --media video.",
+    )
 
     args = parser.parse_args()
 
     if not args.specs_file.exists():
         raise ValueError(f"Specs file {args.specs_file} does not exist")
+
+    media_type = MediaType.IMAGE if args.media == "image" else MediaType.VIDEO
+    if args.video_device and media_type == MediaType.VIDEO:
+        os.environ["BENCHMARK_VIDEO_DEVICE"] = args.video_device
 
     logger.info("Loading from %s", args.specs_file)
     library, call_fn, transforms = load_from_python_file(args.specs_file)
@@ -549,8 +567,6 @@ def main() -> None:
         filter_names = [n.strip() for n in filter_env.split(",") if n.strip()]
         transforms = BenchmarkRunner.filter_transforms(transforms, filter_names)
         logger.info("Filtered to %d transforms: %s", len(transforms), filter_names)
-
-    media_type = MediaType.IMAGE if args.media == "image" else MediaType.VIDEO
 
     runner = BenchmarkRunner(
         library=library,
@@ -565,6 +581,7 @@ def main() -> None:
         warmup_threshold=args.warmup_threshold,
         min_warmup_windows=args.min_warmup_windows,
         num_channels=args.num_channels,
+        video_device=args.video_device if media_type == MediaType.VIDEO else None,
     )
 
     runner.run(args.output)

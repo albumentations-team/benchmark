@@ -152,51 +152,51 @@ Benchmarks on 9-channel images (3x stacked RGB) to test OpenCV chunking and libr
 The video benchmarks compare CPU-based processing (AlbumentationsX) with GPU-accelerated processing (Kornia) for video transformations. The benchmarks use the [UCF101 dataset](https://www.crcv.ucf.edu/data/UCF101.php), which contains realistic videos from 101 action categories.
 
 <!-- VIDEO_BENCHMARK_TABLE_START -->
-| Transform            | albumentationsx (video) 2.0.18 [vid/s]   | kornia (video) 0.8.0 [vid/s]   | torchvision (video) 0.21.0 [vid/s]   | Speedup (albx/fastest other)   |
+| Transform            | albumentationsx (video) 2.0.20 [vid/s]   | kornia (video) 0.8.0 [vid/s]   | torchvision (video) 0.21.0 [vid/s]   | Speedup (albx/fastest other)   |
 |:---------------------|:-----------------------------------------|:-------------------------------|:-------------------------------------|:-------------------------------|
-| Affine               | 16 ± 1                                   | 21 ± 0                         | **453 ± 0**                          | 0.04x                          |
-| AutoContrast         | 16 ± 0                                   | 21 ± 0                         | **578 ± 17**                         | 0.03x                          |
-| Blur                 | **49 ± 2**                               | 21 ± 0                         | -                                    | 2.37x                          |
-| Brightness           | 55 ± 3                                   | 22 ± 0                         | **756 ± 435**                        | 0.07x                          |
-| CenterCrop128        | 586 ± 8                                  | 70 ± 1                         | **1133 ± 235**                       | 0.52x                          |
-| ChannelDropout       | **63 ± 3**                               | 22 ± 0                         | -                                    | 2.89x                          |
-| ChannelShuffle       | 56 ± 2                                   | 20 ± 0                         | **958 ± 0**                          | 0.06x                          |
-| ColorJitter          | 13 ± 0                                   | 19 ± 0                         | **69 ± 0**                           | 0.18x                          |
-| Contrast             | 55 ± 4                                   | 22 ± 0                         | **547 ± 13**                         | 0.10x                          |
-| CornerIllumination   | **5 ± 0**                                | 3 ± 0                          | -                                    | 1.88x                          |
-| Elastic              | 6 ± 0                                    | -                              | **127 ± 1**                          | 0.05x                          |
-| Equalize             | 11 ± 0                                   | 4 ± 0                          | **192 ± 1**                          | 0.06x                          |
-| Erasing              | 70 ± 4                                   | -                              | **255 ± 7**                          | 0.27x                          |
-| GaussianBlur         | 28 ± 0                                   | 22 ± 0                         | **543 ± 11**                         | 0.05x                          |
-| GaussianIllumination | 6 ± 0                                    | **20 ± 0**                     | -                                    | 0.30x                          |
-| GaussianNoise        | 4 ± 0                                    | **22 ± 0**                     | -                                    | 0.16x                          |
-| Grayscale            | 73 ± 14                                  | 22 ± 0                         | **838 ± 467**                        | 0.09x                          |
+| Affine               | 17 ± 1                                   | 21 ± 0                         | **453 ± 0**                          | 0.04x                          |
+| AutoContrast         | 13 ± 1                                   | 21 ± 0                         | **578 ± 17**                         | 0.02x                          |
+| Blur                 | **52 ± 4**                               | 21 ± 0                         | -                                    | 2.53x                          |
+| Brightness           | 58 ± 3                                   | 22 ± 0                         | **756 ± 435**                        | 0.08x                          |
+| CenterCrop128        | 574 ± 7                                  | 70 ± 1                         | **1133 ± 235**                       | 0.51x                          |
+| ChannelDropout       | **66 ± 2**                               | 22 ± 0                         | -                                    | 3.02x                          |
+| ChannelShuffle       | 47 ± 3                                   | 20 ± 0                         | **958 ± 0**                          | 0.05x                          |
+| ColorJitter          | 10 ± 1                                   | 19 ± 0                         | **69 ± 0**                           | 0.15x                          |
+| Contrast             | 50 ± 7                                   | 22 ± 0                         | **547 ± 13**                         | 0.09x                          |
+| CornerIllumination   | **5 ± 0**                                | 3 ± 0                          | -                                    | 2.10x                          |
+| Elastic              | 5 ± 0                                    | -                              | **127 ± 1**                          | 0.04x                          |
+| Equalize             | 9 ± 1                                    | 4 ± 0                          | **192 ± 1**                          | 0.05x                          |
+| Erasing              | 63 ± 3                                   | -                              | **255 ± 7**                          | 0.25x                          |
+| GaussianBlur         | 23 ± 0                                   | 22 ± 0                         | **543 ± 11**                         | 0.04x                          |
+| GaussianIllumination | 7 ± 0                                    | **20 ± 0**                     | -                                    | 0.37x                          |
+| GaussianNoise        | 3 ± 0                                    | **22 ± 0**                     | -                                    | 0.13x                          |
+| Grayscale            | 65 ± 4                                   | 22 ± 0                         | **838 ± 467**                        | 0.08x                          |
 | HorizontalFlip       | 55 ± 1                                   | 22 ± 0                         | **978 ± 49**                         | 0.06x                          |
-| Hue                  | 12 ± 1                                   | **20 ± 0**                     | -                                    | 0.63x                          |
-| Invert               | 82 ± 4                                   | 22 ± 0                         | **843 ± 176**                        | 0.10x                          |
-| LinearIllumination   | **5 ± 0**                                | 4 ± 0                          | -                                    | 1.17x                          |
-| MedianBlur           | **18 ± 0**                               | 8 ± 0                          | -                                    | 2.19x                          |
-| Normalize            | 15 ± 1                                   | 22 ± 0                         | **461 ± 0**                          | 0.03x                          |
+| Hue                  | 15 ± 1                                   | **20 ± 0**                     | -                                    | 0.77x                          |
+| Invert               | 63 ± 5                                   | 22 ± 0                         | **843 ± 176**                        | 0.07x                          |
+| LinearIllumination   | **5 ± 0**                                | 4 ± 0                          | -                                    | 1.23x                          |
+| MedianBlur           | **18 ± 0**                               | 8 ± 0                          | -                                    | 2.13x                          |
+| Normalize            | 12 ± 1                                   | 22 ± 0                         | **461 ± 0**                          | 0.03x                          |
 | Pad                  | 59 ± 3                                   | -                              | **760 ± 338**                        | 0.08x                          |
-| Perspective          | 15 ± 1                                   | -                              | **435 ± 0**                          | 0.04x                          |
-| PlankianJitter       | **26 ± 1**                               | 11 ± 0                         | -                                    | 2.37x                          |
-| PlasmaBrightness     | 1 ± 0                                    | **17 ± 0**                     | -                                    | 0.07x                          |
-| PlasmaContrast       | 1 ± 0                                    | **17 ± 0**                     | -                                    | 0.06x                          |
-| PlasmaShadow         | 2 ± 0                                    | **19 ± 0**                     | -                                    | 0.08x                          |
-| Posterize            | 69 ± 12                                  | -                              | **631 ± 15**                         | 0.11x                          |
-| RGBShift             | **25 ± 1**                               | 22 ± 0                         | -                                    | 1.14x                          |
-| Rain                 | **25 ± 1**                               | 4 ± 0                          | -                                    | 6.64x                          |
-| RandomCrop128        | 529 ± 15                                 | 65 ± 0                         | **1133 ± 15**                        | 0.47x                          |
-| RandomGamma          | **66 ± 3**                               | 22 ± 0                         | -                                    | 3.05x                          |
-| RandomResizedCrop    | 15 ± 0                                   | 6 ± 0                          | **182 ± 16**                         | 0.08x                          |
-| Resize               | 14 ± 1                                   | 6 ± 0                          | **140 ± 35**                         | 0.10x                          |
-| Rotate               | 23 ± 1                                   | 22 ± 0                         | **534 ± 0**                          | 0.04x                          |
-| SaltAndPepper        | **10 ± 0**                               | 9 ± 0                          | -                                    | 1.08x                          |
-| Saturation           | 10 ± 1                                   | **37 ± 0**                     | -                                    | 0.27x                          |
-| Sharpen              | 26 ± 0                                   | 18 ± 0                         | **420 ± 9**                          | 0.06x                          |
-| Solarize             | 60 ± 1                                   | 21 ± 0                         | **628 ± 6**                          | 0.10x                          |
+| Perspective          | 15 ± 0                                   | -                              | **435 ± 0**                          | 0.03x                          |
+| PlankianJitter       | **21 ± 3**                               | 11 ± 0                         | -                                    | 1.92x                          |
+| PlasmaBrightness     | 1 ± 0                                    | **17 ± 0**                     | -                                    | 0.06x                          |
+| PlasmaContrast       | 1 ± 0                                    | **17 ± 0**                     | -                                    | 0.07x                          |
+| PlasmaShadow         | 1 ± 0                                    | **19 ± 0**                     | -                                    | 0.07x                          |
+| Posterize            | 44 ± 6                                   | -                              | **631 ± 15**                         | 0.07x                          |
+| RGBShift             | 20 ± 2                                   | **22 ± 0**                     | -                                    | 0.90x                          |
+| Rain                 | **23 ± 1**                               | 4 ± 0                          | -                                    | 6.01x                          |
+| RandomCrop128        | 541 ± 9                                  | 65 ± 0                         | **1133 ± 15**                        | 0.48x                          |
+| RandomGamma          | **43 ± 4**                               | 22 ± 0                         | -                                    | 1.99x                          |
+| RandomResizedCrop    | 15 ± 1                                   | 6 ± 0                          | **182 ± 16**                         | 0.08x                          |
+| Resize               | 15 ± 0                                   | 6 ± 0                          | **140 ± 35**                         | 0.11x                          |
+| Rotate               | 27 ± 1                                   | 22 ± 0                         | **534 ± 0**                          | 0.05x                          |
+| SaltAndPepper        | 7 ± 0                                    | **9 ± 0**                      | -                                    | 0.78x                          |
+| Saturation           | 9 ± 1                                    | **37 ± 0**                     | -                                    | 0.23x                          |
+| Sharpen              | 23 ± 1                                   | 18 ± 0                         | **420 ± 9**                          | 0.05x                          |
+| Solarize             | 51 ± 2                                   | 21 ± 0                         | **628 ± 6**                          | 0.08x                          |
 | ThinPlateSpline      | 1 ± 0                                    | **45 ± 1**                     | -                                    | 0.03x                          |
-| VerticalFlip         | 66 ± 3                                   | 22 ± 0                         | **978 ± 5**                          | 0.07x                          |
+| VerticalFlip         | 69 ± 2                                   | 22 ± 0                         | **978 ± 5**                          | 0.07x                          |
 <!-- VIDEO_BENCHMARK_TABLE_END -->
 
 ## Performance Highlights

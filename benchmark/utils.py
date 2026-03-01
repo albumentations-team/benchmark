@@ -62,11 +62,11 @@ def read_video_cv2(path: Path) -> np.ndarray:
 
 
 def read_video_torch(path: Path) -> Any:  # torch.Tensor
-    """Read video using torchvision"""
+    """Read video using torchvision (pts_unit='sec' avoids wrong-result warning)."""
     import torchvision
 
-    # Returns tensor of shape (T, C, H, W)
-    video, _, _ = torchvision.io.read_video(str(path))
+    # Returns tensor of shape (T, H, W, C); pts_unit='sec' per torchvision recommendation
+    video, _, _ = torchvision.io.read_video(str(path), pts_unit="sec")
     # Convert to (T, C, H, W) format
     return video.permute(0, 3, 1, 2)
 
