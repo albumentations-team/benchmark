@@ -56,6 +56,32 @@ TRANSFORMS: list[TransformDef] = _build_defs()
 # Maps spec.name → TransformDef for O(1) lookup
 _BY_NAME: dict[str, TransformDef] = {t.name: t for t in TRANSFORMS}
 
+# library -> transform_name -> reason (populated when create_*_fn returns None)
+_UNSUPPORTED_REASONS: dict[str, dict[str, str]] = {}
+
+
+def register_unsupported_reason(library: str, transform_name: str, reason: str) -> None:
+    """Record why a transform is unsupported for a library. Call from create_*_fn before returning None."""
+    _UNSUPPORTED_REASONS.setdefault(library, {})[transform_name] = reason
+
+
+def get_unsupported_transforms(library: str, media: str = "image") -> list[dict[str, str]] | None:
+    """Return list of {name, reason} for transforms in spec that are not supported by this library.
+
+    Returns None if the library has not registered with the registry (e.g. custom spec files).
+    """
+    impls_key = "image_impls" if media == "image" else "video_impls"
+    has_registered = any(getattr(td, impls_key).get(library) is not None for td in TRANSFORMS)
+    if not has_registered:
+        return None
+    reasons = _UNSUPPORTED_REASONS.get(library, {})
+    result: list[dict[str, str]] = []
+    for td in TRANSFORMS:
+        impls = getattr(td, impls_key)
+        if impls.get(library) is None:
+            result.append({"name": td.name, "reason": reasons.get(td.name, "Not implemented")})
+    return result
+
 
 def register_library(
     library: str,
@@ -107,4 +133,11 @@ def build_transforms(library: str, media: str = "image") -> list[dict[str, Any]]
     return result
 
 
-__all__ = ["TRANSFORMS", "TransformDef", "build_transforms", "register_library"]
+__all__ = [
+    "TRANSFORMS",
+    "TransformDef",
+    "build_transforms",
+    "get_unsupported_transforms",
+    "register_library",
+    "register_unsupported_reason",
+]

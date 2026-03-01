@@ -169,6 +169,11 @@ class BenchmarkRunner:
             if self._video_device:
                 device = torch.device(self._video_device)
                 gpu_available = device.type == "cuda" and torch.cuda.is_available()
+                if device.type == "cuda" and not torch.cuda.is_available():
+                    raise RuntimeError(
+                        "--video-device cuda was requested but torch.cuda.is_available() is False. "
+                        "Either use --video-device cpu or ensure CUDA is properly installed.",
+                    )
             else:
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 gpu_available = torch.cuda.is_available()
@@ -189,8 +194,15 @@ class BenchmarkRunner:
             for path in pbar:
                 try:
                     video = self._loader(path)
-                    if torch and isinstance(video, torch.Tensor) and gpu_available:
-                        video = video.to(device, non_blocking=True) if self.library == "kornia" else video.to(device)
+                    if torch and isinstance(video, torch.Tensor):
+                        if gpu_available:
+                            video = (
+                                video.to(device, non_blocking=True) if self.library == "kornia" else video.to(device)
+                            )
+                        else:
+                            if self.library == "kornia" and video.dtype == torch.float16:
+                                video = video.float()  # CPU: float32 for better Kornia op support
+                            video = video.to(device) if device else video
                     videos.append(video)
 
                     if len(videos) >= self.num_items:
@@ -418,6 +430,12 @@ class BenchmarkRunner:
         }
         if self.media_type == MediaType.VIDEO and self._video_device:
             metadata["benchmark_params"]["video_device"] = self._video_device
+
+        from benchmark.transforms.registry import get_unsupported_transforms
+
+        unsupported = get_unsupported_transforms(self.library, self.media_type.value)
+        if unsupported:
+            metadata["unsupported_transforms"] = unsupported
 
         if self.media_type == MediaType.VIDEO:
             try:

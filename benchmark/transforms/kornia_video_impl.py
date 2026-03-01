@@ -8,7 +8,7 @@ import kornia.augmentation as Kaug
 import numpy as np
 import torch
 
-from benchmark.transforms.registry import build_transforms, register_library
+from benchmark.transforms.registry import build_transforms, register_library, register_unsupported_reason
 from benchmark.transforms.specs import TransformSpec
 
 # Get device (respect BENCHMARK_VIDEO_DEVICE for CPU-only runs)
@@ -41,13 +41,14 @@ def __call__(transform: Any, video: Any) -> Any:  # noqa: N807
     return transform(video)
 
 
-# Video loader (read_video_kornia) always returns float16; transform params must match.
+# Video loader returns float16 on GPU, float32 on CPU; transform params must match.
 def create_tensor(
     data: np.ndarray | list[float] | list[list[float]],
-    device: torch.device = device,
+    target_device: torch.device = device,
 ) -> torch.Tensor:
-    """Create a tensor with dtype matching kornia video (float16)."""
-    return torch.tensor(data, device=device, dtype=torch.float16)
+    """Create a tensor with dtype matching kornia video: float16 on GPU, float32 on CPU."""
+    dtype = torch.float16 if target_device.type == "cuda" else torch.float32
+    return torch.tensor(data, device=target_device, dtype=dtype)
 
 
 # Helper function to create transforms from specs
@@ -271,9 +272,11 @@ def create_transform(spec: TransformSpec) -> Any | None:
             same_on_batch=True,
         ).to(device)
     if spec.name == "Elastic":
-        # RandomElasticTransform generates a displacement field per frame in the batch,
-        # which causes OOM when treating T video frames as a batch on CPU.
-        # Process frame-by-frame: apply to first frame, then repeat the result.
+        register_unsupported_reason(
+            LIBRARY,
+            "Elastic",
+            "RandomElasticTransform per-frame displacement fields cause OOM when T frames treated as batch",
+        )
         return None
     if spec.name == "Erasing":
         return Kaug.RandomErasing(
@@ -294,8 +297,11 @@ def create_transform(spec: TransformSpec) -> Any | None:
     if spec.name == "HorizontalFlip":
         return Kaug.RandomHorizontalFlip(p=1, same_on_batch=True).to(device)
     if spec.name == "Perspective":
-        # Kornia's RandomPerspective raises "check_uniform_bounds not implemented for 'Long'"
-        # when used with batched video (T, C, H, W); internal generator uses int bounds.
+        register_unsupported_reason(
+            LIBRARY,
+            "Perspective",
+            "RandomPerspective raises 'check_uniform_bounds not implemented for Long' with batched video (T, C, H, W)",
+        )
         return None
     if spec.name == "RandomResizedCrop":
         return Kaug.RandomResizedCrop(
