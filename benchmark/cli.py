@@ -30,35 +30,42 @@ from pathlib import Path
 
 from tqdm import tqdm
 
+from benchmark.term import configure_logging, tqdm_kwargs
+
 logger = logging.getLogger(__name__)
 
 # Built-in library → spec file mapping (image / video)
 _IMAGE_SPECS: dict[str, str] = {
     "albumentationsx": "benchmark/transforms/albumentationsx_impl.py",
+    "albumentations_mit": "benchmark/transforms/albumentations_mit_impl.py",
     "torchvision": "benchmark/transforms/torchvision_impl.py",
     "kornia": "benchmark/transforms/kornia_impl.py",
 }
 
 _MULTICHANNEL_IMAGE_SPECS: dict[str, str] = {
     "albumentationsx": "benchmark/transforms/albumentationsx_multichannel_impl.py",
+    "albumentations_mit": "benchmark/transforms/albumentations_mit_multichannel_impl.py",
     "torchvision": "benchmark/transforms/torchvision_multichannel_impl.py",
     "kornia": "benchmark/transforms/kornia_multichannel_impl.py",
 }
 
 _VIDEO_SPECS: dict[str, str] = {
     "albumentationsx": "benchmark/transforms/albumentationsx_video_impl.py",
+    "albumentations_mit": "benchmark/transforms/albumentations_mit_video_impl.py",
     "torchvision": "benchmark/transforms/torchvision_video_impl.py",
     "kornia": "benchmark/transforms/kornia_video_impl.py",
 }
 
 _REQUIREMENTS: dict[str, str] = {
     "albumentationsx": "requirements/albumentationsx.txt",
+    "albumentations_mit": "requirements/albumentations_mit.txt",
     "torchvision": "requirements/torchvision.txt",
     "kornia": "requirements/kornia.txt",
 }
 
 _VIDEO_REQUIREMENTS: dict[str, str] = {
     "albumentationsx": "requirements/albumentationsx.txt",
+    "albumentations_mit": "requirements/albumentations_mit.txt",
     "torchvision": "requirements/torchvision-video.txt",
     "kornia": "requirements/kornia-video.txt",
 }
@@ -286,7 +293,7 @@ def cmd_run(args: argparse.Namespace) -> None:
 
     suffix = "_video" if media == "video" else ""
     logger.info("Running %s benchmarks for %d libraries: %s", media, len(requested), requested)
-    for library in tqdm(requested, desc="Libraries", unit="lib"):
+    for library in tqdm(requested, desc="Libraries", unit="lib", **tqdm_kwargs()):
         spec_file = repo_root / spec_map[library]
         output_file = output_dir / f"{library}{suffix}_results.json"
         _run_single(
@@ -456,9 +463,9 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
+    configure_logging(
+        logging.DEBUG if args.verbose else logging.INFO,
+        fmt="%(asctime)s %(levelname)s %(message)s",
     )
 
     if args.command == "run":

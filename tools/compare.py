@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -80,10 +81,58 @@ def _extract_version(metadata: dict[str, Any], library: str) -> str:
     return metadata.get("library_versions", {}).get(library, "?")
 
 
+# Human-readable column titles (also avoids `_` in headers tripping strict MD emphasis parsers).
+_MARKDOWN_TABLE_LIBRARY_LABELS: dict[str, str] = {
+    "albumentations_mit": "Albumentations (MIT)",
+    "albumentationsx": "AlbumentationsX",
+}
+
+
+def _markdown_table_library_label(library: str) -> str:
+    return _MARKDOWN_TABLE_LIBRARY_LABELS.get(library, library)
+
+
+def _speedup_ratio_sigma_bounds(
+    ref_mu: float,
+    ref_std: float,
+    comp_mu: float,
+    comp_std: float,
+) -> tuple[float, float, float]:
+    """Lower bound, point estimate, upper bound for ref/competitor throughput ratio.
+
+    Uses independent +/-1 standard deviation corners: low = max(ref - ref_std, 0) / (comp + comp_std),
+    high = (ref + ref_std) / max(comp - comp_std, epsilon). Assumes non-negative throughputs.
+    """
+    if comp_mu <= 0 or ref_mu < 0:
+        return (float("nan"), float("nan"), float("nan"))
+    mid = ref_mu / comp_mu
+    comp_hi = comp_mu + max(comp_std, 0.0)
+    comp_lo_raw = comp_mu - max(comp_std, 0.0)
+    comp_lo = comp_lo_raw if comp_lo_raw > 0 else max(comp_mu * 1e-9, 1e-18)
+    ref_lo = max(ref_mu - max(ref_std, 0.0), 0.0)
+    ref_hi = ref_mu + max(ref_std, 0.0)
+    low = ref_lo / comp_hi if comp_hi > 0 else mid
+    high = ref_hi / comp_lo if comp_lo > 0 else mid
+    return (low, mid, high)
+
+
+def _format_speedup_cell(low: float, mid: float, high: float) -> str:
+    if math.isnan(mid):
+        return "N/A"
+    span = high - low
+    rel = max(abs(mid), 1e-9)
+    if span <= 0 or span < 0.005 * rel:
+        return f"{mid:.2f}x"
+    return f"{mid:.2f}x ({low:.2f}-{high:.2f}x)"
+
+
 def format_comparison_table(
     loaded: dict[str, dict[str, Any]],
     libraries_filter: list[str] | None = None,
     transforms_filter: list[str] | None = None,
+    *,
+    speedup_header: str = "Speedup (albx / fastest, +/-1sd)",
+    speedup_ref_library: str = "albumentationsx",
 ) -> str:
     """Return markdown table string for all results in *loaded*."""
     if not loaded:
@@ -108,9 +157,10 @@ def format_comparison_table(
         version = _extract_version(entry["metadata"], entry["library"])
         unit = "vid/s" if entry["media"] == "video" else "img/s"
         suffix = " (video)" if entry["media"] == "video" else ""
-        return f"{entry['library']}{suffix} {version} [{unit}]"
+        lib_label = _markdown_table_library_label(entry["library"])
+        return f"{lib_label}{suffix} {version} [{unit}]"
 
-    headers = ["Transform", *[col_header(k) for k in lib_keys], "Speedup (albx/fastest other)"]
+    headers = ["Transform", *[col_header(k) for k in lib_keys], speedup_header]
 
     rows: list[list[str]] = []
     for transform in sorted_transforms:
@@ -139,13 +189,20 @@ def format_comparison_table(
                 cell = "-"
             row.append(cell)
 
-        alb_key = next((k for k in lib_keys if loaded[k]["library"] == "albumentationsx" and k in row_vals), None)
-        if alb_key:
-            alb_val = row_vals[alb_key]
-            others = [v for k, v in row_vals.items() if k != alb_key]
-            if others:
-                speedup = alb_val / max(others)
-                row.append(f"{speedup:.2f}x")
+        ref_key = next(
+            (k for k in lib_keys if loaded[k]["library"] == speedup_ref_library and k in row_vals),
+            None,
+        )
+        if ref_key:
+            ref_val = row_vals[ref_key]
+            ref_s = row_stds[ref_key]
+            other_keys = [k for k in lib_keys if k != ref_key and k in row_vals]
+            if other_keys:
+                comp_key = max(other_keys, key=lambda k: row_vals[k])
+                comp_val = row_vals[comp_key]
+                comp_s = row_stds[comp_key]
+                low, mid, high = _speedup_ratio_sigma_bounds(ref_val, ref_s, comp_val, comp_s)
+                row.append(_format_speedup_cell(low, mid, high))
             else:
                 row.append("N/A")
         else:
@@ -168,6 +225,20 @@ def format_comparison_table(
     return "\n".join(lines)
 
 
+def format_head_to_head_table(
+    loaded: dict[str, dict[str, Any]],
+    transforms_filter: list[str] | None = None,
+) -> str:
+    """Head-to-head AlbumentationsX vs Albumentations (MIT) comparison table."""
+    return format_comparison_table(
+        loaded,
+        libraries_filter=["albumentationsx", "albumentations_mit"],
+        transforms_filter=transforms_filter,
+        speedup_header="Speedup (albx / MIT, +/-1sd)",
+        speedup_ref_library="albumentationsx",
+    )
+
+
 def print_comparison_table(
     loaded: dict[str, dict[str, Any]],
     libraries_filter: list[str] | None = None,
@@ -177,7 +248,7 @@ def print_comparison_table(
     table = format_comparison_table(loaded, libraries_filter, transforms_filter)
     if table:
         print(table)
-        print("\n(single CPU thread, median ± std; units shown per column)")
+        print("\n(single CPU thread, median +/- std; units per column; speedup +/-1sd range vs fastest other)")
     else:
         print("No results found.")
 

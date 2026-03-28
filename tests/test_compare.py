@@ -10,7 +10,13 @@ import pytest
 if TYPE_CHECKING:
     from pathlib import Path
 
-from tools.compare import compare_regression, load_result_file, load_results_dir
+from tools.compare import (
+    _format_speedup_cell,
+    _speedup_ratio_sigma_bounds,
+    compare_regression,
+    load_result_file,
+    load_results_dir,
+)
 
 
 class TestLoadResultFile:
@@ -88,6 +94,27 @@ class TestLoadResultsDir:
             assert "media" in entry
             assert "metadata" in entry
             assert "results" in entry
+
+
+class TestSpeedupSigmaBounds:
+    def test_ratio_bounds_corners(self) -> None:
+        low, mid, high = _speedup_ratio_sigma_bounds(
+            ref_mu=100.0,
+            ref_std=10.0,
+            comp_mu=50.0,
+            comp_std=5.0,
+        )
+        assert mid == pytest.approx(2.0)
+        assert low == pytest.approx(90.0 / 55.0)
+        assert high == pytest.approx(110.0 / 45.0)
+
+    def test_format_collapses_when_no_spread(self) -> None:
+        assert _format_speedup_cell(2.0, 2.0, 2.0) == "2.00x"
+
+    def test_format_shows_range_when_spread(self) -> None:
+        s = _format_speedup_cell(1.5, 2.0, 2.5)
+        assert s.startswith("2.00x (")
+        assert "-" in s
 
 
 class TestCompareRegression:

@@ -151,11 +151,6 @@ lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # Like Black, use double quotes for strings.
 lint.pydocstyle.convention = "google"
 
-[tool.pytest]
-ini_options.testpaths = [ "tests" ]
-ini_options.addopts = "-v --tb=short -p randomly"
-ini_options.timeout = 30
-
 [tool.mypy]
 python_version = "3.13"
 ignore_missing_imports = true
@@ -181,6 +176,11 @@ exclude = [ "**/node_modules", "**/__pycache__", ".git", ".venv" ]
 # Disable the missing imports report
 reportMissingImports = false
 reportMissingModuleSource = false
+
+[tool.pytest]
+ini_options.testpaths = [ "tests" ]
+ini_options.addopts = "-v --tb=short -p randomly"
+ini_options.timeout = 30
 
 [tool.pydantic-mypy]
 init_forbid_extra = true

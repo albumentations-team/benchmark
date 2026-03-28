@@ -405,6 +405,343 @@ TRANSFORM_SPECS = [
             "interpolation": "bilinear",
         },
     ),
+    # -----------------------------------------------------------------------
+    # Additional transforms for AlbumentationsX vs Albumentations comparison
+    # -----------------------------------------------------------------------
+    # Blur
+    TransformSpec(
+        "AdvancedBlur",
+        {
+            "blur_limit": (3, 7),
+            "sigma_x_limit": (0.2, 1.0),
+            "sigma_y_limit": (0.2, 1.0),
+        },
+    ),
+    TransformSpec(
+        "Defocus",
+        {
+            "radius": (3, 7),
+            "alias_blur": (0.1, 0.5),
+        },
+    ),
+    TransformSpec(
+        "ZoomBlur",
+        {
+            "max_factor": (1.05, 1.31),
+        },
+    ),
+    TransformSpec(
+        "GlassBlur",
+        {
+            "sigma": 0.7,
+            "max_delta": 2,
+            "iterations": 2,
+        },
+    ),
+    # Geometric
+    TransformSpec(
+        "SquareSymmetry",
+        {},
+    ),
+    TransformSpec(
+        "Transpose",
+        {},
+    ),
+    TransformSpec(
+        "SafeRotate",
+        {
+            "limit": 45,
+            "interpolation": "bilinear",
+            "border_mode": "constant",
+            "fill": 0,
+        },
+    ),
+    TransformSpec(
+        "RandomRotate90",
+        {},
+    ),
+    TransformSpec(
+        "RandomScale",
+        {
+            "scale_limit": (-0.1, 0.1),
+            "interpolation": "bilinear",
+        },
+    ),
+    TransformSpec(
+        "ShiftScaleRotate",
+        {
+            "shift_limit": 0.0625,
+            "scale_limit": 0.1,
+            "rotate_limit": 45,
+            "interpolation": "bilinear",
+            "border_mode": "constant",
+            "fill": 0,
+        },
+    ),
+    TransformSpec(
+        "GridDistortion",
+        {
+            "num_steps": 5,
+            "distort_limit": 0.3,
+            "interpolation": "bilinear",
+            "border_mode": "constant",
+            "fill": 0,
+        },
+    ),
+    TransformSpec(
+        "PiecewiseAffine",
+        {
+            "scale": (0.03, 0.05),
+            "nb_rows": 4,
+            "nb_cols": 4,
+        },
+    ),
+    TransformSpec(
+        "RandomGridShuffle",
+        {
+            "grid": (3, 3),
+        },
+    ),
+    TransformSpec(
+        "Morphological",
+        {
+            "scale": (2, 3),
+            "operation": "dilation",
+        },
+    ),
+    # Pixel-level
+    TransformSpec(
+        "Downscale",
+        {
+            "scale_range": (0.25, 0.25),
+            "interpolation_pair": ("nearest", "nearest"),
+        },
+    ),
+    TransformSpec(
+        "Emboss",
+        {
+            "alpha": (0.2, 0.5),
+            "strength": (0.2, 0.7),
+        },
+    ),
+    TransformSpec(
+        "ChromaticAberration",
+        {
+            "primary_distortion_limit": (-0.02, 0.02),
+            "secondary_distortion_limit": (-0.05, 0.05),
+            "mode": "green_purple",
+        },
+    ),
+    TransformSpec(
+        "ISONoise",
+        {
+            "color_shift": (0.01, 0.05),
+            "intensity": (0.1, 0.5),
+        },
+    ),
+    TransformSpec(
+        "ShotNoise",
+        {
+            "scale_range": (0.05, 0.15),
+        },
+    ),
+    TransformSpec(
+        "MultiplicativeNoise",
+        {
+            "multiplier": (0.9, 1.1),
+            "per_channel": True,
+        },
+    ),
+    TransformSpec(
+        "AdditiveNoise",
+        {
+            "noise_type": "uniform",
+            "spatial_mode": "per_pixel",
+            "scale_range": (0.02, 0.1),
+        },
+    ),
+    TransformSpec(
+        "RandomFog",
+        {
+            "fog_coef_range": (0.3, 0.5),
+            "alpha_coef": 0.08,
+        },
+    ),
+    TransformSpec(
+        "RandomShadow",
+        {
+            "num_shadows_limit": (1, 2),
+            "shadow_dimension": 5,
+        },
+    ),
+    TransformSpec(
+        "RandomSunFlare",
+        {
+            "flare_roi": (0, 0, 1, 0.5),
+            "num_flare_circles_range": (6, 10),
+        },
+    ),
+    TransformSpec(
+        "RandomToneCurve",
+        {
+            "scale": 0.1,
+        },
+    ),
+    TransformSpec(
+        "RingingOvershoot",
+        {
+            "blur_limit": (7, 15),
+            "cutoff": (0.7854, 1.5708),
+        },
+    ),
+    TransformSpec(
+        "Spatter",
+        {
+            "mean": 0.65,
+            "std": 0.3,
+            "gauss_sigma": 2,
+            "intensity": 0.6,
+            "cutout_threshold": 0.68,
+            "mode": "rain",
+        },
+    ),
+    TransformSpec(
+        "UnsharpMask",
+        {
+            "blur_limit": (3, 7),
+            "sigma_limit": 0.0,
+            "alpha": (0.2, 0.5),
+            "threshold": 10,
+        },
+    ),
+    TransformSpec(
+        "FancyPCA",
+        {
+            "alpha": 0.1,
+        },
+    ),
+    TransformSpec(
+        "Superpixels",
+        {
+            "p_replace": (0.1, 0.1),
+            "n_segments": (100, 100),
+        },
+    ),
+    TransformSpec(
+        "ToSepia",
+        {},
+    ),
+    TransformSpec(
+        "RandomGravel",
+        {
+            "gravel_roi": (0.1, 0.4, 0.9, 0.9),
+            "number_of_patches": 2,
+        },
+    ),
+    # Dropout
+    TransformSpec(
+        "GridDropout",
+        {
+            "ratio": 0.5,
+            "unit_size_range": (2, 10),
+            "holes_number_xy": None,
+            "random_offset": False,
+        },
+    ),
+    TransformSpec(
+        "PixelDropout",
+        {
+            "dropout_prob": 0.01,
+            "per_channel": False,
+            "drop_value": 0,
+        },
+    ),
+    TransformSpec(
+        "ConstrainedCoarseDropout",
+        {
+            "num_holes_range": (1, 3),
+            "hole_height_range": (0.1, 0.2),
+            "hole_width_range": (0.1, 0.2),
+        },
+    ),
+    # Pad / Crop
+    TransformSpec(
+        "PadIfNeeded",
+        {
+            "min_height": 1024,
+            "min_width": 1024,
+            "border_mode": "constant",
+            "fill": 0,
+        },
+    ),
+    TransformSpec(
+        "CropAndPad",
+        {
+            "px": (-10, 20, -10, 20),
+            "border_mode": "constant",
+            "fill": 0,
+        },
+    ),
+    TransformSpec(
+        "RandomSizedCrop",
+        {
+            "min_max_height": (256, 480),
+            "size": (512, 512),
+            "interpolation": "bilinear",
+        },
+    ),
+    # AlbumentationsX-only transforms (will fail gracefully for albumentations_mit)
+    TransformSpec(
+        "AtmosphericFog",
+        {
+            "density_range": (0.8, 1.8),
+            "depth_mode": "linear",
+        },
+    ),
+    TransformSpec(
+        "Vignetting",
+        {
+            "intensity_range": (0.2, 0.5),
+        },
+    ),
+    TransformSpec(
+        "Dithering",
+        {},
+    ),
+    TransformSpec(
+        "FilmGrain",
+        {
+            "intensity_range": (0.1, 0.3),
+            "grain_size_range": (2, 4),
+        },
+    ),
+    TransformSpec(
+        "Halftone",
+        {
+            "dot_size_range": (4, 10),
+            "blend_range": (0.0, 0.35),
+        },
+    ),
+    TransformSpec(
+        "LensFlare",
+        {},
+    ),
+    TransformSpec(
+        "ChannelSwap",
+        {},
+    ),
+    TransformSpec(
+        "GridMask",
+        {
+            "num_grid_range": (3, 7),
+            "line_width_range": (0.2, 0.5),
+            "rotation_range": (0, 0),
+        },
+    ),
+    TransformSpec(
+        "WaterRefraction",
+        {},
+    ),
 ]
 
 # Use the same TRANSFORM_SPECS for both images and videos

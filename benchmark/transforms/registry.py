@@ -17,6 +17,7 @@ Adding a new library:
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -78,14 +79,30 @@ def register_library(
         if create_image_fn is not None:
             try:
                 td.image_impls[library] = create_image_fn(spec)
-            except Exception:
-                logger.warning("Failed to build image transform %r for library %r", spec.name, library, exc_info=True)
+            except Exception as e:
+                logger.warning(
+                    "Skipping image transform %r for %r — %s: %s",
+                    spec.name,
+                    library,
+                    type(e).__name__,
+                    e,
+                )
+                if os.environ.get("BENCHMARK_VERBOSE") == "1":
+                    logger.debug("Image transform build traceback", exc_info=True)
                 td.image_impls[library] = None
         if create_video_fn is not None:
             try:
                 td.video_impls[library] = create_video_fn(spec)
-            except Exception:
-                logger.warning("Failed to build video transform %r for library %r", spec.name, library, exc_info=True)
+            except Exception as e:
+                logger.warning(
+                    "Skipping video transform %r for %r — %s: %s",
+                    spec.name,
+                    library,
+                    type(e).__name__,
+                    e,
+                )
+                if os.environ.get("BENCHMARK_VERBOSE") == "1":
+                    logger.debug("Video transform build traceback", exc_info=True)
                 td.video_impls[library] = None
 
 
