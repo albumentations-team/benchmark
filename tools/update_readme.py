@@ -38,7 +38,8 @@ def patch_readme(
         )
         if new_content is None:
             return content
-        replacement = f"{marker_start}\n{new_content.strip()}\n{marker_end}"
+        # Blank lines after markers help some Markdown engines start a new block (tables after HTML comments).
+        replacement = f"{marker_start}\n\n{new_content.strip()}\n\n{marker_end}"
         new_content_str, n = pattern.subn(replacement, content, count=1)
         return new_content_str if n else content
 
@@ -136,26 +137,34 @@ def main() -> None:
         (repo_root / args.multichannel_results) if args.multichannel_results else (image_results / "multichannel")
     )
 
-    def _load(directory: Path, media: str) -> dict[str, dict[str, object]]:
+    def _load(directory: Path, media: str, *, exclude_docs: bool) -> dict[str, dict[str, object]]:
         loaded = load_results_dir(directory)
-        return {k: v for k, v in loaded.items() if v["media"] == media and v["library"] not in _DOCS_EXCLUDED}
+        return {
+            k: v
+            for k, v in loaded.items()
+            if v["media"] == media and (not exclude_docs or v["library"] not in _DOCS_EXCLUDED)
+        }
 
-    # Load and filter by media type, excluding internal libraries
-    image_loaded = _load(image_results, "image")
-    video_loaded = _load(video_results, "video")
+    # Public tables exclude internal/historical libraries, dedicated h2h tables do not.
+    image_loaded = _load(image_results, "image", exclude_docs=True)
+    video_loaded = _load(video_results, "video", exclude_docs=True)
+    image_loaded_all = _load(image_results, "image", exclude_docs=False)
+    video_loaded_all = _load(video_results, "video", exclude_docs=False)
 
     multichannel_loaded: dict[str, dict[str, object]] = {}
+    multichannel_loaded_all: dict[str, dict[str, object]] = {}
     if multichannel_results.exists():
-        multichannel_loaded = _load(multichannel_results, "image")
+        multichannel_loaded = _load(multichannel_results, "image", exclude_docs=True)
+        multichannel_loaded_all = _load(multichannel_results, "image", exclude_docs=False)
 
     image_table = format_comparison_table(image_loaded) if image_loaded else None
     video_table = format_comparison_table(video_loaded) if video_loaded else None
     multichannel_table = format_comparison_table(multichannel_loaded) if multichannel_loaded else None
 
     # Head-to-head AlbumentationsX vs Albumentations (MIT) tables
-    h2h_image_table = format_head_to_head_table(image_loaded) if image_loaded else None
-    h2h_video_table = format_head_to_head_table(video_loaded) if video_loaded else None
-    h2h_multichannel_table = format_head_to_head_table(multichannel_loaded) if multichannel_loaded else None
+    h2h_image_table = format_head_to_head_table(image_loaded_all) if image_loaded_all else None
+    h2h_video_table = format_head_to_head_table(video_loaded_all) if video_loaded_all else None
+    h2h_multichannel_table = format_head_to_head_table(multichannel_loaded_all) if multichannel_loaded_all else None
 
     # Summary text for Performance Highlights
     image_summary = compute_summary_text(image_table, "image") if image_table else None
