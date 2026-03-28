@@ -312,6 +312,248 @@ def create_transform(spec: TransformSpec) -> Any:
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             p=1,
         )
+    # --- Additional shared transforms ---
+    if spec.name == "AdvancedBlur":
+        return A.AdvancedBlur(
+            blur_limit=params["blur_limit"],
+            sigma_x_limit=params["sigma_x_limit"],
+            sigma_y_limit=params["sigma_y_limit"],
+            p=1,
+        )
+    if spec.name == "Defocus":
+        return A.Defocus(radius=params["radius"], alias_blur=params["alias_blur"], p=1)
+    if spec.name == "ZoomBlur":
+        return A.ZoomBlur(max_factor=params["max_factor"], p=1)
+    if spec.name == "GlassBlur":
+        return A.GlassBlur(
+            sigma=params["sigma"],
+            max_delta=params["max_delta"],
+            iterations=params["iterations"],
+            p=1,
+        )
+    if spec.name == "SquareSymmetry":
+        return A.SquareSymmetry(p=1)
+    if spec.name == "Transpose":
+        return A.Transpose(p=1)
+    if spec.name == "SafeRotate":
+        return A.SafeRotate(
+            limit=params["limit"],
+            interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
+            border_mode=cv2.BORDER_CONSTANT if params["border_mode"] == "constant" else cv2.BORDER_REFLECT,
+            fill=params["fill"],
+            p=1,
+        )
+    if spec.name == "RandomRotate90":
+        return A.RandomRotate90(p=1)
+    if spec.name == "RandomScale":
+        return A.RandomScale(
+            scale_limit=params["scale_limit"],
+            interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
+            p=1,
+        )
+    if spec.name == "ShiftScaleRotate":
+        return A.ShiftScaleRotate(
+            shift_limit=params["shift_limit"],
+            scale_limit=params["scale_limit"],
+            rotate_limit=params["rotate_limit"],
+            interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
+            border_mode=cv2.BORDER_CONSTANT if params["border_mode"] == "constant" else cv2.BORDER_REFLECT,
+            fill=params["fill"],
+            p=1,
+        )
+    if spec.name == "GridDistortion":
+        return A.GridDistortion(
+            num_steps=params["num_steps"],
+            distort_limit=params["distort_limit"],
+            interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
+            border_mode=cv2.BORDER_CONSTANT if params["border_mode"] == "constant" else cv2.BORDER_REFLECT,
+            fill=params["fill"],
+            p=1,
+        )
+    if spec.name == "PiecewiseAffine":
+        return A.PiecewiseAffine(
+            scale=params["scale"],
+            nb_rows=params["nb_rows"],
+            nb_cols=params["nb_cols"],
+            p=1,
+        )
+    if spec.name == "RandomGridShuffle":
+        return A.RandomGridShuffle(grid=params["grid"], p=1)
+    if spec.name == "Morphological":
+        return A.Morphological(scale=params["scale"], operation=params["operation"], p=1)
+    if spec.name == "Downscale":
+        return A.Downscale(
+            scale_range=params["scale_range"],
+            interpolation_pair={
+                "downscale": cv2.INTER_NEAREST if params["interpolation_pair"][0] == "nearest" else cv2.INTER_LINEAR,
+                "upscale": cv2.INTER_NEAREST if params["interpolation_pair"][1] == "nearest" else cv2.INTER_LINEAR,
+            },
+            p=1,
+        )
+    if spec.name == "Emboss":
+        return A.Emboss(alpha=params["alpha"], strength=params["strength"], p=1)
+    if spec.name == "ChromaticAberration":
+        return A.ChromaticAberration(
+            primary_distortion_limit=params["primary_distortion_limit"],
+            secondary_distortion_limit=params["secondary_distortion_limit"],
+            mode=params["mode"],
+            p=1,
+        )
+    if spec.name == "ISONoise":
+        return A.ISONoise(color_shift=params["color_shift"], intensity=params["intensity"], p=1)
+    if spec.name == "ShotNoise":
+        return A.ShotNoise(scale_range=params["scale_range"], p=1)
+    if spec.name == "MultiplicativeNoise":
+        return A.MultiplicativeNoise(
+            multiplier=params["multiplier"],
+            per_channel=params["per_channel"],
+            p=1,
+        )
+    if spec.name == "AdditiveNoise":
+        lo, hi = params["scale_range"]
+        mag = max(abs(lo), abs(hi))
+        return A.AdditiveNoise(
+            noise_type=params["noise_type"],
+            spatial_mode=params["spatial_mode"],
+            noise_params={"ranges": [(-mag, mag)]},
+            p=1,
+        )
+    if spec.name == "RandomFog":
+        return A.RandomFog(
+            fog_coef_range=params["fog_coef_range"],
+            alpha_coef=params["alpha_coef"],
+            p=1,
+        )
+    if spec.name == "RandomShadow":
+        return A.RandomShadow(
+            num_shadows_limit=params["num_shadows_limit"],
+            shadow_dimension=params["shadow_dimension"],
+            p=1,
+        )
+    if spec.name == "RandomSunFlare":
+        return A.RandomSunFlare(
+            flare_roi=params["flare_roi"],
+            num_flare_circles_range=params["num_flare_circles_range"],
+            p=1,
+        )
+    if spec.name == "RandomToneCurve":
+        return A.RandomToneCurve(scale=params["scale"], p=1)
+    if spec.name == "RingingOvershoot":
+        return A.RingingOvershoot(blur_limit=params["blur_limit"], cutoff=params["cutoff"], p=1)
+    if spec.name == "Spatter":
+        return A.Spatter(
+            mean=params["mean"],
+            std=params["std"],
+            gauss_sigma=params["gauss_sigma"],
+            intensity=params["intensity"],
+            cutout_threshold=params["cutout_threshold"],
+            mode=params["mode"],
+            p=1,
+        )
+    if spec.name == "UnsharpMask":
+        return A.UnsharpMask(
+            blur_limit=params["blur_limit"],
+            sigma_limit=params["sigma_limit"],
+            alpha=params["alpha"],
+            threshold=params["threshold"],
+            p=1,
+        )
+    if spec.name == "FancyPCA":
+        return A.FancyPCA(alpha=params["alpha"], p=1)
+    if spec.name == "Superpixels":
+        return A.Superpixels(
+            p_replace=params["p_replace"],
+            n_segments=params["n_segments"],
+            p=1,
+        )
+    if spec.name == "ToSepia":
+        return A.ToSepia(p=1)
+    if spec.name == "RandomGravel":
+        return A.RandomGravel(
+            gravel_roi=params["gravel_roi"],
+            number_of_patches=params["number_of_patches"],
+            p=1,
+        )
+    if spec.name == "GridDropout":
+        return A.GridDropout(
+            ratio=params["ratio"],
+            unit_size_range=params["unit_size_range"],
+            holes_number_xy=params["holes_number_xy"],
+            random_offset=params["random_offset"],
+            p=1,
+        )
+    if spec.name == "PixelDropout":
+        return A.PixelDropout(
+            dropout_prob=params["dropout_prob"],
+            per_channel=params["per_channel"],
+            drop_value=params["drop_value"],
+            p=1,
+        )
+    if spec.name == "ConstrainedCoarseDropout":
+        return A.ConstrainedCoarseDropout(
+            num_holes_range=params["num_holes_range"],
+            hole_height_range=params["hole_height_range"],
+            hole_width_range=params["hole_width_range"],
+            p=1,
+        )
+    if spec.name == "PadIfNeeded":
+        return A.PadIfNeeded(
+            min_height=params["min_height"],
+            min_width=params["min_width"],
+            border_mode=cv2.BORDER_CONSTANT if params["border_mode"] == "constant" else cv2.BORDER_REFLECT,
+            fill=params["fill"],
+            p=1,
+        )
+    if spec.name == "CropAndPad":
+        return A.CropAndPad(
+            px=params["px"],
+            border_mode=cv2.BORDER_CONSTANT if params["border_mode"] == "constant" else cv2.BORDER_REFLECT,
+            fill=params["fill"],
+            p=1,
+        )
+    if spec.name == "RandomSizedCrop":
+        return A.RandomSizedCrop(
+            min_max_height=params["min_max_height"],
+            size=params["size"],
+            interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
+            p=1,
+        )
+    # --- AlbumentationsX-only transforms ---
+    if spec.name == "AtmosphericFog":
+        return A.AtmosphericFog(
+            density_range=params["density_range"],
+            depth_mode=params["depth_mode"],
+            p=1,
+        )
+    if spec.name == "Vignetting":
+        return A.Vignetting(intensity_range=params["intensity_range"], p=1)
+    if spec.name == "Dithering":
+        return A.Dithering(p=1)
+    if spec.name == "FilmGrain":
+        return A.FilmGrain(
+            intensity_range=params["intensity_range"],
+            grain_size_range=params["grain_size_range"],
+            p=1,
+        )
+    if spec.name == "Halftone":
+        return A.Halftone(
+            dot_size_range=params["dot_size_range"],
+            blend_range=params["blend_range"],
+            p=1,
+        )
+    if spec.name == "LensFlare":
+        return A.LensFlare(p=1)
+    if spec.name == "ChannelSwap":
+        return A.ChannelSwap(p=1)
+    if spec.name == "GridMask":
+        return A.GridMask(
+            num_grid_range=params["num_grid_range"],
+            line_width_range=params["line_width_range"],
+            rotation_range=params["rotation_range"],
+            p=1,
+        )
+    if spec.name == "WaterRefraction":
+        return A.WaterRefraction(p=1)
     raise ValueError(f"Unknown transform: {spec.name}")
 
 

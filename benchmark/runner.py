@@ -13,6 +13,7 @@ from warnings import warn
 import numpy as np
 from tqdm import tqdm
 
+from .term import configure_logging, tqdm_kwargs
 from .utils import (
     get_image_loader,
     get_library_versions,
@@ -23,12 +24,6 @@ from .utils import (
     verify_thread_settings,
 )
 
-# Configure logging (BENCHMARK_VERBOSE=1 for DEBUG)
-_log_level = logging.DEBUG if os.environ.get("BENCHMARK_VERBOSE") == "1" else logging.INFO
-logging.basicConfig(
-    level=_log_level,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
 logger = logging.getLogger(__name__)
 
 # Environment variables for various libraries
@@ -128,7 +123,7 @@ class BenchmarkRunner:
         logger.info("Found %d image paths in %s (searching recursively)", len(image_paths), self.data_dir)
         images: list[Any] = []
 
-        with tqdm(image_paths, desc="Loading RGB images", unit="img") as pbar:
+        with tqdm(image_paths, desc="Loading RGB images", unit="img", **tqdm_kwargs()) as pbar:
             for path in pbar:
                 try:
                     import cv2
@@ -179,7 +174,7 @@ class BenchmarkRunner:
 
         videos: list[Any] = []
 
-        with tqdm(video_paths, desc="Loading videos") as pbar:
+        with tqdm(video_paths, desc="Loading videos", **tqdm_kwargs()) as pbar:
             for path in pbar:
                 try:
                     video = self._loader(path)
@@ -234,7 +229,13 @@ class BenchmarkRunner:
             self.max_warmup_iterations,
             len(warmup_subset),
         )
-        with tqdm(total=self.max_warmup_iterations, desc=f"Warmup {transform_name}", unit="iter", leave=False) as pbar:
+        with tqdm(
+            total=self.max_warmup_iterations,
+            desc=f"Warmup {transform_name}",
+            unit="iter",
+            leave=False,
+            **tqdm_kwargs(),
+        ) as pbar:
             for i in range(self.max_warmup_iterations):
                 elapsed = time_transform(lambda x: self.call_fn(transform, x), warmup_subset)
                 throughput = len(warmup_subset) / elapsed
@@ -320,7 +321,7 @@ class BenchmarkRunner:
         throughputs: list[float] = []
         times: list[float] = []
 
-        for _ in tqdm(range(self.num_runs), desc=f"Benchmarking {transform_name}", leave=False):
+        for _ in tqdm(range(self.num_runs), desc=f"Benchmarking {transform_name}", leave=False, **tqdm_kwargs()):
             elapsed = time_transform(lambda x: self.call_fn(transform, x), media)
             throughput = len(media) / elapsed
             throughputs.append(throughput)
@@ -426,6 +427,7 @@ class BenchmarkRunner:
             self.transforms,
             desc=f"Transforms ({self.library})",
             unit="transform",
+            **tqdm_kwargs(),
         ):
             try:
                 transform_name = transform_dict["name"]
@@ -534,6 +536,9 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    _log_level = logging.DEBUG if os.environ.get("BENCHMARK_VERBOSE") == "1" else logging.INFO
+    configure_logging(_log_level, fmt="%(asctime)s %(levelname)s [%(name)s] %(message)s")
 
     if not args.specs_file.exists():
         raise ValueError(f"Specs file {args.specs_file} does not exist")

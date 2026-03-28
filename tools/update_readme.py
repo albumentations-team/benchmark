@@ -11,7 +11,10 @@ import argparse
 import re
 from pathlib import Path
 
-from tools.compare import format_comparison_table, load_results_dir
+from tools.compare import format_comparison_table, format_head_to_head_table, load_results_dir
+
+# Libraries to keep out of public docs (internal / historical reference only)
+_DOCS_EXCLUDED: frozenset[str] = frozenset({"albumentations_mit"})
 
 
 def patch_readme(
@@ -21,6 +24,9 @@ def patch_readme(
     image_summary: str | None,
     video_summary: str | None,
     multichannel_table: str | None = None,
+    h2h_image_table: str | None = None,
+    h2h_video_table: str | None = None,
+    h2h_multichannel_table: str | None = None,
 ) -> bool:
     """Patch README between markers. Returns True if changed."""
     content = readme_path.read_text()
@@ -68,6 +74,24 @@ def patch_readme(
             "<!-- VIDEO_SPEEDUP_SUMMARY_END -->",
             video_summary,
         )
+    if h2h_image_table is not None:
+        content = replace_section(
+            "<!-- ALBX_VS_ALB_IMAGE_TABLE_START -->",
+            "<!-- ALBX_VS_ALB_IMAGE_TABLE_END -->",
+            h2h_image_table,
+        )
+    if h2h_video_table is not None:
+        content = replace_section(
+            "<!-- ALBX_VS_ALB_VIDEO_TABLE_START -->",
+            "<!-- ALBX_VS_ALB_VIDEO_TABLE_END -->",
+            h2h_video_table,
+        )
+    if h2h_multichannel_table is not None:
+        content = replace_section(
+            "<!-- ALBX_VS_ALB_MULTICHANNEL_TABLE_START -->",
+            "<!-- ALBX_VS_ALB_MULTICHANNEL_TABLE_END -->",
+            h2h_multichannel_table,
+        )
 
     if content != orig:
         readme_path.write_text(content)
@@ -112,21 +136,26 @@ def main() -> None:
         (repo_root / args.multichannel_results) if args.multichannel_results else (image_results / "multichannel")
     )
 
-    # Load and filter by media type
-    image_loaded = load_results_dir(image_results)
-    image_loaded = {k: v for k, v in image_loaded.items() if v["media"] == "image"}
+    def _load(directory: Path, media: str) -> dict[str, dict[str, object]]:
+        loaded = load_results_dir(directory)
+        return {k: v for k, v in loaded.items() if v["media"] == media and v["library"] not in _DOCS_EXCLUDED}
 
-    video_loaded = load_results_dir(video_results)
-    video_loaded = {k: v for k, v in video_loaded.items() if v["media"] == "video"}
+    # Load and filter by media type, excluding internal libraries
+    image_loaded = _load(image_results, "image")
+    video_loaded = _load(video_results, "video")
 
     multichannel_loaded: dict[str, dict[str, object]] = {}
     if multichannel_results.exists():
-        multichannel_loaded = load_results_dir(multichannel_results)
-        multichannel_loaded = {k: v for k, v in multichannel_loaded.items() if v["media"] == "image"}
+        multichannel_loaded = _load(multichannel_results, "image")
 
     image_table = format_comparison_table(image_loaded) if image_loaded else None
     video_table = format_comparison_table(video_loaded) if video_loaded else None
     multichannel_table = format_comparison_table(multichannel_loaded) if multichannel_loaded else None
+
+    # Head-to-head AlbumentationsX vs Albumentations (MIT) tables
+    h2h_image_table = format_head_to_head_table(image_loaded) if image_loaded else None
+    h2h_video_table = format_head_to_head_table(video_loaded) if video_loaded else None
+    h2h_multichannel_table = format_head_to_head_table(multichannel_loaded) if multichannel_loaded else None
 
     # Summary text for Performance Highlights
     image_summary = compute_summary_text(image_table, "image") if image_table else None
@@ -139,6 +168,9 @@ def main() -> None:
         image_summary=image_summary,
         video_summary=video_summary,
         multichannel_table=multichannel_table,
+        h2h_image_table=h2h_image_table,
+        h2h_video_table=h2h_video_table,
+        h2h_multichannel_table=h2h_multichannel_table,
     )
     if changed:
         print(f"Updated {readme}")

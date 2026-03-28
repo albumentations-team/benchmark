@@ -84,6 +84,9 @@ def format_comparison_table(
     loaded: dict[str, dict[str, Any]],
     libraries_filter: list[str] | None = None,
     transforms_filter: list[str] | None = None,
+    *,
+    speedup_header: str = "Speedup (albx/fastest other)",
+    speedup_ref_library: str = "albumentationsx",
 ) -> str:
     """Return markdown table string for all results in *loaded*."""
     if not loaded:
@@ -110,7 +113,7 @@ def format_comparison_table(
         suffix = " (video)" if entry["media"] == "video" else ""
         return f"{entry['library']}{suffix} {version} [{unit}]"
 
-    headers = ["Transform", *[col_header(k) for k in lib_keys], "Speedup (albx/fastest other)"]
+    headers = ["Transform", *[col_header(k) for k in lib_keys], speedup_header]
 
     rows: list[list[str]] = []
     for transform in sorted_transforms:
@@ -139,12 +142,15 @@ def format_comparison_table(
                 cell = "-"
             row.append(cell)
 
-        alb_key = next((k for k in lib_keys if loaded[k]["library"] == "albumentationsx" and k in row_vals), None)
-        if alb_key:
-            alb_val = row_vals[alb_key]
-            others = [v for k, v in row_vals.items() if k != alb_key]
+        ref_key = next(
+            (k for k in lib_keys if loaded[k]["library"] == speedup_ref_library and k in row_vals),
+            None,
+        )
+        if ref_key:
+            ref_val = row_vals[ref_key]
+            others = [v for k, v in row_vals.items() if k != ref_key]
             if others:
-                speedup = alb_val / max(others)
+                speedup = ref_val / max(others)
                 row.append(f"{speedup:.2f}x")
             else:
                 row.append("N/A")
@@ -166,6 +172,20 @@ def format_comparison_table(
     lines = [fmt_row(headers), "-+-".join("-" * w for w in col_widths)]
     lines.extend(fmt_row(row) for row in rows)
     return "\n".join(lines)
+
+
+def format_head_to_head_table(
+    loaded: dict[str, dict[str, Any]],
+    transforms_filter: list[str] | None = None,
+) -> str:
+    """Head-to-head AlbumentationsX vs Albumentations (MIT) comparison table."""
+    return format_comparison_table(
+        loaded,
+        libraries_filter=["albumentationsx", "albumentations_mit"],
+        transforms_filter=transforms_filter,
+        speedup_header="Speedup (albx/albumentations)",
+        speedup_ref_library="albumentationsx",
+    )
 
 
 def print_comparison_table(

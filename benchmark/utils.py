@@ -125,6 +125,7 @@ def get_image_loader(library: str) -> Callable[[Path], Any]:
     """Get the appropriate image loader for the library"""
     loaders = {
         "albumentationsx": read_img_cv2,
+        "albumentations_mit": read_img_cv2,
         "ultralytics": read_img_cv2,
         "torchvision": read_img_torch,
         "kornia": read_img_kornia,
@@ -141,6 +142,7 @@ def get_video_loader(library: str) -> Callable[[Path], Any]:
     """Get the appropriate video loader for the library"""
     loaders = {
         "albumentationsx": read_video_cv2,
+        "albumentations_mit": read_video_cv2,
         "torchvision": read_video_torch_float16,
         "kornia": read_video_kornia,
     }
@@ -241,7 +243,8 @@ def get_library_versions(library: str) -> dict[str, str]:
 
     # PyPI package names (may differ from import: e.g. albumentationsx → import albumentations)
     _pkg_names: dict[str, list[str]] = {
-        "albumentationsx": ["albumentationsx", "albumentations"],  # try PyPI name first
+        "albumentationsx": ["albumentationsx", "albumentations"],
+        "albumentations_mit": ["albumentations"],
     }
     if library in _pkg_names:
         for pkg in _pkg_names[library]:

@@ -1,11 +1,11 @@
-r"""AlbumentationsX multi-channel image benchmark spec.
+r"""Albumentations (MIT) multi-channel image benchmark spec.
 
 Tests transforms on 9-channel images (3x stacked RGB, simulating e.g. hyperspectral data).
 The runner synthesizes these in-memory via make_multichannel_loader; no special dataset needed.
 
 Run with:
     python -m benchmark.cli run \\
-        --spec benchmark/transforms/albumentationsx_multichannel_impl.py \\
+        --spec benchmark/transforms/albumentations_mit_multichannel_impl.py \\
         --data-dir /path/to/images \\
         --output output/multichannel \\
         --num-channels 9
@@ -23,7 +23,7 @@ import numpy as np
 cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
 
-LIBRARY = "albumentationsx"
+LIBRARY = "albumentations_mit"
 
 NUM_CHANNELS = 9  # 3 RGB repetitions stacked; must match --num-channels passed to runner
 

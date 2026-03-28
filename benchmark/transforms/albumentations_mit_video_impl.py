@@ -1,4 +1,4 @@
-"""AlbumentationsX implementations of transforms for videos in custom format."""
+"""Albumentations (MIT) implementations of transforms for videos in custom format."""
 
 from typing import Any
 
@@ -14,15 +14,15 @@ cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
 
 # Required: Library name for dependency installation
-LIBRARY = "albumentationsx"
+LIBRARY = "albumentations_mit"
 
 
 # Required: Define how to apply transforms to videos
 def __call__(transform: Any, video: Any) -> Any:  # noqa: N807
-    """Apply AlbumentationsX transform to video frames
+    """Apply Albumentations (MIT) transform to video frames
 
     Args:
-        transform: AlbumentationsX transform instance
+        transform: Albumentations transform instance
         video: numpy array of shape (T, H, W, C)
 
     Returns:
@@ -37,7 +37,7 @@ def __call__(transform: Any, video: Any) -> Any:  # noqa: N807
 
 # Helper function to create transforms from specs
 def create_transform(spec: TransformSpec) -> Any:
-    """Create an AlbumentationsX transform from a TransformSpec."""
+    """Create an Albumentations (MIT) transform from a TransformSpec."""
     params = spec.params
 
     if spec.name == "Resize":
@@ -296,12 +296,11 @@ def create_transform(spec: TransformSpec) -> Any:
             scale_range=(params["distortion_scale"], params["distortion_scale"]),
         )
     if spec.name == "PhotoMetricDistort":
-        return A.PhotoMetricDistort(
-            brightness_range=params["brightness_range"],
-            contrast_range=params["contrast_range"],
-            saturation_range=params["saturation_range"],
-            hue_range=params["hue_range"],
-            distort_p=1.0,
+        return A.ColorJitter(
+            brightness=params["brightness_range"],
+            contrast=params["contrast_range"],
+            saturation=params["saturation_range"],
+            hue=params["hue_range"],
             p=1,
         )
     if spec.name == "LongestMaxSize":
@@ -522,42 +521,6 @@ def create_transform(spec: TransformSpec) -> Any:
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             p=1,
         )
-    # --- AlbumentationsX-only transforms ---
-    if spec.name == "AtmosphericFog":
-        return A.AtmosphericFog(
-            density_range=params["density_range"],
-            depth_mode=params["depth_mode"],
-            p=1,
-        )
-    if spec.name == "Vignetting":
-        return A.Vignetting(intensity_range=params["intensity_range"], p=1)
-    if spec.name == "Dithering":
-        return A.Dithering(p=1)
-    if spec.name == "FilmGrain":
-        return A.FilmGrain(
-            intensity_range=params["intensity_range"],
-            grain_size_range=params["grain_size_range"],
-            p=1,
-        )
-    if spec.name == "Halftone":
-        return A.Halftone(
-            dot_size_range=params["dot_size_range"],
-            blend_range=params["blend_range"],
-            p=1,
-        )
-    if spec.name == "LensFlare":
-        return A.LensFlare(p=1)
-    if spec.name == "ChannelSwap":
-        return A.ChannelSwap(p=1)
-    if spec.name == "GridMask":
-        return A.GridMask(
-            num_grid_range=params["num_grid_range"],
-            line_width_range=params["line_width_range"],
-            rotation_range=params["rotation_range"],
-            p=1,
-        )
-    if spec.name == "WaterRefraction":
-        return A.WaterRefraction(p=1)
     raise ValueError(f"Unknown transform: {spec.name}")
 
 
