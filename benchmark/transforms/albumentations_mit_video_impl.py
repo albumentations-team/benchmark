@@ -17,22 +17,43 @@ cv2.ocl.setUseOpenCL(False)
 LIBRARY = "albumentations_mit"
 
 
+class _ConstrainedCoarseDropoutWrapper:
+    """Injects a full-image bbox so MIT 2.0.8 ConstrainedCoarseDropout actually runs.
+
+    MIT 2.0.8 skips the transform and warns when no bboxes or mask is provided.
+    Wrapping at construction time avoids touching the shared __call__ function.
+    """
+
+    def __init__(self, transform: Any) -> None:
+        self._inner = transform
+
+    def __call__(self, **data: Any) -> dict[str, Any]:
+        data = dict(data)
+        if "images" in data:
+            n = len(data["images"])
+            data.setdefault("bboxes", [[(0.25, 0.25, 0.5, 0.5)] for _ in range(n)])
+        elif "image" in data:
+            data.setdefault("bboxes", [(0.25, 0.25, 0.5, 0.5)])
+        return self._inner(**data)
+
+
 # Required: Define how to apply transforms to videos
 def __call__(transform: Any, video: Any) -> Any:  # noqa: N807
-    """Apply Albumentations (MIT) transform to video frames
+    """Apply Albumentations (MIT) transform to a video clip via the batch ``images`` API.
+
+    Albumentations accepts a stack of frames as ``(T, H, W, C)`` and returns
+    ``["images"]`` with the same shape. Augmentations use one consistent
+    parameter draw per clip (same transform across frames).
 
     Args:
         transform: Albumentations transform instance
         video: numpy array of shape (T, H, W, C)
 
     Returns:
-        Transformed video as numpy array
+        Transformed video as numpy array (T, H, W, C)
     """
-    # albucore's batch_transform reshapes (T,H,W,C) → (H,W,T*C) for spatial transforms,
-    # then calls cv2.warpAffine on the merged array. OpenCV fails when T*C > ~512 channels.
-    # Apply frame-by-frame to avoid the XHWC reshape path entirely.
-    frames = [transform(image=frame)["image"] for frame in video]
-    return np.ascontiguousarray(frames)
+    result = transform(images=video)["images"]
+    return np.ascontiguousarray(result)
 
 
 # Helper function to create transforms from specs
@@ -493,11 +514,13 @@ def create_transform(spec: TransformSpec) -> Any:
             p=1,
         )
     if spec.name == "ConstrainedCoarseDropout":
-        return A.ConstrainedCoarseDropout(
-            num_holes_range=params["num_holes_range"],
-            hole_height_range=params["hole_height_range"],
-            hole_width_range=params["hole_width_range"],
-            p=1,
+        return _ConstrainedCoarseDropoutWrapper(
+            A.ConstrainedCoarseDropout(
+                num_holes_range=params["num_holes_range"],
+                hole_height_range=params["hole_height_range"],
+                hole_width_range=params["hole_width_range"],
+                p=1,
+            ),
         )
     if spec.name == "PadIfNeeded":
         return A.PadIfNeeded(

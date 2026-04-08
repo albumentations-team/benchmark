@@ -19,20 +19,23 @@ LIBRARY = "albumentationsx"
 
 # Required: Define how to apply transforms to videos
 def __call__(transform: Any, video: Any) -> Any:  # noqa: N807
-    """Apply AlbumentationsX transform to video frames
+    """Apply AlbumentationsX transform to a video clip via the batch ``images`` API.
+
+    Albumentations accepts a stack of frames as ``(T, H, W, C)`` and returns
+    ``["images"]`` with the same shape. Augmentations use one consistent
+    parameter draw per clip (same transform across frames), which matches how
+    video is typically applied in training and aligns with Kornia's
+    ``same_on_batch=True`` for fair benchmarking.
 
     Args:
         transform: AlbumentationsX transform instance
         video: numpy array of shape (T, H, W, C)
 
     Returns:
-        Transformed video as numpy array
+        Transformed video as numpy array (T, H, W, C)
     """
-    # albucore's batch_transform reshapes (T,H,W,C) → (H,W,T*C) for spatial transforms,
-    # then calls cv2.warpAffine on the merged array. OpenCV fails when T*C > ~512 channels.
-    # Apply frame-by-frame to avoid the XHWC reshape path entirely.
-    frames = [transform(image=frame)["image"] for frame in video]
-    return np.ascontiguousarray(frames)
+    result = transform(images=video)["images"]
+    return np.ascontiguousarray(result)
 
 
 # Helper function to create transforms from specs

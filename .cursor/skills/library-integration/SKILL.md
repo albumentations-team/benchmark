@@ -170,14 +170,16 @@ Run comparison:
 For video libraries, create `{library}_video_impl.py` and adapt:
 
 ```python
-def __call__(transform, video):
-    """Apply transform to video tensor.
+import numpy as np
 
-    Video shape conventions:
-    - (T, H, W, C) for CPU libraries
-    - (T, C, H, W) for GPU libraries
+
+def __call__(transform, video):
+    """Apply transform to one clip. Shape conventions:
+    - (T, H, W, C) for Albumentations (NumPy) — use batch API when available
+    - (T, C, H, W) for torch / Kornia tensors
     """
-    return transform(video)
+    # Albumentations: native multi-frame API (one param draw per clip)
+    return np.ascontiguousarray(transform(images=video)["images"])
 ```
 
-Video loaders differ - check `benchmark/video_runner.py` for examples.
+For Kornia/torchvision, see `kornia_video_impl.py` / `torchvision_video_impl.py`. Video loaders differ — check `benchmark/utils.py` (`get_video_loader`) and `benchmark/video_runner.py`.

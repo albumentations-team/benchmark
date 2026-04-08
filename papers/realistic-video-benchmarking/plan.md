@@ -18,17 +18,17 @@ The current benchmark is useful, but it is not yet fair enough for the paper we 
 - `benchmark/runner.py` preloads all videos before timing.
 - For tensor libraries, `_load_videos()` moves tensors to GPU before benchmarking, so host-to-device copy is excluded.
 - `benchmark/utils.py` uses different loaders per library, so decode and dtype/layout conversion are library-coupled.
-- `benchmark/transforms/albumentationsx_video_impl.py` applies `transform(image=frame)` independently for each frame, so transform parameters are resampled per frame.
+- Built-in AlbumentationsX and Albumentations (MIT) video specs use `transform(images=video)["images"]` (batch API): one parameter draw per clip, consistent across frames.
 - `benchmark/transforms/kornia_video_impl.py` uses `same_on_batch=True`, so all frames in a clip get identical transform parameters.
 
-That means the current benchmark compares:
+That means the current transform-only benchmark compares:
 
 - CPU vs GPU transform execution
 - with videos already loaded
 - without dataloader overhead
 - without copy overhead
 - without decode overhead
-- and with mismatched temporal semantics
+- with aligned clip-consistent semantics between Albumentations (batch `images`) and Kornia (`same_on_batch=True`)
 
 This is still useful as a kernel benchmark, but it cannot be the only result in the paper.
 
@@ -45,12 +45,9 @@ Changes:
 - Keep the existing benchmark family as the "transform-only / preloaded" benchmark.
 - Add explicit clip-length regimes instead of one hidden default.
 - Lower the tested frame count for the main benchmark if current `T` is not representative of training.
-- Add temporal semantics explicitly:
-  - `clip_consistent`: identical sampled params across all frames
-  - optional `frame_independent`: separate params per frame for ablations only
-- Make Albumentations match the stated semantics:
-  - paper default must be `clip_consistent`
-  - implementation likely via sampled params once per clip, then replay on all frames
+- Add temporal semantics explicitly in metadata and optional modes:
+  - `clip_consistent`: identical sampled params across all frames (current Albumentations path: `images=` batch API)
+  - optional `frame_independent`: separate params per frame for ablations only (would require a different `__call__` path, not the default benchmark)
 
 Main output:
 
@@ -236,28 +233,27 @@ For end-to-end pipeline benchmarks also record:
 
 ## Concrete Implementation Plan
 
-## Phase 1. Fix transform semantics in the current video benchmark
+## Phase 1. Transform semantics and clip control in the current video benchmark
 
-Files likely touched:
+**Done in repo:** AlbumentationsX and Albumentations (MIT) use `transform(images=video)["images"]` for clip-consistent augmentation.
 
-- `benchmark/transforms/albumentationsx_video_impl.py`
-- `benchmark/transforms/albumentations_mit_video_impl.py`
-- possibly `benchmark/transforms/torchvision_video_impl.py`
+Files likely touched for the rest:
+
+- `benchmark/transforms/torchvision_video_impl.py` (audit clip consistency per transform)
 - `benchmark/runner.py`
 - `benchmark/utils.py`
 
-Tasks:
+Remaining tasks:
 
-- add a way to run a video transform in `clip_consistent` mode
-- make Albumentations sample once per clip and replay on all frames
-- store transform mode and clip length in output metadata
+- store transform mode (`clip_consistent` / `frame_independent`) and clip length in output metadata
 - add CLI flags for clip-length truncation / frame sampling
 - stop hiding frame count inside the dataset itself
+- optional: explicit `frame_independent` code path for ablation only
 
 Acceptance criteria:
 
-- same clip yields identical spatial params across frames for Albumentations
-- results JSON includes enough metadata to distinguish semantic mode
+- default benchmark remains clip-consistent for Albumentations batch API
+- results JSON includes enough metadata to distinguish semantic mode when multiple modes exist
 - current benchmark still runs as a fast transform-only benchmark
 
 ## Phase 2. Add a "fair transform-only" video benchmark config
@@ -399,7 +395,7 @@ Unless experiments prove otherwise, start with:
 
 ## Minimal Milestone Order
 
-1. Fix Albumentations video semantics so all frames share the same transform.
+1. ~~Fix Albumentations video semantics~~ (done: `transform(images=video)["images"]`).
 2. Add clip-length control and rerun transform-only video benchmarks at realistic `T`.
 3. Add dataloader + copy benchmark with worker sweep.
 4. Add decode + dataloader + copy benchmark.

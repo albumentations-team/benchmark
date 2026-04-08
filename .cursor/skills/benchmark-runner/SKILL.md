@@ -105,6 +105,17 @@ TRANSFORMS = [
 
 Then run with `-s your_file.py`
 
+### Video specs (Albumentations)
+
+Albumentations supports multi-frame input as `(T, H, W, C)`. Use the batch key `images`, not a per-frame loop:
+
+```python
+def __call__(transform, video):
+    return np.ascontiguousarray(transform(images=video)["images"])
+```
+
+See `benchmark/transforms/albumentationsx_video_impl.py` and `.cursor/rules/video_custom_transforms_architecture.mdc`.
+
 ## Workflow
 
 1. **Prepare data**: Ensure images/videos are in target directory
