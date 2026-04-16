@@ -25,7 +25,8 @@ TRANSFORMS = [
 
 Key details:
 - `__call__` receives **a single video** (not batched) — the runner loops over videos itself
-- Video shape is `(T, H, W, C)` for numpy-based libraries (AlbumentationsX)
+- Video shape is `(T, H, W, C)` for numpy-based libraries (AlbumentationsX, Albumentations MIT)
+- Albumentations built-in video specs use `transform(images=video)["images"]` — the library’s native multi-frame API; one parameter sample applies to the whole clip
 - Video shape is `(T, C, H, W)` for tensor-based libraries (torchvision, Kornia)
 - `name` appears verbatim in result JSON keys and comparison tables
 - All transforms must have `p=1` for deterministic benchmarking
@@ -116,12 +117,14 @@ Videos are loaded via `get_video_loader(library)` from `benchmark/utils.py`. Fil
 
 ## Library-specific `__call__` patterns
 
-**AlbumentationsX** — numpy `(T, H, W, C)`, uses `images=` key:
+**AlbumentationsX / Albumentations (MIT)** — numpy `(T, H, W, C)`, batch API:
 ```python
 def __call__(transform, video):
     result = transform(images=video)["images"]
     return np.ascontiguousarray(result)
 ```
+
+Do not loop `transform(image=frame)` per frame for the default benchmark: that resamples parameters each frame and is slower and semantically different from clip-consistent video augmentation.
 
 **torchvision** — tensor `(T, C, H, W)`, GPU if available:
 ```python

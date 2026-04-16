@@ -83,6 +83,12 @@ def __call__(transform, image):
     result = transform(image)
     return result
 
+# ✓ Good - Albumentations video (T, H, W, C), batch API
+def __call__(transform, video):
+    import numpy as np
+
+    return np.ascontiguousarray(transform(images=video)["images"])
+
 # ✗ Bad - Wrong signature
 def __call__(transform):  # Missing image parameter
     return transform()

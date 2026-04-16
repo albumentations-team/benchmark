@@ -30,20 +30,11 @@ Run augmentation benchmarks with standardized configurations and automatic resul
 
 ## Running Video Benchmarks
 
-### Single library
-```bash
-./run_video_single.sh \
-  -d /path/to/videos \
-  -o output_videos/library_results.json \
-  -s benchmark/transforms/library_video_impl.py
-```
+Use the unified CLI (`python -m benchmark.cli run --media video ...`). Legacy `run_video_*.sh` scripts are not in-repo.
 
-### All libraries
-```bash
-./run_video_all.sh \
-  -d /path/to/videos \
-  -o output_videos/
-```
+### Google Cloud (detached)
+
+Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with a startup script that rsyncs a **dataset prefix** from `gs://` to local disk, runs the same `benchmark.cli run` flags (including `--spec`, warmup, `--multichannel`), writes artifacts under `gs://<results-base>/<run_id>/`, then deletes the VM. See README **Google Cloud (detached)** and `benchmark/cloud/gcp.py`. Use `--gcp-attached` for blocking SSH/debug runs.
 
 ## Standard Parameters
 
@@ -104,6 +95,17 @@ TRANSFORMS = [
 ```
 
 Then run with `-s your_file.py`
+
+### Video specs (Albumentations)
+
+Albumentations supports multi-frame input as `(T, H, W, C)`. Use the batch key `images`, not a per-frame loop:
+
+```python
+def __call__(transform, video):
+    return np.ascontiguousarray(transform(images=video)["images"])
+```
+
+See `benchmark/transforms/albumentationsx_video_impl.py` and `.cursor/rules/video_custom_transforms_architecture.mdc`.
 
 ## Workflow
 

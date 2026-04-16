@@ -23,9 +23,11 @@ Usage examples:
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from tqdm import tqdm
@@ -189,16 +191,140 @@ def _run_single(
 # ---------------------------------------------------------------------------
 
 
-def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Path, media: str) -> None:
-    """Run benchmarks on a GCP instance."""
-    from benchmark.cloud.gcp import GCPRunner
+def build_gcp_benchmark_cli_argv(
+    args: argparse.Namespace,
+    *,
+    data_dir: str,
+    output: str,
+    repo_root: Path,
+) -> list[str]:
+    """Build argv for ``python -m benchmark.cli run`` on the VM (no cloud flags)."""
+    argv: list[str] = [
+        "--data-dir",
+        data_dir,
+        "--output",
+        output,
+        "--media",
+        args.media,
+        "--num-runs",
+        str(args.num_runs),
+        "--warmup-window",
+        str(args.warmup_window),
+        "--warmup-threshold",
+        str(args.warmup_threshold),
+        "--min-warmup-windows",
+        str(args.min_warmup_windows),
+        "--num-channels",
+        str(args.num_channels),
+    ]
+    if args.num_items is not None:
+        argv += ["--num-items", str(args.num_items)]
+    if args.max_warmup is not None:
+        argv += ["--max-warmup", str(args.max_warmup)]
+    if args.libraries:
+        argv += ["--libraries", *args.libraries]
+    if args.transforms:
+        argv += ["--transforms", *args.transforms]
+    if args.spec:
+        spec_path = Path(args.spec).resolve()
+        try:
+            rel = spec_path.relative_to(repo_root.resolve())
+        except ValueError as e:
+            msg = "--spec must be inside the repository when using --cloud gcp"
+            raise ValueError(msg) from e
+        argv += ["--spec", str(rel)]
+    if getattr(args, "multichannel", False):
+        argv.append("--multichannel")
+    if args.verbose:
+        argv.append("--verbose")
+    return argv
+
+
+def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Path) -> None:
+    """Run benchmarks on a GCP instance (detached by default)."""
+    from benchmark.cloud.gcp import GCPRunner, build_gcp_job_dict, new_run_id
     from benchmark.cloud.instance import GCPInstanceConfig
 
     if not args.gcp_project:
         logger.error("--gcp-project is required when using --cloud gcp")
         sys.exit(1)
 
-    remote_data_dir = args.gcp_remote_data_dir or args.data_dir
+    remote_repo_dir = args.gcp_remote_repo_dir
+
+    if args.gcp_attached:
+        if not args.gcp_remote_data_dir:
+            logger.error("--gcp-remote-data-dir is required with --gcp-attached (path to dataset on the VM)")
+            sys.exit(1)
+        remote_data_dir = args.gcp_remote_data_dir
+        remote_output = f"{remote_repo_dir}/results"
+        try:
+            bench_argv = build_gcp_benchmark_cli_argv(
+                args,
+                data_dir=remote_data_dir,
+                output=remote_output,
+                repo_root=repo_root,
+            )
+        except ValueError as e:
+            logger.error("%s", e)  # noqa: TRY400
+            sys.exit(1)
+
+        config = GCPInstanceConfig(
+            project=args.gcp_project,
+            zone=args.gcp_zone,
+            machine_type=args.gcp_machine_type,
+            accelerator_type=args.gcp_gpu_type,
+            accelerator_count=1 if args.gcp_gpu_type else 0,
+            image_family="pytorch-latest-gpu" if args.gcp_gpu_type else "pytorch-latest-cpu",
+            disk_size_gb=args.gcp_disk_size_gb,
+        )
+        runner = GCPRunner(config)
+        runner.run_attached(
+            repo_root=repo_root,
+            remote_cli_args=bench_argv,
+            local_output_dir=local_output_dir,
+            remote_repo_dir=remote_repo_dir,
+            keep_instance=args.gcp_keep_instance,
+        )
+        return
+
+    if not args.gcp_gcs_data_uri or not args.gcp_gcs_results_uri:
+        logger.error("Detached GCP runs require --gcp-gcs-data-uri and --gcp-gcs-results-uri")
+        sys.exit(1)
+
+    run_id = new_run_id()
+    machine_slug = args.gcp_machine_type.replace("/", "-").lower()[:24]
+    instance_name = f"benchmark-{machine_slug}-{run_id[:12]}".lower().replace("_", "-")
+
+    try:
+        bench_argv = build_gcp_benchmark_cli_argv(
+            args,
+            data_dir="/root/benchmark-data",
+            output="/root/benchmark-work/results",
+            repo_root=repo_root,
+        )
+    except ValueError as e:
+        logger.error("%s", e)  # noqa: TRY400
+        sys.exit(1)
+
+    submission = {
+        "argv": sys.argv,
+        "start_timestamp_unix": time.time(),
+    }
+    instance_meta = {
+        "project": args.gcp_project,
+        "zone": args.gcp_zone,
+        "machine_type": args.gcp_machine_type,
+        "accelerator_type": args.gcp_gpu_type,
+        "instance_name": instance_name,
+    }
+    job = build_gcp_job_dict(
+        run_id=run_id,
+        gcs_data_uri=args.gcp_gcs_data_uri,
+        benchmark_cli_args=bench_argv,
+        terminate_instance=not args.gcp_keep_instance,
+        submission=submission,
+        instance_meta=instance_meta,
+    )
 
     config = GCPInstanceConfig(
         project=args.gcp_project,
@@ -207,26 +333,52 @@ def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Pa
         accelerator_type=args.gcp_gpu_type,
         accelerator_count=1 if args.gcp_gpu_type else 0,
         image_family="pytorch-latest-gpu" if args.gcp_gpu_type else "pytorch-latest-cpu",
+        disk_size_gb=args.gcp_disk_size_gb,
+        instance_name_override=instance_name,
+    )
+    runner = GCPRunner(config)
+
+    if args.gcp_dry_run:
+        prefix = runner.run_detached(
+            repo_root=repo_root,
+            gcs_data_uri=args.gcp_gcs_data_uri,
+            gcs_results_base_uri=args.gcp_gcs_results_uri,
+            job=dict(job),
+            dry_run=True,
+        )
+        logger.info("Dry run complete (no uploads or VM). Run prefix would be: %s", prefix)
+        return
+
+    run_prefix = runner.run_detached(
+        repo_root=repo_root,
+        gcs_data_uri=args.gcp_gcs_data_uri,
+        gcs_results_base_uri=args.gcp_gcs_results_uri,
+        job=dict(job),
+        dry_run=False,
     )
 
-    # Build CLI args that will be forwarded to the remote run
-    remote_args: list[str] = ["--media", media]
-    if args.libraries:
-        remote_args += ["--libraries", *args.libraries]
-    if args.transforms:
-        remote_args += ["--transforms", *args.transforms]
-    if args.num_items:
-        remote_args += ["--num-items", str(args.num_items)]
-    if args.num_runs != 5:
-        remote_args += ["--num-runs", str(args.num_runs)]
-
-    runner = GCPRunner(config)
-    runner.run(
-        repo_root=repo_root,
-        remote_cli_args=remote_args,
-        local_output_dir=local_output_dir,
-        remote_data_dir=remote_data_dir,
-        keep_instance=args.gcp_keep_instance,
+    meta_path = local_output_dir / "gcp_last_run.json"
+    local_output_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "run_prefix": run_prefix,
+        "run_id": run_id,
+        "instance_name": instance_name,
+        "zone": args.gcp_zone,
+        "project": args.gcp_project,
+        "gcs_data_uri": args.gcp_gcs_data_uri,
+        "gcs_results_base_uri": args.gcp_gcs_results_uri.rstrip("/"),
+        "terminate_instance": not args.gcp_keep_instance,
+        "fetch_results_hint": f"gcloud storage cp -r {run_prefix}/results/* {local_output_dir}/",
+    }
+    meta_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    logger.info(
+        "Detached GCP run submitted. Instance %s starting; artifacts under %s\n"
+        "Local metadata written to %s\n"
+        "When finished, fetch results e.g.:\n  %s",
+        instance_name,
+        run_prefix,
+        meta_path,
+        payload["fetch_results_hint"],
     )
 
 
@@ -243,15 +395,16 @@ def cmd_run(args: argparse.Namespace) -> None:
 
     # --multichannel: use 9ch specs, output to output/multichannel/
     if getattr(args, "multichannel", False) and media == "image":
-        output_dir = output_dir / "multichannel"
-        output_dir.mkdir(parents=True, exist_ok=True)
         args.num_channels = 9
+        if args.cloud != "gcp":
+            output_dir = output_dir / "multichannel"
+            output_dir.mkdir(parents=True, exist_ok=True)
 
     # ------------------------------------------------------------------
     # Cloud path: delegate the whole run to a GCP instance
     # ------------------------------------------------------------------
     if args.cloud == "gcp":
-        _cmd_run_gcp(args, repo_root, output_dir, media)
+        _cmd_run_gcp(args, repo_root, output_dir)
         return
 
     # Custom spec file path takes priority
@@ -399,7 +552,44 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="GPU accelerator type (e.g. nvidia-tesla-t4)",
     )
-    run_p.add_argument("--gcp-remote-data-dir", metavar="PATH", help="Path to data on the remote instance")
+    run_p.add_argument(
+        "--gcp-remote-data-dir",
+        metavar="PATH",
+        help="Attached mode: dataset path on the VM (required with --gcp-attached)",
+    )
+    run_p.add_argument(
+        "--gcp-remote-repo-dir",
+        metavar="PATH",
+        default="~/benchmark",
+        help="Remote directory for the repo extract and results (default: ~/benchmark)",
+    )
+    run_p.add_argument(
+        "--gcp-gcs-data-uri",
+        metavar="GS_URI",
+        help="Detached mode: gs:// URI of dataset directory to rsync onto the VM (required unless --gcp-attached)",
+    )
+    run_p.add_argument(
+        "--gcp-gcs-results-uri",
+        metavar="GS_URI",
+        help="Detached mode: gs:// URI prefix for run artifacts (required unless --gcp-attached)",
+    )
+    run_p.add_argument(
+        "--gcp-attached",
+        action="store_true",
+        help="Use blocking SSH workflow (upload repo, run, download results) instead of detached startup-script",
+    )
+    run_p.add_argument(
+        "--gcp-dry-run",
+        action="store_true",
+        help="Detached mode: print job.json and exit without uploading or creating a VM",
+    )
+    run_p.add_argument(
+        "--gcp-disk-size-gb",
+        type=int,
+        default=100,
+        metavar="N",
+        help="Boot disk size in GB (default: 100)",
+    )
     run_p.add_argument("--gcp-keep-instance", action="store_true", help="Do not delete instance after run (debug)")
 
     run_p.add_argument("--num-items", "-n", type=int, help="Number of images/videos (default depends on media type)")

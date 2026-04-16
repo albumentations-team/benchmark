@@ -6,6 +6,9 @@ import albumentations as A
 import cv2
 import numpy as np
 
+from benchmark.transforms.albumentations_mit_compat import (
+    ConstrainedCoarseDropoutWrapper as _ConstrainedCoarseDropoutWrapper,
+)
 from benchmark.transforms.registry import build_transforms, register_library
 from benchmark.transforms.specs import TransformSpec
 
@@ -19,20 +22,21 @@ LIBRARY = "albumentations_mit"
 
 # Required: Define how to apply transforms to videos
 def __call__(transform: Any, video: Any) -> Any:  # noqa: N807
-    """Apply Albumentations (MIT) transform to video frames
+    """Apply Albumentations (MIT) transform to a video clip via the batch ``images`` API.
+
+    Albumentations accepts a stack of frames as ``(T, H, W, C)`` and returns
+    ``["images"]`` with the same shape. Augmentations use one consistent
+    parameter draw per clip (same transform across frames).
 
     Args:
         transform: Albumentations transform instance
         video: numpy array of shape (T, H, W, C)
 
     Returns:
-        Transformed video as numpy array
+        Transformed video as numpy array (T, H, W, C)
     """
-    # albucore's batch_transform reshapes (T,H,W,C) → (H,W,T*C) for spatial transforms,
-    # then calls cv2.warpAffine on the merged array. OpenCV fails when T*C > ~512 channels.
-    # Apply frame-by-frame to avoid the XHWC reshape path entirely.
-    frames = [transform(image=frame)["image"] for frame in video]
-    return np.ascontiguousarray(frames)
+    result = transform(images=video)["images"]
+    return np.ascontiguousarray(result)
 
 
 # Helper function to create transforms from specs
@@ -493,11 +497,13 @@ def create_transform(spec: TransformSpec) -> Any:
             p=1,
         )
     if spec.name == "ConstrainedCoarseDropout":
-        return A.ConstrainedCoarseDropout(
-            num_holes_range=params["num_holes_range"],
-            hole_height_range=params["hole_height_range"],
-            hole_width_range=params["hole_width_range"],
-            p=1,
+        return _ConstrainedCoarseDropoutWrapper(
+            A.ConstrainedCoarseDropout(
+                num_holes_range=params["num_holes_range"],
+                hole_height_range=params["hole_height_range"],
+                hole_width_range=params["hole_width_range"],
+                p=1,
+            ),
         )
     if spec.name == "PadIfNeeded":
         return A.PadIfNeeded(

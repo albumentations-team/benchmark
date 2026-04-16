@@ -27,8 +27,9 @@ A comprehensive benchmarking suite for comparing the performance of popular imag
     - [Getting Started](#getting-started)
     - [Using Your Own Data](#using-your-own-data)
   - [Running Benchmarks](#running-benchmarks)
-    - [Image Benchmarks](#running-image-benchmarks)
-    - [Video Benchmarks](#running-video-benchmarks)
+    - [Google Cloud (detached)](#google-cloud-detached)
+    - [RGB Image Benchmarks](#rgb-image-benchmarks-all-libraries)
+    - [Video Benchmarks](#video-benchmarks-all-libraries)
   - [Methodology](#methodology)
   - [Contributing](#contributing)
 
@@ -159,6 +160,8 @@ Benchmarks on 9-channel images (3x stacked RGB) to test OpenCV chunking and libr
 ### Video Benchmarks
 
 The video benchmarks compare CPU-based processing (AlbumentationsX) with GPU-accelerated processing (Kornia) for video transformations. The benchmarks use the [UCF101 dataset](https://www.crcv.ucf.edu/data/UCF101.php), which contains realistic videos from 101 action categories.
+
+For AlbumentationsX and Albumentations (MIT), each clip is a NumPy array `(T, H, W, C)`. The built-in spec files apply augmentations with `transform(images=video)["images"]`—Albumentations’ batch video API—so parameters are drawn once per clip and shared across frames, in line with typical video training and with Kornia’s `same_on_batch=True` for a fair comparison.
 
 <!-- VIDEO_BENCHMARK_TABLE_START -->
 
@@ -551,6 +554,62 @@ This will give you more relevant performance metrics for your specific use case.
 ## Running Benchmarks
 
 All benchmarks use the unified CLI: `python -m benchmark.cli run`. Use `--media` for image vs video, `--multichannel` for 9-channel image benchmarks, and `--libraries` to restrict to one or more libraries.
+
+### Google Cloud (detached)
+
+Run benchmarks on a **Compute Engine** VM that starts from your laptop, then keeps going after you disconnect. The default path is **detached**: the CLI uploads the repo and a job definition to **GCS**, creates a VM whose **startup script** stages data from a `gs://` dataset prefix to **local disk** (benchmarks do not read from a mounted bucket), runs `python -m benchmark.cli run` with the same flags you would use locally (including `--spec`, `--multichannel`, warmup options, etc.), uploads **results**, **vm.log**, **exit_code.txt**, and **run_meta.json** under a unique prefix, and **deletes the VM** when finished (unless you pass `--gcp-keep-instance`).
+
+**Prerequisites**
+
+- [Google Cloud SDK](https://cloud.google.com/sdk) (`gcloud`) authenticated for your project.
+- VM boot image must provide **Python 3.13+** (the package matches `requires-python` in `pytorch-latest-*` images only if that image already ships 3.13; otherwise use a custom image or install 3.13 in your startup flow—the bootstrap script fails fast with a clear error if `python3` is too old).
+- A GCS bucket (or two) with:
+  - A **dataset prefix** your VM can read, e.g. `gs://my-bucket/datasets/ucf101-subset/` (only the files under that prefix are rsynced to the VM).
+  - A **results base URI** where each run is written, e.g. `gs://my-bucket/benchmark-runs`.
+- The default Compute Engine service account (or the one attached to the VM) needs **read** access to the data prefix and **read/write** to the results bucket. For the VM to **delete itself** after the run, that service account also needs permission to call **compute.instances.delete** on its own instance (e.g. `roles/compute.instanceAdmin.v1` on a dedicated benchmark project—tighten IAM for production).
+
+**Submit a detached run**
+
+`--data-dir` and `--output` are still required by the parser; for detached mode they are only used locally to write `gcp_last_run.json` (and as a hint path for copying results). Point the real dataset at GCS:
+
+```bash
+python -m benchmark.cli run \
+  --cloud gcp \
+  --gcp-project my-gcp-project \
+  --gcp-zone us-central1-a \
+  --gcp-machine-type n1-standard-8 \
+  --gcp-gcs-data-uri gs://my-bucket/datasets/video-50 \
+  --gcp-gcs-results-uri gs://my-bucket/benchmark-runs \
+  --data-dir /tmp/unused \
+  --output ./gcp_runs \
+  --media video \
+  --libraries albumentationsx kornia torchvision \
+  --num-items 50
+```
+
+After submission, open `./gcp_runs/gcp_last_run.json` for `run_prefix`, `instance_name`, and a suggested `gcloud storage cp` command to pull `results/` when the run finishes.
+
+**Dry run (no upload, no VM)**
+
+```bash
+python -m benchmark.cli run --cloud gcp ... --gcp-dry-run
+```
+
+**Attached / SSH mode (debug)**
+
+Creates the VM, waits for SSH, uploads the repo, runs the benchmark in a live session, downloads results to `--output`, then deletes the VM. Requires a dataset path **on the VM** (you must stage data yourself):
+
+```bash
+python -m benchmark.cli run \
+  --cloud gcp --gcp-attached \
+  --gcp-project my-gcp-project \
+  --gcp-remote-data-dir /data/benchmark/videos \
+  --data-dir /tmp/unused \
+  --output ./results \
+  --media video
+```
+
+**Cost note:** GCS storage for a subset and JSON results is usually small compared to **GPU/CPU VM uptime**; the expensive mistake is leaving instances running. Detached runs terminate the VM by default after uploading artifacts.
 
 ### RGB image benchmarks (all libraries)
 

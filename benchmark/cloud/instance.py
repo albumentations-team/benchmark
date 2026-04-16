@@ -21,6 +21,8 @@ class GCPInstanceConfig:
         preemptible:    Whether to use a preemptible (spot) instance.
         tags:           Network tags applied to the instance.
         scopes:         OAuth scopes granted to the instance service account.
+        instance_name_override: If set, used as the Compute Engine instance name instead of the default
+            ``benchmark-<machine-type>`` pattern (needed for unique detached-run names).
     """
 
     project: str
@@ -34,9 +36,12 @@ class GCPInstanceConfig:
     preemptible: bool = True
     tags: list[str] = field(default_factory=lambda: ["benchmark"])
     scopes: list[str] = field(default_factory=lambda: ["https://www.googleapis.com/auth/cloud-platform"])
+    instance_name_override: str | None = None
 
     @property
     def instance_name(self) -> str:
+        if self.instance_name_override:
+            return self.instance_name_override
         return f"benchmark-{self.machine_type.replace('/', '-')}"
 
     @classmethod
