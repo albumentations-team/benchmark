@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shlex
 import subprocess
 import tempfile
@@ -229,14 +230,15 @@ def _validate_gs_uri(uri: str, *, kind: str) -> str:
 
 
 def _gcs_cp(local_path: Path, dest_uri: str) -> None:
-    """Upload a file to GCS using ``gcloud storage cp``."""
-    cmd = [_GCLOUD, "storage", "cp", str(local_path), dest_uri]
-    _run(cmd)
+    """Upload a file to GCS using ``gsutil cp``."""
+    _run(["gsutil", "cp", str(local_path), dest_uri])
 
 
 def _make_repo_tarball(repo_root: Path) -> Path:
     """Create a gzipped tar of the repo in a temp file; caller must unlink when done."""
-    archive_path = Path(tempfile.mkstemp(suffix=".tar.gz", prefix="benchmark-repo-")[1])
+    fd, tmp = tempfile.mkstemp(suffix=".tar.gz", prefix="benchmark-repo-")
+    os.close(fd)
+    archive_path = Path(tmp)
     exclude_flags = [flag for pattern in _REPO_EXCLUDE_PATTERNS for flag in ("--exclude", pattern)]
     subprocess.run(
         ["tar", "czf", str(archive_path), *exclude_flags, "-C", str(repo_root), "."],

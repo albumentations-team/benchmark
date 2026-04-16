@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import json
+import sys
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -200,6 +203,149 @@ class TestBuildGcpBenchmarkCliArgv:
                 output="/o",
                 repo_root=tmp_path / "repo_only",
             )
+
+    def test_spec_inside_repo_uses_relative_path(self, tmp_path: Path) -> None:
+        parser = build_parser()
+        repo_root = tmp_path / "repo"
+        spec_path = repo_root / "configs" / "spec.py"
+        spec_path.parent.mkdir(parents=True)
+        spec_path.write_text('LIBRARY = "kornia"\n')
+        args = parser.parse_args(
+            ["run", "--data-dir", "/d", "--output", "/o", "--spec", str(spec_path)],
+        )
+        argv = build_gcp_benchmark_cli_argv(
+            args,
+            data_dir="/d",
+            output="/o",
+            repo_root=repo_root,
+        )
+        assert "--spec" in argv
+        assert argv[argv.index("--spec") + 1] == str(spec_path.relative_to(repo_root))
+
+
+class TestCmdRunGcp:
+    """Tests for _cmd_run_gcp orchestration logic via mocked cloud dependencies."""
+
+    def _base_args(self, parser: argparse.ArgumentParser, extra: list[str] | None = None) -> argparse.Namespace:
+        base = ["run", "--data-dir", "/d", "--output", "/o", "--cloud", "gcp", "--gcp-project", "proj"]
+        return parser.parse_args(base + (extra or []))
+
+    def test_detached_requires_gcs_uris(self, tmp_path: Path) -> None:
+        parser = build_parser()
+        args = self._base_args(parser)
+        from benchmark.cli import _cmd_run_gcp
+
+        with pytest.raises(SystemExit):
+            _cmd_run_gcp(args, tmp_path, tmp_path)
+
+    def test_attached_requires_remote_data_dir(self, tmp_path: Path) -> None:
+        parser = build_parser()
+        args = self._base_args(parser, ["--gcp-attached"])
+        from benchmark.cli import _cmd_run_gcp
+
+        with pytest.raises(SystemExit):
+            _cmd_run_gcp(args, tmp_path, tmp_path)
+
+    def test_detached_dry_run_does_not_create_vm(self, tmp_path: Path) -> None:
+        parser = build_parser()
+        args = self._base_args(
+            parser,
+            [
+                "--gcp-gcs-data-uri",
+                "gs://b/d",
+                "--gcp-gcs-results-uri",
+                "gs://b/r",
+                "--gcp-dry-run",
+            ],
+        )
+        mock_runner = MagicMock()
+        mock_runner.run_detached.return_value = "gs://b/r/dryrunid"
+
+        with (
+            patch("benchmark.cloud.gcp.GCPRunner", return_value=mock_runner),
+            patch("benchmark.cloud.instance.GCPInstanceConfig"),
+            patch("benchmark.cloud.gcp.new_run_id", return_value="testrunid"),
+        ):
+            from benchmark.cli import _cmd_run_gcp
+
+            _cmd_run_gcp(args, tmp_path, tmp_path)
+
+        mock_runner.run_detached.assert_called_once()
+        _, kwargs = mock_runner.run_detached.call_args
+        assert kwargs["dry_run"] is True
+        mock_runner.create_instance.assert_not_called()
+
+    def test_detached_writes_metadata_json(self, tmp_path: Path) -> None:
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+        parser = build_parser()
+        args = parser.parse_args(
+            [
+                "run",
+                "--data-dir",
+                "/d",
+                "--output",
+                str(out_dir),
+                "--cloud",
+                "gcp",
+                "--gcp-project",
+                "proj",
+                "--gcp-gcs-data-uri",
+                "gs://b/data",
+                "--gcp-gcs-results-uri",
+                "gs://b/runs",
+            ],
+        )
+        mock_runner = MagicMock()
+        mock_runner.run_detached.return_value = "gs://b/runs/abc123"
+
+        with (
+            patch("benchmark.cloud.gcp.GCPRunner", return_value=mock_runner),
+            patch("benchmark.cloud.instance.GCPInstanceConfig"),
+            patch("benchmark.cloud.gcp.new_run_id", return_value="abc123"),
+            patch.object(sys, "argv", ["benchmark.cli"]),
+        ):
+            from benchmark.cli import _cmd_run_gcp
+
+            _cmd_run_gcp(args, tmp_path, out_dir)
+
+        meta = json.loads((out_dir / "gcp_last_run.json").read_text())
+        assert meta["run_id"] == "abc123"
+        assert meta["run_prefix"] == "gs://b/runs/abc123"
+        assert "fetch_results_hint" in meta
+
+    def test_attached_calls_run_attached_with_correct_argv(self, tmp_path: Path) -> None:
+        parser = build_parser()
+        args = self._base_args(
+            parser,
+            [
+                "--gcp-attached",
+                "--gcp-remote-data-dir",
+                "/vm/data",
+                "--media",
+                "video",
+                "--libraries",
+                "kornia",
+            ],
+        )
+        mock_runner = MagicMock()
+
+        with (
+            patch("benchmark.cloud.gcp.GCPRunner", return_value=mock_runner),
+            patch("benchmark.cloud.instance.GCPInstanceConfig"),
+        ):
+            from benchmark.cli import _cmd_run_gcp
+
+            _cmd_run_gcp(args, tmp_path, tmp_path)
+
+        mock_runner.run_attached.assert_called_once()
+        _, kwargs = mock_runner.run_attached.call_args
+        argv = kwargs["remote_cli_args"]
+        assert "--data-dir" in argv
+        assert argv[argv.index("--data-dir") + 1] == "/vm/data"
+        assert "--media" in argv
+        assert "video" in argv
+        assert "kornia" in argv
 
 
 class TestExtractLibrary:

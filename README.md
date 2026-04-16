@@ -28,6 +28,8 @@ A comprehensive benchmarking suite for comparing the performance of popular imag
     - [Using Your Own Data](#using-your-own-data)
   - [Running Benchmarks](#running-benchmarks)
     - [Google Cloud (detached)](#google-cloud-detached)
+    - [RGB Image Benchmarks](#rgb-image-benchmarks-all-libraries)
+    - [Video Benchmarks](#video-benchmarks-all-libraries)
   - [Methodology](#methodology)
   - [Contributing](#contributing)
 

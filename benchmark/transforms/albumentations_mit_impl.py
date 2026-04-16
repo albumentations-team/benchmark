@@ -6,6 +6,9 @@ import albumentations as A
 import cv2
 import numpy as np
 
+from benchmark.transforms.albumentations_mit_compat import (
+    ConstrainedCoarseDropoutWrapper as _ConstrainedCoarseDropoutWrapper,
+)
 from benchmark.transforms.registry import build_transforms, register_library
 from benchmark.transforms.specs import TransformSpec
 
@@ -15,26 +18,6 @@ cv2.ocl.setUseOpenCL(False)
 
 # Required: Library name for dependency installation
 LIBRARY = "albumentations_mit"
-
-
-class _ConstrainedCoarseDropoutWrapper:
-    """Injects a full-image bbox so MIT 2.0.8 ConstrainedCoarseDropout actually runs.
-
-    MIT 2.0.8 skips the transform and warns when no bboxes or mask is provided.
-    Wrapping at construction time avoids touching the shared __call__ function.
-    """
-
-    def __init__(self, transform: Any) -> None:
-        self._inner = transform
-
-    def __call__(self, **data: Any) -> dict[str, Any]:
-        data = dict(data)
-        if "images" in data:
-            n = len(data["images"])
-            data.setdefault("bboxes", [[(0.25, 0.25, 0.5, 0.5)] for _ in range(n)])
-        elif "image" in data:
-            data.setdefault("bboxes", [(0.25, 0.25, 0.5, 0.5)])
-        return self._inner(**data)
 
 
 # Required: Define how to apply transforms to images
