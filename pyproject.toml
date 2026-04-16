@@ -137,8 +137,9 @@ lint.per-file-ignores."benchmark/cli.py" = [
 ]  # CLI: print output + subprocess with known commands
 lint.per-file-ignores."benchmark/cloud/gcp.py" = [
   "S603",
-  "S607"
-]  # Cloud: subprocess calls to gcloud with known args
+  "S607",
+  "S608",
+]  # Cloud: subprocess/gcloud; embedded bootstrap shell (not SQL)
 lint.per-file-ignores."tests/**/*.py" = [
   "S101",   # allow assert in tests
   "SLF001", # allow private member access in tests

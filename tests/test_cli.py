@@ -10,7 +10,7 @@ import pytest
 if TYPE_CHECKING:
     from pathlib import Path
 
-from benchmark.cli import _extract_library, build_parser
+from benchmark.cli import _extract_library, build_gcp_benchmark_cli_argv, build_parser
 
 
 class TestBuildParser:
@@ -121,6 +121,85 @@ class TestBuildParser:
         parser = build_parser()
         args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out"])
         assert args.warmup_threshold == pytest.approx(0.05)
+
+    def test_gcp_flags_parse(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(
+            [
+                "run",
+                "--data-dir",
+                "/data",
+                "--output",
+                "/out",
+                "--cloud",
+                "gcp",
+                "--gcp-project",
+                "p",
+                "--gcp-gcs-data-uri",
+                "gs://b/d",
+                "--gcp-gcs-results-uri",
+                "gs://b/r",
+                "--gcp-disk-size-gb",
+                "200",
+                "--gcp-dry-run",
+            ],
+        )
+        assert args.gcp_gcs_data_uri == "gs://b/d"
+        assert args.gcp_gcs_results_uri == "gs://b/r"
+        assert args.gcp_disk_size_gb == 200
+        assert args.gcp_dry_run is True
+        assert args.gcp_attached is False
+
+
+class TestBuildGcpBenchmarkCliArgv:
+    def test_builds_argv_without_cloud_flags(self, tmp_path: Path) -> None:
+        parser = build_parser()
+        args = parser.parse_args(
+            [
+                "run",
+                "--data-dir",
+                "/ignored",
+                "--output",
+                "/ignored",
+                "--num-runs",
+                "3",
+                "--num-items",
+                "10",
+                "--libraries",
+                "kornia",
+            ],
+        )
+        repo_root = tmp_path
+        argv = build_gcp_benchmark_cli_argv(
+            args,
+            data_dir="/remote/data",
+            output="/remote/out",
+            repo_root=repo_root,
+        )
+        assert "--data-dir" in argv
+        idx = argv.index("--data-dir")
+        assert argv[idx + 1] == "/remote/data"
+        assert argv[argv.index("--output") + 1] == "/remote/out"
+        assert "--num-items" in argv
+        assert argv[argv.index("--num-items") + 1] == "10"
+        assert "--libraries" in argv
+        assert "kornia" in argv
+        assert "--cloud" not in argv
+
+    def test_spec_must_be_inside_repo(self, tmp_path: Path) -> None:
+        parser = build_parser()
+        outside = tmp_path / "outside.py"
+        outside.write_text('LIBRARY = "kornia"\n')
+        args = parser.parse_args(
+            ["run", "--data-dir", "/d", "--output", "/o", "--spec", str(outside)],
+        )
+        with pytest.raises(ValueError, match="inside the repository"):
+            build_gcp_benchmark_cli_argv(
+                args,
+                data_dir="/d",
+                output="/o",
+                repo_root=tmp_path / "repo_only",
+            )
 
 
 class TestExtractLibrary:
