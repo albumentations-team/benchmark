@@ -31,6 +31,18 @@ class TestBuildParser:
         args = parser.parse_args(["compare", "--baseline", "/baseline", "--current", "/current"])
         assert args.command == "compare"
 
+    def test_doctor_subcommand_exists(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["doctor", "--json"])
+        assert args.command == "doctor"
+        assert args.json is True
+
+    def test_validate_results_subcommand_exists(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["validate-results", "/results"])
+        assert args.command == "validate-results"
+        assert args.path == "/results"
+
     def test_run_requires_data_dir(self) -> None:
         parser = build_parser()
         with pytest.raises(SystemExit):
@@ -93,6 +105,11 @@ class TestBuildParser:
         args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out"])
         assert args.num_runs == 5
 
+    def test_timer_defaults_to_pyperf(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out"])
+        assert args.timer == "pyperf"
+
     def test_libraries_default_none(self) -> None:
         parser = build_parser()
         args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out"])
@@ -124,6 +141,27 @@ class TestBuildParser:
         parser = build_parser()
         args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out"])
         assert args.warmup_threshold == pytest.approx(0.05)
+
+    def test_reliability_flags_parse(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(
+            [
+                "run",
+                "--data-dir",
+                "/data",
+                "--output",
+                "/out",
+                "--timer",
+                "pyperf",
+                "--min-time",
+                "1.5",
+                "--min-batches",
+                "3",
+            ],
+        )
+        assert args.timer == "pyperf"
+        assert args.min_time == pytest.approx(1.5)
+        assert args.min_batches == 3
 
     def test_gcp_flags_parse(self) -> None:
         parser = build_parser()

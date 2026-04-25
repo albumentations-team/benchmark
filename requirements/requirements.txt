@@ -1,4 +1,5 @@
 opencv-python-headless
 pandas
+pyperf
 tabulate
 tqdm

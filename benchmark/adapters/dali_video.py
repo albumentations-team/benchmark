@@ -48,6 +48,8 @@ def run_dali_video_transform(
     batch_size: int,
     num_runs: int,
     workers: int,
+    min_time: float = 0.0,
+    min_batches: int = 1,
 ) -> dict[str, Any]:
     try:
         from nvidia.dali import fn, pipeline_def, types
@@ -90,10 +92,15 @@ def run_dali_video_transform(
     for _ in tqdm(range(num_runs), desc=f"DALI ({transform_name})", leave=False, **tqdm_kwargs()):
         start = time.perf_counter()
         processed = 0
+        batches = 0
         try:
-            for _ in range(batches_per_epoch):
-                _ = pipeline.run()
-                processed += batch_size
+            while True:
+                for _ in range(batches_per_epoch):
+                    _ = pipeline.run()
+                    processed += batch_size
+                    batches += 1
+                if time.perf_counter() - start >= min_time and batches >= min_batches:
+                    break
         except Exception as e:
             return unsupported_result(f"DALI run failed: {type(e).__name__}: {e}")
         elapsed = time.perf_counter() - start
@@ -104,5 +111,7 @@ def run_dali_video_transform(
     result = summarize_runs(throughputs, times)
     result["clip_length"] = clip_length
     result["batch_size"] = batch_size
+    result["min_time"] = min_time
+    result["min_batches"] = min_batches
     result["decoder"] = "dali"
     return result

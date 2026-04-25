@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import Any
 
 from tqdm import tqdm
 
@@ -13,9 +14,6 @@ from benchmark.term import tqdm_kwargs
 logger = logging.getLogger(__name__)
 
 _VIDEO_EXTENSIONS = (".mp4", ".avi", ".mov", ".mkv", ".webm")
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class VideoDecodeRunner:
@@ -29,6 +27,7 @@ class VideoDecodeRunner:
         num_runs: int = 5,
         clip_length: int = 16,
         scenario: str = "video-decode-16f",
+        min_time: float = 0.0,
     ) -> None:
         self.data_dir = data_dir
         self.decoders = decoders
@@ -37,6 +36,7 @@ class VideoDecodeRunner:
         self.num_runs = num_runs
         self.clip_length = clip_length
         self.scenario = scenario
+        self.min_time = min_time
 
     def _video_paths(self) -> list[Path]:
         paths = sorted(path for path in self.data_dir.rglob("*") if path.suffix.lower() in _VIDEO_EXTENSIONS)
@@ -67,9 +67,12 @@ class VideoDecodeRunner:
         for _ in tqdm(range(self.num_runs), desc=f"Decoding ({decoder})", leave=False, **tqdm_kwargs()):
             start = time.perf_counter()
             decoded = 0
-            for path in paths:
-                _ = decode_video(decoder, path, self.clip_length)
-                decoded += 1
+            while True:
+                for path in paths:
+                    _ = decode_video(decoder, path, self.clip_length)
+                    decoded += 1
+                if time.perf_counter() - start >= self.min_time:
+                    break
             elapsed = time.perf_counter() - start
             times.append(elapsed)
             throughputs.append(decoded / elapsed)
@@ -106,9 +109,20 @@ class VideoDecodeRunner:
                         "num_videos": len(paths),
                         "num_runs": self.num_runs,
                         "clip_length": self.clip_length,
+                        "min_time": self.min_time,
                         "decode_included": True,
                         "frame_sampling": "uniform",
                     },
+                    timing_backend="perf_counter",
+                    measurement_scope="decode_only",
+                    data_source="disk",
+                    data_dir=self.data_dir,
+                    media="video",
+                    includes_decode=True,
+                    includes_collate=False,
+                    includes_gpu_transfer=decoder == "dali",
+                    includes_dataloader_workers=False,
+                    repo_root=Path(__file__).parent.parent,
                 ),
                 "results": {decoder: results[decoder]},
             }
@@ -122,9 +136,20 @@ class VideoDecodeRunner:
                     "num_videos": len(paths),
                     "num_runs": self.num_runs,
                     "clip_length": self.clip_length,
+                    "min_time": self.min_time,
                     "decode_included": True,
                     "frame_sampling": "uniform",
                 },
+                timing_backend="perf_counter",
+                measurement_scope="decode_only",
+                data_source="disk",
+                data_dir=self.data_dir,
+                media="video",
+                includes_decode=True,
+                includes_collate=False,
+                includes_gpu_transfer=any(decoder == "dali" for decoder in self.decoders),
+                includes_dataloader_workers=False,
+                repo_root=Path(__file__).parent.parent,
             ),
             "results": results,
         }

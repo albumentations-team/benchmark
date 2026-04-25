@@ -144,8 +144,42 @@ def _run_single(
     transforms_filter: list[str] | None = None,
     verbose: bool = False,
     num_channels: int = 3,
+    timer_backend: str = "pyperf",
+    scenario: str = "manual",
 ) -> None:
     python = _ensure_venv(library, media, repo_root)
+
+    if timer_backend == "pyperf":
+        cmd = [
+            str(python),
+            "-m",
+            "benchmark.pyperf_micro_runner",
+            "--specs-file",
+            str(spec_file),
+            "--data-dir",
+            str(data_dir),
+            "--json-output",
+            str(output_file),
+            "--output",
+            str(output_file.with_suffix(".pyperf.json")),
+            "--media",
+            media,
+            "--scenario",
+            scenario,
+            "--num-channels",
+            str(num_channels),
+            "--processes",
+            "1",
+            "--values",
+            str(num_runs),
+        ]
+        if num_items is not None:
+            cmd += ["--num-items", str(num_items)]
+        if transforms_filter:
+            cmd += ["--transforms", ",".join(transforms_filter)]
+        logger.info("Running pyperf micro benchmark for %s %s → %s", library, media, output_file)
+        subprocess.run(cmd, check=True)
+        return
 
     cmd = [
         str(python),
@@ -241,6 +275,8 @@ def _run_scenario_library(
             num_runs=args.num_runs,
             batch_size=args.batch_size,
             workers=args.workers,
+            min_time=args.min_time,
+            min_batches=args.min_batches,
             num_channels=num_channels,
             clip_length=clip_length,
         )
@@ -268,6 +304,8 @@ def _run_scenario_library(
             transforms_filter=args.transforms,
             verbose=args.verbose,
             num_channels=num_channels,
+            timer_backend=args.timer,
+            scenario=scenario_name,
         )
         return
 
@@ -292,6 +330,10 @@ def _run_scenario_library(
         str(args.batch_size),
         "--workers",
         str(args.workers),
+        "--min-time",
+        str(args.min_time),
+        "--min-batches",
+        str(args.min_batches),
         "--num-channels",
         str(num_channels),
         "--clip-length",
@@ -326,6 +368,7 @@ def _cmd_run_scenario(args: argparse.Namespace, repo_root: Path, output_dir: Pat
             num_runs=args.num_runs,
             clip_length=clip_length,
             scenario=scenario.name,
+            min_time=args.min_time,
         )
         runner.run()
         return
@@ -408,10 +451,16 @@ def build_gcp_benchmark_cli_argv(
         argv += ["--batch-size", str(args.batch_size)]
     if getattr(args, "workers", None) is not None:
         argv += ["--workers", str(args.workers)]
+    if getattr(args, "min_time", None):
+        argv += ["--min-time", str(args.min_time)]
+    if getattr(args, "min_batches", None):
+        argv += ["--min-batches", str(args.min_batches)]
     if getattr(args, "clip_length", None):
         argv += ["--clip-length", str(args.clip_length)]
     if getattr(args, "decoders", None):
         argv += ["--decoders", *args.decoders]
+    if getattr(args, "timer", None):
+        argv += ["--timer", args.timer]
     return argv
 
 
@@ -645,6 +694,8 @@ def cmd_run(args: argparse.Namespace) -> None:
             transforms_filter=args.transforms,
             verbose=args.verbose,
             num_channels=args.num_channels,
+            timer_backend=args.timer,
+            scenario=f"{media}-manual",
         )
 
     logger.info("All benchmarks complete. Results in: %s", output_dir)
@@ -676,6 +727,37 @@ def cmd_compare(args: argparse.Namespace) -> None:
         threshold=args.threshold,
         fail_on_regression=args.fail_on_regression,
     )
+
+
+def cmd_doctor(args: argparse.Namespace) -> None:
+    from benchmark.reliability import doctor_report
+
+    report = doctor_report(Path(__file__).parent.parent)
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print("Benchmark doctor")
+        print(f"ok: {report['ok']}")
+        for warning in report["warnings"]:
+            print(f"warning: {warning}")
+    if args.fail_on_warning and report["warnings"]:
+        sys.exit(1)
+
+
+def cmd_validate_results(args: argparse.Namespace) -> None:
+    from benchmark.reliability import audit_results
+
+    report = audit_results(Path(args.path))
+    if args.json:
+        print(json.dumps(report.as_dict(), indent=2))
+    else:
+        print(f"checked: {report.files_checked} result file(s)")
+        for warning in report.warnings:
+            print(f"warning: {warning}")
+        for issue in report.issues:
+            print(f"error: {issue}")
+    if not report.ok:
+        sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
@@ -724,7 +806,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument(
         "--scenario",
         choices=["image-rgb", "image-9ch", "video-decode-16f", "video-16f"],
-        help="Run a v2 benchmark scenario. Preserves legacy --media behavior when omitted.",
+        help="Run a benchmark scenario such as image-rgb, image-9ch, video-decode-16f, or video-16f.",
     )
     run_p.add_argument(
         "--mode",
@@ -733,6 +815,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run_p.add_argument("--batch-size", type=int, default=32, help="Pipeline dataloader batch size")
     run_p.add_argument("--workers", type=int, default=0, help="Pipeline dataloader worker count")
+    run_p.add_argument("--min-time", type=float, default=0.0, help="Minimum measured seconds per run")
+    run_p.add_argument("--min-batches", type=int, default=1, help="Minimum measured dataloader batches per run")
     run_p.add_argument("--clip-length", type=int, help="Video frames per clip for scenario benchmarks")
     run_p.add_argument(
         "--decoders",
@@ -798,6 +882,12 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument("--warmup-threshold", type=float, default=0.05)
     run_p.add_argument("--min-warmup-windows", type=int, default=3)
     run_p.add_argument(
+        "--timer",
+        choices=["simple", "pyperf"],
+        default="pyperf",
+        help="Micro benchmark timing backend (default: pyperf)",
+    )
+    run_p.add_argument(
         "--num-channels",
         type=int,
         default=3,
@@ -845,6 +935,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Exit with code 1 if any regression exceeds --threshold",
     )
 
+    # ------------------------------------------------------------------
+    # doctor
+    # ------------------------------------------------------------------
+    doctor_p = subparsers.add_parser("doctor", help="Check benchmark environment reliability")
+    doctor_p.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+    doctor_p.add_argument("--fail-on-warning", action="store_true", help="Exit 1 when doctor reports warnings")
+
+    # ------------------------------------------------------------------
+    # validate-results
+    # ------------------------------------------------------------------
+    validate_p = subparsers.add_parser("validate-results", help="Audit benchmark result JSON files")
+    validate_p.add_argument("path", help="Result JSON file or directory")
+    validate_p.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+
     return parser
 
 
@@ -861,6 +965,10 @@ def main() -> None:
         cmd_run(args)
     elif args.command == "compare":
         cmd_compare(args)
+    elif args.command == "doctor":
+        cmd_doctor(args)
+    elif args.command == "validate-results":
+        cmd_validate_results(args)
 
 
 if __name__ == "__main__":

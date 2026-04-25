@@ -108,6 +108,8 @@ class PipelineBenchmarkRunner:
         workers: int = 0,
         num_channels: int = 3,
         clip_length: int = 16,
+        min_time: float = 0.0,
+        min_batches: int = 1,
     ) -> None:
         self.library = library
         self.data_dir = data_dir
@@ -122,6 +124,8 @@ class PipelineBenchmarkRunner:
         self.workers = workers
         self.num_channels = num_channels
         self.clip_length = clip_length
+        self.min_time = min_time
+        self.min_batches = min_batches
 
     def _paths(self) -> list[Path]:
         extensions = _IMAGE_EXTENSIONS if self.media == "image" else _VIDEO_EXTENSIONS
@@ -194,6 +198,8 @@ class PipelineBenchmarkRunner:
                     batch_size=self.batch_size,
                     num_runs=self.num_runs,
                     workers=self.workers,
+                    min_time=self.min_time,
+                    min_batches=self.min_batches,
                 )
             except DecoderUnavailableError as e:
                 return unsupported_result(str(e))
@@ -213,14 +219,20 @@ class PipelineBenchmarkRunner:
             return unsupported_result(f"Pipeline warmup failed: {type(e).__name__}: {e}")
 
         for _ in tqdm(range(self.num_runs), desc=f"Pipeline ({self.library})", leave=False, **tqdm_kwargs()):
-            loader = self._loader(paths)
             processed = 0
+            batches = 0
             _torch_cuda_synchronize()
             start = time.perf_counter()
             try:
-                for batch in loader:
-                    self._apply_transform_to_batch(transform, batch)
-                    processed += len(batch)
+                while True:
+                    loader = self._loader(paths)
+                    for batch in loader:
+                        self._apply_transform_to_batch(transform, batch)
+                        processed += len(batch)
+                        batches += 1
+                    elapsed_so_far = time.perf_counter() - start
+                    if elapsed_so_far >= self.min_time and batches >= self.min_batches:
+                        break
                 _torch_cuda_synchronize()
             except Exception as e:
                 return unsupported_result(f"Pipeline run failed: {type(e).__name__}: {e}")
@@ -260,11 +272,23 @@ class PipelineBenchmarkRunner:
                     "num_runs": self.num_runs,
                     "batch_size": self.batch_size,
                     "workers": self.workers,
+                    "min_time": self.min_time,
+                    "min_batches": self.min_batches,
                     "num_channels": self.num_channels,
                     "clip_length": self.clip_length if self.media == "video" else None,
                     "decode_included": True,
                     "decoder": "opencv" if self.media == "video" and self.library != "dali" else self.library,
                 },
+                timing_backend="dali_pipeline" if self.library == "dali" else "perf_counter",
+                measurement_scope="decode_dataloader_augment",
+                data_source="disk",
+                data_dir=self.data_dir,
+                media=self.media,
+                includes_decode=True,
+                includes_collate=True,
+                includes_gpu_transfer=self.media == "video" and self.library in {"torchvision", "kornia"},
+                includes_dataloader_workers=self.workers > 0,
+                repo_root=Path(__file__).parent.parent,
             ),
             "results": results,
         }
@@ -283,6 +307,8 @@ def main() -> None:
     parser.add_argument("--num-runs", type=int, default=5)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--workers", type=int, default=0)
+    parser.add_argument("--min-time", type=float, default=0.0)
+    parser.add_argument("--min-batches", type=int, default=1)
     parser.add_argument("--num-channels", type=int, default=3)
     parser.add_argument("--clip-length", type=int, default=16)
     args = parser.parse_args()
@@ -305,6 +331,8 @@ def main() -> None:
         num_runs=args.num_runs,
         batch_size=args.batch_size,
         workers=args.workers,
+        min_time=args.min_time,
+        min_batches=args.min_batches,
         num_channels=args.num_channels,
         clip_length=args.clip_length,
     )

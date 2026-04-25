@@ -1,4 +1,5 @@
 import multiprocessing
+import os
 import platform
 import sys
 from collections.abc import Callable
@@ -230,11 +231,24 @@ def verify_thread_settings() -> dict[str, Any]:
 
 def get_system_info() -> dict[str, str]:
     """Get system information"""
+    memory_total = "unknown"
+    try:
+        if hasattr(os, "sysconf"):
+            pages = os.sysconf("SC_PHYS_PAGES")
+            page_size = os.sysconf("SC_PAGE_SIZE")
+            memory_total = str(int(pages) * int(page_size))
+    except (OSError, ValueError):
+        memory_total = "unknown"
+
     return {
         "python_version": sys.version,
+        "python_executable": sys.executable,
         "platform": platform.platform(),
+        "system": platform.system(),
+        "machine": platform.machine(),
         "processor": platform.processor(),
         "cpu_count": str(multiprocessing.cpu_count()),
+        "memory_total_bytes": memory_total,
         "timestamp": datetime.now(UTC).isoformat(),
     }
 
