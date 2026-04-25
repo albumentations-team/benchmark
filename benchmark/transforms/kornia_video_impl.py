@@ -68,6 +68,15 @@ def create_transform(spec: TransformSpec) -> Any | None:
             p=1,
             same_on_batch=True,
         ).to(device)
+    if spec.name == "ColorJiggle":
+        return Kaug.ColorJiggle(
+            brightness=params["brightness"],
+            contrast=params["contrast"],
+            saturation=params["saturation"],
+            hue=params["hue"],
+            p=1,
+            same_on_batch=True,
+        ).to(device)
     if spec.name == "AutoContrast":
         return Kaug.RandomAutoContrast(p=1, same_on_batch=True).to(device)
     if spec.name == "Blur":
@@ -315,11 +324,11 @@ def create_transform(spec: TransformSpec) -> Any | None:
             same_on_batch=True,
         ).to(device)
     if spec.name == "RandomRotate90":
-        return Kaug.RandomRotation(
-            times=(0, 3),
-            p=1,
-            same_on_batch=True,
-        ).to(device)
+        return Kaug.RandomRotation90(times=(0, 3), p=1, same_on_batch=True).to(device)
+    if spec.name == "RandomRotation90":
+        return Kaug.RandomRotation90(times=params["times"], p=1, same_on_batch=True).to(device)
+    if spec.name == "RandomJigsaw":
+        return Kaug.RandomJigsaw(grid=params["grid"], p=1, same_on_batch=True).to(device)
     if spec.name == "Rotate":
         # Convert degrees to radians for rotation
         angle = create_tensor(params["angle"]) * (torch.pi / 180.0)

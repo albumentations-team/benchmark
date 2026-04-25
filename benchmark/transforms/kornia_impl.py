@@ -31,7 +31,7 @@ def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
     Returns:
         Transformed image as torch.Tensor
     """
-    return transform(image)
+    return transform(image.unsqueeze(0)).squeeze(0)
 
 
 # Helper function to create transforms from specs
@@ -41,6 +41,15 @@ def create_transform(spec: TransformSpec) -> Any | None:
 
     if spec.name == "ColorJitter":
         return Kaug.ColorJitter(
+            brightness=params["brightness"],
+            contrast=params["contrast"],
+            saturation=params["saturation"],
+            hue=params["hue"],
+            p=1,
+            same_on_batch=False,
+        )
+    if spec.name == "ColorJiggle":
+        return Kaug.ColorJiggle(
             brightness=params["brightness"],
             contrast=params["contrast"],
             saturation=params["saturation"],
@@ -278,6 +287,10 @@ def create_transform(spec: TransformSpec) -> Any | None:
             ratio=params["ratio"],
             p=1,
         )
+    if spec.name == "RandomRotation90":
+        return Kaug.RandomRotation90(times=params["times"], p=1)
+    if spec.name == "RandomJigsaw":
+        return Kaug.RandomJigsaw(grid=params["grid"], p=1)
     if spec.name == "Rotate":
         return Kaug.RandomRotation(
             degrees=(params["angle"], params["angle"]),

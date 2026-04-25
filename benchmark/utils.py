@@ -33,6 +33,13 @@ def read_img_kornia(path: Path) -> Any:  # torch.Tensor
     return read_img_torch(path) / 255.0  # Keep as float32 on CPU
 
 
+def read_img_pil(path: Path) -> Any:  # PIL.Image.Image
+    """Read image using Pillow (RGB mode)"""
+    from PIL import Image
+
+    return Image.open(str(path)).convert("RGB")
+
+
 def read_video_cv2(path: Path) -> np.ndarray:
     """Read video using OpenCV (for AlbumentationsX)
 
@@ -129,6 +136,7 @@ def get_image_loader(library: str) -> Callable[[Path], Any]:
         "ultralytics": read_img_cv2,
         "torchvision": read_img_torch,
         "kornia": read_img_kornia,
+        "pillow": read_img_pil,
     }
 
     if library not in loaders:
@@ -257,7 +265,32 @@ def get_library_versions(library: str) -> dict[str, str]:
     else:
         versions[library] = get_version(library)
 
-    for extra_librarties in ["numpy", "pillow", "opencv-python-headless", "torch", "opencv-python"]:
+    decoder_packages = {
+        "opencv": ["opencv-python-headless", "opencv-python"],
+        "pyav": ["av"],
+        "decord": ["decord"],
+        "torchcodec": ["torchcodec"],
+        "torchvision": ["torchvision"],
+        "dali": ["nvidia-dali-cuda120", "nvidia-dali-cuda110", "nvidia-dali"],
+    }
+    if library in decoder_packages:
+        for pkg in decoder_packages[library]:
+            v = get_version(pkg)
+            if v != "not installed":
+                versions[library] = v
+                break
+
+    for extra_librarties in [
+        "numpy",
+        "pillow",
+        "opencv-python-headless",
+        "torch",
+        "torchvision",
+        "opencv-python",
+        "av",
+        "decord",
+        "torchcodec",
+    ]:
         versions[extra_librarties] = get_version(extra_librarties)
 
     return versions

@@ -42,6 +42,7 @@ _IMAGE_SPECS: dict[str, str] = {
     "albumentations_mit": "benchmark/transforms/albumentations_mit_impl.py",
     "torchvision": "benchmark/transforms/torchvision_impl.py",
     "kornia": "benchmark/transforms/kornia_impl.py",
+    "pillow": "benchmark/transforms/pillow_impl.py",
 }
 
 _MULTICHANNEL_IMAGE_SPECS: dict[str, str] = {
@@ -63,6 +64,7 @@ _REQUIREMENTS: dict[str, str] = {
     "albumentations_mit": "requirements/albumentations_mit.txt",
     "torchvision": "requirements/torchvision.txt",
     "kornia": "requirements/kornia.txt",
+    "pillow": "requirements/pillow.txt",
 }
 
 _VIDEO_REQUIREMENTS: dict[str, str] = {
@@ -70,6 +72,7 @@ _VIDEO_REQUIREMENTS: dict[str, str] = {
     "albumentations_mit": "requirements/albumentations_mit.txt",
     "torchvision": "requirements/torchvision-video.txt",
     "kornia": "requirements/kornia-video.txt",
+    "dali": "requirements/dali-video.txt",
 }
 
 
@@ -186,6 +189,166 @@ def _run_single(
     subprocess.run(cmd, check=True, env=env)
 
 
+def _dali_transforms_from_specs(transforms_filter: list[str] | None = None) -> list[dict[str, object]]:
+    from benchmark.transforms.specs import TRANSFORM_SPECS
+
+    transforms: list[dict[str, object]] = [{"name": spec.name, "transform": spec.params} for spec in TRANSFORM_SPECS]
+    if transforms_filter is None:
+        return transforms
+    allowed = set(transforms_filter)
+    return [transform for transform in transforms if str(transform["name"]) in allowed]
+
+
+def _spec_map_for_scenario(scenario_name: str, mode: str) -> dict[str, str]:
+    if scenario_name == "image-9ch":
+        return _MULTICHANNEL_IMAGE_SPECS
+    if scenario_name == "video-16f":
+        return _VIDEO_SPECS
+    if scenario_name == "image-rgb":
+        return _IMAGE_SPECS
+    msg = f"No transform spec map for {scenario_name!r}/{mode!r}"
+    raise ValueError(msg)
+
+
+def _run_scenario_library(
+    *,
+    library: str,
+    spec_map: dict[str, str],
+    args: argparse.Namespace,
+    repo_root: Path,
+    output_dir: Path,
+    scenario_name: str,
+    media: str,
+    num_channels: int,
+    clip_length: int,
+) -> None:
+    import os
+
+    if args.mode == "pipeline" and library == "dali":
+        from benchmark.pipeline_runner import PipelineBenchmarkRunner
+
+        transforms = _dali_transforms_from_specs(args.transforms)
+        output_file = output_dir / "dali_pipeline_results.json"
+        runner = PipelineBenchmarkRunner(
+            library=library,
+            data_dir=Path(args.data_dir),
+            output_file=output_file,
+            transforms=transforms,
+            call_fn=lambda _transform, item: item,
+            media=media,
+            scenario=scenario_name,
+            num_items=args.num_items,
+            num_runs=args.num_runs,
+            batch_size=args.batch_size,
+            workers=args.workers,
+            num_channels=num_channels,
+            clip_length=clip_length,
+        )
+        runner.run()
+        return
+
+    spec_file = repo_root / spec_map[library]
+    suffix = "_pipeline" if args.mode == "pipeline" else "_micro"
+    output_file = output_dir / f"{library}{suffix}_results.json"
+
+    if args.mode == "micro":
+        _run_single(
+            library=library,
+            spec_file=spec_file,
+            data_dir=Path(args.data_dir),
+            output_file=output_file,
+            media=media,
+            num_items=args.num_items,
+            num_runs=args.num_runs,
+            max_warmup=args.max_warmup,
+            warmup_window=args.warmup_window,
+            warmup_threshold=args.warmup_threshold,
+            min_warmup_windows=args.min_warmup_windows,
+            repo_root=repo_root,
+            transforms_filter=args.transforms,
+            verbose=args.verbose,
+            num_channels=num_channels,
+        )
+        return
+
+    python = _ensure_venv(library, media, repo_root)
+    cmd = [
+        str(python),
+        "-m",
+        "benchmark.pipeline_runner",
+        "--specs-file",
+        str(spec_file),
+        "--data-dir",
+        str(args.data_dir),
+        "--output",
+        str(output_file),
+        "--media",
+        media,
+        "--scenario",
+        scenario_name,
+        "--num-runs",
+        str(args.num_runs),
+        "--batch-size",
+        str(args.batch_size),
+        "--workers",
+        str(args.workers),
+        "--num-channels",
+        str(num_channels),
+        "--clip-length",
+        str(clip_length),
+    ]
+    if args.num_items is not None:
+        cmd += ["--num-items", str(args.num_items)]
+
+    env_extra: dict[str, str] = {}
+    if args.transforms:
+        env_extra["BENCHMARK_TRANSFORMS_FILTER"] = ",".join(args.transforms)
+    env = {**os.environ, **env_extra}
+    subprocess.run(cmd, check=True, env=env)
+
+
+def _cmd_run_scenario(args: argparse.Namespace, repo_root: Path, output_dir: Path) -> None:
+    from benchmark.decode_runner import VideoDecodeRunner
+    from benchmark.scenarios import get_scenario, resolve_decoders, resolve_libraries, resolve_mode
+
+    scenario = get_scenario(args.scenario)
+    args.mode = resolve_mode(scenario, args.mode)
+    clip_length = args.clip_length or scenario.clip_length or 16
+    num_channels = scenario.num_channels
+
+    if args.mode == "decode":
+        decoders = resolve_decoders(scenario, args.decoders)
+        runner = VideoDecodeRunner(
+            data_dir=Path(args.data_dir),
+            decoders=decoders,
+            output_dir=output_dir,
+            num_items=args.num_items,
+            num_runs=args.num_runs,
+            clip_length=clip_length,
+            scenario=scenario.name,
+        )
+        runner.run()
+        return
+
+    libraries = resolve_libraries(scenario, args.mode, args.libraries)
+    spec_map = _spec_map_for_scenario(scenario.name, args.mode)
+    scenario_output_dir = output_dir / scenario.name / args.mode
+    scenario_output_dir.mkdir(parents=True, exist_ok=True)
+    logger.info("Running scenario %s/%s for libraries: %s", scenario.name, args.mode, libraries)
+    for library in tqdm(libraries, desc=f"{scenario.name}/{args.mode}", unit="lib", **tqdm_kwargs()):
+        _run_scenario_library(
+            library=library,
+            spec_map=spec_map,
+            args=args,
+            repo_root=repo_root,
+            output_dir=scenario_output_dir,
+            scenario_name=scenario.name,
+            media=scenario.media,
+            num_channels=num_channels,
+            clip_length=clip_length,
+        )
+
+
 # ---------------------------------------------------------------------------
 # GCP cloud helper
 # ---------------------------------------------------------------------------
@@ -237,6 +400,18 @@ def build_gcp_benchmark_cli_argv(
         argv.append("--multichannel")
     if args.verbose:
         argv.append("--verbose")
+    if getattr(args, "scenario", None):
+        argv += ["--scenario", args.scenario]
+    if getattr(args, "mode", None):
+        argv += ["--mode", args.mode]
+    if getattr(args, "batch_size", None):
+        argv += ["--batch-size", str(args.batch_size)]
+    if getattr(args, "workers", None) is not None:
+        argv += ["--workers", str(args.workers)]
+    if getattr(args, "clip_length", None):
+        argv += ["--clip-length", str(args.clip_length)]
+    if getattr(args, "decoders", None):
+        argv += ["--decoders", *args.decoders]
     return argv
 
 
@@ -407,6 +582,11 @@ def cmd_run(args: argparse.Namespace) -> None:
         _cmd_run_gcp(args, repo_root, output_dir)
         return
 
+    if args.scenario:
+        _cmd_run_scenario(args, repo_root, output_dir)
+        logger.info("Scenario benchmark complete. Results in: %s", output_dir)
+        return
+
     # Custom spec file path takes priority
     if args.spec:
         spec_file = Path(args.spec)
@@ -540,6 +720,25 @@ def build_parser() -> argparse.ArgumentParser:
         "-s",
         metavar="FILE",
         help="Custom spec file (overrides --libraries; library inferred from LIBRARY variable)",
+    )
+    run_p.add_argument(
+        "--scenario",
+        choices=["image-rgb", "image-9ch", "video-decode-16f", "video-16f"],
+        help="Run a v2 benchmark scenario. Preserves legacy --media behavior when omitted.",
+    )
+    run_p.add_argument(
+        "--mode",
+        choices=["micro", "pipeline", "decode"],
+        help="Scenario benchmark mode. Defaults depend on --scenario.",
+    )
+    run_p.add_argument("--batch-size", type=int, default=32, help="Pipeline dataloader batch size")
+    run_p.add_argument("--workers", type=int, default=0, help="Pipeline dataloader worker count")
+    run_p.add_argument("--clip-length", type=int, help="Video frames per clip for scenario benchmarks")
+    run_p.add_argument(
+        "--decoders",
+        nargs="+",
+        metavar="DECODER",
+        help="Video decoders for --scenario video-decode-16f",
     )
     # Cloud options
     run_p.add_argument("--cloud", choices=["gcp"], default=None, help="Run on cloud (currently: gcp)")

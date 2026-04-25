@@ -392,6 +392,15 @@ TRANSFORM_SPECS = [
         },
     ),
     TransformSpec(
+        "ColorJiggle",
+        {
+            "brightness": (0.875, 1.125),
+            "contrast": (0.5, 1.5),
+            "saturation": (0.5, 1.5),
+            "hue": (-0.05, 0.05),
+        },
+    ),
+    TransformSpec(
         "LongestMaxSize",
         {
             "max_size": 512,
@@ -438,6 +447,12 @@ TRANSFORM_SPECS = [
             "iterations": 2,
         },
     ),
+    TransformSpec(
+        "ModeFilter",
+        {
+            "kernel_range": (3, 7),
+        },
+    ),
     # Geometric
     TransformSpec(
         "SquareSymmetry",
@@ -459,6 +474,12 @@ TRANSFORM_SPECS = [
     TransformSpec(
         "RandomRotate90",
         {},
+    ),
+    TransformSpec(
+        "RandomRotation90",
+        {
+            "times": (1, 3),
+        },
     ),
     TransformSpec(
         "RandomScale",
@@ -503,6 +524,12 @@ TRANSFORM_SPECS = [
         },
     ),
     TransformSpec(
+        "RandomJigsaw",
+        {
+            "grid": (4, 4),
+        },
+    ),
+    TransformSpec(
         "Morphological",
         {
             "scale": (2, 3),
@@ -515,6 +542,38 @@ TRANSFORM_SPECS = [
         {
             "scale_range": (0.25, 0.25),
             "interpolation_pair": ("nearest", "nearest"),
+        },
+    ),
+    TransformSpec(
+        "Colorize",
+        {
+            "black_range": ((0, 0, 0), (0, 0, 0)),
+            "white_range": ((255, 255, 255), (255, 255, 255)),
+            "mid_range": ((96, 64, 32), (96, 64, 32)),
+            "mid_value_range": (127, 127),
+        },
+    ),
+    TransformSpec(
+        "PixelSpread",
+        {
+            "radius": 2,
+            "interpolation": "nearest",
+            "border_mode": "reflect101",
+            "fill": 0,
+        },
+    ),
+    TransformSpec(
+        "EnhanceEdge",
+        {
+            "mode": "edge",
+            "alpha_range": (0.5, 1.0),
+        },
+    ),
+    TransformSpec(
+        "EnhanceDetail",
+        {
+            "mode": "detail",
+            "alpha_range": (0.5, 1.0),
         },
     ),
     TransformSpec(
@@ -736,6 +795,16 @@ TRANSFORM_SPECS = [
             "num_grid_range": (3, 7),
             "line_width_range": (0.2, 0.5),
             "rotation_range": (0, 0),
+        },
+    ),
+    TransformSpec(
+        "CopyAndPaste",
+        {
+            "min_visibility_after_paste": 0.05,
+            "blend_mode": "hard",
+            "blend_sigma_range": (1.0, 3.0),
+            "scale_range": (1.0, 1.0),
+            "min_paste_area": 1,
         },
     ),
     TransformSpec(

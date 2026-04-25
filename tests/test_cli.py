@@ -153,6 +153,31 @@ class TestBuildParser:
         assert args.gcp_dry_run is True
         assert args.gcp_attached is False
 
+    def test_scenario_flags_parse(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(
+            [
+                "run",
+                "--data-dir",
+                "/data",
+                "--output",
+                "/out",
+                "--scenario",
+                "video-decode-16f",
+                "--mode",
+                "decode",
+                "--clip-length",
+                "16",
+                "--decoders",
+                "opencv",
+                "pyav",
+            ],
+        )
+        assert args.scenario == "video-decode-16f"
+        assert args.mode == "decode"
+        assert args.clip_length == 16
+        assert args.decoders == ["opencv", "pyav"]
+
 
 class TestBuildGcpBenchmarkCliArgv:
     def test_builds_argv_without_cloud_flags(self, tmp_path: Path) -> None:
@@ -188,6 +213,39 @@ class TestBuildGcpBenchmarkCliArgv:
         assert "--libraries" in argv
         assert "kornia" in argv
         assert "--cloud" not in argv
+
+    def test_builds_scenario_argv(self, tmp_path: Path) -> None:
+        parser = build_parser()
+        args = parser.parse_args(
+            [
+                "run",
+                "--data-dir",
+                "/ignored",
+                "--output",
+                "/ignored",
+                "--scenario",
+                "video-16f",
+                "--mode",
+                "pipeline",
+                "--batch-size",
+                "4",
+                "--workers",
+                "2",
+                "--clip-length",
+                "16",
+            ],
+        )
+        argv = build_gcp_benchmark_cli_argv(
+            args,
+            data_dir="/remote/data",
+            output="/remote/out",
+            repo_root=tmp_path,
+        )
+        assert argv[argv.index("--scenario") + 1] == "video-16f"
+        assert argv[argv.index("--mode") + 1] == "pipeline"
+        assert argv[argv.index("--batch-size") + 1] == "4"
+        assert argv[argv.index("--workers") + 1] == "2"
+        assert argv[argv.index("--clip-length") + 1] == "16"
 
     def test_spec_must_be_inside_repo(self, tmp_path: Path) -> None:
         parser = build_parser()
