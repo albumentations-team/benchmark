@@ -6,6 +6,9 @@ import albumentations as A
 import cv2
 import numpy as np
 
+from benchmark.transforms.albumentations_compat import (
+    ConstrainedCoarseDropoutWrapper as _ConstrainedCoarseDropoutWrapper,
+)
 from benchmark.transforms.registry import build_transforms, register_library
 from benchmark.transforms.specs import TransformSpec
 
@@ -15,6 +18,41 @@ cv2.ocl.setUseOpenCL(False)
 
 # Required: Library name for dependency installation
 LIBRARY = "albumentationsx"
+
+
+def _range(value: Any) -> tuple[Any, Any]:
+    if isinstance(value, tuple | list):
+        return (value[0], value[1])
+    return (value, value)
+
+
+def _symmetric_range(value: Any) -> tuple[Any, Any]:
+    if isinstance(value, tuple | list):
+        return (value[0], value[1])
+    return (-value, value)
+
+
+def _affine_axis_ranges(value: Any) -> dict[str, tuple[Any, Any]]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, tuple | list):
+        return {"x": _range(value[0]), "y": _range(value[1])}
+    return {"x": _range(value), "y": _range(value)}
+
+
+class _ColorizeFromRgbVideo:
+    def __init__(self, **kwargs: Any) -> None:
+        self._to_gray = A.ToGray(num_output_channels=1, p=1)
+        self._colorize = A.Colorize(**kwargs, p=1)
+
+    def __call__(self, **kwargs: Any) -> dict[str, Any]:
+        frames = []
+        for frame in kwargs["images"]:
+            gray = self._to_gray(image=frame)["image"]
+            if gray.ndim == 2:
+                gray = gray[..., None]
+            frames.append(self._colorize(image=gray)["image"])
+        return {"images": np.stack(frames, axis=0)}
 
 
 # Required: Define how to apply transforms to videos
@@ -34,7 +72,10 @@ def __call__(transform: Any, video: Any) -> Any:  # noqa: N807
     Returns:
         Transformed video as numpy array (T, H, W, C)
     """
-    result = transform(images=video)["images"]
+    if isinstance(transform, A.CopyAndPaste):
+        result = transform(images=video, copy_paste_metadata=[])["images"]
+    else:
+        result = transform(images=video)["images"]
     return np.ascontiguousarray(result)
 
 
@@ -85,7 +126,7 @@ def create_transform(spec: TransformSpec) -> Any:
         )
     if spec.name == "Rotate":
         return A.Rotate(
-            limit=params["angle"],
+            angle_range=_symmetric_range(params["angle"]),
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             border_mode=cv2.BORDER_CONSTANT if params["mode"] == "constant" else cv2.BORDER_REFLECT,
             fill=params["fill"],
@@ -93,10 +134,10 @@ def create_transform(spec: TransformSpec) -> Any:
         )
     if spec.name == "Affine":
         return A.Affine(
-            rotate=params["angle"],
-            translate_px=params["shift"],
-            scale=params["scale"],
-            shear=params["shear"],
+            rotate=_symmetric_range(params["angle"]),
+            translate_px=_affine_axis_ranges(params["shift"]),
+            scale=_range(params["scale"]),
+            shear=_affine_axis_ranges(params["shear"]),
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             border_mode=cv2.BORDER_CONSTANT if params["mode"] == "constant" else cv2.BORDER_REFLECT,
             fill=params["fill"],
@@ -119,10 +160,18 @@ def create_transform(spec: TransformSpec) -> Any:
         )
     if spec.name == "ColorJitter":
         return A.ColorJitter(
-            brightness=params["brightness"],
-            contrast=params["contrast"],
-            saturation=params["saturation"],
-            hue=params["hue"],
+            brightness_range=_range(params["brightness"]),
+            contrast_range=_range(params["contrast"]),
+            saturation_range=_range(params["saturation"]),
+            hue_range=_range(params["hue"]),
+            p=1,
+        )
+    if spec.name == "ColorJiggle":
+        return A.ColorJitter(
+            brightness_range=params["brightness"],
+            contrast_range=params["contrast"],
+            saturation_range=params["saturation"],
+            hue_range=params["hue"],
             p=1,
         )
     if spec.name == "ChannelShuffle":
@@ -132,15 +181,15 @@ def create_transform(spec: TransformSpec) -> Any:
     if spec.name == "RGBShift":
         shift = params["pixel_shift"]
         return A.RGBShift(
-            r_shift_limit=shift,
-            g_shift_limit=shift,
-            b_shift_limit=shift,
+            r_shift_range=_symmetric_range(shift),
+            g_shift_range=_symmetric_range(shift),
+            b_shift_range=_symmetric_range(shift),
             p=1,
         )
     if spec.name == "GaussianBlur":
         return A.GaussianBlur(
-            blur_limit=params["kernel_size"],
-            sigma_limit=(params["sigma"], params["sigma"]),
+            blur_range=params["kernel_size"],
+            sigma_range=_range(params["sigma"]),
             p=1,
         )
     if spec.name == "GaussianNoise":
@@ -154,7 +203,7 @@ def create_transform(spec: TransformSpec) -> Any:
         return A.InvertImg(p=1)
     if spec.name == "Posterize":
         return A.Posterize(
-            num_bits=params["bits"],
+            num_bits=_range(params["bits"]),
             p=1,
         )
     if spec.name == "Solarize":
@@ -164,8 +213,8 @@ def create_transform(spec: TransformSpec) -> Any:
         )
     if spec.name == "Sharpen":
         return A.Sharpen(
-            alpha=params["alpha"],
-            lightness=params["lightness"],
+            alpha_range=params["alpha"],
+            lightness_range=params["lightness"],
             p=1,
         )
     if spec.name == "AutoContrast":
@@ -191,7 +240,7 @@ def create_transform(spec: TransformSpec) -> Any:
         )
     if spec.name == "RandomGamma":
         return A.RandomGamma(
-            gamma_limit=(params["gamma"], params["gamma"]),
+            gamma_range=_range(params["gamma"]),
             p=1,
         )
     if spec.name == "PlankianJitter":
@@ -201,32 +250,32 @@ def create_transform(spec: TransformSpec) -> Any:
         )
     if spec.name == "MedianBlur":
         return A.MedianBlur(
-            blur_limit=(params["blur_limit"], params["blur_limit"]),
+            blur_range=_range(params["blur_limit"]),
             p=1,
         )
     if spec.name == "MotionBlur":
         return A.MotionBlur(
-            blur_limit=params["kernel_size"],
+            blur_range=_range(params["kernel_size"]),
             angle_range=params["angle_range"],
             direction_range=params["direction_range"],
             p=1,
         )
     if spec.name == "CLAHE":
         return A.CLAHE(
-            clip_limit=params["clip_limit"],
+            clip_range=params["clip_limit"],
             tile_grid_size=params["tile_grid_size"],
             p=1,
         )
     if spec.name == "Brightness":
         return A.RandomBrightnessContrast(
-            brightness_limit=params["brightness_limit"],
-            contrast_limit=(0.0, 0.0),
+            brightness_range=params["brightness_limit"],
+            contrast_range=(0.0, 0.0),
             p=1,
         )
     if spec.name == "Contrast":
         return A.RandomBrightnessContrast(
-            brightness_limit=(0.0, 0.0),
-            contrast_limit=params["contrast_limit"],
+            brightness_range=(0.0, 0.0),
+            contrast_range=params["contrast_limit"],
             p=1,
         )
     if spec.name == "CoarseDropout":
@@ -238,14 +287,14 @@ def create_transform(spec: TransformSpec) -> Any:
         )
     if spec.name == "Blur":
         return A.Blur(
-            blur_limit=(params["radius"], params["radius"]),
+            blur_range=_range(params["radius"]),
             p=1,
         )
     if spec.name == "HSV":
         return A.HueSaturationValue(
-            hue_shift_limit=params["hue"] * 255,
-            sat_shift_limit=params["saturation"] * 255,
-            val_shift_limit=params["value"] * 255,
+            hue_shift_range=_symmetric_range(params["hue"] * 255),
+            sat_shift_range=_symmetric_range(params["saturation"] * 255),
+            val_shift_range=_symmetric_range(params["value"] * 255),
             p=1,
         )
     if spec.name == "ChannelDropout":
@@ -258,9 +307,9 @@ def create_transform(spec: TransformSpec) -> Any:
         return A.Illumination(p=1, mode="gaussian")
     if spec.name == "Hue":
         return A.HueSaturationValue(
-            hue_shift_limit=params["hue"],
-            sat_shift_limit=0,
-            val_shift_limit=0,
+            hue_shift_range=_symmetric_range(params["hue"]),
+            sat_shift_range=(0, 0),
+            val_shift_range=(0, 0),
             p=1,
         )
     if spec.name == "PlasmaBrightness":
@@ -276,18 +325,23 @@ def create_transform(spec: TransformSpec) -> Any:
             brightness_coefficient=params["brightness_coefficient"],
         )
     if spec.name == "SaltAndPepper":
-        return A.SaltAndPepper(p=1, amount=params["amount"], salt_vs_pepper=params["salt_vs_pepper"])
+        return A.SaltAndPepper(p=1, amount_range=params["amount"], salt_vs_pepper_range=params["salt_vs_pepper"])
     if spec.name == "Saturation":
-        sat_shift_limit = params["saturation_factor"] * 255
-        return A.HueSaturationValue(p=1, hue_shift_limit=0, sat_shift_limit=sat_shift_limit, val_shift_limit=0)
+        sat_shift_range = _symmetric_range(params["saturation_factor"] * 255)
+        return A.HueSaturationValue(
+            p=1,
+            hue_shift_range=(0, 0),
+            sat_shift_range=sat_shift_range,
+            val_shift_range=(0, 0),
+        )
     if spec.name == "Snow":
         return A.RandomSnow(p=1, snow_point_range=params["snow_point_range"])
     if spec.name == "OpticalDistortion":
-        return A.OpticalDistortion(p=1, distort_limit=params["distort_limit"])
+        return A.OpticalDistortion(p=1, distort_range=_symmetric_range(params["distort_limit"]))
     if spec.name == "Shear":
         return A.Affine(
             p=1,
-            shear=params["shear"],
+            shear=_range(params["shear"]),
             interpolation=cv2.INTER_LINEAR,
             border_mode=cv2.BORDER_CONSTANT,
             fill=0,
@@ -322,15 +376,15 @@ def create_transform(spec: TransformSpec) -> Any:
     # --- Additional shared transforms ---
     if spec.name == "AdvancedBlur":
         return A.AdvancedBlur(
-            blur_limit=params["blur_limit"],
-            sigma_x_limit=params["sigma_x_limit"],
-            sigma_y_limit=params["sigma_y_limit"],
+            blur_range=params["blur_limit"],
+            sigma_x_range=params["sigma_x_limit"],
+            sigma_y_range=params["sigma_y_limit"],
             p=1,
         )
     if spec.name == "Defocus":
-        return A.Defocus(radius=params["radius"], alias_blur=params["alias_blur"], p=1)
+        return A.Defocus(radius_range=params["radius"], alias_blur_range=params["alias_blur"], p=1)
     if spec.name == "ZoomBlur":
-        return A.ZoomBlur(max_factor=params["max_factor"], p=1)
+        return A.ZoomBlur(max_factor_range=params["max_factor"], p=1)
     if spec.name == "GlassBlur":
         return A.GlassBlur(
             sigma=params["sigma"],
@@ -338,13 +392,15 @@ def create_transform(spec: TransformSpec) -> Any:
             iterations=params["iterations"],
             p=1,
         )
+    if spec.name == "ModeFilter":
+        return A.ModeFilter(kernel_range=params["kernel_range"], p=1)
     if spec.name == "SquareSymmetry":
         return A.SquareSymmetry(p=1)
     if spec.name == "Transpose":
         return A.Transpose(p=1)
     if spec.name == "SafeRotate":
         return A.SafeRotate(
-            limit=params["limit"],
+            angle_range=_symmetric_range(params["limit"]),
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             border_mode=cv2.BORDER_CONSTANT if params["border_mode"] == "constant" else cv2.BORDER_REFLECT,
             fill=params["fill"],
@@ -354,15 +410,15 @@ def create_transform(spec: TransformSpec) -> Any:
         return A.RandomRotate90(p=1)
     if spec.name == "RandomScale":
         return A.RandomScale(
-            scale_limit=params["scale_limit"],
+            scale_range=params["scale_limit"],
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             p=1,
         )
     if spec.name == "ShiftScaleRotate":
         return A.ShiftScaleRotate(
-            shift_limit=params["shift_limit"],
-            scale_limit=params["scale_limit"],
-            rotate_limit=params["rotate_limit"],
+            shift_range=_symmetric_range(params["shift_limit"]),
+            scale_range=_symmetric_range(params["scale_limit"]),
+            rotate_range=_symmetric_range(params["rotate_limit"]),
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             border_mode=cv2.BORDER_CONSTANT if params["border_mode"] == "constant" else cv2.BORDER_REFLECT,
             fill=params["fill"],
@@ -371,7 +427,7 @@ def create_transform(spec: TransformSpec) -> Any:
     if spec.name == "GridDistortion":
         return A.GridDistortion(
             num_steps=params["num_steps"],
-            distort_limit=params["distort_limit"],
+            distort_range=_symmetric_range(params["distort_limit"]),
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             border_mode=cv2.BORDER_CONSTANT if params["border_mode"] == "constant" else cv2.BORDER_REFLECT,
             fill=params["fill"],
@@ -379,12 +435,14 @@ def create_transform(spec: TransformSpec) -> Any:
         )
     if spec.name == "PiecewiseAffine":
         return A.PiecewiseAffine(
-            scale=params["scale"],
-            nb_rows=params["nb_rows"],
-            nb_cols=params["nb_cols"],
+            scale_range=params["scale"],
+            nb_rows_range=_range(params["nb_rows"]),
+            nb_cols_range=_range(params["nb_cols"]),
             p=1,
         )
     if spec.name == "RandomGridShuffle":
+        return A.RandomGridShuffle(grid=params["grid"], p=1)
+    if spec.name == "RandomJigsaw":
         return A.RandomGridShuffle(grid=params["grid"], p=1)
     if spec.name == "Morphological":
         return A.Morphological(scale=params["scale"], operation=params["operation"], p=1)
@@ -397,17 +455,34 @@ def create_transform(spec: TransformSpec) -> Any:
             },
             p=1,
         )
+    if spec.name == "Colorize":
+        return _ColorizeFromRgbVideo(
+            black_range=params["black_range"],
+            white_range=params["white_range"],
+            mid_range=params["mid_range"],
+            mid_value_range=params["mid_value_range"],
+        )
+    if spec.name == "PixelSpread":
+        return A.PixelSpread(
+            radius=params["radius"],
+            interpolation=cv2.INTER_NEAREST if params["interpolation"] == "nearest" else cv2.INTER_LINEAR,
+            border_mode=cv2.BORDER_REFLECT_101 if params["border_mode"] == "reflect101" else cv2.BORDER_CONSTANT,
+            fill=params["fill"],
+            p=1,
+        )
+    if spec.name in {"EnhanceEdge", "EnhanceDetail"}:
+        return A.Enhance(mode=params["mode"], alpha_range=params["alpha_range"], p=1)
     if spec.name == "Emboss":
-        return A.Emboss(alpha=params["alpha"], strength=params["strength"], p=1)
+        return A.Emboss(alpha_range=params["alpha"], strength_range=params["strength"], p=1)
     if spec.name == "ChromaticAberration":
         return A.ChromaticAberration(
-            primary_distortion_limit=params["primary_distortion_limit"],
-            secondary_distortion_limit=params["secondary_distortion_limit"],
+            primary_distortion_range=params["primary_distortion_limit"],
+            secondary_distortion_range=params["secondary_distortion_limit"],
             mode=params["mode"],
             p=1,
         )
     if spec.name == "ISONoise":
-        return A.ISONoise(color_shift=params["color_shift"], intensity=params["intensity"], p=1)
+        return A.ISONoise(color_shift_range=params["color_shift"], intensity_range=params["intensity"], p=1)
     if spec.name == "ShotNoise":
         return A.ShotNoise(scale_range=params["scale_range"], p=1)
     if spec.name == "MultiplicativeNoise":
@@ -433,7 +508,7 @@ def create_transform(spec: TransformSpec) -> Any:
         )
     if spec.name == "RandomShadow":
         return A.RandomShadow(
-            num_shadows_limit=params["num_shadows_limit"],
+            num_shadows_range=params["num_shadows_limit"],
             shadow_dimension=params["shadow_dimension"],
             p=1,
         )
@@ -446,22 +521,22 @@ def create_transform(spec: TransformSpec) -> Any:
     if spec.name == "RandomToneCurve":
         return A.RandomToneCurve(scale=params["scale"], p=1)
     if spec.name == "RingingOvershoot":
-        return A.RingingOvershoot(blur_limit=params["blur_limit"], cutoff=params["cutoff"], p=1)
+        return A.RingingOvershoot(blur_range=params["blur_limit"], cutoff_range=params["cutoff"], p=1)
     if spec.name == "Spatter":
         return A.Spatter(
-            mean=params["mean"],
-            std=params["std"],
-            gauss_sigma=params["gauss_sigma"],
-            intensity=params["intensity"],
-            cutout_threshold=params["cutout_threshold"],
+            mean_range=_range(params["mean"]),
+            std_range=_range(params["std"]),
+            gauss_sigma_range=_range(params["gauss_sigma"]),
+            intensity_range=_range(params["intensity"]),
+            cutout_threshold_range=_range(params["cutout_threshold"]),
             mode=params["mode"],
             p=1,
         )
     if spec.name == "UnsharpMask":
         return A.UnsharpMask(
-            blur_limit=params["blur_limit"],
-            sigma_limit=params["sigma_limit"],
-            alpha=params["alpha"],
+            blur_range=params["blur_limit"],
+            sigma_range=_range(params["sigma_limit"]),
+            alpha_range=params["alpha"],
             threshold=params["threshold"],
             p=1,
         )
@@ -469,8 +544,8 @@ def create_transform(spec: TransformSpec) -> Any:
         return A.FancyPCA(alpha=params["alpha"], p=1)
     if spec.name == "Superpixels":
         return A.Superpixels(
-            p_replace=params["p_replace"],
-            n_segments=params["n_segments"],
+            p_replace_range=params["p_replace"],
+            n_segments_range=params["n_segments"],
             p=1,
         )
     if spec.name == "ToSepia":
@@ -497,11 +572,13 @@ def create_transform(spec: TransformSpec) -> Any:
             p=1,
         )
     if spec.name == "ConstrainedCoarseDropout":
-        return A.ConstrainedCoarseDropout(
-            num_holes_range=params["num_holes_range"],
-            hole_height_range=params["hole_height_range"],
-            hole_width_range=params["hole_width_range"],
-            p=1,
+        return _ConstrainedCoarseDropoutWrapper(
+            A.ConstrainedCoarseDropout(
+                num_holes_range=params["num_holes_range"],
+                hole_height_range=params["hole_height_range"],
+                hole_width_range=params["hole_width_range"],
+                p=1,
+            ),
         )
     if spec.name == "PadIfNeeded":
         return A.PadIfNeeded(
@@ -557,6 +634,15 @@ def create_transform(spec: TransformSpec) -> Any:
             num_grid_range=params["num_grid_range"],
             line_width_range=params["line_width_range"],
             rotation_range=params["rotation_range"],
+            p=1,
+        )
+    if spec.name == "CopyAndPaste":
+        return A.CopyAndPaste(
+            min_visibility_after_paste=params["min_visibility_after_paste"],
+            blend_mode=params["blend_mode"],
+            blend_sigma_range=params["blend_sigma_range"],
+            scale_range=params["scale_range"],
+            min_paste_area=params["min_paste_area"],
             p=1,
         )
     if spec.name == "WaterRefraction":

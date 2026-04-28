@@ -178,12 +178,15 @@ for t in module.TRANSFORMS:
 
 ```bash
 # Quick test with small dataset
-./run_single.sh \
-  -d /path/to/test/images \
-  -o test_output.json \
-  -s my_transforms.py \
-  -n 10 \
-  -r 1
+python -m benchmark.cli run \
+  --scenario image-rgb \
+  --mode micro \
+  --data-dir /path/to/test/images \
+  --output test_output/custom_spec \
+  --spec my_transforms.py \
+  --num-items 10 \
+  --num-runs 1 \
+  --timer pyperf
 ```
 
 Check output:

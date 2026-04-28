@@ -13,15 +13,13 @@ from warnings import warn
 import numpy as np
 from tqdm import tqdm
 
+from .results import build_metadata, summarize_runs
 from .term import configure_logging, tqdm_kwargs
 from .utils import (
     get_image_loader,
-    get_library_versions,
-    get_system_info,
     get_video_loader,
     make_multichannel_loader,
     time_transform,
-    verify_thread_settings,
 )
 
 logger = logging.getLogger(__name__)
@@ -108,6 +106,12 @@ class BenchmarkRunner:
         else:
             self._loader = get_video_loader(library)
         self.num_channels = num_channels
+
+    def _time_media_simple(self, transform: Any, media: list[Any]) -> float:
+        return time_transform(lambda x: self.call_fn(transform, x), media)
+
+    def _time_media(self, transform: Any, media: list[Any]) -> float:
+        return self._time_media_simple(transform, media)
 
     # ------------------------------------------------------------------
     # Media loading
@@ -237,7 +241,7 @@ class BenchmarkRunner:
             **tqdm_kwargs(),
         ) as pbar:
             for i in range(self.max_warmup_iterations):
-                elapsed = time_transform(lambda x: self.call_fn(transform, x), warmup_subset)
+                elapsed = self._time_media(transform, warmup_subset)
                 throughput = len(warmup_subset) / elapsed
                 time_per_item = elapsed / len(warmup_subset)
                 warmup_throughputs.append(throughput)
@@ -297,6 +301,7 @@ class BenchmarkRunner:
 
         if early_stopped:
             median = float(np.median(warmup_throughputs))
+            std_throughput = float(np.std(warmup_throughputs, ddof=1)) if len(warmup_throughputs) > 1 else 0.0
             logger.warning(
                 "%s: early stopped (%.1f %s/s from warmup) — %s",
                 transform_name,
@@ -306,14 +311,21 @@ class BenchmarkRunner:
             )
             return {
                 "supported": True,
+                "status": "ok",
                 "warmup_iterations": len(warmup_throughputs),
                 "throughputs": [],
                 "median_throughput": median,
-                "std_throughput": float(np.std(warmup_throughputs, ddof=1)),
+                "mean_throughput": float(np.mean(warmup_throughputs)) if warmup_throughputs else 0.0,
+                "std_throughput": std_throughput,
+                "cv_throughput": std_throughput / median if median > 0 else 0.0,
+                "throughput_ci95": 0.0,
                 "times": [],
                 "mean_time": time_per_item,
                 "std_time": 0.0,
+                "num_successful_runs": 0,
                 "variance_stable": False,
+                "unstable": True,
+                "unstable_reason": "early stopped during warmup",
                 "early_stopped": True,
                 "early_stop_reason": early_stop_reason,
             }
@@ -322,13 +334,14 @@ class BenchmarkRunner:
         times: list[float] = []
 
         for _ in tqdm(range(self.num_runs), desc=f"Benchmarking {transform_name}", leave=False, **tqdm_kwargs()):
-            elapsed = time_transform(lambda x: self.call_fn(transform, x), media)
+            elapsed = self._time_media(transform, media)
             throughput = len(media) / elapsed
             throughputs.append(throughput)
             times.append(elapsed)
 
-        median_throughput = float(np.median(throughputs))
-        std_throughput = float(np.std(throughputs, ddof=1))
+        result = summarize_runs(throughputs, times)
+        median_throughput = result["median_throughput"]
+        std_throughput = result["std_throughput"]
         logger.info(
             "%s: %.1f %s/s (median, std=%.1f, %d runs)",
             transform_name,
@@ -338,19 +351,15 @@ class BenchmarkRunner:
             self.num_runs,
         )
 
-        return {
-            "supported": True,
-            "warmup_iterations": len(warmup_throughputs),
-            "throughputs": throughputs,
-            "median_throughput": median_throughput,
-            "std_throughput": std_throughput,
-            "times": times,
-            "mean_time": len(media) / median_throughput,
-            "std_time": std_throughput / (median_throughput**2) * len(media),
-            "variance_stable": True,
-            "early_stopped": False,
-            "early_stop_reason": None,
-        }
+        result.update(
+            {
+                "warmup_iterations": len(warmup_throughputs),
+                "variance_stable": True,
+                "early_stopped": False,
+                "early_stop_reason": None,
+            },
+        )
+        return result
 
     # ------------------------------------------------------------------
     # Transform filter
@@ -397,11 +406,11 @@ class BenchmarkRunner:
                 pass
 
         num_key = f"num_{self._item_label}"
-        metadata: dict[str, Any] = {
-            "system_info": get_system_info(),
-            "library_versions": get_library_versions(self.library),
-            "thread_settings": verify_thread_settings(),
-            "benchmark_params": {
+        metadata = build_metadata(
+            scenario=f"{self.media_type.value}-manual",
+            mode="micro",
+            library=self.library,
+            benchmark_params={
                 num_key: self.num_items,
                 "num_runs": self.num_runs,
                 "max_warmup_iterations": self.max_warmup_iterations,
@@ -409,8 +418,19 @@ class BenchmarkRunner:
                 "warmup_threshold": self.warmup_threshold,
                 "min_warmup_windows": self.min_warmup_windows,
                 "num_channels": self.num_channels,
+                "timer_backend": "simple",
             },
-        }
+            timing_backend="perf_counter",
+            measurement_scope="augmentation_only",
+            data_source="memory",
+            data_dir=self.data_dir,
+            media=self.media_type.value,
+            includes_decode=False,
+            includes_collate=False,
+            includes_gpu_transfer=self.media_type == MediaType.VIDEO and self.library == "kornia",
+            includes_dataloader_workers=False,
+            repo_root=Path(__file__).parent.parent,
+        )
 
         if self.media_type == MediaType.VIDEO:
             try:
@@ -453,7 +473,7 @@ class BenchmarkRunner:
 
 
 # ------------------------------------------------------------------
-# Spec file loader (shared by CLI and legacy entry points)
+# Spec file loader (shared by CLI and direct entry points)
 # ------------------------------------------------------------------
 
 
@@ -501,7 +521,7 @@ def load_from_python_file(specs_file: Path) -> tuple[str, Callable[[Any, Any], A
 
 
 # ------------------------------------------------------------------
-# Legacy entry point (kept so existing shell scripts still work)
+# Direct entry point for simple perf_counter micro timing
 # ------------------------------------------------------------------
 
 

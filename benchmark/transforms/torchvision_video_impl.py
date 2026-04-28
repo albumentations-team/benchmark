@@ -60,6 +60,9 @@ def create_transform(spec: TransformSpec) -> Any | None:
         return tv_transforms.RandomHorizontalFlip(**params)
     if spec.name == "VerticalFlip":
         return tv_transforms.RandomVerticalFlip(**params)
+    if spec.name == "RandomRotate90":
+        lo, hi = params["times"]
+        return lambda video: torch.rot90(video, int(torch.randint(lo, hi + 1, ()).item()), dims=(-2, -1))
     if spec.name == "Pad":
         return tv_transforms.Pad(padding=params["padding"], fill=params["fill"], padding_mode=params["border_mode"])
     if spec.name == "Rotate":
@@ -99,6 +102,13 @@ def create_transform(spec: TransformSpec) -> Any | None:
             else tv_transforms.InterpolationMode.NEAREST,
         )
     if spec.name == "ColorJitter":
+        return tv_transforms.ColorJitter(
+            brightness=params["brightness"],
+            contrast=params["contrast"],
+            saturation=params["saturation"],
+            hue=params["hue"],
+        )
+    if spec.name == "ColorJiggle":
         return tv_transforms.ColorJitter(
             brightness=params["brightness"],
             contrast=params["contrast"],

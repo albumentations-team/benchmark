@@ -16,12 +16,13 @@ torch.set_num_threads(1)
 
 
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
-    return transform(image)
+    return transform(image.unsqueeze(0)).squeeze(0)
 
 
 TRANSFORMS = [
     {"name": "HorizontalFlip", "transform": Kaug.RandomHorizontalFlip(p=1)},
     {"name": "VerticalFlip", "transform": Kaug.RandomVerticalFlip(p=1)},
+    {"name": "RandomRotate90", "transform": Kaug.RandomRotation90(times=(0, 3), p=1)},
     {"name": "Rotate", "transform": Kaug.RandomRotation(degrees=(45, 45), p=1)},
     {
         "name": "Affine",
@@ -70,6 +71,7 @@ TRANSFORMS = [
     {"name": "Resize", "transform": Kaug.Resize(size=(512, 512), p=1)},
     {"name": "LongestMaxSize", "transform": Kaug.LongestMaxSize(max_size=512, p=1)},
     {"name": "SmallestMaxSize", "transform": Kaug.SmallestMaxSize(max_size=512, p=1)},
+    {"name": "RandomJigsaw", "transform": Kaug.RandomJigsaw(grid=(4, 4), p=1)},
     {"name": "Invert", "transform": Kaug.RandomInvert(p=1)},
     {"name": "Posterize", "transform": Kaug.RandomPosterize(bits=4.0, p=1)},
     {"name": "Solarize", "transform": Kaug.RandomSolarize(thresholds=0.5, p=1)},

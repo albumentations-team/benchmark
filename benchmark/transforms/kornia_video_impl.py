@@ -6,6 +6,7 @@ import kornia
 import kornia.augmentation as Kaug
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 from benchmark.transforms.registry import build_transforms, register_library
 from benchmark.transforms.specs import TransformSpec
@@ -54,6 +55,41 @@ def create_tensor(data: np.ndarray, device: torch.device = device) -> torch.Tens
     return torch.tensor(data, device=device, dtype=dtype)
 
 
+class _CenterCropWithPad(torch.nn.Module):
+    def __init__(self, size: tuple[int, int]) -> None:
+        super().__init__()
+        self.height, self.width = size
+        self.crop = Kaug.CenterCrop(size=size, p=1)
+
+    def forward(self, video: torch.Tensor) -> torch.Tensor:
+        height, width = video.shape[-2:]
+        pad_height = max(0, self.height - height)
+        pad_width = max(0, self.width - width)
+        if pad_height or pad_width:
+            top = pad_height // 2
+            bottom = pad_height - top
+            left = pad_width // 2
+            right = pad_width - left
+            video = F.pad(video, (left, right, top, bottom))
+        return self.crop(video)
+
+
+class _RandomJigsawWithPad(torch.nn.Module):
+    def __init__(self, grid: tuple[int, int]) -> None:
+        super().__init__()
+        self.grid = grid
+        self.jigsaw = Kaug.RandomJigsaw(grid=grid, p=1, same_on_batch=True)
+
+    def forward(self, video: torch.Tensor) -> torch.Tensor:
+        height, width = video.shape[-2:]
+        grid_h, grid_w = self.grid
+        pad_height = (-height) % grid_h
+        pad_width = (-width) % grid_w
+        if pad_height or pad_width:
+            video = F.pad(video, (0, pad_width, 0, pad_height))
+        return self.jigsaw(video)[..., :height, :width]
+
+
 # Helper function to create transforms from specs
 def create_transform(spec: TransformSpec) -> Any | None:
     """Create a Kornia transform from a TransformSpec."""
@@ -61,6 +97,15 @@ def create_transform(spec: TransformSpec) -> Any | None:
 
     if spec.name == "ColorJitter":
         return Kaug.ColorJitter(
+            brightness=params["brightness"],
+            contrast=params["contrast"],
+            saturation=params["saturation"],
+            hue=params["hue"],
+            p=1,
+            same_on_batch=True,
+        ).to(device)
+    if spec.name == "ColorJiggle":
+        return Kaug.ColorJiggle(
             brightness=params["brightness"],
             contrast=params["contrast"],
             saturation=params["saturation"],
@@ -242,10 +287,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
             same_on_batch=True,
         ).to(device)
     if spec.name == "CenterCrop128":
-        return Kaug.CenterCrop(
-            size=(params["height"], params["width"]),
-            p=1,
-        ).to(device)
+        return _CenterCropWithPad(size=(params["height"], params["width"])).to(device)
     if spec.name == "Affine":
         # Create a simple affine transform with fixed parameters
         # This avoids the device mismatch issue by not using random parameters
@@ -315,11 +357,9 @@ def create_transform(spec: TransformSpec) -> Any | None:
             same_on_batch=True,
         ).to(device)
     if spec.name == "RandomRotate90":
-        return Kaug.RandomRotation(
-            times=(0, 3),
-            p=1,
-            same_on_batch=True,
-        ).to(device)
+        return Kaug.RandomRotation90(times=params["times"], p=1, same_on_batch=True).to(device)
+    if spec.name == "RandomJigsaw":
+        return _RandomJigsawWithPad(grid=params["grid"]).to(device)
     if spec.name == "Rotate":
         # Convert degrees to radians for rotation
         angle = create_tensor(params["angle"]) * (torch.pi / 180.0)

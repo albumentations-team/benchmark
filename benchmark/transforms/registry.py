@@ -77,33 +77,9 @@ def register_library(
         if td is None:
             continue
         if create_image_fn is not None:
-            try:
-                td.image_impls[library] = create_image_fn(spec)
-            except Exception as e:
-                logger.warning(
-                    "Skipping image transform %r for %r — %s: %s",
-                    spec.name,
-                    library,
-                    type(e).__name__,
-                    e,
-                )
-                if os.environ.get("BENCHMARK_VERBOSE") == "1":
-                    logger.debug("Image transform build traceback", exc_info=True)
-                td.image_impls[library] = None
+            td.image_impls[library] = lambda spec=spec: create_image_fn(spec)
         if create_video_fn is not None:
-            try:
-                td.video_impls[library] = create_video_fn(spec)
-            except Exception as e:
-                logger.warning(
-                    "Skipping video transform %r for %r — %s: %s",
-                    spec.name,
-                    library,
-                    type(e).__name__,
-                    e,
-                )
-                if os.environ.get("BENCHMARK_VERBOSE") == "1":
-                    logger.debug("Video transform build traceback", exc_info=True)
-                td.video_impls[library] = None
+            td.video_impls[library] = lambda spec=spec: create_video_fn(spec)
 
 
 def build_transforms(library: str, media: str = "image") -> list[dict[str, Any]]:
@@ -115,10 +91,30 @@ def build_transforms(library: str, media: str = "image") -> list[dict[str, Any]]
         library: Library name (e.g. "albumentationsx")
         media: "image" or "video"
     """
+    filter_env = os.environ.get("BENCHMARK_TRANSFORMS_FILTER", "").strip()
+    allowed = {name.strip() for name in filter_env.split(",") if name.strip()} if filter_env else None
     result: list[dict[str, Any]] = []
     for td in TRANSFORMS:
+        if allowed is not None and td.name not in allowed:
+            continue
         impls = td.image_impls if media == "image" else td.video_impls
-        transform = impls.get(library)
+        factory = impls.get(library)
+        if factory is None:
+            continue
+        try:
+            transform = factory()
+        except Exception as e:
+            logger.warning(
+                "Skipping %s transform %r for %r — %s: %s",
+                media,
+                td.name,
+                library,
+                type(e).__name__,
+                e,
+            )
+            if os.environ.get("BENCHMARK_VERBOSE") == "1":
+                logger.debug("%s transform build traceback", media.capitalize(), exc_info=True)
+            continue
         if transform is not None:
             result.append({"name": td.name, "transform": transform})
     return result

@@ -20,7 +20,7 @@ import albumentations as A
 import cv2
 import numpy as np
 
-from benchmark.transforms.albumentations_mit_compat import (
+from benchmark.transforms.albumentations_compat import (
     ConstrainedCoarseDropoutWrapper as _ConstrainedCoarseDropoutWrapper,
 )
 

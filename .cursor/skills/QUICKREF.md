@@ -5,7 +5,7 @@
 ### 1. Test Benchmark Runner
 ```bash
 # Ask Cursor: "Show me how to run benchmarks for albumentationsx"
-# Expected: Should reference run_single.sh with proper parameters
+# Expected: Should reference python -m benchmark.cli run with --scenario/--mode/--libraries
 ```
 
 ### 2. Test Pre-commit Validation
@@ -23,7 +23,7 @@
 ### 4. Test Library Integration
 ```bash
 # Ask Cursor: "How do I add support for a new library called 'newlib'?"
-# Expected: Should outline creating _impl.py, requirements.txt, updating run scripts
+# Expected: Should outline creating _impl.py, requirements.txt, and registering CLI maps/env groups
 ```
 
 ### 5. Test Documentation Generator

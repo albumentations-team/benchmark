@@ -140,6 +140,10 @@ lint.per-file-ignores."benchmark/cloud/gcp.py" = [
   "S607",
   "S608",
 ]  # Cloud: subprocess/gcloud; embedded bootstrap shell (not SQL)
+lint.per-file-ignores."benchmark/transforms/pillow_impl.py" = [
+  "NPY002", # legacy np.random API is fine for benchmark transforms
+  "S311",   # random is fine for augmentation — not cryptographic
+]
 lint.per-file-ignores."tests/**/*.py" = [
   "S101",   # allow assert in tests
   "SLF001", # allow private member access in tests

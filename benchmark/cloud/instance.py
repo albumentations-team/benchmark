@@ -18,7 +18,7 @@ class GCPInstanceConfig:
         disk_size_gb:   Boot disk size in GB.
         accelerator_type: Optional GPU accelerator type, e.g. "nvidia-tesla-t4".
         accelerator_count: Number of GPUs (0 for CPU-only).
-        preemptible:    Whether to use a preemptible (spot) instance.
+    preemptible:    Whether to use a preemptible (spot) instance.
         tags:           Network tags applied to the instance.
         scopes:         OAuth scopes granted to the instance service account.
         instance_name_override: If set, used as the Compute Engine instance name instead of the default
@@ -28,12 +28,12 @@ class GCPInstanceConfig:
     project: str
     zone: str
     machine_type: str = "n1-standard-8"
-    image_family: str = "pytorch-latest-cpu"
-    image_project: str = "deeplearning-platform-release"
+    image_family: str = "ubuntu-2404-lts-amd64"
+    image_project: str = "ubuntu-os-cloud"
     disk_size_gb: int = 100
     accelerator_type: str | None = None
     accelerator_count: int = 0
-    preemptible: bool = True
+    preemptible: bool = False
     tags: list[str] = field(default_factory=lambda: ["benchmark"])
     scopes: list[str] = field(default_factory=lambda: ["https://www.googleapis.com/auth/cloud-platform"])
     instance_name_override: str | None = None

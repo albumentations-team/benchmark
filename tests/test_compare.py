@@ -14,6 +14,7 @@ from tools.compare import (
     _format_speedup_cell,
     _speedup_ratio_sigma_bounds,
     compare_regression,
+    format_comparison_table,
     load_result_file,
     load_results_dir,
 )
@@ -38,6 +39,15 @@ class TestLoadResultFile:
         library, media, _metadata, _results = load_result_file(path)
         assert library == "kornia"
         assert media == "video"
+
+    def test_scenario_micro_result_file(self, tmp_path: Path) -> None:
+        data = {"metadata": {}, "results": {"Resize": {}}}
+        path = tmp_path / "albumentationsx_micro_results.json"
+        path.write_text(json.dumps(data))
+
+        library, media, _metadata, _results = load_result_file(path)
+        assert library == "albumentationsx"
+        assert media == "image"
 
     def test_returns_metadata_dict(self, minimal_result_json: Path) -> None:
         _, _, metadata, _results = load_result_file(minimal_result_json)
@@ -70,6 +80,14 @@ class TestLoadResultsDir:
     def test_loads_two_result_files(self, result_dir_fixture: Path) -> None:
         result = load_results_dir(result_dir_fixture)
         assert len(result) == 2
+
+    def test_skips_raw_pyperf_json(self, tmp_path: Path) -> None:
+        data = {"metadata": {}, "results": {"Resize": {}}}
+        (tmp_path / "albumentationsx_micro_results.json").write_text(json.dumps(data))
+        (tmp_path / "albumentationsx_micro_results.pyperf.json").write_text(json.dumps({"benchmarks": []}))
+
+        result = load_results_dir(tmp_path)
+        assert list(result) == ["albumentationsx"]
 
     def test_image_key_format(self, result_dir_fixture: Path) -> None:
         result = load_results_dir(result_dir_fixture)
@@ -115,6 +133,66 @@ class TestSpeedupSigmaBounds:
         s = _format_speedup_cell(1.5, 2.0, 2.5)
         assert s.startswith("2.00x (")
         assert "-" in s
+
+
+class TestFormatComparisonTable:
+    def test_early_stopped_transform_is_visible_as_slow_marker(self) -> None:
+        loaded = {
+            "albumentationsx": {
+                "library": "albumentationsx",
+                "media": "image",
+                "metadata": {"library_versions": {"albumentationsx": "1.0"}},
+                "results": {
+                    "Elastic": {
+                        "supported": True,
+                        "early_stopped": True,
+                        "slow_marker": "<10 img/s",
+                        "median_throughput": 5.0,
+                        "std_throughput": 0.0,
+                    },
+                },
+            },
+            "torchvision": {
+                "library": "torchvision",
+                "media": "image",
+                "metadata": {"library_versions": {"torchvision": "1.0"}},
+                "results": {
+                    "Elastic": {
+                        "supported": True,
+                        "early_stopped": False,
+                        "median_throughput": 25.0,
+                        "std_throughput": 1.0,
+                    },
+                },
+            },
+        }
+
+        table = format_comparison_table(loaded)
+
+        assert "Elastic" in table
+        assert "<10 img/s" in table
+
+    def test_early_stopped_transform_formats_threshold_without_marker(self) -> None:
+        loaded = {
+            "albumentationsx": {
+                "library": "albumentationsx",
+                "media": "image",
+                "metadata": {"library_versions": {"albumentationsx": "1.0"}},
+                "results": {
+                    "SlowTransform": {
+                        "supported": True,
+                        "early_stopped": True,
+                        "slow_threshold_throughput": 42.0,
+                        "slow_threshold_unit": "img/s",
+                    },
+                },
+            },
+        }
+
+        table = format_comparison_table(loaded)
+
+        assert "SlowTransform" in table
+        assert "<42 img/s" in table
 
 
 class TestCompareRegression:

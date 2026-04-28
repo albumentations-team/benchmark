@@ -23,6 +23,10 @@ TRANSFORMS = [
     {"name": "HorizontalFlip", "transform": tv_transforms.RandomHorizontalFlip(p=1)},
     {"name": "VerticalFlip", "transform": tv_transforms.RandomVerticalFlip(p=1)},
     {
+        "name": "RandomRotate90",
+        "transform": lambda image: torch.rot90(image, int(torch.randint(0, 4, ()).item()), dims=(-2, -1)),
+    },
+    {
         "name": "Rotate",
         "transform": tv_transforms.RandomRotation(
             degrees=45,

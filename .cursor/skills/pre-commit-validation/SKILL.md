@@ -19,6 +19,8 @@ pre-commit run --files benchmark/runner.py tools/compare_results.py
 # Run specific hook
 pre-commit run ruff --all-files
 pre-commit run mypy --all-files
+pre-commit run shellcheck --all-files
+pre-commit run shfmt --all-files
 ```
 
 ## Auto-fix Common Issues
@@ -62,6 +64,11 @@ pre-commit run pyright --all-files
 Config in `pyproject.toml`:
 - `pythonVersion = "3.13"`
 - `reportMissingImports = false` (for optional deps)
+
+### Shell scripts
+
+Shell scripts are checked with `shellcheck` and formatted with `shfmt`.
+Keep benchmark launcher scripts Bash-clean because failures can waste GCP time.
 
 ## Project Quality Standards
 

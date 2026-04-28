@@ -1,4 +1,5 @@
 import multiprocessing
+import os
 import platform
 import sys
 from collections.abc import Callable
@@ -31,6 +32,13 @@ def read_img_torch(path: Path) -> Any:  # torch.Tensor
 def read_img_kornia(path: Path) -> Any:  # torch.Tensor
     """Read image using kornia format"""
     return read_img_torch(path) / 255.0  # Keep as float32 on CPU
+
+
+def read_img_pil(path: Path) -> Any:  # PIL.Image.Image
+    """Read image using Pillow (RGB mode)"""
+    from PIL import Image
+
+    return Image.open(str(path)).convert("RGB")
 
 
 def read_video_cv2(path: Path) -> np.ndarray:
@@ -129,6 +137,7 @@ def get_image_loader(library: str) -> Callable[[Path], Any]:
         "ultralytics": read_img_cv2,
         "torchvision": read_img_torch,
         "kornia": read_img_kornia,
+        "pillow": read_img_pil,
     }
 
     if library not in loaders:
@@ -222,11 +231,24 @@ def verify_thread_settings() -> dict[str, Any]:
 
 def get_system_info() -> dict[str, str]:
     """Get system information"""
+    memory_total = "unknown"
+    try:
+        if hasattr(os, "sysconf"):
+            pages = os.sysconf("SC_PHYS_PAGES")
+            page_size = os.sysconf("SC_PAGE_SIZE")
+            memory_total = str(int(pages) * int(page_size))
+    except (OSError, ValueError):
+        memory_total = "unknown"
+
     return {
         "python_version": sys.version,
+        "python_executable": sys.executable,
         "platform": platform.platform(),
+        "system": platform.system(),
+        "machine": platform.machine(),
         "processor": platform.processor(),
         "cpu_count": str(multiprocessing.cpu_count()),
+        "memory_total_bytes": memory_total,
         "timestamp": datetime.now(UTC).isoformat(),
     }
 
@@ -257,7 +279,32 @@ def get_library_versions(library: str) -> dict[str, str]:
     else:
         versions[library] = get_version(library)
 
-    for extra_librarties in ["numpy", "pillow", "opencv-python-headless", "torch", "opencv-python"]:
+    decoder_packages = {
+        "opencv": ["opencv-python-headless", "opencv-python"],
+        "pyav": ["av"],
+        "decord": ["decord"],
+        "torchcodec": ["torchcodec"],
+        "torchvision": ["torchvision"],
+        "dali": ["nvidia-dali-cuda120", "nvidia-dali-cuda110", "nvidia-dali"],
+    }
+    if library in decoder_packages:
+        for pkg in decoder_packages[library]:
+            v = get_version(pkg)
+            if v != "not installed":
+                versions[library] = v
+                break
+
+    for extra_librarties in [
+        "numpy",
+        "pillow",
+        "opencv-python-headless",
+        "torch",
+        "torchvision",
+        "opencv-python",
+        "av",
+        "decord",
+        "torchcodec",
+    ]:
         versions[extra_librarties] = get_version(extra_librarties)
 
     return versions

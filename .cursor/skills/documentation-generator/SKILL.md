@@ -195,7 +195,13 @@ Complete documentation update workflow:
 
 ```bash
 # 1. Run benchmarks (if needed)
-./run_all.sh -d /path/to/images -o output/
+python -m benchmark.cli run \
+  --scenario image-rgb \
+  --mode micro \
+  --data-dir /path/to/imagenet/val \
+  --output output/rgb_micro \
+  --num-items 2000 \
+  --timer pyperf
 
 # 2. Update all documentation
 ./tools/update_docs.sh
@@ -208,6 +214,16 @@ git diff docs/
 git add README.md docs/
 git commit -m "docs: update benchmark results"
 ```
+
+## Benchmark Policy Notes
+
+Keep README guidance aligned with these policies:
+
+- Cloud benchmark docs should show `--gcp-gcs-data-uri` pointing at one dataset archive/object, not a directory of individual images.
+- Micro benchmark docs should state that media is preloaded once per library and reused across transform measurements.
+- Pyperf docs should mention per-transform subprocess isolation, media-cache reuse, lazy transform construction, and slow-transform preflight/early-stop behavior.
+- Environment docs should mention joined environments and cached dependency installs, including the detached GCP venv cache.
+- Local rerun examples should include `--no-refresh-requirements` when dependency versions are intentionally fixed.
 
 ## Troubleshooting
 
