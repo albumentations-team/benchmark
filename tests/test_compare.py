@@ -172,6 +172,28 @@ class TestFormatComparisonTable:
         assert "Elastic" in table
         assert "<10 img/s" in table
 
+    def test_early_stopped_transform_formats_threshold_without_marker(self) -> None:
+        loaded = {
+            "albumentationsx": {
+                "library": "albumentationsx",
+                "media": "image",
+                "metadata": {"library_versions": {"albumentationsx": "1.0"}},
+                "results": {
+                    "SlowTransform": {
+                        "supported": True,
+                        "early_stopped": True,
+                        "slow_threshold_throughput": 42.0,
+                        "slow_threshold_unit": "img/s",
+                    },
+                },
+            },
+        }
+
+        table = format_comparison_table(loaded)
+
+        assert "SlowTransform" in table
+        assert "<42 img/s" in table
+
 
 class TestCompareRegression:
     def test_regression_detected(self, baseline_and_current_dirs, capsys) -> None:

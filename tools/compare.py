@@ -141,7 +141,7 @@ def _format_result_cell(result: dict[str, Any], *, is_fastest: bool = False) -> 
             return marker
         threshold = result.get("slow_threshold_throughput")
         unit = result.get("slow_threshold_unit", "img/s")
-        if isinstance(threshold, int | float) and threshold > 0:
+        if isinstance(threshold, (int, float)) and threshold > 0:
             return f"<{threshold:.0f} {unit}"
         return "slow-skipped"
     v = float(result.get("median_throughput", 0.0))
