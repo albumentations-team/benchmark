@@ -176,6 +176,7 @@ output_videos_custom/
 paper.md
 
 # Benchmark run artifacts
+_internal/
 gcp_runs/
 output/
 output_*/
