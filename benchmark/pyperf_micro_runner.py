@@ -38,6 +38,11 @@ def _time_transform_loop(loops: int, transform: Any, media: list[Any], call_fn: 
     return pyperf.perf_counter() - start
 
 
+def _pyperf_value_throughputs(values: list[float]) -> list[float]:
+    """Convert pyperf-normalized per-item seconds into items/second."""
+    return [1.0 / value for value in values if value > 0]
+
+
 def _add_worker_args(cmd: list[str], args: argparse.Namespace) -> None:
     cmd.extend(
         [
@@ -328,7 +333,7 @@ def _run_filtered_transforms(
         if bench is None:
             continue
         times = [float(value) for value in bench.get_values()]
-        throughputs = [len(media) / value for value in times if value > 0]
+        throughputs = _pyperf_value_throughputs(times)
         result = summarize_runs(throughputs, times)
         result["pyperf"] = {
             "name": bench.get_name(),

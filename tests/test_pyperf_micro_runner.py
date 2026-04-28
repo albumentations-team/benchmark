@@ -11,11 +11,15 @@ import pytest
 
 pytest.importorskip("pyperf")
 
-from benchmark.pyperf_micro_runner import _merge_pyperf_payload, _preflight_slow_transform
+from benchmark.pyperf_micro_runner import _merge_pyperf_payload, _preflight_slow_transform, _pyperf_value_throughputs
 from benchmark.runner import MediaType
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+def test_pyperf_value_throughputs_use_normalized_per_item_times() -> None:
+    assert _pyperf_value_throughputs([0.25, 0.5, 0.0]) == [4.0, 2.0]
 
 
 def test_preflight_slow_transform_returns_visible_skip_payload() -> None:
