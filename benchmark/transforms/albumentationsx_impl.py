@@ -6,6 +6,9 @@ import albumentations as A
 import cv2
 import numpy as np
 
+from benchmark.transforms.albumentations_compat import (
+    ConstrainedCoarseDropoutWrapper as _ConstrainedCoarseDropoutWrapper,
+)
 from benchmark.transforms.registry import build_transforms, register_library
 from benchmark.transforms.specs import TransformSpec
 
@@ -395,8 +398,6 @@ def create_transform(spec: TransformSpec) -> Any:
         )
     if spec.name == "RandomRotate90":
         return A.RandomRotate90(p=1)
-    if spec.name == "RandomRotation90":
-        return A.RandomRotate90(p=1)
     if spec.name == "RandomScale":
         return A.RandomScale(
             scale_range=params["scale_limit"],
@@ -561,11 +562,13 @@ def create_transform(spec: TransformSpec) -> Any:
             p=1,
         )
     if spec.name == "ConstrainedCoarseDropout":
-        return A.ConstrainedCoarseDropout(
-            num_holes_range=params["num_holes_range"],
-            hole_height_range=params["hole_height_range"],
-            hole_width_range=params["hole_width_range"],
-            p=1,
+        return _ConstrainedCoarseDropoutWrapper(
+            A.ConstrainedCoarseDropout(
+                num_holes_range=params["num_holes_range"],
+                hole_height_range=params["hole_height_range"],
+                hole_width_range=params["hole_width_range"],
+                p=1,
+            ),
         )
     if spec.name == "PadIfNeeded":
         return A.PadIfNeeded(

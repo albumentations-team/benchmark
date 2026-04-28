@@ -79,14 +79,29 @@ class TestBuildTransforms:
         assert len(video_result) == 1
         assert video_result[0]["name"] == first_name
 
+    def test_filter_env_only_builds_requested_transforms(self, monkeypatch) -> None:
+        first_name = TRANSFORM_SPECS[0].name
+        built_names: list[str] = []
+
+        def tracking_factory(spec) -> object:
+            built_names.append(spec.name)
+            return object()
+
+        register_library("_filtered_lib", create_image_fn=tracking_factory)
+        monkeypatch.setenv("BENCHMARK_TRANSFORMS_FILTER", first_name)
+
+        result = build_transforms("_filtered_lib", media="image")
+
+        assert [entry["name"] for entry in result] == [first_name]
+        assert built_names == [first_name]
+
 
 class TestRegisterLibrary:
     def test_registers_image_impls(self) -> None:
-        sentinel = object()
-        register_library("_reg_test", create_image_fn=lambda _spec: sentinel)
+        register_library("_reg_test", create_image_fn=lambda _spec: object())
         for td in TRANSFORMS:
             assert "_reg_test" in td.image_impls
-            assert td.image_impls["_reg_test"] is sentinel
+            assert callable(td.image_impls["_reg_test"])
 
     def test_registers_video_impls(self) -> None:
         sentinel = object()
@@ -98,10 +113,10 @@ class TestRegisterLibrary:
         def bad_factory(_spec) -> None:
             raise RuntimeError("intentional failure")
 
-        # Should not raise — exceptions are caught and logged
         register_library("_bad_lib", create_image_fn=bad_factory)
-        for td in TRANSFORMS:
-            assert td.image_impls.get("_bad_lib") is None
+        result = build_transforms("_bad_lib", media="image")
+
+        assert result == []
 
     def test_none_factory_skips_image(self) -> None:
         register_library("_skip_lib", create_image_fn=None, create_video_fn=None)

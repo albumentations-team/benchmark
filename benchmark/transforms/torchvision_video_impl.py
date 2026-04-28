@@ -60,7 +60,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
         return tv_transforms.RandomHorizontalFlip(**params)
     if spec.name == "VerticalFlip":
         return tv_transforms.RandomVerticalFlip(**params)
-    if spec.name == "RandomRotation90":
+    if spec.name == "RandomRotate90":
         lo, hi = params["times"]
         return lambda video: torch.rot90(video, int(torch.randint(lo, hi + 1, ()).item()), dims=(-2, -1))
     if spec.name == "Pad":

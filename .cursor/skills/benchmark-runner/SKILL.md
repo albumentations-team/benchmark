@@ -1,6 +1,6 @@
 ---
 name: benchmark-runner
-description: Automates running image/video augmentation benchmarks for single or multiple libraries, validates outputs, generates comparison reports, and updates documentation. Use when running benchmarks, comparing library performance, or when the user mentions benchmark, run_all.sh, run_single.sh, or performance testing.
+description: Automates running image/video augmentation benchmarks for single or multiple libraries, validates outputs, generates comparison reports, and updates documentation. Use when running benchmarks, comparing library performance, or when the user mentions benchmark, benchmark.cli, pyperf, GCP benchmark runs, or performance testing.
 ---
 
 # Benchmark Runner
@@ -9,23 +9,32 @@ Run augmentation benchmarks with standardized configurations and automatic resul
 
 ## Running Image Benchmarks
 
+Use the unified CLI. Legacy `run_all.sh` / `run_single.sh` examples are stale for this repo.
+
 ### Single library
 ```bash
-./run_single.sh \
-  -d /path/to/images \
-  -o output/library_results.json \
-  -s benchmark/transforms/library_impl.py \
-  -n 2000 \
-  -r 5
+python -m benchmark.cli run \
+  --scenario image-rgb \
+  --mode micro \
+  --data-dir /path/to/imagenet/val \
+  --output output/rgb_micro \
+  --libraries albumentationsx \
+  --num-items 2000 \
+  --num-runs 5 \
+  --timer pyperf
 ```
 
 ### All libraries
 ```bash
-./run_all.sh \
-  -d /path/to/images \
-  -o output/ \
-  -n 2000 \
-  -r 5
+python -m benchmark.cli run \
+  --scenario image-rgb \
+  --mode micro \
+  --data-dir /path/to/imagenet/val \
+  --output output/rgb_micro \
+  --libraries albumentationsx torchvision kornia pillow \
+  --num-items 2000 \
+  --num-runs 5 \
+  --timer pyperf
 ```
 
 ## Running Video Benchmarks
@@ -34,7 +43,20 @@ Use the unified CLI (`python -m benchmark.cli run --media video ...`). Legacy `r
 
 ### Google Cloud (detached)
 
-Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with a startup script that rsyncs a **dataset prefix** from `gs://` to local disk, runs the same `benchmark.cli run` flags (including `--spec`, warmup, `--multichannel`), writes artifacts under `gs://<results-base>/<run_id>/`, then deletes the VM. See README **Google Cloud (detached)** and `benchmark/cloud/gcp.py`. Use `--gcp-attached` for blocking SSH/debug runs.
+Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with a startup script that downloads one **dataset archive/object** from `gs://` (for example `val.tar`), unpacks/stages it on local disk, runs the same `benchmark.cli run` flags (including `--spec`, warmup, `--multichannel`), writes artifacts under `gs://<results-base>/<run_id>/`, then deletes the VM. See README **Google Cloud (detached)** and `benchmark/cloud/gcp.py`. Use `--gcp-attached` for blocking SSH/debug runs.
+
+## Optimization Policies
+
+- Stage datasets as one archive/object in cloud runs; do not copy individual images one by one for each VM.
+- Keep timed data local to the benchmark machine. Detached GCP runs unpack to local disk before running.
+- Micro benchmarks preload the requested number of media items once per library, in that library's native format.
+- Pyperf runs may use per-transform subprocesses, but those subprocesses must reuse the per-library media cache and must not decode images again.
+- Construct only the transform being measured in pyperf subprocesses. Avoid eager construction of all transforms because some libraries warn or do setup in constructors.
+- Use joined environments for compatible libraries (`torch_stack` for torchvision/Kornia/Pillow image runs, `torch_video` for torchvision/Kornia video runs).
+- Cache environments by resolved requirements, Python version, media type, and environment group; reuse the GCS venv cache for detached GCP unless deliberately rebuilding.
+- Preflight slow transforms and record an early-stop payload instead of spending the full pyperf budget on transforms that exceed the slow threshold.
+- Preserve single-thread internal execution for micro benchmarks; pipeline benchmarks can use production-style workers/threading and must record those settings.
+- Prefer `--no-refresh-requirements` for local reruns when dependency versions are intentionally fixed.
 
 ## Standard Parameters
 

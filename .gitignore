@@ -174,3 +174,8 @@ notebooks/
 output_custom/
 output_videos_custom/
 paper.md
+
+# Benchmark run artifacts
+gcp_runs/
+output/
+output_*/

@@ -12,7 +12,7 @@ Add support for new augmentation libraries to the benchmark suite.
 ```
 - [ ] Create transform implementation file
 - [ ] Create requirements file
-- [ ] Update run scripts
+- [ ] Register CLI spec maps and environment groups
 - [ ] Test with sample data
 - [ ] Generate baseline results
 - [ ] Update documentation
@@ -81,54 +81,53 @@ opencv-python>=4.5.0
 
 Add to `requirements/requirements.txt` if base dependencies needed.
 
-## Step 3: Update Run Scripts
+## Step 3: Register CLI Support
 
 ### For image benchmarks
 
-Edit `run_all.sh`:
+Add the library to the image spec and requirement maps in `benchmark/cli.py`:
 
-```bash
-# Add to LIBRARIES array (line ~95)
-LIBRARIES=("albumentationsx" "torchvision" "kornia" "newlib")
-
-# Add to SPEC_FILES array
-SPEC_FILES=(
-    "benchmark/transforms/albumentationsx_impl.py"
-    "benchmark/transforms/torchvision_impl.py"
-    "benchmark/transforms/kornia_impl.py"
-    "benchmark/transforms/newlib_impl.py"
-)
+```python
+_IMAGE_SPECS["newlib"] = "benchmark/transforms/newlib_impl.py"
+_REQUIREMENTS["newlib"] = "requirements/newlib.txt"
 ```
 
 ### For video benchmarks
 
-Edit `run_video_all.sh` similarly.
+Add the library to `_VIDEO_SPECS` and `_VIDEO_REQUIREMENTS` in `benchmark/cli.py`.
+If it can share dependencies with existing libraries, add it to the relevant `_ENV_GROUPS` entry instead of creating a separate venv.
 
 ## Step 4: Test Integration
 
 ```bash
 # Test single library
-./run_single.sh \
-  -d /path/to/test/images \
-  -o test_output/newlib_results.json \
-  -s benchmark/transforms/newlib_impl.py \
-  -n 10 \
-  -r 1
+python -m benchmark.cli run \
+  --scenario image-rgb \
+  --mode micro \
+  --data-dir /path/to/test/images \
+  --output test_output/newlib \
+  --libraries newlib \
+  --num-items 10 \
+  --num-runs 1 \
+  --timer pyperf
 
 # Verify JSON output
-python -c "import json; print(json.load(open('test_output/newlib_results.json'))['metadata']['library_versions'])"
+python -c "import json; print(json.load(open('test_output/newlib/image-rgb/micro/newlib_micro_results.json'))['metadata']['library_versions'])"
 ```
 
 ## Step 5: Generate Baseline Results
 
 ```bash
 # Full benchmark run
-./run_single.sh \
-  -d /path/to/full/dataset \
-  -o output/newlib_results.json \
-  -s benchmark/transforms/newlib_impl.py \
-  -n 2000 \
-  -r 5
+python -m benchmark.cli run \
+  --scenario image-rgb \
+  --mode micro \
+  --data-dir /path/to/full/dataset \
+  --output output/newlib_rgb_micro \
+  --libraries newlib \
+  --num-items 2000 \
+  --num-runs 5 \
+  --timer pyperf
 ```
 
 ## Step 6: Update Documentation

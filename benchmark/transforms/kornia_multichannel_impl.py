@@ -22,7 +22,7 @@ def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
 TRANSFORMS = [
     {"name": "HorizontalFlip", "transform": Kaug.RandomHorizontalFlip(p=1)},
     {"name": "VerticalFlip", "transform": Kaug.RandomVerticalFlip(p=1)},
-    {"name": "RandomRotation90", "transform": Kaug.RandomRotation90(times=(1, 3), p=1)},
+    {"name": "RandomRotate90", "transform": Kaug.RandomRotation90(times=(0, 3), p=1)},
     {"name": "Rotate", "transform": Kaug.RandomRotation(degrees=(45, 45), p=1)},
     {
         "name": "Affine",

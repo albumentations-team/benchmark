@@ -23,12 +23,15 @@ Usage examples:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
+import os
 import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import TypedDict
 
 from tqdm import tqdm
 
@@ -75,6 +78,20 @@ _VIDEO_REQUIREMENTS: dict[str, str] = {
     "dali": "requirements/dali-video.txt",
 }
 
+_ENV_GROUPS: dict[str, dict[str, tuple[str, ...]]] = {
+    "image": {
+        "albumentationsx": ("albumentationsx",),
+        "albumentations_mit": ("albumentations_mit",),
+        "torch_stack": ("torchvision", "kornia", "pillow"),
+    },
+    "video": {
+        "albumentationsx_video": ("albumentationsx",),
+        "albumentations_mit_video": ("albumentations_mit",),
+        "torch_video": ("torchvision", "kornia"),
+        "dali_video": ("dali",),
+    },
+}
+
 
 # ---------------------------------------------------------------------------
 # venv / runner helpers
@@ -98,34 +115,167 @@ def _venv_python(venv_dir: Path) -> Path:
     return venv_dir / "bin" / "python"
 
 
-def _ensure_venv(library: str, media: str, repo_root: Path) -> Path:
+def _requirement_input_path(requirements_path: Path) -> Path:
+    return requirements_path.with_suffix(".in")
+
+
+def _compile_requirements(python: Path, requirements_path: Path) -> None:
+    requirements_input = _requirement_input_path(requirements_path)
+    if not requirements_input.exists():
+        return
+    logger.info("Refreshing %s from %s", requirements_path, requirements_input)
+    try:
+        subprocess.run(
+            [
+                str(python),
+                "-m",
+                "uv",
+                "pip",
+                "compile",
+                "--upgrade",
+                "--quiet",
+                "-o",
+                str(requirements_path),
+                str(requirements_input),
+            ],
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        if requirements_path.exists():
+            logger.warning("Could not refresh %s on this platform; keeping existing lock", requirements_path)
+            return
+        raise
+
+
+def _requirements_cache_key(
+    *,
+    python: Path,
+    requirements_paths: list[Path],
+    env_group: str,
+    media: str,
+) -> str:
+    digest = hashlib.sha256()
+    digest.update(f"python={python}\n".encode())
+    try:
+        python_version = subprocess.check_output(
+            [str(python), "--version"],
+            text=True,
+            stderr=subprocess.STDOUT,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        python_version = "unknown"
+    digest.update(f"python_version={python_version}\n".encode())
+    digest.update(f"env_group={env_group}\nmedia={media}\n".encode())
+    for path in requirements_paths:
+        digest.update(f"path={path.name}\n".encode())
+        digest.update(path.read_bytes())
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def _ensure_uv(python: Path) -> None:
+    try:
+        subprocess.run(
+            [str(python), "-m", "uv", "--version"],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        logger.info("Installing uv into %s", python.parent.parent)
+        subprocess.run([str(python), "-m", "pip", "install", "-q", "uv"], check=True)
+
+
+def _install_requirements_if_needed(
+    *,
+    python: Path,
+    venv_dir: Path,
+    requirements_paths: list[Path],
+    env_group: str,
+    media: str,
+) -> None:
+    cache_file = venv_dir / ".benchmark_requirements_hash"
+    cache_key = _requirements_cache_key(
+        python=python,
+        requirements_paths=requirements_paths,
+        env_group=env_group,
+        media=media,
+    )
+    if cache_file.exists() and cache_file.read_text(encoding="utf-8").strip() == cache_key:
+        logger.info("Using cached dependencies for %s (%s)", env_group, media)
+        return
+
+    logger.info("Installing dependencies for %s (%s)...", env_group, media)
+    for requirements_path in requirements_paths:
+        subprocess.run(
+            [str(python), "-m", "uv", "pip", "install", "-q", "-U", "-r", str(requirements_path)],
+            check=True,
+        )
+    cache_file.write_text(f"{cache_key}\n", encoding="utf-8")
+    logger.info("Dependencies ready for %s", env_group)
+
+
+def _library_env_group(library: str, media: str) -> str:
+    for group, libraries in _ENV_GROUPS.get(media, {}).items():
+        if library in libraries:
+            return group
     suffix = "_video" if media == "video" else ""
-    venv_dir = repo_root / f".venv_{library}{suffix}"
+    return f"{library}{suffix}"
+
+
+def _requirements_for_env_group(env_group: str, media: str, repo_root: Path) -> list[Path]:
+    req_map = _VIDEO_REQUIREMENTS if media == "video" else _REQUIREMENTS
+    group_libraries = _ENV_GROUPS.get(media, {}).get(env_group, (env_group.removesuffix("_video"),))
+    requirements_paths = [repo_root / "requirements" / "requirements.txt"]
+    seen = {requirements_paths[0]}
+    for library in group_libraries:
+        req = repo_root / req_map[library]
+        if req not in seen:
+            requirements_paths.append(req)
+            seen.add(req)
+    return requirements_paths
+
+
+def _ensure_venv(library: str, media: str, repo_root: Path, *, refresh_requirements: bool = True) -> Path:
+    env_group = _library_env_group(library, media)
+    venv_dir = repo_root / f".venv_{env_group}"
 
     if not venv_dir.exists():
-        logger.info("Creating venv for %s (%s)...", library, media)
+        logger.info("Creating venv for %s (%s)...", env_group, media)
         subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
 
     python = _venv_python(venv_dir)
 
-    logger.info("Installing dependencies for %s (%s)...", library, media)
-    subprocess.run([str(python), "-m", "pip", "install", "-q", "-U", "uv"], check=True)
+    _ensure_uv(python)
 
-    base_req = repo_root / "requirements" / "requirements.txt"
-    subprocess.run(
-        [str(python), "-m", "uv", "pip", "install", "-q", "-U", "-r", str(base_req)],
-        check=True,
-    )
+    requirements_paths = _requirements_for_env_group(env_group, media, repo_root)
+    if refresh_requirements:
+        for requirements_path in requirements_paths:
+            _compile_requirements(python, requirements_path)
 
-    req_map = _VIDEO_REQUIREMENTS if media == "video" else _REQUIREMENTS
-    lib_req = repo_root / req_map[library]
-    subprocess.run(
-        [str(python), "-m", "uv", "pip", "install", "-q", "-U", "--force-reinstall", "-r", str(lib_req)],
-        check=True,
+    _install_requirements_if_needed(
+        python=python,
+        venv_dir=venv_dir,
+        requirements_paths=requirements_paths,
+        env_group=env_group,
+        media=media,
     )
-    logger.info("Dependencies ready for %s", library)
 
     return python
+
+
+class _SlowSkipKwargs(TypedDict):
+    slow_threshold_sec_per_item: float | None
+    slow_preflight_items: int | None
+    disable_slow_skip: bool
+
+
+def _slow_skip_kwargs(args: argparse.Namespace) -> _SlowSkipKwargs:
+    return {
+        "slow_threshold_sec_per_item": args.slow_threshold_sec_per_item,
+        "slow_preflight_items": args.slow_preflight_items,
+        "disable_slow_skip": args.disable_slow_skip,
+    }
 
 
 def _run_single(
@@ -146,10 +296,16 @@ def _run_single(
     num_channels: int = 3,
     timer_backend: str = "pyperf",
     scenario: str = "manual",
+    refresh_requirements: bool = True,
+    slow_threshold_sec_per_item: float | None = None,
+    slow_preflight_items: int | None = None,
+    disable_slow_skip: bool = False,
 ) -> None:
-    python = _ensure_venv(library, media, repo_root)
+    python = _ensure_venv(library, media, repo_root, refresh_requirements=refresh_requirements)
 
     if timer_backend == "pyperf":
+        pyperf_output_file = output_file.with_suffix(".pyperf.json")
+        pyperf_output_file.unlink(missing_ok=True)
         cmd = [
             str(python),
             "-m",
@@ -161,7 +317,7 @@ def _run_single(
             "--json-output",
             str(output_file),
             "--output",
-            str(output_file.with_suffix(".pyperf.json")),
+            str(pyperf_output_file),
             "--media",
             media,
             "--scenario",
@@ -177,8 +333,20 @@ def _run_single(
             cmd += ["--num-items", str(num_items)]
         if transforms_filter:
             cmd += ["--transforms", ",".join(transforms_filter)]
+        if slow_threshold_sec_per_item is not None:
+            cmd += ["--slow-threshold-sec-per-item", str(slow_threshold_sec_per_item)]
+        if slow_preflight_items is not None:
+            cmd += ["--slow-preflight-items", str(slow_preflight_items)]
+        if disable_slow_skip:
+            cmd.append("--disable-slow-skip")
+        pyperf_env_extra: dict[str, str] = {}
+        if transforms_filter:
+            pyperf_env_extra["BENCHMARK_TRANSFORMS_FILTER"] = ",".join(transforms_filter)
+        if verbose:
+            pyperf_env_extra["BENCHMARK_VERBOSE"] = "1"
+        env = {**os.environ, **pyperf_env_extra}
         logger.info("Running pyperf micro benchmark for %s %s → %s", library, media, output_file)
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, env=env)
         return
 
     cmd = [
@@ -208,8 +376,6 @@ def _run_single(
         cmd += ["--max-warmup", str(max_warmup)]
     if num_channels != 3:
         cmd += ["--num-channels", str(num_channels)]
-
-    import os
 
     env_extra: dict[str, str] = {}
     if transforms_filter:
@@ -306,10 +472,12 @@ def _run_scenario_library(
             num_channels=num_channels,
             timer_backend=args.timer,
             scenario=scenario_name,
+            refresh_requirements=args.refresh_requirements,
+            **_slow_skip_kwargs(args),
         )
         return
 
-    python = _ensure_venv(library, media, repo_root)
+    python = _ensure_venv(library, media, repo_root, refresh_requirements=args.refresh_requirements)
     cmd = [
         str(python),
         "-m",
@@ -461,7 +629,21 @@ def build_gcp_benchmark_cli_argv(
         argv += ["--decoders", *args.decoders]
     if getattr(args, "timer", None):
         argv += ["--timer", args.timer]
+    if not getattr(args, "refresh_requirements", True):
+        argv.append("--no-refresh-requirements")
+    if getattr(args, "slow_threshold_sec_per_item", None) is not None:
+        argv += ["--slow-threshold-sec-per-item", str(args.slow_threshold_sec_per_item)]
+    if getattr(args, "slow_preflight_items", None) is not None:
+        argv += ["--slow-preflight-items", str(args.slow_preflight_items)]
+    if getattr(args, "disable_slow_skip", False):
+        argv.append("--disable-slow-skip")
     return argv
+
+
+def _default_gcp_venv_cache_uri(results_uri: str) -> str:
+    base = results_uri.rstrip("/")
+    parent = base.rsplit("/", 1)[0] if "/" in base.removeprefix("gs://") else base
+    return f"{parent}/augmentation-cache"
 
 
 def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Path) -> None:
@@ -474,6 +656,8 @@ def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Pa
         sys.exit(1)
 
     remote_repo_dir = args.gcp_remote_repo_dir
+    image_family = "pytorch-2-9-cu129-ubuntu-2404-nvidia-580" if args.gcp_gpu_type else "ubuntu-2404-lts-amd64"
+    image_project = "deeplearning-platform-release" if args.gcp_gpu_type else "ubuntu-os-cloud"
 
     if args.gcp_attached:
         if not args.gcp_remote_data_dir:
@@ -498,8 +682,10 @@ def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Pa
             machine_type=args.gcp_machine_type,
             accelerator_type=args.gcp_gpu_type,
             accelerator_count=1 if args.gcp_gpu_type else 0,
-            image_family="pytorch-latest-gpu" if args.gcp_gpu_type else "pytorch-latest-cpu",
+            image_family=image_family,
+            image_project=image_project,
             disk_size_gb=args.gcp_disk_size_gb,
+            preemptible=args.gcp_preemptible,
         )
         runner = GCPRunner(config)
         runner.run_attached(
@@ -515,6 +701,18 @@ def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Pa
         logger.error("Detached GCP runs require --gcp-gcs-data-uri and --gcp-gcs-results-uri")
         sys.exit(1)
 
+    def _gcp_staged_data_dir() -> str:
+        """Where the dataset ended up on the VM after staging from GCS."""
+        p = (args.gcp_gcs_data_uri or "").rstrip("/")
+        if not p.startswith("gs://"):
+            return "/root/benchmark-data"
+        base = p.rsplit("/", 1)[-1].lower()
+        if base.endswith(".tar") and base.startswith("val"):
+            return "/root/benchmark-data/val"
+        if base in {"val", "train", "test"}:
+            return "/root/benchmark-data/val"
+        return "/root/benchmark-data"
+
     run_id = new_run_id()
     machine_slug = args.gcp_machine_type.replace("/", "-").lower()[:24]
     instance_name = f"benchmark-{machine_slug}-{run_id[:12]}".lower().replace("_", "-")
@@ -522,7 +720,7 @@ def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Pa
     try:
         bench_argv = build_gcp_benchmark_cli_argv(
             args,
-            data_dir="/root/benchmark-data",
+            data_dir=_gcp_staged_data_dir(),
             output="/root/benchmark-work/results",
             repo_root=repo_root,
         )
@@ -546,6 +744,11 @@ def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Pa
         gcs_data_uri=args.gcp_gcs_data_uri,
         benchmark_cli_args=bench_argv,
         terminate_instance=not args.gcp_keep_instance,
+        keep_instance_on_failure=args.gcp_keep_on_failure,
+        venv_cache_uri=""
+        if args.gcp_no_venv_cache
+        else args.gcp_venv_cache_uri or _default_gcp_venv_cache_uri(args.gcp_gcs_results_uri),
+        force_venv_cache_rebuild=args.gcp_force_venv_cache_rebuild,
         submission=submission,
         instance_meta=instance_meta,
     )
@@ -556,8 +759,10 @@ def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Pa
         machine_type=args.gcp_machine_type,
         accelerator_type=args.gcp_gpu_type,
         accelerator_count=1 if args.gcp_gpu_type else 0,
-        image_family="pytorch-latest-gpu" if args.gcp_gpu_type else "pytorch-latest-cpu",
+        image_family=image_family,
+        image_project=image_project,
         disk_size_gb=args.gcp_disk_size_gb,
+        preemptible=args.gcp_preemptible,
         instance_name_override=instance_name,
     )
     runner = GCPRunner(config)
@@ -592,6 +797,9 @@ def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Pa
         "gcs_data_uri": args.gcp_gcs_data_uri,
         "gcs_results_base_uri": args.gcp_gcs_results_uri.rstrip("/"),
         "terminate_instance": not args.gcp_keep_instance,
+        "keep_instance_on_failure": args.gcp_keep_on_failure,
+        "venv_cache_uri": job["venv_cache_uri"],
+        "force_venv_cache_rebuild": args.gcp_force_venv_cache_rebuild,
         "fetch_results_hint": f"gcloud storage cp -r {run_prefix}/results/* {local_output_dir}/",
     }
     meta_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -657,6 +865,10 @@ def cmd_run(args: argparse.Namespace) -> None:
             transforms_filter=args.transforms,
             verbose=args.verbose,
             num_channels=args.num_channels,
+            timer_backend=args.timer,
+            scenario=f"{media}-manual",
+            refresh_requirements=args.refresh_requirements,
+            **_slow_skip_kwargs(args),
         )
         return
 
@@ -696,6 +908,8 @@ def cmd_run(args: argparse.Namespace) -> None:
             num_channels=args.num_channels,
             timer_backend=args.timer,
             scenario=f"{media}-manual",
+            refresh_requirements=args.refresh_requirements,
+            **_slow_skip_kwargs(args),
         )
 
     logger.info("All benchmarks complete. Results in: %s", output_dir)
@@ -849,7 +1063,10 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument(
         "--gcp-gcs-data-uri",
         metavar="GS_URI",
-        help="Detached mode: gs:// URI of dataset directory to rsync onto the VM (required unless --gcp-attached)",
+        help=(
+            "Detached mode: gs:// URI of the dataset archive/object to download to the VM "
+            "(required unless --gcp-attached)"
+        ),
     )
     run_p.add_argument(
         "--gcp-gcs-results-uri",
@@ -874,6 +1091,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="Boot disk size in GB (default: 100)",
     )
     run_p.add_argument("--gcp-keep-instance", action="store_true", help="Do not delete instance after run (debug)")
+    run_p.add_argument(
+        "--gcp-keep-on-failure",
+        action="store_true",
+        help="Detached mode: keep the VM alive only when the startup script or benchmark fails.",
+    )
+    run_p.add_argument(
+        "--gcp-preemptible",
+        action="store_true",
+        help="Use a preemptible GCP VM. Default is a regular VM for benchmark stability and quota compatibility.",
+    )
+    run_p.add_argument(
+        "--gcp-venv-cache-uri",
+        metavar="GS_URI",
+        help="GCS prefix for reusable VM venv cache (default: sibling augmentation-cache bucket prefix).",
+    )
+    run_p.add_argument("--gcp-no-venv-cache", action="store_true", help="Disable GCS venv cache restore/populate.")
+    run_p.add_argument(
+        "--gcp-force-venv-cache-rebuild",
+        action="store_true",
+        help="Bypass venv cache lookup and upload a fresh cache after a successful run.",
+    )
 
     run_p.add_argument("--num-items", "-n", type=int, help="Number of images/videos (default depends on media type)")
     run_p.add_argument("--num-runs", "-r", type=int, default=5, help="Benchmark runs per transform (default: 5)")
@@ -882,10 +1120,34 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument("--warmup-threshold", type=float, default=0.05)
     run_p.add_argument("--min-warmup-windows", type=int, default=3)
     run_p.add_argument(
+        "--slow-threshold-sec-per-item",
+        type=float,
+        default=None,
+        help="Skip pyperf for transforms slower than this many seconds per image/video in preflight.",
+    )
+    run_p.add_argument(
+        "--slow-preflight-items",
+        type=int,
+        default=None,
+        help="Number of images/videos used for pyperf slow-transform preflight.",
+    )
+    run_p.add_argument(
+        "--disable-slow-skip",
+        action="store_true",
+        help="Run exhaustive pyperf measurements even when preflight says a transform is slow.",
+    )
+    run_p.add_argument(
         "--timer",
         choices=["simple", "pyperf"],
         default="pyperf",
         help="Micro benchmark timing backend (default: pyperf)",
+    )
+    run_p.set_defaults(refresh_requirements=True)
+    run_p.add_argument(
+        "--no-refresh-requirements",
+        action="store_false",
+        dest="refresh_requirements",
+        help="Skip regenerating requirements/*.txt from requirements/*.in before checking the venv dependency cache",
     )
     run_p.add_argument(
         "--num-channels",

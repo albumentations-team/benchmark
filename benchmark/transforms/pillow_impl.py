@@ -49,6 +49,17 @@ def _find_perspective_coeffs(source: list[tuple[float, float]], target: list[tup
     return np.linalg.solve(mat, b).tolist()
 
 
+def _pad_to_min_size(img: Image.Image, min_width: int, min_height: int, fill: int = 0) -> Image.Image:
+    iw, ih = img.size
+    pad_w = max(0, min_width - iw)
+    pad_h = max(0, min_height - ih)
+    if pad_w == 0 and pad_h == 0:
+        return img
+    left = pad_w // 2
+    top = pad_h // 2
+    return ImageOps.expand(img, border=(left, top, pad_w - left, pad_h - top), fill=fill)
+
+
 def _hsv_shift(arr: np.ndarray, h_shift: float, s_scale: float, v_scale: float) -> np.ndarray:
     """Vectorised RGB->HSV shift->RGB.  arr is float32 in [0, 1], shape HxWx3."""
     r, g, b = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2]
@@ -182,12 +193,8 @@ def create_transform(spec: TransformSpec) -> Any | None:
         return lambda img: img.transpose(random.choice(_ops))
 
     if spec.name == "RandomRotate90":
-        _ops90 = [Image.ROTATE_90, Image.ROTATE_180, Image.ROTATE_270]
-        return lambda img: img.transpose(random.choice(_ops90))
-
-    if spec.name == "RandomRotation90":
-        _ops90 = [Image.ROTATE_90, Image.ROTATE_180, Image.ROTATE_270]
-        return lambda img: img.transpose(random.choice(_ops90))
+        _ops90 = [None, Image.ROTATE_90, Image.ROTATE_180, Image.ROTATE_270]
+        return lambda img: img if (op := random.choice(_ops90)) is None else img.transpose(op)
 
     if spec.name == "Rotate":
         angle = params["angle"]
@@ -358,8 +365,9 @@ def create_transform(spec: TransformSpec) -> Any | None:
         interp = _pil_interp(params["interpolation"])
 
         def _random_sized_crop(img: Image.Image) -> Image.Image:
+            img = _pad_to_min_size(img, min_width=min_h, min_height=min_h)
             iw, ih = img.size
-            h = random.randint(min_h, min(max_h, ih))
+            h = random.randint(min_h, min(max_h, ih, iw))
             w = h
             x = random.randint(0, max(0, iw - w))
             y = random.randint(0, max(0, ih - h))

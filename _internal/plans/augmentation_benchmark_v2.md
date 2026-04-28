@@ -94,11 +94,38 @@ Use these boundaries by default:
 
 Defaults:
 
+- RGB dataset source: same convention as `imread_benchmark` — download `ILSVRC2012_img_val.tar`, unpack it to `imagenet/val`, and point `--data-dir` at that directory.
+- RGB micro dataset: `2,000` images from the unpacked ImageNet validation set via `--num-items 2000`. More images mostly slow the run down; reliability should come from calibrated timing, repeated measurements, and variance checks.
+- RGB pipeline dataset: full unpacked ImageNet validation set (`50,000` images) for paper runs. Use `10,000+` only for intermediate sweeps where runtime is the constraint.
 - Video clip length: `16` frames.
 - Image batch sizes: configurable, start with `32` and `128`.
 - Video batch sizes: configurable, start with `4` and `8`, because 16-frame clips eat memory fast.
 - Report both throughput and latency: images/sec or clips/sec, plus ms/sample and ms/batch.
 - Record CPU model, GPU model, torch/CUDA versions, decoder, whether decode is included, dataloader workers, batch size, pin memory, precision, channel count, clip length.
+
+Threading policy:
+
+- Micro benchmarks are controlled single-stream measurements: one process, one internal library thread, preloaded
+  decoded inputs, augmentation only. Treat them as an implementation profiler: they are valuable for checking
+  algorithmic quality and regressions, but they are intentionally artificial because they measure one CPU core rather
+  than a production training input pipeline. Set `OMP_NUM_THREADS=1`, `OPENBLAS_NUM_THREADS=1`,
+  `MKL_NUM_THREADS=1`, `NUMEXPR_NUM_THREADS=1`, OpenCV threads to `1`, and PyTorch CPU threads to `1` where
+  applicable.
+- Pipeline benchmarks should represent production-style throughput, not a single-core lab constraint. Use dataloader worker sweeps and allow each library to use its normal or recommended production threading model. AlbumentationsX gets parallelism through multiple dataloader workers; torchvision/Kornia/OpenCV should not be artificially limited in the main user-facing pipeline table.
+- Always record both dataloader workers and internal thread settings. If space allows, add a controlled appendix table with internal threads forced to `1`, but keep the main pipeline result production-style.
+
+Paper hardware matrix:
+
+- Choose CPUs because they resemble machines used to feed model training, not because they cover every GCP CPU family.
+- RGB micro/profiler: MacBook M4 or similar Apple Silicon, `c4-standard-16` for modern Intel x86,
+  `c4d-standard-16` for modern AMD x86, and `c4a-standard-16` only if cloud Arm portability is part of the claim.
+  Add `g2-standard-16` and `a2-highgpu-1g` if the profiler should represent the host CPUs used beside L4 and A100
+  training jobs.
+- CPU-only pipeline: one modern C4/C4D-class CPU machine is enough for the main RGB and 9-channel CPU pipeline table;
+  add the second CPU vendor only if the paper claims cross-vendor CPU behavior.
+- Mainstream GPU: one L4 machine for realistic training-input pipeline results.
+- High-end GPU: one A100 machine for stress-testing whether CPU augmentation becomes the bottleneck when model-side throughput is high.
+- More important than extra CPU micro runs: DataLoader/pipeline image benchmarks and video augmentation with GPU execution, especially torchvision video on GPU.
 
 ## Video Decode Benchmark
 
@@ -180,6 +207,12 @@ Update [README.md](README.md) so users see two different questions answered:
 
 - Profiler tables: "How fast is the augmentation operation itself?"
 - Realistic pipeline tables: "What should I use in a training loop?"
+
+For RGB images, document the paper defaults explicitly:
+
+- Micro/profiler tables use `2,000` images from the unpacked ImageNet validation tar, preloaded into memory, with one internal thread for every library.
+- Pipeline tables use the full `50,000` ImageNet validation images from disk, dataloader worker sweeps, and production-style library threading. These tables are the user guidance tables.
+- Do not compare the micro and pipeline numbers in the same ranking without labels; they answer different questions.
 
 Update report tooling to group by scenario and mode instead of only image/video:
 

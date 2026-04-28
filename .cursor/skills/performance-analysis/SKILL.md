@@ -150,6 +150,16 @@ This shows:
 
 ## Common Performance Issues
 
+### Repeated Media Loading
+**Symptom**: `Loading RGB images` appears before every transform in a pyperf micro run.
+**Cause**: The per-transform pyperf subprocess is bypassing the per-library media cache.
+**Fix**: Ensure the parent loads media once per library, writes the temporary media cache, and passes `--media-cache` to transform subprocesses and pyperf workers. Do not benchmark by rereading images from disk per transform.
+
+### Constructor Warning Spam
+**Symptom**: Warnings from unrelated transforms, for example `ShiftScaleRotate` or `ElasticTransform`, appear while benchmarking `Solarize`.
+**Cause**: Transform specs are eagerly constructing all transforms during import.
+**Fix**: Build transforms lazily and pass `BENCHMARK_TRANSFORMS_FILTER` into pyperf subprocesses so only the measured transform is instantiated.
+
 ### Slow Warmup
 **Symptom**: `warmup_iterations > 500`
 **Causes**:
@@ -174,7 +184,7 @@ stability = abs(recent - overall) / overall
 - Thermal throttling
 - Memory pressure
 
-**Fix**: Run benchmark on idle system with `num_runs=10` for better statistics.
+**Fix**: First increase measured work per sample (`--num-items` or pyperf `--min-time`/loops if exposed), then increase `--num-runs`. Run on an idle, plugged-in machine; on Linux use `python -m pyperf system tune`.
 
 ### Early Stopping
 **Symptom**: `early_stopped=True`
@@ -182,7 +192,16 @@ stability = abs(recent - overall) / overall
 1. Transform too slow (> 0.1 sec/image)
 2. Timeout (> 60 sec total)
 
-**Analysis**: Check `early_stop_reason` for details.
+**Analysis**: Check `early_stop_reason` for details. Early stopping is expected policy for very slow transforms; do not force exhaustive pyperf runs unless the user explicitly asks for slow-transform measurements.
+
+### Cloud Setup Dominates Runtime
+**Symptom**: Runs spend most time copying data or rebuilding venvs.
+**Fix**:
+- Stage a single dataset archive/object, not individual images.
+- Reuse joined environments where dependency sets are compatible.
+- Reuse the local venv cache and detached GCP GCS venv cache.
+- Use `--no-refresh-requirements` for local reruns with fixed dependency versions.
+- Use smoke runs with small `--num-items` / selected `--transforms` before full cloud runs.
 
 ## Thread Configuration
 

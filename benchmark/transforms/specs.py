@@ -473,12 +473,8 @@ TRANSFORM_SPECS = [
     ),
     TransformSpec(
         "RandomRotate90",
-        {},
-    ),
-    TransformSpec(
-        "RandomRotation90",
         {
-            "times": (1, 3),
+            "times": (0, 3),
         },
     ),
     TransformSpec(

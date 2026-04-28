@@ -4,7 +4,8 @@ Detached flow (default for ``--cloud gcp``):
 
     1. Build a repo tarball and upload it with ``job.json`` + ``bootstrap.sh`` to GCS under a unique run prefix.
     2. Create a Compute Engine VM whose startup script downloads ``bootstrap.sh`` and runs it.
-    3. On the VM: rsync dataset from GCS to local disk, ``pip install -e .``, run ``benchmark.cli run``
+    3. On the VM: download the dataset archive from GCS to local disk, extract it, install Python 3.13 with ``uv``,
+       run ``benchmark.cli run``
        (no cloud flags).
     4. Upload results and logs to GCS, then delete the VM via the Compute API (unless
        ``terminate_instance`` is false).
@@ -78,15 +79,13 @@ _REPO_EXCLUDE_PATTERNS = [
 _BOOTSTRAP_SH = (
     r"""#!/bin/bash
 set -euo pipefail
+export HOME="${HOME:-/root}"
+export PATH="/snap/bin:${HOME}/.local/bin:${PATH}"
 RUN_LOG=/var/log/benchmark-gcp-run.log
-exec > >(tee -a "$RUN_LOG") 2>&1
+touch "$RUN_LOG"
+echo "benchmark bootstrap logging to ${RUN_LOG}"
+exec >>"$RUN_LOG" 2>&1
 echo "=== benchmark bootstrap start $(date -u +"%Y-%m-%dT%H:%M:%SZ") ==="
-
-if ! command -v gsutil >/dev/null 2>&1; then
-  export DEBIAN_FRONTEND=noninteractive
-  apt-get update -qq
-  apt-get install -y -qq google-cloud-cli ca-certificates curl
-fi
 
 PREFIX=$(curl -s -f -H "Metadata-Flavor: Google" \
   "http://metadata.google.internal/computeMetadata/v1/instance/attributes/benchmark-run-prefix")
@@ -100,28 +99,343 @@ REPODIR="""
 DATADIR="""
     + _VM_DATADIR
     + r"""
+
+self_delete_vm() {
+  MD=http://metadata.google.internal/computeMetadata/v1
+  local project zone_raw zone name token_json token
+  project=$(curl -s -f -H "Metadata-Flavor: Google" "$MD/project/project-id") || return 1
+  zone_raw=$(curl -s -f -H "Metadata-Flavor: Google" "$MD/instance/zone") || return 1
+  zone=${zone_raw##*/}
+  name=$(curl -s -f -H "Metadata-Flavor: Google" "$MD/instance/name") || return 1
+  token_json=$(curl -s -f -H "Metadata-Flavor: Google" \
+    "$MD/instance/service-accounts/default/token?scopes=https://www.googleapis.com/auth/cloud-platform") || return 1
+  token=$(python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])" <<<"$token_json") || return 1
+  curl -s -S -f -X DELETE \
+    -H "Authorization: Bearer $token" \
+    "https://compute.googleapis.com/compute/v1/projects/${project}/zones/${zone}/instances/${name}" \
+    || echo "WARN: instance self-delete failed; delete manually or fix IAM (compute.instances.delete)."
+}
+
+should_terminate() {
+  if [[ ! -f "$WORKDIR/job.json" ]]; then
+    return 0
+  fi
+  [[ "$(python3 -c 'import json; print(json.load(open("'"$WORKDIR"'/job.json"))["terminate_instance"])')" == "True" ]]
+}
+
+upload_terminal_artifacts() {
+  local rc="$1"
+  local status="$2"
+  local run_prefix="$PREFIX"
+  local terminal_ok=1
+  if [[ -f "$WORKDIR/job.json" ]]; then
+    run_prefix=$(
+      python3 -c 'import json; print(json.load(open("'"$WORKDIR"'/job.json"))["gcs_results_prefix"].rstrip("/"))'
+    )
+  fi
+  mkdir -p "$WORKDIR"
+  printf '%s\n' "$rc" > "$WORKDIR/exit_code.txt"
+
+  if [[ -n "${RESULT_SYNC_PID:-}" ]]; then
+    kill "$RESULT_SYNC_PID" 2>/dev/null || true
+    RESULT_SYNC_PID=""
+  fi
+
+  terminal_log() {
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] terminal-upload: $*" >&2
+  }
+
+  gcs_cp_retry() {
+    local label="$1"
+    local timeout_secs="$2"
+    local src="$3"
+    local dest="$4"
+    local attempt rc
+    for attempt in 1 2 3 4 5; do
+      terminal_log "upload ${label} attempt ${attempt}/5: timeout ${timeout_secs}s to ${dest}"
+      set +e
+      timeout "${timeout_secs}s" gcloud --quiet storage cp "$src" "$dest"
+      rc=$?
+      set -e
+      if [[ "$rc" == "0" ]]; then
+        terminal_log "upload ${label} succeeded"
+        return 0
+      fi
+      terminal_log "WARN: upload ${label} failed with rc=${rc}"
+      sleep 3
+    done
+    terminal_log "ERROR: upload ${label} failed after retries: timeout ${timeout_secs}s to ${dest}"
+    return 1
+  }
+
+  gcs_describe_retry() {
+    local label="$1"
+    local uri="$2"
+    local attempt rc
+    for attempt in 1 2 3 4 5; do
+      terminal_log "confirm ${label} attempt ${attempt}/5: timeout 30s gcloud --quiet storage objects describe ${uri}"
+      set +e
+      timeout 30s gcloud --quiet storage objects describe "$uri" >/dev/null 2>&1
+      rc=$?
+      set -e
+      if [[ "$rc" == "0" ]]; then
+        terminal_log "confirm ${label} succeeded"
+        return 0
+      fi
+      terminal_log "WARN: confirm ${label} failed with rc=${rc}"
+      sleep 3
+    done
+    terminal_log "ERROR: confirm ${label} failed after retries: timeout 30s for ${uri}"
+    return 1
+  }
+
+  BENCHMARK_TERMINAL_STATUS="$status" BENCHMARK_TERMINAL_RC="$rc" python3 << 'PY' || true
+import json
+import os
+import time
+from pathlib import Path
+
+work = Path("/root/benchmark-work")
+job_path = work / "job.json"
+meta = {
+    "exit_code": int(os.environ["BENCHMARK_TERMINAL_RC"]),
+    "status": os.environ["BENCHMARK_TERMINAL_STATUS"],
+    "end_timestamp_unix": time.time(),
+}
+if job_path.exists():
+    job = json.loads(job_path.read_text(encoding="utf-8"))
+    meta.update(job.get("instance", {}))
+    meta["submission"] = job.get("submission", {})
+(work / "run_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+PY
+
+  gcs_cp_retry "exit_code.txt" 60 "$WORKDIR/exit_code.txt" "${run_prefix}/exit_code.txt" || terminal_ok=0
+  gcs_cp_retry "run_meta.json" 60 "$WORKDIR/run_meta.json" "${run_prefix}/run_meta.json" || terminal_ok=0
+
+  local marker_name marker_path
+  if [[ "$status" == "success" ]]; then
+    marker_name="DONE"
+    marker_path="$WORKDIR/DONE"
+    date -u > "$marker_path"
+  else
+    marker_name="FAILED"
+    marker_path="$WORKDIR/FAILED"
+    printf 'failed exit %s\n%s\n' "$rc" "$(date -u)" > "$marker_path"
+  fi
+
+  gcs_cp_retry "$marker_name" 60 "$marker_path" "${run_prefix}/${marker_name}" || terminal_ok=0
+  gcs_describe_retry "$marker_name" "${run_prefix}/${marker_name}" || terminal_ok=0
+  if [[ "$terminal_ok" != "1" ]]; then
+    terminal_log "ERROR: terminal marker upload was not confirmed for ${run_prefix}; keeping VM for triage."
+    return 1
+  fi
+
+  if [[ -d "$WORKDIR/results" ]]; then
+    terminal_log "sync results to ${run_prefix}/results/"
+    timeout 300s gcloud --quiet storage rsync --recursive "$WORKDIR/results" "${run_prefix}/results/" || \
+      terminal_log "WARN: result rsync failed after terminal marker confirmation"
+  fi
+  gcs_cp_retry "vm.log" 60 "$RUN_LOG" "${run_prefix}/vm.log" || true
+  return 0
+}
+
+on_error() {
+  local rc=$?
+  local line="$1"
+  echo "ERROR: benchmark bootstrap failed at line ${line} (exit ${rc})" >&2
+  terminal_uploaded=0
+  upload_terminal_artifacts "$rc" "failed" && terminal_uploaded=1
+  keep_on_failure=$(
+    python3 -c 'import json; print(json.load(open("'"$WORKDIR"'/job.json")).get("keep_instance_on_failure", False))' \
+      2>/dev/null || echo "False"
+  )
+  if should_terminate && [[ "$keep_on_failure" != "True" && "$terminal_uploaded" == "1" ]]; then
+    self_delete_vm || true
+  fi
+  exit "$rc"
+}
+trap 'on_error $LINENO' ERR
+
+if ! command -v gcloud >/dev/null 2>&1; then
+  echo "ERROR: gcloud is required on the VM image; Ubuntu GCE images should provide google-cloud-cli snap." >&2
+  exit 1
+fi
+
+(
+  while true; do
+    sleep 15
+    timeout 60s gcloud --quiet storage cp "$RUN_LOG" "${PREFIX}/vm.log" >/dev/null 2>&1 || true
+  done
+) &
+LOG_SYNC_PID=$!
+RESULT_SYNC_PID=""
+cleanup_background_syncs() {
+  kill "$LOG_SYNC_PID" "${RESULT_SYNC_PID:-}" 2>/dev/null || true
+}
+trap cleanup_background_syncs EXIT
+
 mkdir -p "$WORKDIR" "$DATADIR"
 cd "$WORKDIR"
 
-gsutil cp "${PREFIX}/job.json" ./job.json
-gsutil cp "${PREFIX}/repo.tar.gz" ./repo.tar.gz
+gcloud --quiet storage cp "${PREFIX}/job.json" ./job.json
+gcloud --quiet storage cp "${PREFIX}/repo.tar.gz" ./repo.tar.gz
+RUN_PREFIX=$(python3 -c 'import json; print(json.load(open("job.json"))["gcs_results_prefix"].rstrip("/"))')
+mkdir -p "$WORKDIR/results"
+(
+  while true; do
+    sleep 30
+    if [[ -d "$WORKDIR/results" ]]; then
+      timeout 300s gcloud --quiet storage rsync --recursive \
+        "$WORKDIR/results" "${RUN_PREFIX}/results/" >/dev/null 2>&1 || true
+    fi
+  done
+) &
+RESULT_SYNC_PID=$!
 
 mkdir -p "$REPODIR"
 tar xzf repo.tar.gz -C "$REPODIR"
 rm -f repo.tar.gz
 
-DATA_URI=$(python3 -c 'import json; print(json.load(open("job.json"))["gcs_data_uri"])')
-gsutil -m rsync -r "$DATA_URI" "$DATADIR"
+compute_venv_cache_path() {
+  python3 << 'PY'
+import hashlib
+import json
+import platform
+from pathlib import Path
+
+work = Path("/root/benchmark-work")
+repo = work / "repo"
+job = json.loads((work / "job.json").read_text(encoding="utf-8"))
+cache_uri = str(job.get("venv_cache_uri", "")).rstrip("/")
+if not cache_uri:
+    raise SystemExit(0)
+
+digest = hashlib.sha256()
+digest.update(b"grouping-schema=v1\n")
+digest.update(f"os={platform.system()}\narch={platform.machine()}\npython=3.13\n".encode())
+for path in sorted((repo / "requirements").glob("*.txt")):
+    digest.update(f"path={path.name}\n".encode())
+    digest.update(path.read_bytes())
+    digest.update(b"\n")
+print(f"{cache_uri}/venvs-{platform.system()}-{platform.machine()}-{digest.hexdigest()[:16]}.tar.gz")
+PY
+}
+
+VENV_CACHE_PATH="$(compute_venv_cache_path || true)"
+FORCE_VENV_CACHE_REBUILD=$(
+  python3 -c 'import json; print(json.load(open("job.json")).get("force_venv_cache_rebuild", False))'
+)
+VENV_CACHE_HIT=0
+if [[ -n "$VENV_CACHE_PATH" ]]; then
+  echo "Venv cache path: ${VENV_CACHE_PATH}"
+  if [[ "$FORCE_VENV_CACHE_REBUILD" == "True" ]]; then
+    echo "Venv cache lookup skipped: force rebuild requested."
+  elif timeout 30s gcloud --quiet storage objects describe "$VENV_CACHE_PATH" >/dev/null 2>&1; then
+    echo "Venv cache hit; restoring..."
+    if timeout 300s gcloud --quiet storage cp "$VENV_CACHE_PATH" "$WORKDIR/venvs.tar.gz"; then
+      tar xzf "$WORKDIR/venvs.tar.gz" -C "$WORKDIR"
+      rm -f "$WORKDIR/venvs.tar.gz"
+      VENV_CACHE_HIT=1
+      echo "Venv cache restored."
+    else
+      echo "WARN: failed to download venv cache; rebuilding locally." >&2
+    fi
+  else
+    echo "Venv cache miss; will populate after successful run."
+  fi
+else
+  echo "Venv cache disabled."
+fi
+
+STAGE_LIMIT=$(python3 << 'PY'
+import json
+
+j = json.load(open("job.json"))
+args = j["benchmark_cli_args"]
+gcs_data_uri: str = j["gcs_data_uri"]
+
+
+def value(flag: str) -> str:
+    try:
+        return str(args[args.index(flag) + 1])
+    except (ValueError, IndexError):
+        return ""
+
+
+mode = value("--mode")
+num_items = value("--num-items")
+is_tar = gcs_data_uri.lower().endswith((".tar", ".tar.gz", ".tgz"))
+if mode == "micro" and not is_tar:
+    raise SystemExit(
+        "For --mode micro on GCP, --gcp-gcs-data-uri must point to a tarball (e.g. gs://.../imagenet/val.tar). "
+        f"Got: {gcs_data_uri!r}"
+    )
+if mode == "micro":
+    print(num_items or "2000")
+else:
+    print("0")
+PY
+)
+TAR_PATH="$WORKDIR/imagenet-val.tar"
+TAR_URI=$(python3 -c 'import json; print(json.load(open("job.json"))["gcs_data_uri"])')
+mkdir -p "$DATADIR"
+if [[ "$TAR_URI" == *.tar || "$TAR_URI" == *.tar.gz || "$TAR_URI" == *.tgz ]]; then
+  echo "Staging dataset tarball: ${TAR_URI}"
+  gcloud storage cp "$TAR_URI" "$TAR_PATH"
+  export BENCHMARK_TAR_PATH="$TAR_PATH"
+  export BENCHMARK_STAGING_DIR="$DATADIR"
+  export BENCHMARK_TAR_EXTRACT_LIMIT="$STAGE_LIMIT"
+  python3 << 'PY'
+import os
+import tarfile
+from pathlib import Path
+
+data_dir = Path(os.environ["BENCHMARK_STAGING_DIR"])
+limit_raw = os.environ.get("BENCHMARK_TAR_EXTRACT_LIMIT", "0")
+limit = int(limit_raw) if limit_raw.isdigit() else 0
+tar_path = Path(os.environ["BENCHMARK_TAR_PATH"])
+
+# ImageNet val tarball layout (standard): val/<name>.JPEG
+
+
+def is_image_member(name: str) -> bool:
+    lower = name.lower()
+    return lower.startswith("val/") and (lower.endswith(".jpeg") or lower.endswith(".jpg") or lower.endswith(".png"))
+
+
+with tarfile.open(tar_path, mode="r:*") as tf:
+    if limit == 0:
+        tf.extractall(path=data_dir, filter="data")
+    else:
+        members = [m for m in tf.getmembers() if m.isfile() and is_image_member(m.name)]
+        members.sort(key=lambda m: m.name)
+        members = members[:limit]
+        tf.extractall(path=data_dir, members=members, filter="data")
+PY
+  rm -f "$TAR_PATH"
+else
+  echo "Staging dataset directory: ${TAR_URI}"
+  gcloud --quiet storage rsync --recursive "$TAR_URI" "$DATADIR"
+fi
 
 cd "$REPODIR"
-python3 -c 'import sys; assert sys.version_info >= (3, 13), "Need Python 3.13+ on VM: " + sys.version'
-python3 -m pip install -q pip setuptools wheel uv
-python3 -m pip install -q -e .
+echo "Installing uv..."
+curl -Ls https://astral.sh/uv/install.sh | sh
+uv --version
+uv python install 3.13
+CONTROL_VENV="$WORKDIR/control-venv"
+CONTROL_PYTHON="$CONTROL_VENV/bin/python"
+if [[ ! -x "$CONTROL_PYTHON" ]]; then
+  uv venv "$CONTROL_VENV" --python 3.13 --seed
+fi
+UV_LINK_MODE=copy uv pip install --python "$CONTROL_PYTHON" -q -r requirements/requirements.txt -e .
+export CONTROL_PYTHON
 cd "$WORKDIR"
 
 set +e
 python3 << 'PY'
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -134,7 +448,13 @@ repo = Path("""
     + r""")
 j = json.loads((work / "job.json").read_text())
 rc = subprocess.call(
-    [sys.executable, "-m", "benchmark.cli", "run", *j["benchmark_cli_args"]],
+    [
+        os.environ["CONTROL_PYTHON"],
+        "-m",
+        "benchmark.cli",
+        "run",
+        *j["benchmark_cli_args"],
+    ],
     cwd=repo,
 )
 (work / "benchmark_exit_code.txt").write_text(str(rc))
@@ -142,68 +462,54 @@ sys.exit(0)
 PY
 set -e
 
-RUN_PREFIX=$(python3 -c 'import json; print(json.load(open("job.json"))["gcs_results_prefix"].rstrip("/"))')
-mkdir -p """
-    + _VM_RESULTS
-    + r"""
-
-gsutil -m rsync -r """
-    + _VM_RESULTS
-    + r""" "${RUN_PREFIX}/results/" || true
-gsutil cp "$RUN_LOG" "${RUN_PREFIX}/vm.log" || true
-
-python3 << 'PY'
-import json
-import subprocess
-import time
-from pathlib import Path
-
-work = Path("""
-    + repr(_VM_WORKDIR)
-    + r""")
-j = json.loads((work / "job.json").read_text())
-prefix = j["gcs_results_prefix"].rstrip("/")
-rc = int((work / "benchmark_exit_code.txt").read_text().strip())
-(work / "exit_code.txt").write_text(str(rc))
-subprocess.run(["gsutil", "cp", str(work / "exit_code.txt"), f"{prefix}/exit_code.txt"], check=False)
-meta = {
-    "exit_code": rc,
-    "end_timestamp_unix": time.time(),
-    **j.get("instance", {}),
-    "submission": j.get("submission", {}),
-}
-(work / "run_meta.json").write_text(json.dumps(meta, indent=2))
-subprocess.run(["gsutil", "cp", str(work / "run_meta.json"), f"{prefix}/run_meta.json"], check=False)
-PY
+RC=$(cat "$WORKDIR/benchmark_exit_code.txt")
+terminal_uploaded=0
+if [[ "$RC" == "0" ]]; then
+  upload_terminal_artifacts "$RC" "success" && terminal_uploaded=1
+  if [[ -n "${VENV_CACHE_PATH:-}" && "$VENV_CACHE_HIT" != "1" ]]; then
+    echo "Populating venv cache at ${VENV_CACHE_PATH}..."
+    rm -f "$WORKDIR/venvs.tar.gz"
+    cache_inputs=()
+    [[ -d "$WORKDIR/control-venv" ]] && cache_inputs+=("control-venv")
+    while IFS= read -r path; do
+      cache_inputs+=("${path#"$WORKDIR"/}")
+    done < <(find "$REPODIR" -maxdepth 1 -type d -name '.venv_*' | sort)
+    if (( ${#cache_inputs[@]} > 0 )); then
+      (
+        cd "$WORKDIR"
+        GZIP=-1 timeout 300s tar czf "$WORKDIR/venvs.tar.gz" "${cache_inputs[@]}"
+      ) && timeout 600s gcloud --quiet storage cp "$WORKDIR/venvs.tar.gz" "$VENV_CACHE_PATH" || \
+        echo "WARN: failed to populate venv cache at ${VENV_CACHE_PATH}" >&2
+      rm -f "$WORKDIR/venvs.tar.gz"
+    else
+      echo "WARN: no venvs found to cache." >&2
+    fi
+  fi
+else
+  upload_terminal_artifacts "$RC" "failed" && terminal_uploaded=1
+fi
 
 terminate=$(python3 -c 'import json; print(json.load(open("job.json"))["terminate_instance"])')
-if [[ "$terminate" == "True" ]]; then
-  MD=http://metadata.google.internal/computeMetadata/v1
-  PROJECT=$(curl -s -f -H "Metadata-Flavor: Google" "$MD/project/project-id")
-  ZONE_RAW=$(curl -s -f -H "Metadata-Flavor: Google" "$MD/instance/zone")
-  ZONE=${ZONE_RAW##*/}
-  NAME=$(curl -s -f -H "Metadata-Flavor: Google" "$MD/instance/name")
-  TOKEN_JSON=$(curl -s -f -H "Metadata-Flavor: Google" \
-    "$MD/instance/service-accounts/default/token?scopes=https://www.googleapis.com/auth/cloud-platform")
-  TOKEN=$(python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])" <<<"$TOKEN_JSON")
-  curl -s -S -f -X DELETE \
-    -H "Authorization: Bearer $TOKEN" \
-    "https://compute.googleapis.com/compute/v1/projects/${PROJECT}/zones/${ZONE}/instances/${NAME}" \
-    || echo "WARN: instance self-delete failed; delete manually or fix IAM (compute.instances.delete)."
+keep_on_failure=$(python3 -c 'import json; print(json.load(open("job.json")).get("keep_instance_on_failure", False))')
+if [[ "$terminate" == "True" && "$terminal_uploaded" == "1" && ( "$RC" == "0" || "$keep_on_failure" != "True" ) ]]; then
+  self_delete_vm || true
 fi
 echo "=== benchmark bootstrap end $(date -u +"%Y-%m-%dT%H:%M:%SZ") ==="
+exit "$RC"
 """
 )
 
 _STARTUP_INLINE = r"""#!/bin/bash
 set -euo pipefail
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq || true
-apt-get install -y -qq ca-certificates curl python3 google-cloud-cli || true
+export PATH="/snap/bin:${PATH}"
 PREFIX=$(curl -s -f -H "Metadata-Flavor: Google" \
   "http://metadata.google.internal/computeMetadata/v1/instance/attributes/benchmark-run-prefix")
 TMP=/tmp/benchmark-gcp-bootstrap.sh
-gsutil cp "${PREFIX}/bootstrap.sh" "$TMP"
+if ! command -v gcloud >/dev/null 2>&1; then
+  echo "ERROR: gcloud is required to fetch bootstrap.sh; expected it from the GCE image google-cloud-cli snap."
+  exit 1
+fi
+gcloud --quiet storage cp "${PREFIX}/bootstrap.sh" "$TMP"
 chmod +x "$TMP"
 exec "$TMP"
 """
@@ -211,7 +517,20 @@ exec "$TMP"
 
 def _run(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
     logger.debug("$ %s", shlex.join(cmd))
-    return subprocess.run(cmd, check=True, text=True, capture_output=True, **kwargs)
+    kwargs.setdefault("timeout", int(os.environ.get("BENCHMARK_GCLOUD_TIMEOUT_SECS", "600")))
+    try:
+        return subprocess.run(cmd, check=True, text=True, capture_output=True, **kwargs)
+    except subprocess.CalledProcessError as e:
+        logger.exception(
+            "Command failed: %s\nstdout:\n%s\nstderr:\n%s",
+            shlex.join(cmd),
+            e.stdout or "",
+            e.stderr or "",
+        )
+        raise
+    except subprocess.TimeoutExpired:
+        logger.exception("Command timed out after %ss: %s", kwargs["timeout"], shlex.join(cmd))
+        raise
 
 
 def _run_stream(cmd: list[str], **kwargs: Any) -> int:
@@ -230,8 +549,8 @@ def _validate_gs_uri(uri: str, *, kind: str) -> str:
 
 
 def _gcs_cp(local_path: Path, dest_uri: str) -> None:
-    """Upload a file to GCS using ``gsutil cp``."""
-    _run(["gsutil", "cp", str(local_path), dest_uri])
+    """Upload a file to GCS using ``gcloud storage cp``."""
+    _run([_GCLOUD, "storage", "cp", str(local_path), dest_uri], timeout=300)
 
 
 def _make_repo_tarball(repo_root: Path) -> Path:
@@ -240,9 +559,11 @@ def _make_repo_tarball(repo_root: Path) -> Path:
     os.close(fd)
     archive_path = Path(tmp)
     exclude_flags = [flag for pattern in _REPO_EXCLUDE_PATTERNS for flag in ("--exclude", pattern)]
+    env = {**os.environ, "COPYFILE_DISABLE": "1"}
     subprocess.run(
-        ["tar", "czf", str(archive_path), *exclude_flags, "-C", str(repo_root), "."],
+        ["tar", "--no-xattrs", "-czf", str(archive_path), *exclude_flags, "-C", str(repo_root), "."],
         check=True,
+        env=env,
     )
     return archive_path
 
@@ -308,7 +629,7 @@ class GCPRunner:
             cmd.append("--preemptible")
 
         logger.info("Creating instance %s in %s...", cfg.instance_name, cfg.zone)
-        _run(cmd)
+        _run(cmd, timeout=900)
         logger.info("Instance created.")
 
     def delete_instance(self) -> None:
@@ -354,6 +675,7 @@ class GCPRunner:
                 capture_output=True,
                 text=True,
                 check=False,
+                timeout=30,
             )
             if result.returncode == 0 and "ready" in result.stdout:
                 logger.info("SSH ready.")
@@ -377,9 +699,11 @@ class GCPRunner:
         try:
             archive_path.unlink(missing_ok=True)
             logger.info("Creating repo archive for upload (excluding venvs and outputs)...")
+            env = {**os.environ, "COPYFILE_DISABLE": "1"}
             subprocess.run(
-                ["tar", "czf", str(archive_path), *exclude_flags, "-C", str(repo_root), "."],
+                ["tar", "--no-xattrs", "-czf", str(archive_path), *exclude_flags, "-C", str(repo_root), "."],
                 check=True,
+                env=env,
             )
 
             logger.info("Uploading repo archive to %s:%s...", cfg.instance_name, remote_dir)
@@ -618,6 +942,9 @@ def build_gcp_job_dict(
     gcs_data_uri: str,
     benchmark_cli_args: list[str],
     terminate_instance: bool,
+    keep_instance_on_failure: bool,
+    venv_cache_uri: str,
+    force_venv_cache_rebuild: bool,
     submission: dict[str, Any],
     instance_meta: dict[str, Any],
 ) -> dict[str, Any]:
@@ -627,6 +954,9 @@ def build_gcp_job_dict(
         "gcs_data_uri": _validate_gs_uri(gcs_data_uri, kind="--gcp-gcs-data-uri"),
         "gcs_results_prefix": "",
         "terminate_instance": terminate_instance,
+        "keep_instance_on_failure": keep_instance_on_failure,
+        "venv_cache_uri": _validate_gs_uri(venv_cache_uri, kind="--gcp-venv-cache-uri") if venv_cache_uri else "",
+        "force_venv_cache_rebuild": force_venv_cache_rebuild,
         "benchmark_cli_args": benchmark_cli_args,
         "submission": submission,
         "instance": instance_meta,

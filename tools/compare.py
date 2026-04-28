@@ -48,6 +48,12 @@ def load_result_file(path: Path) -> tuple[str, str, dict[str, Any], dict[str, An
     if "_video_results" in stem:
         library = stem.replace("_video_results", "")
         media = "video"
+    elif "_micro_results" in stem:
+        library = stem.replace("_micro_results", "")
+        media = "image"
+    elif "_pipeline_results" in stem:
+        library = stem.replace("_pipeline_results", "")
+        media = "image"
     else:
         library = stem.replace("_results", "")
         media = "image"
@@ -56,13 +62,13 @@ def load_result_file(path: Path) -> tuple[str, str, dict[str, Any], dict[str, An
 
 
 def load_results_dir(directory: Path) -> dict[str, dict[str, Any]]:
-    """Load all *.json result files from a directory.
+    """Load benchmark summary result files from a directory.
 
     Returns:
         {library: {"media": "image"|"video", "metadata": {...}, "results": {...}}}
     """
     out: dict[str, dict[str, Any]] = {}
-    for path in sorted(directory.glob("*.json")):
+    for path in sorted(directory.glob("*_results.json")):
         try:
             library, media, metadata, results = load_result_file(path)
             key = f"{library}_video" if media == "video" else library
@@ -126,6 +132,24 @@ def _format_speedup_cell(low: float, mid: float, high: float) -> str:
     return f"{mid:.2f}x ({low:.2f}-{high:.2f}x)"
 
 
+def _format_result_cell(result: dict[str, Any], *, is_fastest: bool = False) -> str:
+    if not result.get("supported"):
+        return "-"
+    if result.get("early_stopped"):
+        marker = result.get("slow_marker")
+        if isinstance(marker, str) and marker:
+            return marker
+        threshold = result.get("slow_threshold_throughput")
+        unit = result.get("slow_threshold_unit", "img/s")
+        if isinstance(threshold, int | float) and threshold > 0:
+            return f"<{threshold:.0f} {unit}"
+        return "slow-skipped"
+    v = float(result.get("median_throughput", 0.0))
+    s = float(result.get("std_throughput", 0.0))
+    cell = f"{v:.0f} ± {s:.0f}"
+    return f"**{cell}**" if is_fastest else cell
+
+
 def format_comparison_table(
     loaded: dict[str, dict[str, Any]],
     libraries_filter: list[str] | None = None,
@@ -166,25 +190,28 @@ def format_comparison_table(
     for transform in sorted_transforms:
         row_vals: dict[str, float] = {}
         row_stds: dict[str, float] = {}
+        row_results: dict[str, dict[str, Any]] = {}
         for key in lib_keys:
             r = loaded[key]["results"].get(transform, {})
+            if r.get("supported"):
+                row_results[key] = r
             if r.get("supported") and not r.get("early_stopped"):
                 row_vals[key] = r.get("median_throughput", 0.0)
                 row_stds[key] = r.get("std_throughput", 0.0)
 
-        if len(row_vals) < 2:
+        if not row_results:
             continue
 
-        max_val = max(row_vals.values())
+        max_val = max(row_vals.values()) if row_vals else None
 
         row: list[str] = [transform]
         for key in lib_keys:
-            if key in row_vals:
-                v = row_vals[key]
-                s = row_stds[key]
-                cell = f"{v:.0f} ± {s:.0f}"
-                if v == max_val:
-                    cell = f"**{cell}**"
+            if key in row_results:
+                is_fastest = max_val is not None and row_vals.get(key) == max_val
+                cell = _format_result_cell(
+                    row_results[key],
+                    is_fastest=is_fastest,
+                )
             else:
                 cell = "-"
             row.append(cell)

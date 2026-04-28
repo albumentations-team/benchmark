@@ -5,7 +5,7 @@ This directory contains 6 specialized Cursor skills designed for the image/video
 ## Available Skills
 
 ### 1. [Benchmark Runner](benchmark-runner/SKILL.md)
-**Triggers**: benchmark, run_all.sh, run_single.sh, performance testing
+**Triggers**: benchmark, `benchmark.cli`, performance testing
 
 Automates running benchmarks with standard configurations:
 - Run single or multiple library benchmarks
@@ -19,7 +19,7 @@ Automates running benchmarks with standard configurations:
 Guides adding new augmentation libraries:
 - Create transform implementation files
 - Set up requirements and virtual environments
-- Update run scripts
+- Register CLI spec maps and joined environment groups
 - Generate baseline results
 
 ### 3. [Pre-commit Validation](pre-commit-validation/SKILL.md)

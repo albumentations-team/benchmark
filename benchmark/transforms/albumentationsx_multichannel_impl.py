@@ -20,6 +20,10 @@ import albumentations as A
 import cv2
 import numpy as np
 
+from benchmark.transforms.albumentations_compat import (
+    ConstrainedCoarseDropoutWrapper as _ConstrainedCoarseDropoutWrapper,
+)
+
 cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
 
@@ -193,7 +197,6 @@ TRANSFORMS = [
     # --- Additional geometric (channel-agnostic) ---
     {"name": "SquareSymmetry", "transform": A.SquareSymmetry(p=1)},
     {"name": "Transpose", "transform": A.Transpose(p=1)},
-    {"name": "RandomRotation90", "transform": A.RandomRotate90(p=1)},
     {
         "name": "SafeRotate",
         "transform": A.SafeRotate(
@@ -321,11 +324,13 @@ TRANSFORMS = [
     {"name": "PixelDropout", "transform": A.PixelDropout(dropout_prob=0.01, per_channel=False, drop_value=0, p=1)},
     {
         "name": "ConstrainedCoarseDropout",
-        "transform": A.ConstrainedCoarseDropout(
-            num_holes_range=(1, 3),
-            hole_height_range=(0.1, 0.2),
-            hole_width_range=(0.1, 0.2),
-            p=1,
+        "transform": _ConstrainedCoarseDropoutWrapper(
+            A.ConstrainedCoarseDropout(
+                num_holes_range=(1, 3),
+                hole_height_range=(0.1, 0.2),
+                hole_width_range=(0.1, 0.2),
+                p=1,
+            ),
         ),
     },
     {

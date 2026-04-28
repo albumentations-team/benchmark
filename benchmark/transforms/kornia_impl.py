@@ -9,6 +9,7 @@ from typing import Any
 import kornia
 import kornia.augmentation as Kaug
 import torch
+import torch.nn.functional as F
 
 from benchmark.transforms.registry import build_transforms, register_library
 from benchmark.transforms.specs import TransformSpec
@@ -18,6 +19,41 @@ LIBRARY = "kornia"
 
 # Force single thread for fair comparison with albumentationsx and torchvision
 torch.set_num_threads(1)
+
+
+class _CenterCropWithPad(torch.nn.Module):
+    def __init__(self, size: tuple[int, int]) -> None:
+        super().__init__()
+        self.height, self.width = size
+        self.crop = Kaug.CenterCrop(size=size, p=1)
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        height, width = image.shape[-2:]
+        pad_height = max(0, self.height - height)
+        pad_width = max(0, self.width - width)
+        if pad_height or pad_width:
+            top = pad_height // 2
+            bottom = pad_height - top
+            left = pad_width // 2
+            right = pad_width - left
+            image = F.pad(image, (left, right, top, bottom))
+        return self.crop(image)
+
+
+class _RandomJigsawWithPad(torch.nn.Module):
+    def __init__(self, grid: tuple[int, int]) -> None:
+        super().__init__()
+        self.grid = grid
+        self.jigsaw = Kaug.RandomJigsaw(grid=grid, p=1)
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        height, width = image.shape[-2:]
+        grid_h, grid_w = self.grid
+        pad_height = (-height) % grid_h
+        pad_width = (-width) % grid_w
+        if pad_height or pad_width:
+            image = F.pad(image, (0, pad_width, 0, pad_height))
+        return self.jigsaw(image)[..., :height, :width]
 
 
 # Required: Define how to apply transforms to images
@@ -225,10 +261,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
             p=1,
         )
     if spec.name == "CenterCrop128":
-        return Kaug.CenterCrop(
-            size=(params["height"], params["width"]),
-            p=1,
-        )
+        return _CenterCropWithPad(size=(params["height"], params["width"]))
     if spec.name == "Affine":
         angle_degrees = float(params["angle"])
         # Translation in pixels (same as albumentations translate_px)
@@ -287,10 +320,10 @@ def create_transform(spec: TransformSpec) -> Any | None:
             ratio=params["ratio"],
             p=1,
         )
-    if spec.name == "RandomRotation90":
+    if spec.name == "RandomRotate90":
         return Kaug.RandomRotation90(times=params["times"], p=1)
     if spec.name == "RandomJigsaw":
-        return Kaug.RandomJigsaw(grid=params["grid"], p=1)
+        return _RandomJigsawWithPad(grid=params["grid"])
     if spec.name == "Rotate":
         return Kaug.RandomRotation(
             degrees=(params["angle"], params["angle"]),

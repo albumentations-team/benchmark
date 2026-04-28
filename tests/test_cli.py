@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
@@ -13,7 +14,15 @@ import pytest
 if TYPE_CHECKING:
     from pathlib import Path
 
-from benchmark.cli import _extract_library, build_gcp_benchmark_cli_argv, build_parser
+from benchmark.cli import (
+    _compile_requirements,
+    _extract_library,
+    _library_env_group,
+    _requirements_cache_key,
+    _requirements_for_env_group,
+    build_gcp_benchmark_cli_argv,
+    build_parser,
+)
 
 
 class TestBuildParser:
@@ -163,6 +172,16 @@ class TestBuildParser:
         assert args.min_time == pytest.approx(1.5)
         assert args.min_batches == 3
 
+    def test_refresh_requirements_is_default(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out"])
+        assert args.refresh_requirements is True
+
+    def test_no_refresh_requirements_flag(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out", "--no-refresh-requirements"])
+        assert args.refresh_requirements is False
+
     def test_gcp_flags_parse(self) -> None:
         parser = build_parser()
         args = parser.parse_args(
@@ -183,13 +202,35 @@ class TestBuildParser:
                 "--gcp-disk-size-gb",
                 "200",
                 "--gcp-dry-run",
+                "--gcp-venv-cache-uri",
+                "gs://b/cache",
+                "--gcp-force-venv-cache-rebuild",
             ],
         )
         assert args.gcp_gcs_data_uri == "gs://b/d"
         assert args.gcp_gcs_results_uri == "gs://b/r"
         assert args.gcp_disk_size_gb == 200
         assert args.gcp_dry_run is True
+        assert args.gcp_venv_cache_uri == "gs://b/cache"
+        assert args.gcp_force_venv_cache_rebuild is True
         assert args.gcp_attached is False
+        assert args.gcp_preemptible is False
+
+        preemptible_args = parser.parse_args(
+            [
+                "run",
+                "--data-dir",
+                "/data",
+                "--output",
+                "/out",
+                "--cloud",
+                "gcp",
+                "--gcp-project",
+                "p",
+                "--gcp-preemptible",
+            ],
+        )
+        assert preemptible_args.gcp_preemptible is True
 
     def test_scenario_flags_parse(self) -> None:
         parser = build_parser()
@@ -285,6 +326,45 @@ class TestBuildGcpBenchmarkCliArgv:
         assert argv[argv.index("--workers") + 1] == "2"
         assert argv[argv.index("--clip-length") + 1] == "16"
 
+    def test_builds_no_refresh_requirements_argv(self, tmp_path: Path) -> None:
+        parser = build_parser()
+        args = parser.parse_args(
+            ["run", "--data-dir", "/ignored", "--output", "/ignored", "--no-refresh-requirements"],
+        )
+        argv = build_gcp_benchmark_cli_argv(
+            args,
+            data_dir="/remote/data",
+            output="/remote/out",
+            repo_root=tmp_path,
+        )
+        assert "--no-refresh-requirements" in argv
+
+    def test_builds_slow_skip_argv(self, tmp_path: Path) -> None:
+        parser = build_parser()
+        args = parser.parse_args(
+            [
+                "run",
+                "--data-dir",
+                "/ignored",
+                "--output",
+                "/ignored",
+                "--slow-threshold-sec-per-item",
+                "0.2",
+                "--slow-preflight-items",
+                "5",
+                "--disable-slow-skip",
+            ],
+        )
+        argv = build_gcp_benchmark_cli_argv(
+            args,
+            data_dir="/remote/data",
+            output="/remote/out",
+            repo_root=tmp_path,
+        )
+        assert argv[argv.index("--slow-threshold-sec-per-item") + 1] == "0.2"
+        assert argv[argv.index("--slow-preflight-items") + 1] == "5"
+        assert "--disable-slow-skip" in argv
+
     def test_spec_must_be_inside_repo(self, tmp_path: Path) -> None:
         parser = build_parser()
         outside = tmp_path / "outside.py"
@@ -359,16 +439,18 @@ class TestCmdRunGcp:
 
         with (
             patch("benchmark.cloud.gcp.GCPRunner", return_value=mock_runner),
-            patch("benchmark.cloud.instance.GCPInstanceConfig"),
+            patch("benchmark.cloud.instance.GCPInstanceConfig") as mock_config,
             patch("benchmark.cloud.gcp.new_run_id", return_value="testrunid"),
         ):
             from benchmark.cli import _cmd_run_gcp
 
             _cmd_run_gcp(args, tmp_path, tmp_path)
 
+        assert mock_config.call_args.kwargs["preemptible"] is False
         mock_runner.run_detached.assert_called_once()
         _, kwargs = mock_runner.run_detached.call_args
         assert kwargs["dry_run"] is True
+        assert kwargs["job"]["venv_cache_uri"] == "gs://b/augmentation-cache"
         mock_runner.create_instance.assert_not_called()
 
     def test_detached_writes_metadata_json(self, tmp_path: Path) -> None:
@@ -479,3 +561,50 @@ class TestExtractLibrary:
         # _extract_library checks stripped lines starting with "LIBRARY"
         # comments start with # so they won't match
         assert _extract_library(spec) == "correct"
+
+
+class TestRequirementsCacheKey:
+    def test_torch_libraries_share_image_env_group(self, tmp_path: Path) -> None:
+        assert _library_env_group("torchvision", "image") == "torch_stack"
+        assert _library_env_group("kornia", "image") == "torch_stack"
+        assert _library_env_group("pillow", "image") == "torch_stack"
+
+        reqs = _requirements_for_env_group("torch_stack", "image", tmp_path)
+        assert [path.name for path in reqs] == ["requirements.txt", "torchvision.txt", "kornia.txt", "pillow.txt"]
+
+    def test_cache_key_changes_when_requirements_change(self, tmp_path: Path) -> None:
+        req = tmp_path / "requirements.txt"
+        req.write_text("numpy\n", encoding="utf-8")
+        python = tmp_path / "python"
+
+        first = _requirements_cache_key(
+            python=python,
+            requirements_paths=[req],
+            env_group="pillow",
+            media="image",
+        )
+        req.write_text("numpy\npillow\n", encoding="utf-8")
+        second = _requirements_cache_key(
+            python=python,
+            requirements_paths=[req],
+            env_group="pillow",
+            media="image",
+        )
+
+        assert first != second
+
+    def test_compile_keeps_existing_lock_when_platform_resolution_fails(self, tmp_path: Path) -> None:
+        req = tmp_path / "dali-video.txt"
+        req.write_text("nvidia-dali-cuda120\n", encoding="utf-8")
+        req.with_suffix(".in").write_text("nvidia-dali-cuda120\n", encoding="utf-8")
+
+        with (
+            patch("benchmark.cli.subprocess.run", side_effect=RuntimeError("wrong exception")),
+            pytest.raises(RuntimeError),
+        ):
+            _compile_requirements(tmp_path / "python", req)
+
+        with patch("benchmark.cli.subprocess.run", side_effect=subprocess.CalledProcessError(1, "uv")):
+            _compile_requirements(tmp_path / "python", req)
+
+        assert req.read_text(encoding="utf-8") == "nvidia-dali-cuda120\n"
