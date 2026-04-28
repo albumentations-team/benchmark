@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 
 def test_albumentationsx_specs_do_not_use_removed_range_aliases() -> None:
     root = Path(__file__).parents[1]
@@ -40,6 +42,8 @@ def test_albumentationsx_specs_do_not_use_removed_range_aliases() -> None:
 
 
 def test_albumentationsx_specs_include_motion_blur() -> None:
+    pytest.importorskip("albumentations")
+
     from benchmark.transforms.albumentationsx_impl import TRANSFORMS as IMAGE_TRANSFORMS
     from benchmark.transforms.albumentationsx_video_impl import TRANSFORMS as VIDEO_TRANSFORMS
 

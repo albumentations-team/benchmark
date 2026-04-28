@@ -7,6 +7,10 @@ import json
 import time
 from typing import TYPE_CHECKING, Any
 
+import pytest
+
+pytest.importorskip("pyperf")
+
 from benchmark.pyperf_micro_runner import _merge_pyperf_payload, _preflight_slow_transform
 from benchmark.runner import MediaType
 
