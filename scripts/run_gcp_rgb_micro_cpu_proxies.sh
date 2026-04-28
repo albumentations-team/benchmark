@@ -104,9 +104,9 @@ wait_for_vm_delete_after_terminal_marker() {
   local instance="$1"
   local project="$2"
   local zone="$3"
-  local deadline=$(( $(date +%s) + 1200 ))
+  local deadline=$(($(date +%s) + 1200))
   local vm_status
-  while (( $(date +%s) < deadline )); do
+  while (($(date +%s) < deadline)); do
     vm_status="$(probe_vm_status "$instance" "$project" "$zone")"
     if [[ "$vm_status" == "UNKNOWN" ]] && vm_absence_confirmed "$instance" "$project" "$zone" "gs://unused"; then
       echo "VM $instance is gone."
@@ -126,26 +126,30 @@ wait_for_gcp_run() {
     return 1
   fi
   local prefix instance zone project
-  prefix="$(python - <<'PY' "$meta"
+  prefix="$(
+    python - "$meta" <<'PY'
 import json, sys
 print(json.load(open(sys.argv[1], encoding="utf-8"))["run_prefix"].rstrip("/"))
 PY
-)"
-  instance="$(python - <<'PY' "$meta"
+  )"
+  instance="$(
+    python - "$meta" <<'PY'
 import json, sys
 print(json.load(open(sys.argv[1], encoding="utf-8"))["instance_name"])
 PY
-)"
-  zone="$(python - <<'PY' "$meta"
+  )"
+  zone="$(
+    python - "$meta" <<'PY'
 import json, sys
 print(json.load(open(sys.argv[1], encoding="utf-8"))["zone"])
 PY
-)"
-  project="$(python - <<'PY' "$meta"
+  )"
+  project="$(
+    python - "$meta" <<'PY'
 import json, sys
 print(json.load(open(sys.argv[1], encoding="utf-8"))["project"])
 PY
-)"
+  )"
   echo "Waiting for run to finish: $prefix"
   local start
   start="$(date +%s)"
@@ -202,7 +206,7 @@ PY
     fi
     local now
     now="$(date +%s)"
-    if (( now - start > MAX_WAIT_SECS )); then
+    if ((now - start > MAX_WAIT_SECS)); then
       echo "ERROR: timed out waiting for $prefix/exit_code.txt" >&2
       return 1
     fi
