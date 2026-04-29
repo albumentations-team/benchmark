@@ -101,6 +101,16 @@ print(f"Max speedup: {df['albumentationsx'].max():.2f}×")
 print(f"Min speedup: {df['albumentationsx'].min():.2f}×")
 ```
 
+## Checking Lazy Output Artifacts
+
+When a library is unexpectedly faster, check whether it returns lazy or partially materialized outputs.
+
+- Pillow/PIL must call `Image.load()` on returned `Image.Image` objects inside the timed adapter so the image operation is complete before timing stops.
+- Do not add `np.asarray()`, pixel sums, checksums, or other cross-library output consumption to the timed benchmark. That measures extra conversion/validation work, not the transform API.
+- Use local diagnostics for suspicious transforms: compare raw Pillow call time against Pillow call + `Image.load()`, and inspect output identity / memory sharing. Keep those diagnostics out of production benchmark timing.
+- Crop/transpose/resize-like transforms are the first place to check because they are the most likely to expose views, reused objects, or deferred buffers.
+- Treat benchmark-side reimplementations as suspect. If Pillow/Kornia/torchvision lacks a direct transform analogue, mark it unsupported instead of composing helpers that make the comparison about our glue code.
+
 ## Performance Regression Detection
 
 Compare results across runs:

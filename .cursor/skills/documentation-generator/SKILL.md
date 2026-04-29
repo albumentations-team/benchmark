@@ -222,6 +222,8 @@ Keep README guidance aligned with these policies:
 - Cloud benchmark docs should show `--gcp-gcs-data-uri` pointing at one dataset archive/object, not a directory of individual images.
 - Micro benchmark docs should state that media is preloaded once per library and reused across transform measurements.
 - Pyperf docs should mention per-transform subprocess isolation, media-cache reuse, lazy transform construction, and slow-transform preflight/early-stop behavior.
+- Benchmark policy docs should mention lazy output materialization: Pillow/PIL should call `Image.load()` on returned `Image.Image` objects inside the timed adapter, while NumPy conversion/checksums belong only in diagnostics.
+- Benchmark policy docs should state that library tables include only direct transform support. Missing transforms should remain unsupported instead of being recreated with benchmark-side helper code.
 - Environment docs should mention joined environments and cached dependency installs, including the detached GCP venv cache.
 - Local rerun examples should include `--no-refresh-requirements` when dependency versions are intentionally fixed.
 

@@ -7,11 +7,17 @@ import json
 import time
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
 import pytest
 
 pytest.importorskip("pyperf")
 
-from benchmark.pyperf_micro_runner import _merge_pyperf_payload, _preflight_slow_transform, _pyperf_value_throughputs
+from benchmark.pyperf_micro_runner import (
+    _make_micro_output_contiguous,
+    _merge_pyperf_payload,
+    _preflight_slow_transform,
+    _pyperf_value_throughputs,
+)
 from benchmark.runner import MediaType
 
 if TYPE_CHECKING:
@@ -20,6 +26,30 @@ if TYPE_CHECKING:
 
 def test_pyperf_value_throughputs_use_normalized_per_item_times() -> None:
     assert _pyperf_value_throughputs([0.25, 0.5, 0.0]) == [4.0, 2.0]
+
+
+def test_make_micro_output_contiguous_copies_numpy_views() -> None:
+    output = np.zeros((4, 4, 3), dtype=np.uint8)[:, ::-1]
+
+    contiguous = _make_micro_output_contiguous(output)
+
+    assert contiguous.flags.c_contiguous
+    assert contiguous.shape == output.shape
+
+
+def test_make_micro_output_contiguous_calls_tensor_contiguous() -> None:
+    class TensorLike:
+        def __init__(self) -> None:
+            self.called = False
+
+        def contiguous(self) -> TensorLike:
+            self.called = True
+            return self
+
+    output = TensorLike()
+
+    assert _make_micro_output_contiguous(output) is output
+    assert output.called
 
 
 def test_preflight_slow_transform_returns_visible_skip_payload() -> None:

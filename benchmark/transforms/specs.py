@@ -93,7 +93,7 @@ TRANSFORM_SPECS = [
     TransformSpec(
         "Rotate",
         {
-            "angle": 45,
+            "angle_range": (-45, 45),
             "interpolation": "nearest",
             "mode": "constant",
             "fill": 0,
@@ -201,7 +201,9 @@ TRANSFORM_SPECS = [
     ),
     TransformSpec(
         "Equalize",
-        {},
+        {
+            "mode": "pil",
+        },
     ),
     TransformSpec(
         "Normalize",
@@ -367,6 +369,7 @@ TRANSFORM_SPECS = [
         "OpticalDistortion",
         {
             "distort_limit": 0.5,
+            "mode": "fisheye",
         },
     ),
     TransformSpec(
@@ -735,6 +738,8 @@ TRANSFORM_SPECS = [
             "px": (-10, 20, -10, 20),
             "border_mode": "constant",
             "fill": 0,
+            "keep_size": True,
+            "interpolation": "bilinear",
         },
     ),
     TransformSpec(

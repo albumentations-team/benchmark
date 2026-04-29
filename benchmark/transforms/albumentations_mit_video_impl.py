@@ -86,7 +86,7 @@ def create_transform(spec: TransformSpec) -> Any:
         )
     if spec.name == "Rotate":
         return A.Rotate(
-            limit=params["angle"],
+            limit=params["angle_range"],
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             border_mode=cv2.BORDER_CONSTANT if params["mode"] == "constant" else cv2.BORDER_REFLECT,
             fill=params["fill"],

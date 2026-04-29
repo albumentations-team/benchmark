@@ -103,7 +103,7 @@ TRANSFORMS = [
     },
     {
         "name": "OpticalDistortion",
-        "transform": A.OpticalDistortion(distort_range=(-0.5, 0.5), p=1),
+        "transform": A.OpticalDistortion(distort_range=(-0.5, 0.5), mode="fisheye", p=1),
     },
     {
         "name": "ElasticTransform",

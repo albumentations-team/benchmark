@@ -64,13 +64,12 @@ def create_transform(spec: TransformSpec) -> Any | None:
     if spec.name == "VerticalFlip":
         return tv_transforms.RandomVerticalFlip(p=1)
     if spec.name == "RandomRotate90":
-        lo, hi = params["times"]
-        return lambda image: torch.rot90(image, int(torch.randint(lo, hi + 1, ()).item()), dims=(-2, -1))
+        return None
     if spec.name == "Pad":
         return tv_transforms.Pad(padding=params["padding"], fill=params["fill"], padding_mode=params["border_mode"])
     if spec.name == "Rotate":
         return tv_transforms.RandomRotation(
-            degrees=params["angle"],
+            degrees=params["angle_range"],
             interpolation=tv_transforms.InterpolationMode.BILINEAR
             if params["interpolation"] == "bilinear"
             else tv_transforms.InterpolationMode.NEAREST,

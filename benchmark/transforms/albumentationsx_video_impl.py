@@ -126,7 +126,7 @@ def create_transform(spec: TransformSpec) -> Any:
         )
     if spec.name == "Rotate":
         return A.Rotate(
-            angle_range=_symmetric_range(params["angle"]),
+            angle_range=params["angle_range"],
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             border_mode=cv2.BORDER_CONSTANT if params["mode"] == "constant" else cv2.BORDER_REFLECT,
             fill=params["fill"],
@@ -337,7 +337,7 @@ def create_transform(spec: TransformSpec) -> Any:
     if spec.name == "Snow":
         return A.RandomSnow(p=1, snow_point_range=params["snow_point_range"])
     if spec.name == "OpticalDistortion":
-        return A.OpticalDistortion(p=1, distort_range=_symmetric_range(params["distort_limit"]))
+        return A.OpticalDistortion(p=1, distort_range=_symmetric_range(params["distort_limit"]), mode=params["mode"])
     if spec.name == "Shear":
         return A.Affine(
             p=1,

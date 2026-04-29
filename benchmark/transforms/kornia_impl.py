@@ -326,7 +326,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
         return _RandomJigsawWithPad(grid=params["grid"])
     if spec.name == "Rotate":
         return Kaug.RandomRotation(
-            degrees=(params["angle"], params["angle"]),
+            degrees=params["angle_range"],
             p=1,
         )
     if spec.name == "Shear":

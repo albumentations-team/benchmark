@@ -361,11 +361,10 @@ def create_transform(spec: TransformSpec) -> Any | None:
     if spec.name == "RandomJigsaw":
         return _RandomJigsawWithPad(grid=params["grid"]).to(device)
     if spec.name == "Rotate":
-        # Convert degrees to radians for rotation
-        angle = create_tensor(params["angle"]) * (torch.pi / 180.0)
-        return kornia.geometry.transform.Rotate(
-            angle=angle,
-            mode="bilinear",
+        return Kaug.RandomRotation(
+            degrees=params["angle_range"],
+            p=1,
+            same_on_batch=True,
         ).to(device)
     if spec.name == "Shear":
         return Kaug.RandomShear(

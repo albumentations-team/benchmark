@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pyperf
 
 from benchmark.results import build_metadata, summarize_runs, write_results
@@ -30,11 +31,27 @@ _SLOW_DEFAULTS: dict[MediaType, dict[str, float | int]] = {
 }
 
 
+def _make_micro_output_contiguous(output: Any) -> Any:
+    """Materialize micro-benchmark outputs so views/lazy buffers are not counted as finished work."""
+    if isinstance(output, np.ndarray):
+        return np.ascontiguousarray(output)
+
+    contiguous = getattr(output, "contiguous", None)
+    if callable(contiguous):
+        return contiguous()
+
+    load = getattr(output, "load", None)
+    if callable(load) and output.__class__.__module__.startswith("PIL."):
+        load()
+
+    return output
+
+
 def _time_transform_loop(loops: int, transform: Any, media: list[Any], call_fn: Any) -> float:
     start = pyperf.perf_counter()
     for _ in range(loops):
         for item in media:
-            _ = call_fn(transform, item)
+            _ = _make_micro_output_contiguous(call_fn(transform, item))
     return pyperf.perf_counter() - start
 
 
