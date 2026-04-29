@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pyperf
 
 from benchmark.results import build_metadata, summarize_runs, write_results
@@ -30,12 +31,33 @@ _SLOW_DEFAULTS: dict[MediaType, dict[str, float | int]] = {
 }
 
 
+def _make_micro_output_contiguous(output: Any) -> Any:
+    """Materialize micro-benchmark outputs so views/lazy buffers are not counted as finished work."""
+    if isinstance(output, np.ndarray):
+        return np.ascontiguousarray(output)
+
+    contiguous = getattr(output, "contiguous", None)
+    if callable(contiguous):
+        return contiguous()
+
+    load = getattr(output, "load", None)
+    if callable(load) and output.__class__.__module__.startswith("PIL."):
+        load()
+
+    return output
+
+
 def _time_transform_loop(loops: int, transform: Any, media: list[Any], call_fn: Any) -> float:
     start = pyperf.perf_counter()
     for _ in range(loops):
         for item in media:
-            _ = call_fn(transform, item)
+            _ = _make_micro_output_contiguous(call_fn(transform, item))
     return pyperf.perf_counter() - start
+
+
+def _pyperf_value_throughputs(values: list[float]) -> list[float]:
+    """Convert pyperf-normalized per-item seconds into items/second."""
+    return [1.0 / value for value in values if value > 0]
 
 
 def _add_worker_args(cmd: list[str], args: argparse.Namespace) -> None:
@@ -328,7 +350,7 @@ def _run_filtered_transforms(
         if bench is None:
             continue
         times = [float(value) for value in bench.get_values()]
-        throughputs = [len(media) / value for value in times if value > 0]
+        throughputs = _pyperf_value_throughputs(times)
         result = summarize_runs(throughputs, times)
         result["pyperf"] = {
             "name": bench.get_name(),

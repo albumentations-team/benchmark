@@ -11,7 +11,7 @@ import argparse
 import re
 from pathlib import Path
 
-from tools.compare import format_comparison_table, format_head_to_head_table, load_results_dir
+from tools.compare import format_comparison_table, load_results_dir
 
 # Libraries to keep out of public docs (internal / historical reference only)
 _DOCS_EXCLUDED: frozenset[str] = frozenset({"albumentations_mit"})
@@ -24,9 +24,6 @@ def patch_readme(
     image_summary: str | None,
     video_summary: str | None,
     multichannel_table: str | None = None,
-    h2h_image_table: str | None = None,
-    h2h_video_table: str | None = None,
-    h2h_multichannel_table: str | None = None,
 ) -> bool:
     """Patch README between markers. Returns True if changed."""
     content = readme_path.read_text()
@@ -75,25 +72,6 @@ def patch_readme(
             "<!-- VIDEO_SPEEDUP_SUMMARY_END -->",
             video_summary,
         )
-    if h2h_image_table is not None:
-        content = replace_section(
-            "<!-- ALBX_VS_ALB_IMAGE_TABLE_START -->",
-            "<!-- ALBX_VS_ALB_IMAGE_TABLE_END -->",
-            h2h_image_table,
-        )
-    if h2h_video_table is not None:
-        content = replace_section(
-            "<!-- ALBX_VS_ALB_VIDEO_TABLE_START -->",
-            "<!-- ALBX_VS_ALB_VIDEO_TABLE_END -->",
-            h2h_video_table,
-        )
-    if h2h_multichannel_table is not None:
-        content = replace_section(
-            "<!-- ALBX_VS_ALB_MULTICHANNEL_TABLE_START -->",
-            "<!-- ALBX_VS_ALB_MULTICHANNEL_TABLE_END -->",
-            h2h_multichannel_table,
-        )
-
     if content != orig:
         readme_path.write_text(content)
         return True
@@ -145,26 +123,17 @@ def main() -> None:
             if v["media"] == media and (not exclude_docs or v["library"] not in _DOCS_EXCLUDED)
         }
 
-    # Public tables exclude internal/historical libraries, dedicated h2h tables do not.
+    # Public tables exclude internal/historical libraries.
     image_loaded = _load(image_results, "image", exclude_docs=True)
     video_loaded = _load(video_results, "video", exclude_docs=True)
-    image_loaded_all = _load(image_results, "image", exclude_docs=False)
-    video_loaded_all = _load(video_results, "video", exclude_docs=False)
 
     multichannel_loaded: dict[str, dict[str, object]] = {}
-    multichannel_loaded_all: dict[str, dict[str, object]] = {}
     if multichannel_results.exists():
         multichannel_loaded = _load(multichannel_results, "image", exclude_docs=True)
-        multichannel_loaded_all = _load(multichannel_results, "image", exclude_docs=False)
 
     image_table = format_comparison_table(image_loaded) if image_loaded else None
     video_table = format_comparison_table(video_loaded) if video_loaded else None
     multichannel_table = format_comparison_table(multichannel_loaded) if multichannel_loaded else None
-
-    # Head-to-head AlbumentationsX vs Albumentations (MIT) tables
-    h2h_image_table = format_head_to_head_table(image_loaded_all) if image_loaded_all else None
-    h2h_video_table = format_head_to_head_table(video_loaded_all) if video_loaded_all else None
-    h2h_multichannel_table = format_head_to_head_table(multichannel_loaded_all) if multichannel_loaded_all else None
 
     # Summary text for Performance Highlights
     image_summary = compute_summary_text(image_table, "image") if image_table else None
@@ -177,9 +146,6 @@ def main() -> None:
         image_summary=image_summary,
         video_summary=video_summary,
         multichannel_table=multichannel_table,
-        h2h_image_table=h2h_image_table,
-        h2h_video_table=h2h_video_table,
-        h2h_multichannel_table=h2h_multichannel_table,
     )
     if changed:
         print(f"Updated {readme}")
