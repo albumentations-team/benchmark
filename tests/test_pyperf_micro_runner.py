@@ -75,8 +75,9 @@ def test_preflight_slow_transform_returns_visible_skip_payload() -> None:
     assert result is not None
     assert result["early_stopped"] is True
     assert result["num_successful_runs"] == 0
-    assert result["slow_marker"] == "<1000 img/s"
+    assert result["slow_marker"] == "≤1000 img/s"
     assert "SlowTransform slower than threshold" in result["early_stop_reason"]
+    assert ">=" in result["early_stop_reason"]
 
 
 def test_merge_pyperf_payload_allows_missing_file_for_slow_skips(tmp_path: Path) -> None:

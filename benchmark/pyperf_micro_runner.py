@@ -146,8 +146,8 @@ def _preflight_slow_transform(
     unit = "vid/s" if media_type == MediaType.VIDEO else "img/s"
 
     reason: str | None = None
-    if time_per_item > threshold:
-        reason = f"{transform_name} slower than threshold: {time_per_item:.3f} sec/{item_label} > {threshold:.3f}"
+    if time_per_item >= threshold:
+        reason = f"{transform_name} slower than threshold: {time_per_item:.3f} sec/{item_label} >= {threshold:.3f}"
     elif wall_time > max_preflight_secs:
         reason = f"{transform_name} preflight timeout: {wall_time:.1f} sec > {max_preflight_secs:.1f} sec"
 
@@ -179,7 +179,7 @@ def _preflight_slow_transform(
         "slow_threshold_sec_per_item": threshold,
         "slow_threshold_throughput": 1.0 / threshold if threshold > 0 else 0.0,
         "slow_threshold_unit": unit,
-        "slow_marker": f"<{1.0 / threshold:.0f} {unit}" if threshold > 0 else "slow-skipped",
+        "slow_marker": f"≤{1.0 / threshold:.0f} {unit}" if threshold > 0 else "slow-skipped",
         "preflight_items": len(subset),
         "preflight_elapsed": elapsed,
         "pyperf": None,
