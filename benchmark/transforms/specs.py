@@ -23,10 +23,15 @@ when changing specs.
   RandomGamma: spec gamma as int (e.g. 120). Kornia expects float -> gamma / 100.
 
   RGBShift: spec pixel_shift in [0,255]. Kornia expects normalized [0,1] -> /255.
+
+  Dithering: shared benchmark contract (method, n_colors, color_mode,
+    error_diffusion_algorithm) lives in ``benchmark.transforms.dithering_benchmark``.
 """
 
 from dataclasses import dataclass
 from typing import Any
+
+from benchmark.transforms.dithering_benchmark import DITHERING_BENCHMARK_PARAMS
 
 
 @dataclass
@@ -764,15 +769,7 @@ TRANSFORM_SPECS = [
             "intensity_range": (0.2, 0.5),
         },
     ),
-    TransformSpec(
-        "Dithering",
-        {
-            "method": "error_diffusion",
-            "n_colors": 2,
-            "color_mode": "grayscale",
-            "error_diffusion_algorithm": "floyd_steinberg",
-        },
-    ),
+    TransformSpec("Dithering", dict(DITHERING_BENCHMARK_PARAMS)),
     TransformSpec(
         "FilmGrain",
         {

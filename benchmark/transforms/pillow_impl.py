@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
+from benchmark.transforms.dithering_benchmark import dithering_params_match_benchmark_contract
 from benchmark.transforms.registry import build_transforms, register_library
 
 if TYPE_CHECKING:
@@ -146,12 +147,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
         )
 
     if spec.name == "Dithering":
-        if (
-            params.get("method") != "error_diffusion"
-            or params.get("n_colors") != 2
-            or params.get("color_mode") != "grayscale"
-            or params.get("error_diffusion_algorithm") != "floyd_steinberg"
-        ):
+        if not dithering_params_match_benchmark_contract(params):
             return None
         return lambda img: img.convert("L").convert("1", dither=Image.Dither.FLOYDSTEINBERG).convert("RGB")
 

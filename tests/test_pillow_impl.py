@@ -8,6 +8,7 @@ pytest.importorskip("PIL")
 
 from PIL import Image
 
+from benchmark.transforms.dithering_benchmark import DITHERING_BENCHMARK_PARAMS
 from benchmark.transforms.specs import TransformSpec
 
 
@@ -45,17 +46,7 @@ def test_direct_transpose_is_supported() -> None:
 
 
 def test_dithering_matches_shared_floyd_steinberg_spec() -> None:
-    transform = _create_transform(
-        TransformSpec(
-            "Dithering",
-            {
-                "method": "error_diffusion",
-                "n_colors": 2,
-                "color_mode": "grayscale",
-                "error_diffusion_algorithm": "floyd_steinberg",
-            },
-        ),
-    )
+    transform = _create_transform(TransformSpec("Dithering", dict(DITHERING_BENCHMARK_PARAMS)))
     assert transform is not None
 
     result = transform(Image.linear_gradient("L").resize((8, 8)).convert("RGB"))

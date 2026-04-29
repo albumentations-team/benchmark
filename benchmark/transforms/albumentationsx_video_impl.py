@@ -9,6 +9,7 @@ import numpy as np
 from benchmark.transforms.albumentations_compat import (
     ConstrainedCoarseDropoutWrapper as _ConstrainedCoarseDropoutWrapper,
 )
+from benchmark.transforms.dithering_benchmark import albumentations_dithering_kwargs
 from benchmark.transforms.registry import build_transforms, register_library
 from benchmark.transforms.specs import TransformSpec
 
@@ -614,13 +615,7 @@ def create_transform(spec: TransformSpec) -> Any:
     if spec.name == "Vignetting":
         return A.Vignetting(intensity_range=params["intensity_range"], p=1)
     if spec.name == "Dithering":
-        return A.Dithering(
-            method=params["method"],
-            n_colors=params["n_colors"],
-            color_mode=params["color_mode"],
-            error_diffusion_algorithm=params["error_diffusion_algorithm"],
-            p=1,
-        )
+        return A.Dithering(**albumentations_dithering_kwargs(params), p=1)
     if spec.name == "FilmGrain":
         return A.FilmGrain(
             intensity_range=params["intensity_range"],
