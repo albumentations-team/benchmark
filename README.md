@@ -55,116 +55,67 @@ For paper-quality RGB image results, use `2,000` ImageNet validation images for 
 
 <!-- IMAGE_BENCHMARK_TABLE_START -->
 
-| Transform                | AlbumentationsX 2.2.3 [img/s]   | kornia 0.8.2 [img/s]   | pillow 12.2.0 [img/s]   | torchvision 0.26.0 [img/s]   | Speedup (albx / fastest, +/-1sd)   |
-|:-------------------------|:--------------------------------|:-----------------------|:------------------------|:-----------------------------|:-----------------------------------|
-| AdditiveNoise            | **260 ± 5**                     | -                      | -                       | -                            | N/A                                |
-| AdvancedBlur             | **1263 ± 58**                   | -                      | -                       | -                            | N/A                                |
-| Affine                   | **1400 ± 12**                   | 466 ± 3                | 618 ± 1                 | 354 ± 6                      | 2.27x (2.24-2.29x)                 |
-| AtmosphericFog           | **361 ± 6**                     | -                      | -                       | -                            | N/A                                |
-| AutoContrast             | 1462 ± 31                       | 765 ± 1                | **2255 ± 3**            | 417 ± 0                      | 0.65x (0.63-0.66x)                 |
-| Blur                     | **7035 ± 245**                  | 776 ± 1                | 1888 ± 6                | -                            | 3.73x (3.59-3.87x)                 |
-| Brightness               | **9889 ± 344**                  | 3066 ± 3               | 1358 ± 4                | 2032 ± 7                     | 3.23x (3.11-3.34x)                 |
-| CLAHE                    | **627 ± 2**                     | 208 ± 0                | -                       | -                            | 3.02x (3.00-3.03x)                 |
-| CenterCrop128            | **61351 ± 1392**                | 5461 ± 21              | -                       | 38924 ± 270                  | 1.58x (1.53-1.62x)                 |
-| ChannelDropout           | **11541 ± 369**                 | 2986 ± 8               | -                       | -                            | 3.86x (3.73-4.00x)                 |
-| ChannelShuffle           | **7927 ± 199**                  | 1772 ± 2               | -                       | 5491 ± 15                    | 1.44x (1.40-1.48x)                 |
-| ChannelSwap              | **8672 ± 225**                  | -                      | -                       | -                            | N/A                                |
-| ChromaticAberration      | **533 ± 1**                     | -                      | -                       | -                            | N/A                                |
-| CoarseDropout            | **17354 ± 931**                 | -                      | -                       | -                            | N/A                                |
-| ColorJiggle              | **1128 ± 9**                    | 107 ± 0                | -                       | 136 ± 0                      | 8.31x (8.23-8.38x)                 |
-| ColorJitter              | **1136 ± 26**                   | 172 ± 0                | -                       | 136 ± 0                      | 6.59x (6.43-6.75x)                 |
-| Colorize                 | **3842 ± 98**                   | -                      | 3738 ± 4                | -                            | 1.03x (1.00-1.06x)                 |
-| ConstrainedCoarseDropout | **289 ± 5**                     | -                      | -                       | -                            | N/A                                |
-| Contrast                 | **9051 ± 165**                  | 3054 ± 5               | 1064 ± 2                | 1251 ± 3                     | 2.96x (2.90-3.02x)                 |
-| CopyAndPaste             | **147276 ± 877**                | -                      | -                       | -                            | N/A                                |
-| CornerIllumination       | 441 ± 9                         | **608 ± 1**            | -                       | -                            | 0.73x (0.71-0.74x)                 |
-| CropAndPad               | **3158 ± 29**                   | -                      | -                       | -                            | N/A                                |
-| Defocus                  | **128 ± 0**                     | -                      | -                       | -                            | N/A                                |
-| Dithering                | <10 img/s                       | -                      | **333 ± 0**             | -                            | N/A                                |
-| Downscale                | **6014 ± 83**                   | -                      | -                       | -                            | N/A                                |
-| Elastic                  | **404 ± 6**                     | <10 img/s              | -                       | <10 img/s                    | N/A                                |
-| Emboss                   | **2844 ± 10**                   | -                      | -                       | -                            | N/A                                |
-| EnhanceDetail            | **3758 ± 28**                   | -                      | 821 ± 2                 | -                            | 4.58x (4.53-4.62x)                 |
-| EnhanceEdge              | **2319 ± 4**                    | -                      | 528 ± 1                 | -                            | 4.40x (4.38-4.41x)                 |
-| Equalize                 | 1044 ± 9                        | 405 ± 1                | **2216 ± 2**            | 956 ± 1                      | 0.47x (0.47-0.48x)                 |
-| Erasing                  | **23177 ± 572**                 | 1249 ± 2               | -                       | 4322 ± 17                    | 5.36x (5.21-5.52x)                 |
-| FancyPCA                 | **107 ± 1**                     | -                      | -                       | -                            | N/A                                |
-| FilmGrain                | **274 ± 4**                     | -                      | -                       | -                            | N/A                                |
-| GaussianBlur             | **2355 ± 24**                   | 750 ± 2                | 776 ± 1                 | 346 ± 1                      | 3.03x (3.00-3.07x)                 |
-| GaussianIllumination     | 637 ± 55                        | **712 ± 1**            | -                       | -                            | 0.90x (0.82-0.97x)                 |
-| GaussianNoise            | **287 ± 7**                     | 136 ± 3                | -                       | -                            | 2.11x (2.01-2.21x)                 |
-| GlassBlur                | **35 ± 0**                      | -                      | -                       | -                            | N/A                                |
-| Grayscale                | 19095 ± 916                     | 1701 ± 2               | **19375 ± 73**          | 3524 ± 6                     | 0.99x (0.93-1.04x)                 |
-| GridDistortion           | **1342 ± 15**                   | -                      | -                       | -                            | N/A                                |
-| GridDropout              | **92 ± 2**                      | -                      | -                       | -                            | N/A                                |
-| GridMask                 | **16685 ± 364**                 | -                      | -                       | -                            | N/A                                |
-| HSV                      | **912 ± 42**                    | -                      | -                       | -                            | N/A                                |
-| Halftone                 | **30 ± 1**                      | -                      | -                       | -                            | N/A                                |
-| HorizontalFlip           | 12670 ± 550                     | 1399 ± 3               | **14918 ± 62**          | 1790 ± 1                     | 0.85x (0.81-0.89x)                 |
-| Hue                      | **1648 ± 19**                   | 206 ± 1                | -                       | -                            | 8.01x (7.89-8.13x)                 |
-| ISONoise                 | **181 ± 1**                     | -                      | -                       | -                            | N/A                                |
-| Invert                   | **44252 ± 6931**                | 3813 ± 8               | 5544 ± 10               | 5350 ± 20                    | 7.98x (6.72-9.25x)                 |
-| JpegCompression          | 1291 ± 11                       | 208 ± 0                | **1324 ± 4**            | 954 ± 2                      | 0.97x (0.96-0.99x)                 |
-| LensFlare                | **274 ± 5**                     | -                      | -                       | -                            | N/A                                |
-| LinearIllumination       | 518 ± 38                        | **1225 ± 4**           | -                       | -                            | 0.42x (0.39-0.46x)                 |
-| LongestMaxSize           | **3847 ± 15**                   | 854 ± 3                | -                       | -                            | 4.50x (4.47-4.54x)                 |
-| MedianBlur               | **1473 ± 10**                   | <10 img/s              | 11 ± 0                  | -                            | 136.50x (135.54-137.47x)           |
-| ModeFilter               | <10 img/s                       | -                      | **16 ± 0**              | -                            | N/A                                |
-| Morphological            | **17396 ± 1484**                | -                      | -                       | -                            | N/A                                |
-| MotionBlur               | **3668 ± 50**                   | 337 ± 3                | -                       | -                            | 10.89x (10.66-11.12x)              |
-| MultiplicativeNoise      | **5069 ± 13**                   | -                      | -                       | -                            | N/A                                |
-| Normalize                | **1403 ± 84**                   | 1245 ± 1               | -                       | 1100 ± 2                     | 1.13x (1.06-1.20x)                 |
-| OpticalDistortion        | **348 ± 4**                     | 251 ± 1                | -                       | -                            | 1.38x (1.37-1.40x)                 |
-| Pad                      | **32188 ± 1453**                | -                      | 27611 ± 250             | 5336 ± 8                     | 1.17x (1.10-1.23x)                 |
-| PadIfNeeded              | **7218 ± 103**                  | -                      | -                       | -                            | N/A                                |
-| Perspective              | **1125 ± 11**                   | 223 ± 0                | -                       | 285 ± 1                      | 3.95x (3.89-4.00x)                 |
-| PhotoMetricDistort       | **1001 ± 6**                    | -                      | -                       | 131 ± 0                      | 7.66x (7.60-7.72x)                 |
-| PiecewiseAffine          | **176 ± 1**                     | -                      | -                       | -                            | N/A                                |
-| PixelDropout             | **806 ± 11**                    | -                      | -                       | -                            | N/A                                |
-| PixelSpread              | **618 ± 18**                    | -                      | -                       | -                            | N/A                                |
-| PlankianJitter           | 2967 ± 77                       | **3135 ± 8**           | -                       | -                            | 0.95x (0.92-0.97x)                 |
-| PlasmaBrightness         | **169 ± 1**                     | 116 ± 0                | -                       | -                            | 1.46x (1.44-1.47x)                 |
-| PlasmaContrast           | **133 ± 1**                     | 118 ± 0                | -                       | -                            | 1.13x (1.12-1.14x)                 |
-| PlasmaShadow             | 196 ± 1                         | **286 ± 1**            | -                       | -                            | 0.68x (0.68-0.69x)                 |
-| Posterize                | **15344 ± 938**                 | 1114 ± 11              | 5496 ± 18               | 5337 ± 10                    | 2.79x (2.61-2.97x)                 |
-| RGBShift                 | **4635 ± 98**                   | 1722 ± 4               | -                       | -                            | 2.69x (2.63-2.75x)                 |
-| Rain                     | **2144 ± 29**                   | 1763 ± 5               | -                       | -                            | 1.22x (1.20-1.24x)                 |
-| RandomCrop128            | **58110 ± 1752**                | 3391 ± 23              | -                       | 33926 ± 518                  | 1.71x (1.64-1.79x)                 |
-| RandomFog                | **9 ± 0**                       | -                      | -                       | -                            | N/A                                |
-| RandomGamma              | **13447 ± 903**                 | 273 ± 0                | -                       | -                            | 49.18x (45.81-52.56x)              |
-| RandomGravel             | **1439 ± 10**                   | -                      | -                       | -                            | N/A                                |
-| RandomGridShuffle        | **11387 ± 296**                 | -                      | -                       | -                            | N/A                                |
-| RandomJigsaw             | **9789 ± 164**                  | 647 ± 1                | -                       | -                            | 15.13x (14.85-15.41x)              |
-| RandomResizedCrop        | **4139 ± 110**                  | 674 ± 3                | -                       | 982 ± 6                      | 4.21x (4.08-4.35x)                 |
-| RandomRotate90           | **8659 ± 256**                  | 469 ± 1                | -                       | -                            | 18.46x (17.87-19.06x)              |
-| RandomScale              | **3438 ± 22**                   | -                      | -                       | -                            | N/A                                |
-| RandomShadow             | **555 ± 5**                     | -                      | -                       | -                            | N/A                                |
-| RandomSizedCrop          | **3901 ± 13**                   | -                      | -                       | -                            | N/A                                |
-| RandomSunFlare           | **356 ± 1**                     | -                      | -                       | -                            | N/A                                |
-| RandomToneCurve          | **12488 ± 381**                 | -                      | -                       | -                            | N/A                                |
-| RingingOvershoot         | **161 ± 2**                     | -                      | -                       | -                            | N/A                                |
-| Rotate                   | 2731 ± 23                       | 458 ± 1                | **3978 ± 50**           | 469 ± 1                      | 0.69x (0.67-0.70x)                 |
-| SafeRotate               | **1402 ± 5**                    | -                      | -                       | -                            | N/A                                |
-| SaltAndPepper            | **900 ± 17**                    | 522 ± 1                | -                       | -                            | 1.72x (1.69-1.76x)                 |
-| Saturation               | 1199 ± 32                       | 217 ± 0                | **1339 ± 2**            | -                            | 0.90x (0.87-0.92x)                 |
-| Sharpen                  | **2196 ± 16**                   | 437 ± 2                | -                       | 534 ± 2                      | 4.11x (4.07-4.15x)                 |
-| Shear                    | **1305 ± 7**                    | 493 ± 1                | 507 ± 1                 | -                            | 2.57x (2.55-2.59x)                 |
-| ShiftScaleRotate         | **1398 ± 7**                    | -                      | -                       | -                            | N/A                                |
-| ShotNoise                | **45 ± 0**                      | -                      | -                       | -                            | N/A                                |
-| SmallestMaxSize          | **2603 ± 28**                   | 538 ± 0                | -                       | -                            | 4.84x (4.78-4.90x)                 |
-| Snow                     | **728 ± 7**                     | 189 ± 0                | -                       | -                            | 3.84x (3.80-3.89x)                 |
-| Solarize                 | **14834 ± 1274**                | 716 ± 2                | 5418 ± 18               | 1309 ± 1                     | 2.74x (2.49-2.98x)                 |
-| Spatter                  | **114 ± 3**                     | -                      | -                       | -                            | N/A                                |
-| SquareSymmetry           | **8738 ± 235**                  | -                      | -                       | -                            | N/A                                |
-| Superpixels              | **19 ± 0**                      | -                      | -                       | -                            | N/A                                |
-| ThinPlateSpline          | 75 ± 1                          | **79 ± 0**             | -                       | -                            | 0.96x (0.94-0.97x)                 |
-| ToSepia                  | **8378 ± 216**                  | -                      | -                       | -                            | N/A                                |
-| Transpose                | 8315 ± 255                      | -                      | **11463 ± 68**          | -                            | 0.73x (0.70-0.75x)                 |
-| UnsharpMask              | 373 ± 9                         | -                      | **480 ± 1**             | -                            | 0.78x (0.76-0.80x)                 |
-| VerticalFlip             | 24213 ± 2943                    | 3314 ± 10              | **40881 ± 517**         | 5317 ± 24                    | 0.59x (0.51-0.67x)                 |
-| Vignetting               | **616 ± 28**                    | -                      | -                       | -                            | N/A                                |
-| WaterRefraction          | **127 ± 2**                     | -                      | -                       | -                            | N/A                                |
-| ZoomBlur                 | **183 ± 4**                     | -                      | -                       | -                            | N/A                                |
+| Transform            | AlbumentationsX 2.2.4 [img/s]   | kornia 0.8.2 [img/s]   | pillow 12.2.0 [img/s]   | torchvision 0.26.0 [img/s]   | Speedup (albx / fastest, +/-1sd)   |
+|:---------------------|:--------------------------------|:-----------------------|:------------------------|:-----------------------------|:-----------------------------------|
+| Affine               | **1476 ± 8**                    | 444 ± 2                | 610 ± 1                 | 344 ± 1                      | 2.42x (2.40-2.43x)                 |
+| AutoContrast         | 1624 ± 44                       | 871 ± 2                | **2140 ± 16**           | 425 ± 1                      | 0.76x (0.73-0.79x)                 |
+| Blur                 | **7111 ± 172**                  | 747 ± 11               | 1870 ± 5                | -                            | 3.80x (3.70-3.91x)                 |
+| Brightness           | **9519 ± 464**                  | 6349 ± 17              | 1340 ± 5                | 3040 ± 1                     | 1.50x (1.42-1.58x)                 |
+| CLAHE                | **651 ± 2**                     | 207 ± 2                | -                       | -                            | 3.14x (3.11-3.18x)                 |
+| CenterCrop128        | 65233 ± 849                     | 5097 ± 50              | -                       | **218716 ± 4282**            | 0.30x (0.29-0.31x)                 |
+| ChannelDropout       | **11142 ± 418**                 | 5908 ± 21              | -                       | -                            | 1.89x (1.81-1.96x)                 |
+| ChannelShuffle       | **7764 ± 301**                  | 2500 ± 13              | -                       | 5359 ± 37                    | 1.45x (1.38-1.52x)                 |
+| ColorJiggle          | **1139 ± 23**                   | 105 ± 1                | -                       | 131 ± 3                      | 8.67x (8.33-9.02x)                 |
+| ColorJitter          | **1205 ± 32**                   | 170 ± 1                | -                       | 133 ± 1                      | 7.10x (6.86-7.34x)                 |
+| Colorize             | **3794 ± 141**                  | -                      | 3653 ± 14               | -                            | 1.04x (1.00-1.08x)                 |
+| Contrast             | **9109 ± 139**                  | 6340 ± 39              | 1056 ± 4                | 1555 ± 6                     | 1.44x (1.41-1.47x)                 |
+| CornerIllumination   | 509 ± 4                         | **661 ± 3**            | -                       | -                            | 0.77x (0.76-0.78x)                 |
+| Dithering            | slow-skipped                    | -                      | **1430 ± 10**           | -                            | N/A                                |
+| Elastic              | **447 ± 10**                    | slow-skipped           | -                       | slow-skipped                 | N/A                                |
+| Equalize             | 1106 ± 18                       | 394 ± 2                | **2127 ± 13**           | 945 ± 11                     | 0.52x (0.51-0.53x)                 |
+| Erasing              | **23094 ± 2053**                | 1223 ± 4               | -                       | 15302 ± 186                  | 1.51x (1.36-1.66x)                 |
+| GaussianBlur         | **2410 ± 46**                   | 728 ± 11               | 757 ± 3                 | 334 ± 3                      | 3.18x (3.11-3.25x)                 |
+| GaussianIllumination | **806 ± 6**                     | 729 ± 16               | -                       | -                            | 1.11x (1.07-1.14x)                 |
+| GaussianNoise        | **336 ± 8**                     | 138 ± 0                | -                       | -                            | 2.43x (2.37-2.50x)                 |
+| Grayscale            | 18722 ± 1638                    | 2385 ± 9               | **18898 ± 112**         | 3556 ± 19                    | 0.99x (0.90-1.08x)                 |
+| HorizontalFlip       | 13351 ± 218                     | 1335 ± 11              | **14477 ± 112**         | 2389 ± 42                    | 0.92x (0.90-0.94x)                 |
+| Hue                  | **1919 ± 10**                   | 202 ± 3                | -                       | -                            | 9.51x (9.31-9.72x)                 |
+| Invert               | 52004 ± 2956                    | 10587 ± 56             | 5501 ± 10               | **54349 ± 6731**             | 0.96x (0.80-1.15x)                 |
+| JpegCompression      | **1322 ± 28**                   | 206 ± 1                | 1276 ± 2                | 924 ± 2                      | 1.04x (1.01-1.06x)                 |
+| LinearIllumination   | 594 ± 15                        | **1528 ± 3**           | -                       | -                            | 0.39x (0.38-0.40x)                 |
+| LongestMaxSize       | **3726 ± 50**                   | 849 ± 1                | -                       | -                            | 4.39x (4.32-4.45x)                 |
+| MedianBlur           | **1542 ± 25**                   | slow-skipped           | 10 ± 0                  | -                            | 147.30x (143.09-151.61x)           |
+| MotionBlur           | **3830 ± 65**                   | 320 ± 3                | -                       | -                            | 11.97x (11.66-12.29x)              |
+| Normalize            | **1662 ± 7**                    | 1578 ± 3               | -                       | 1346 ± 6                     | 1.05x (1.05-1.06x)                 |
+| OpticalDistortion    | **393 ± 14**                    | 239 ± 1                | -                       | -                            | 1.64x (1.58-1.71x)                 |
+| Pad                  | **37790 ± 3640**                | -                      | 26566 ± 217             | 4994 ± 150                   | 1.42x (1.28-1.57x)                 |
+| Perspective          | **1182 ± 3**                    | 206 ± 3                | -                       | 275 ± 1                      | 4.30x (4.27-4.33x)                 |
+| PhotoMetricDistort   | **1042 ± 5**                    | -                      | -                       | 128 ± 1                      | 8.16x (8.05-8.28x)                 |
+| PlankianJitter       | **3180 ± 94**                   | 2944 ± 36              | -                       | -                            | 1.08x (1.04-1.13x)                 |
+| PlasmaBrightness     | **403 ± 5**                     | 116 ± 0                | -                       | -                            | 3.46x (3.40-3.51x)                 |
+| PlasmaContrast       | **245 ± 14**                    | 118 ± 0                | -                       | -                            | 2.07x (1.95-2.20x)                 |
+| PlasmaShadow         | **520 ± 17**                    | 295 ± 1                | -                       | -                            | 1.76x (1.70-1.82x)                 |
+| Posterize            | 13714 ± 763                     | 1350 ± 12              | 5415 ± 6                | **51289 ± 515**              | 0.27x (0.25-0.29x)                 |
+| RGBShift             | **4736 ± 89**                   | 2429 ± 20              | -                       | -                            | 1.95x (1.90-2.00x)                 |
+| Rain                 | 2111 ± 81                       | **2480 ± 15**          | -                       | -                            | 0.85x (0.81-0.89x)                 |
+| RandomCrop128        | 64065 ± 709                     | 3197 ± 41              | -                       | **123064 ± 3395**            | 0.52x (0.50-0.54x)                 |
+| RandomGamma          | **12865 ± 516**                 | 271 ± 2                | -                       | -                            | 47.42x (45.27-49.61x)              |
+| RandomJigsaw         | **9297 ± 525**                  | 659 ± 13               | -                       | -                            | 14.11x (13.06-15.21x)              |
+| RandomResizedCrop    | **4291 ± 12**                   | 655 ± 6                | -                       | 970 ± 20                     | 4.43x (4.33-4.53x)                 |
+| RandomRotate90       | **8312 ± 304**                  | 446 ± 12               | -                       | -                            | 18.65x (17.51-19.85x)              |
+| Resize               | **3521 ± 34**                   | 666 ± 12               | 1080 ± 1                | 317 ± 2                      | 3.26x (3.22-3.29x)                 |
+| Rotate               | 2939 ± 22                       | 434 ± 2                | **3936 ± 99**           | 454 ± 6                      | 0.75x (0.72-0.77x)                 |
+| SaltAndPepper        | **923 ± 25**                    | 563 ± 2                | -                       | -                            | 1.64x (1.59-1.69x)                 |
+| Saturation           | **1385 ± 13**                   | 213 ± 3                | 1328 ± 5                | -                            | 1.04x (1.03-1.06x)                 |
+| Sharpen              | **2259 ± 34**                   | 440 ± 3                | -                       | 574 ± 2                      | 3.93x (3.86-4.01x)                 |
+| Shear                | **1328 ± 3**                    | 479 ± 2                | 502 ± 1                 | -                            | 2.64x (2.63-2.65x)                 |
+| SmallestMaxSize      | **2591 ± 62**                   | 537 ± 1                | -                       | -                            | 4.82x (4.70-4.94x)                 |
+| Snow                 | **752 ± 10**                    | 187 ± 0                | -                       | -                            | 4.02x (3.96-4.09x)                 |
+| Solarize             | **13551 ± 755**                 | 812 ± 1                | 5372 ± 6                | 1655 ± 12                    | 2.52x (2.38-2.67x)                 |
+| ThinPlateSpline      | **90 ± 2**                      | 78 ± 0                 | -                       | -                            | 1.16x (1.13-1.20x)                 |
+| Transpose            | 7502 ± 590                      | -                      | **11124 ± 234**         | -                            | 0.67x (0.61-0.74x)                 |
+| UnsharpMask          | **3076 ± 71**                   | -                      | 476 ± 1                 | -                            | 6.47x (6.31-6.63x)                 |
+| VerticalFlip         | 28941 ± 1742                    | 3261 ± 47              | **41026 ± 500**         | 39873 ± 714                  | 0.71x (0.65-0.76x)                 |
 
 <!-- IMAGE_BENCHMARK_TABLE_END -->
 
@@ -462,7 +413,7 @@ python -m benchmark.cli run \
 - Micro benchmarks preload the requested number of images or videos once per library into that library's native in-memory representation. Per-transform timing must not reread or decode media from disk.
 - Pyperf micro runs isolate transform measurements in subprocesses, but those subprocesses reuse the per-library media cache and lazily construct only the transform being measured.
 - Libraries with lazy or partially lazy output objects must materialize their own result inside the timed call. For Pillow, call `Image.load()` on returned `Image.Image` objects. Do not force fairness by converting outputs to NumPy arrays or computing checksums in the timed benchmark; those are diagnostic-only operations and change the library contract being measured.
-- Libraries should only be listed for transforms they support directly. Do not recreate missing transforms with extensive benchmark-side helper code just to fill a table cell. For example, Pillow can benchmark direct `Image` / `ImageOps` / `ImageFilter` operations, but should skip Albumentations-style composites such as `RandomResizedCrop`, `PadIfNeeded`, `SafeRotate`, `ShiftScaleRotate`, `LongestMaxSize`, and `SmallestMaxSize`.
+- Libraries should only be listed for transforms they support directly. Do not recreate missing transforms with extensive benchmark-side helper code just to fill a table cell. For example, Pillow can benchmark direct `Image` / `ImageOps` / `ImageFilter` operations, but should skip Albumentations-style composites such as `RandomResizedCrop`, `PadIfNeeded`, `SafeRotate`, `ShiftScaleRotate`, `LongestMaxSize`, and `SmallestMaxSize`. When Pillow has a direct equivalent for an AlbumentationsX transform, keep the parameters exact; `Dithering` maps to grayscale, 2-color Floyd-Steinberg dithering, not palette quantization.
 - Compatible libraries share joined environments to avoid redundant dependency setup. Image benchmarks group torchvision, Kornia, and Pillow into the `torch_stack` environment; video benchmarks group torchvision and Kornia into `torch_video`.
 - Environment setup is cached by resolved requirement files, Python version, media type, and environment group. Detached GCP runs can additionally reuse the GCS venv cache unless `--gcp-no-venv-cache` or `--gcp-force-venv-cache-rebuild` is set.
 - Slow transforms are preflighted before exhaustive pyperf measurement. If a transform crosses the slow threshold, record an early-stop result instead of spending the full run budget.

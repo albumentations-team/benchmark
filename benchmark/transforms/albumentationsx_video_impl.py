@@ -614,7 +614,13 @@ def create_transform(spec: TransformSpec) -> Any:
     if spec.name == "Vignetting":
         return A.Vignetting(intensity_range=params["intensity_range"], p=1)
     if spec.name == "Dithering":
-        return A.Dithering(p=1)
+        return A.Dithering(
+            method=params["method"],
+            n_colors=params["n_colors"],
+            color_mode=params["color_mode"],
+            error_diffusion_algorithm=params["error_diffusion_algorithm"],
+            p=1,
+        )
     if spec.name == "FilmGrain":
         return A.FilmGrain(
             intensity_range=params["intensity_range"],

@@ -146,7 +146,14 @@ def create_transform(spec: TransformSpec) -> Any | None:
         )
 
     if spec.name == "Dithering":
-        return lambda img: img.convert("P", dither=Image.FLOYDSTEINBERG).convert("RGB")
+        if (
+            params.get("method") != "error_diffusion"
+            or params.get("n_colors") != 2
+            or params.get("color_mode") != "grayscale"
+            or params.get("error_diffusion_algorithm") != "floyd_steinberg"
+        ):
+            return None
+        return lambda img: img.convert("L").convert("1", dither=Image.Dither.FLOYDSTEINBERG).convert("RGB")
 
     # Direct ImageFilter equivalents.
     if spec.name == "GaussianBlur":

@@ -2,7 +2,7 @@
 #    uv pip compile -o /Users/vladimiriglovikov/workspace/benchmark/requirements/albumentationsx.txt /Users/vladimiriglovikov/workspace/benchmark/requirements/albumentationsx.in
 albucore==0.1.5
     # via albumentationsx
-albumentationsx==2.2.3
+albumentationsx==2.2.4
     # via -r requirements/albumentationsx.in
 annotated-types==0.7.0
     # via pydantic
