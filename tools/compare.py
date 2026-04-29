@@ -27,6 +27,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from benchmark.slow_threshold import slow_marker_from_threshold
+
 _HAVE_PANDAS = importlib.util.find_spec("pandas") is not None
 
 
@@ -142,7 +144,7 @@ def _format_result_cell(result: dict[str, Any], *, is_fastest: bool = False) -> 
         threshold = result.get("slow_threshold_throughput")
         unit = result.get("slow_threshold_unit", "img/s")
         if isinstance(threshold, (int, float)) and threshold > 0:
-            return f"<{threshold:.0f} {unit}"
+            return slow_marker_from_threshold(threshold, unit)
         return "slow-skipped"
     v = float(result.get("median_throughput", 0.0))
     s = float(result.get("std_throughput", 0.0))

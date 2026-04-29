@@ -146,7 +146,7 @@ class TestFormatComparisonTable:
                     "Elastic": {
                         "supported": True,
                         "early_stopped": True,
-                        "slow_marker": "<10 img/s",
+                        "slow_marker": "≤10 img/s",
                         "median_throughput": 5.0,
                         "std_throughput": 0.0,
                     },
@@ -170,7 +170,7 @@ class TestFormatComparisonTable:
         table = format_comparison_table(loaded)
 
         assert "Elastic" in table
-        assert "<10 img/s" in table
+        assert "≤10 img/s" in table
 
     def test_early_stopped_transform_formats_threshold_without_marker(self) -> None:
         loaded = {
@@ -192,7 +192,7 @@ class TestFormatComparisonTable:
         table = format_comparison_table(loaded)
 
         assert "SlowTransform" in table
-        assert "<42 img/s" in table
+        assert "≤42 img/s" in table
 
 
 class TestCompareRegression:
