@@ -14,6 +14,7 @@ import numpy as np
 from tqdm import tqdm
 
 from .results import build_metadata, summarize_runs
+from .slow_threshold import is_slow_time_per_item, slow_threshold_info
 from .term import configure_logging, tqdm_kwargs
 from .utils import (
     get_image_loader,
@@ -248,7 +249,10 @@ class BenchmarkRunner:
 
                 total_time = time.time() - start_time
 
-                if i >= self._min_iterations_before_stopping and time_per_item >= self._slow_threshold:
+                if i >= self._min_iterations_before_stopping and is_slow_time_per_item(
+                    time_per_item,
+                    self._slow_threshold,
+                ):
                     reason = (
                         f"Transform too slow: {time_per_item:.3f} sec/{self._item_label_singular}"
                         f" >= {self._slow_threshold} sec/{self._item_label_singular} threshold"
@@ -309,10 +313,7 @@ class BenchmarkRunner:
                 self._item_label_singular,
                 early_stop_reason,
             )
-            slow_thr = self._slow_threshold
             slow_unit = "vid/s" if self.media_type == MediaType.VIDEO else "img/s"
-            slow_tp = 1.0 / slow_thr if slow_thr > 0 else 0.0
-            slow_marker = f"≤{slow_tp:.0f} {slow_unit}" if slow_thr > 0 else "slow-skipped"
             return {
                 "supported": True,
                 "status": "ok",
@@ -332,10 +333,7 @@ class BenchmarkRunner:
                 "unstable_reason": "early stopped during warmup",
                 "early_stopped": True,
                 "early_stop_reason": early_stop_reason,
-                "slow_threshold_sec_per_item": slow_thr,
-                "slow_threshold_throughput": slow_tp,
-                "slow_threshold_unit": slow_unit,
-                "slow_marker": slow_marker,
+                **slow_threshold_info(self._slow_threshold, slow_unit),
             }
 
         throughputs: list[float] = []

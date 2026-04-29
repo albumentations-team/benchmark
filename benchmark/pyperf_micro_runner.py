@@ -15,6 +15,7 @@ import pyperf
 
 from benchmark.results import build_metadata, summarize_runs, write_results
 from benchmark.runner import BenchmarkRunner, MediaType, load_from_python_file
+from benchmark.slow_threshold import is_slow_time_per_item, slow_threshold_info, slow_threshold_reason
 from benchmark.utils import materialize_transform_output
 
 _SLOW_DEFAULTS: dict[MediaType, dict[str, float | int]] = {
@@ -135,8 +136,8 @@ def _preflight_slow_transform(
     unit = "vid/s" if media_type == MediaType.VIDEO else "img/s"
 
     reason: str | None = None
-    if time_per_item >= threshold:
-        reason = f"{transform_name} slower than threshold: {time_per_item:.3f} sec/{item_label} >= {threshold:.3f}"
+    if is_slow_time_per_item(time_per_item, threshold):
+        reason = slow_threshold_reason(transform_name, time_per_item, threshold, item_label)
     elif wall_time > max_preflight_secs:
         reason = f"{transform_name} preflight timeout: {wall_time:.1f} sec > {max_preflight_secs:.1f} sec"
 
@@ -165,10 +166,7 @@ def _preflight_slow_transform(
         "unstable_reason": "early stopped during pyperf preflight",
         "early_stopped": True,
         "early_stop_reason": reason,
-        "slow_threshold_sec_per_item": threshold,
-        "slow_threshold_throughput": 1.0 / threshold if threshold > 0 else 0.0,
-        "slow_threshold_unit": unit,
-        "slow_marker": f"≤{1.0 / threshold:.0f} {unit}" if threshold > 0 else "slow-skipped",
+        **slow_threshold_info(threshold, unit),
         "preflight_items": len(subset),
         "preflight_elapsed": elapsed,
         "pyperf": None,

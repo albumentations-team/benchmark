@@ -52,7 +52,7 @@ def _git_snapshot() -> dict[str, Any]:
 
 
 def _summary_result_files(source_dir: Path) -> list[Path]:
-    files = sorted(path for path in source_dir.glob("*_results.json") if not path.name.endswith(".pyperf.json"))
+    files = sorted(source_dir.glob("*_results.json"))
     if not files:
         msg = f"No summary *_results.json files found in {source_dir}"
         raise ValueError(msg)
