@@ -44,6 +44,27 @@ def test_direct_transpose_is_supported() -> None:
     assert result.size == (6, 4)
 
 
+def test_dithering_matches_shared_floyd_steinberg_spec() -> None:
+    transform = _create_transform(
+        TransformSpec(
+            "Dithering",
+            {
+                "method": "error_diffusion",
+                "n_colors": 2,
+                "color_mode": "grayscale",
+                "error_diffusion_algorithm": "floyd_steinberg",
+            },
+        ),
+    )
+    assert transform is not None
+
+    result = transform(Image.linear_gradient("L").resize((8, 8)).convert("RGB"))
+
+    assert result.mode == "RGB"
+    assert result.size == (8, 8)
+    assert set(result.getdata()) <= {(0, 0, 0), (255, 255, 255)}
+
+
 def test_pillow_skips_non_native_or_composite_transforms() -> None:
     assert _create_transform(TransformSpec("RandomCrop128", {"height": 128, "width": 128})) is None
     assert _create_transform(TransformSpec("CenterCrop128", {"height": 128, "width": 128})) is None
@@ -59,5 +80,22 @@ def test_pillow_skips_non_native_or_composite_transforms() -> None:
     assert _create_transform(TransformSpec("Defocus", {"radius": (3, 7), "alias_blur": (0.1, 0.5)})) is None
     assert (
         _create_transform(TransformSpec("SaltAndPepper", {"amount": (0.01, 0.06), "salt_vs_pepper": (0.4, 0.6)}))
+        is None
+    )
+
+
+def test_pillow_skips_dithering_variants_without_direct_equivalent() -> None:
+    assert (
+        _create_transform(
+            TransformSpec(
+                "Dithering",
+                {
+                    "method": "ordered",
+                    "n_colors": 2,
+                    "color_mode": "grayscale",
+                    "error_diffusion_algorithm": "floyd_steinberg",
+                },
+            ),
+        )
         is None
     )

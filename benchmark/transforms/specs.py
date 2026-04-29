@@ -766,7 +766,12 @@ TRANSFORM_SPECS = [
     ),
     TransformSpec(
         "Dithering",
-        {},
+        {
+            "method": "error_diffusion",
+            "n_colors": 2,
+            "color_mode": "grayscale",
+            "error_diffusion_algorithm": "floyd_steinberg",
+        },
     ),
     TransformSpec(
         "FilmGrain",
