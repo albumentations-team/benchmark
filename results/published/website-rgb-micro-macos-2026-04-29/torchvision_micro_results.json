@@ -2,7 +2,7 @@
   "metadata": {
     "system_info": {
       "python_version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
-      "python_executable": "/Users/vladimiriglovikov/workspace/benchmark/.venv_torch_stack/bin/python",
+      "python_executable": ".venv_torch_stack/bin/python",
       "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
       "system": "Darwin",
       "machine": "arm64",
@@ -29,16 +29,15 @@
       "pillow": "{'threads': 'unknown', 'simd': False}"
     },
     "environment": {
-      "pid": 31577,
-      "cwd": "/Users/vladimiriglovikov/workspace/benchmark",
-      "python_executable": "/Users/vladimiriglovikov/workspace/benchmark/.venv_torch_stack/bin/python",
-      "python_prefix": "/Users/vladimiriglovikov/workspace/benchmark/.venv_torch_stack",
+      "cwd": ".",
+      "python_executable": ".venv_torch_stack/bin/python",
+      "python_prefix": ".venv_torch_stack",
       "argv": [
-        "/Users/vladimiriglovikov/workspace/benchmark/benchmark/runner.py",
+        "benchmark/runner.py",
         "--specs-file",
-        "/Users/vladimiriglovikov/workspace/benchmark/benchmark/transforms/torchvision_impl.py",
+        "benchmark/transforms/torchvision_impl.py",
         "--data-dir",
-        "/Users/vladimiriglovikov/data/imagenet/val",
+        "<external-path>",
         "--output",
         "output/rgb_micro_macos/image-rgb/micro/torchvision_micro_results.json",
         "--media",
@@ -76,12 +75,11 @@
     "gpu": {
       "torch_available": true,
       "torch_version": "2.11.0",
-      "cuda_available": false,
-      "torch_cuda_version": null
+      "cuda_available": false
     },
     "dataset": {
       "available": true,
-      "path": "/Users/vladimiriglovikov/data/imagenet/val",
+      "path": "<external-path>",
       "media": "image",
       "file_count": 50000,
       "total_bytes": 6706560319,
@@ -113,7 +111,6 @@
     "scenario": "image-manual",
     "mode": "micro",
     "library": "torchvision",
-    "decoder": null,
     "benchmark_params": {
       "num_images": 2000,
       "num_runs": 5,
@@ -156,11 +153,9 @@
       "std_time": 0.054141853562716655,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "RandomCrop128": {
       "status": "ok",
@@ -192,11 +187,9 @@
       "std_time": 0.0012019339424938998,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 31,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "RandomResizedCrop": {
       "status": "ok",
@@ -228,11 +221,9 @@
       "std_time": 0.05227857437453089,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "CenterCrop128": {
       "status": "ok",
@@ -264,11 +255,9 @@
       "std_time": 0.0005177661625846022,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "HorizontalFlip": {
       "status": "ok",
@@ -300,11 +289,9 @@
       "std_time": 0.010444662968723203,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 17,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "VerticalFlip": {
       "status": "ok",
@@ -336,11 +323,9 @@
       "std_time": 0.0022740784516815903,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Pad": {
       "status": "ok",
@@ -372,11 +357,9 @@
       "std_time": 0.005438713099354103,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Rotate": {
       "status": "ok",
@@ -408,11 +391,9 @@
       "std_time": 0.08499079025960067,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Affine": {
       "status": "ok",
@@ -444,11 +425,9 @@
       "std_time": 0.13246946342182822,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 40,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Perspective": {
       "status": "ok",
@@ -480,11 +459,9 @@
       "std_time": 0.16568148933948626,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Elastic": {
       "supported": true,
@@ -540,11 +517,9 @@
       "std_time": 0.19842570660082626,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "ChannelShuffle": {
       "status": "ok",
@@ -576,11 +551,9 @@
       "std_time": 0.0008379198605309059,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Grayscale": {
       "status": "ok",
@@ -612,11 +585,9 @@
       "std_time": 0.0014083848760364504,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "GaussianBlur": {
       "status": "ok",
@@ -648,11 +619,9 @@
       "std_time": 0.06244675602323085,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Invert": {
       "status": "ok",
@@ -684,11 +653,9 @@
       "std_time": 0.006502181029303941,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Posterize": {
       "status": "ok",
@@ -720,11 +687,9 @@
       "std_time": 0.00045998317810253203,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Solarize": {
       "status": "ok",
@@ -756,11 +721,9 @@
       "std_time": 0.002869499854564722,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Sharpen": {
       "status": "ok",
@@ -792,11 +755,9 @@
       "std_time": 0.009699829293140323,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "AutoContrast": {
       "status": "ok",
@@ -828,11 +789,9 @@
       "std_time": 0.029516097832567496,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Equalize": {
       "status": "ok",
@@ -864,11 +823,9 @@
       "std_time": 0.010523101596004744,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Normalize": {
       "status": "ok",
@@ -900,11 +857,9 @@
       "std_time": 0.010855143237243686,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Erasing": {
       "status": "ok",
@@ -936,11 +891,9 @@
       "std_time": 0.0011745031207237404,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "JpegCompression": {
       "status": "ok",
@@ -972,11 +925,9 @@
       "std_time": 0.006116411276142214,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Brightness": {
       "status": "ok",
@@ -1008,11 +959,9 @@
       "std_time": 0.004558251803993636,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Contrast": {
       "status": "ok",
@@ -1044,11 +993,9 @@
       "std_time": 0.006010239623998334,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "PhotoMetricDistort": {
       "status": "ok",
@@ -1080,11 +1027,9 @@
       "std_time": 0.028217196366582528,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "ColorJiggle": {
       "status": "ok",
@@ -1116,11 +1061,9 @@
       "std_time": 0.07137090563515454,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     }
   }
 }

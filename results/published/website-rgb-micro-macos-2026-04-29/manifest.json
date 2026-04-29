@@ -33,7 +33,7 @@
         "memory_total_bytes": "137438953472",
         "platform": "macOS-26.4.1-arm64-arm-64bit",
         "processor": "arm",
-        "python_executable": "/Users/vladimiriglovikov/workspace/benchmark/.venv_albumentationsx/bin/python",
+        "python_executable": ".venv_albumentationsx/bin/python",
         "python_version": "3.12.8 | packaged by Anaconda, Inc. | (main, Dec 11 2024, 10:37:40) [Clang 14.0.6 ]",
         "system": "Darwin",
         "timestamp": "2026-04-29T11:14:49.253621+00:00"
@@ -71,7 +71,7 @@
         "memory_total_bytes": "137438953472",
         "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
         "processor": "arm",
-        "python_executable": "/Users/vladimiriglovikov/workspace/benchmark/.venv_torch_stack/bin/python",
+        "python_executable": ".venv_torch_stack/bin/python",
         "python_version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
         "system": "Darwin",
         "timestamp": "2026-04-29T11:32:48.488992+00:00"
@@ -108,7 +108,7 @@
         "memory_total_bytes": "137438953472",
         "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
         "processor": "arm",
-        "python_executable": "/Users/vladimiriglovikov/workspace/benchmark/.venv_torch_stack/bin/python",
+        "python_executable": ".venv_torch_stack/bin/python",
         "python_version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
         "system": "Darwin",
         "timestamp": "2026-04-29T11:56:59.332924+00:00"
@@ -145,7 +145,7 @@
         "memory_total_bytes": "137438953472",
         "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
         "processor": "arm",
-        "python_executable": "/Users/vladimiriglovikov/workspace/benchmark/.venv_torch_stack/bin/python",
+        "python_executable": ".venv_torch_stack/bin/python",
         "python_version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
         "system": "Darwin",
         "timestamp": "2026-04-29T11:23:47.265581+00:00"
@@ -160,7 +160,7 @@
   ],
   "git": {
     "branch": "docs/rgb-micro-macos-readme-2.2.4",
-    "commit": "1a0676bc4c382a10af8e2478f0bf1e79dcd36e39",
+    "commit": "e685ba5e18a87e92121c066af95c9fefb4acd247",
     "dirty": true
   },
   "libraries": [
@@ -177,7 +177,7 @@
   },
   "machine": "macos",
   "notes": "RGB micro benchmark snapshot for website/repo tables; summary JSONs only.",
-  "published_at_utc": "2026-04-29T12:21:25.763917+00:00",
+  "published_at_utc": "2026-04-29T12:35:13.422020+00:00",
   "purpose": "website-full",
   "schema_version": 1,
   "source_dir": "output/rgb_micro_macos/image-rgb/micro"

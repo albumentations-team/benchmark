@@ -2,7 +2,7 @@
   "metadata": {
     "system_info": {
       "python_version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
-      "python_executable": "/Users/vladimiriglovikov/workspace/benchmark/.venv_torch_stack/bin/python",
+      "python_executable": ".venv_torch_stack/bin/python",
       "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
       "system": "Darwin",
       "machine": "arm64",
@@ -30,16 +30,15 @@
       "pillow": "{'threads': 'unknown', 'simd': False}"
     },
     "environment": {
-      "pid": 31902,
-      "cwd": "/Users/vladimiriglovikov/workspace/benchmark",
-      "python_executable": "/Users/vladimiriglovikov/workspace/benchmark/.venv_torch_stack/bin/python",
-      "python_prefix": "/Users/vladimiriglovikov/workspace/benchmark/.venv_torch_stack",
+      "cwd": ".",
+      "python_executable": ".venv_torch_stack/bin/python",
+      "python_prefix": ".venv_torch_stack",
       "argv": [
-        "/Users/vladimiriglovikov/workspace/benchmark/benchmark/runner.py",
+        "benchmark/runner.py",
         "--specs-file",
-        "/Users/vladimiriglovikov/workspace/benchmark/benchmark/transforms/kornia_impl.py",
+        "benchmark/transforms/kornia_impl.py",
         "--data-dir",
-        "/Users/vladimiriglovikov/data/imagenet/val",
+        "<external-path>",
         "--output",
         "output/rgb_micro_macos/image-rgb/micro/kornia_micro_results.json",
         "--media",
@@ -77,12 +76,11 @@
     "gpu": {
       "torch_available": true,
       "torch_version": "2.11.0",
-      "cuda_available": false,
-      "torch_cuda_version": null
+      "cuda_available": false
     },
     "dataset": {
       "available": true,
-      "path": "/Users/vladimiriglovikov/data/imagenet/val",
+      "path": "<external-path>",
       "media": "image",
       "file_count": 50000,
       "total_bytes": 6706560319,
@@ -114,7 +112,6 @@
     "scenario": "image-manual",
     "mode": "micro",
     "library": "kornia",
-    "decoder": null,
     "benchmark_params": {
       "num_images": 2000,
       "num_runs": 5,
@@ -157,11 +154,9 @@
       "std_time": 0.031275146184747145,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "RandomCrop128": {
       "status": "ok",
@@ -193,11 +188,9 @@
       "std_time": 0.0033410998025205987,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "RandomResizedCrop": {
       "status": "ok",
@@ -229,11 +222,9 @@
       "std_time": 0.027189316747530615,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "CenterCrop128": {
       "status": "ok",
@@ -265,11 +256,9 @@
       "std_time": 0.004126241399617452,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "HorizontalFlip": {
       "status": "ok",
@@ -301,11 +290,9 @@
       "std_time": 0.009126908834396218,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "VerticalFlip": {
       "status": "ok",
@@ -337,11 +324,9 @@
       "std_time": 0.0005914861758797407,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Rotate": {
       "status": "ok",
@@ -373,11 +358,9 @@
       "std_time": 0.030283305154436647,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Affine": {
       "status": "ok",
@@ -409,11 +392,9 @@
       "std_time": 0.01830581437700887,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Perspective": {
       "status": "ok",
@@ -445,11 +426,9 @@
       "std_time": 0.1067210129142443,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Elastic": {
       "supported": true,
@@ -505,11 +484,9 @@
       "std_time": 0.08981977489398067,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "ChannelShuffle": {
       "status": "ok",
@@ -541,11 +518,9 @@
       "std_time": 0.0020172376349483797,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Grayscale": {
       "status": "ok",
@@ -577,11 +552,9 @@
       "std_time": 0.011777565670280321,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "RGBShift": {
       "status": "ok",
@@ -613,11 +586,9 @@
       "std_time": 0.010586267450028077,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "GaussianBlur": {
       "status": "ok",
@@ -649,11 +620,9 @@
       "std_time": 0.04367444018998298,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "GaussianNoise": {
       "status": "ok",
@@ -685,11 +654,9 @@
       "std_time": 0.06810952473915205,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Invert": {
       "status": "ok",
@@ -721,11 +688,9 @@
       "std_time": 0.0034056497829038305,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Posterize": {
       "status": "ok",
@@ -757,11 +722,9 @@
       "std_time": 0.12369459262778525,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Solarize": {
       "status": "ok",
@@ -793,11 +756,9 @@
       "std_time": 0.07671544518245603,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Sharpen": {
       "status": "ok",
@@ -829,11 +790,9 @@
       "std_time": 0.062417065214875306,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "AutoContrast": {
       "status": "ok",
@@ -865,11 +824,9 @@
       "std_time": 0.052806463845874424,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Equalize": {
       "status": "ok",
@@ -901,11 +858,9 @@
       "std_time": 0.0775762095951416,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Normalize": {
       "status": "ok",
@@ -937,11 +892,9 @@
       "std_time": 0.017704741919393207,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Erasing": {
       "status": "ok",
@@ -973,11 +926,9 @@
       "std_time": 0.011174053809788044,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "JpegCompression": {
       "status": "ok",
@@ -1009,11 +960,9 @@
       "std_time": 0.0844461321997941,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "RandomGamma": {
       "status": "ok",
@@ -1045,11 +994,9 @@
       "std_time": 0.13081968032430663,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "PlankianJitter": {
       "status": "ok",
@@ -1081,11 +1028,9 @@
       "std_time": 0.005823992533127754,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "MedianBlur": {
       "supported": true,
@@ -1141,11 +1086,9 @@
       "std_time": 0.1147625573651809,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "CLAHE": {
       "status": "ok",
@@ -1177,11 +1120,9 @@
       "std_time": 0.027738197299227465,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Brightness": {
       "status": "ok",
@@ -1213,11 +1154,9 @@
       "std_time": 0.0018772167010634546,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Contrast": {
       "status": "ok",
@@ -1249,11 +1188,9 @@
       "std_time": 0.0024910394647315297,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Blur": {
       "status": "ok",
@@ -1285,11 +1222,9 @@
       "std_time": 0.00771974048987342,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "ChannelDropout": {
       "status": "ok",
@@ -1321,11 +1256,9 @@
       "std_time": 0.002714070172096835,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "LinearIllumination": {
       "status": "ok",
@@ -1357,11 +1290,9 @@
       "std_time": 0.009300414210155624,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "CornerIllumination": {
       "status": "ok",
@@ -1393,11 +1324,9 @@
       "std_time": 0.016690777651631076,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "GaussianIllumination": {
       "status": "ok",
@@ -1429,11 +1358,9 @@
       "std_time": 0.05912737286061279,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Hue": {
       "status": "ok",
@@ -1465,11 +1392,9 @@
       "std_time": 0.026873558822700164,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "PlasmaBrightness": {
       "status": "ok",
@@ -1501,11 +1426,9 @@
       "std_time": 0.024637386316958474,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "PlasmaContrast": {
       "status": "ok",
@@ -1537,11 +1460,9 @@
       "std_time": 0.013522535856551382,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "PlasmaShadow": {
       "status": "ok",
@@ -1573,11 +1494,9 @@
       "std_time": 0.01878696075700601,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Rain": {
       "status": "ok",
@@ -1609,11 +1528,9 @@
       "std_time": 0.0020371273463834624,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "SaltAndPepper": {
       "status": "ok",
@@ -1645,11 +1562,9 @@
       "std_time": 0.008727843795861017,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Saturation": {
       "status": "ok",
@@ -1681,11 +1596,9 @@
       "std_time": 0.0444994847639202,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Snow": {
       "status": "ok",
@@ -1717,11 +1630,9 @@
       "std_time": 0.025669473764444416,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "OpticalDistortion": {
       "status": "ok",
@@ -1753,11 +1664,9 @@
       "std_time": 0.02127151826654514,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "Shear": {
       "status": "ok",
@@ -1789,11 +1698,9 @@
       "std_time": 0.03459208143201088,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "ThinPlateSpline": {
       "status": "ok",
@@ -1825,11 +1732,9 @@
       "std_time": 0.09996881903054512,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "ColorJiggle": {
       "status": "ok",
@@ -1861,11 +1766,9 @@
       "std_time": 0.020831899996162487,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "LongestMaxSize": {
       "status": "ok",
@@ -1897,11 +1800,9 @@
       "std_time": 0.020078951405407608,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "SmallestMaxSize": {
       "status": "ok",
@@ -1933,11 +1834,9 @@
       "std_time": 0.008045422556843606,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "RandomRotate90": {
       "status": "ok",
@@ -1969,11 +1868,9 @@
       "std_time": 0.01944094377128884,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     },
     "RandomJigsaw": {
       "status": "ok",
@@ -2005,11 +1902,9 @@
       "std_time": 0.010761467239419502,
       "num_successful_runs": 5,
       "unstable": false,
-      "unstable_reason": null,
       "warmup_iterations": 16,
       "variance_stable": true,
-      "early_stopped": false,
-      "early_stop_reason": null
+      "early_stopped": false
     }
   }
 }

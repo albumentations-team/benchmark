@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 from datetime import UTC, datetime
@@ -70,6 +71,44 @@ def _load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
+_DROP_METADATA_KEYS = frozenset({"pid"})
+_PATH_METADATA_KEYS = frozenset({"python_executable", "python_prefix", "cwd", "path", "data_dir"})
+
+
+def _sanitize_path(value: str, root: Path) -> str:
+    expanded = Path(value).expanduser().absolute()
+    if not expanded.is_absolute():
+        return value
+    root_abs = root.absolute()
+    try:
+        common = os.path.commonpath([str(expanded), str(root_abs)])
+    except ValueError:
+        return "<external-path>"
+    if common == str(root_abs):
+        return str(expanded.relative_to(root_abs))
+    return "<external-path>"
+
+
+def _sanitize_value(value: Any, *, key: str | None = None, root: Path) -> Any:
+    if key in _DROP_METADATA_KEYS:
+        return None
+    if isinstance(value, dict):
+        return {
+            child_key: sanitized
+            for child_key, child_value in value.items()
+            if (sanitized := _sanitize_value(child_value, key=child_key, root=root)) is not None
+        }
+    if isinstance(value, list):
+        return [_sanitize_value(item, root=root) for item in value]
+    if isinstance(value, str) and (key in _PATH_METADATA_KEYS or value.startswith(("/", "~"))):
+        return _sanitize_path(value, root)
+    return value
+
+
+def _sanitize_result_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return _sanitize_value(payload, root=_repo_root())
+
+
 def _manifest(
     *,
     source_dir: Path,
@@ -83,7 +122,7 @@ def _manifest(
     entries = []
     library_versions: dict[str, Any] = {}
     for path in files:
-        payload = _load_json(path)
+        payload = _sanitize_result_payload(_load_json(path))
         metadata = payload["metadata"]
         versions = metadata.get("library_versions", {})
         library = (
@@ -136,7 +175,10 @@ def publish_results(
     if not source_dir.is_dir():
         msg = f"Source directory does not exist: {source_dir}"
         raise ValueError(msg)
-    if destination_dir.exists() and any(destination_dir.iterdir()) and not force:
+    if destination_dir.exists() and not destination_dir.is_dir():
+        msg = f"Destination exists and is not a directory: {destination_dir}"
+        raise ValueError(msg)
+    if destination_dir.is_dir() and any(destination_dir.iterdir()) and not force:
         msg = f"Destination already exists and is not empty: {destination_dir}. Use --force to replace it."
         raise ValueError(msg)
 
@@ -150,7 +192,8 @@ def publish_results(
                 stale.unlink()
 
     for path in files:
-        shutil.copy2(path, destination_dir / path.name)
+        payload = _sanitize_result_payload(_load_json(path))
+        (destination_dir / path.name).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
     manifest = _manifest(
         source_dir=source_dir,
