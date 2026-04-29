@@ -11,11 +11,11 @@ import time
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import pyperf
 
 from benchmark.results import build_metadata, summarize_runs, write_results
 from benchmark.runner import BenchmarkRunner, MediaType, load_from_python_file
+from benchmark.utils import materialize_transform_output
 
 _SLOW_DEFAULTS: dict[MediaType, dict[str, float | int]] = {
     MediaType.IMAGE: {
@@ -33,18 +33,7 @@ _SLOW_DEFAULTS: dict[MediaType, dict[str, float | int]] = {
 
 def _make_micro_output_contiguous(output: Any) -> Any:
     """Materialize micro-benchmark outputs so views/lazy buffers are not counted as finished work."""
-    if isinstance(output, np.ndarray):
-        return np.ascontiguousarray(output)
-
-    contiguous = getattr(output, "contiguous", None)
-    if callable(contiguous):
-        return contiguous()
-
-    load = getattr(output, "load", None)
-    if callable(load) and output.__class__.__module__.startswith("PIL."):
-        load()
-
-    return output
+    return materialize_transform_output(output)
 
 
 def _time_transform_loop(loops: int, transform: Any, media: list[Any], call_fn: Any) -> float:

@@ -116,6 +116,22 @@ def make_multichannel_loader(base_loader: Callable[[Path], Any], num_channels: i
     return load
 
 
+def materialize_transform_output(output: Any) -> Any:
+    """Force transform outputs to be realized before the timer stops."""
+    if isinstance(output, np.ndarray):
+        return np.ascontiguousarray(output)
+
+    contiguous = getattr(output, "contiguous", None)
+    if callable(contiguous):
+        return contiguous()
+
+    load = getattr(output, "load", None)
+    if callable(load) and output.__class__.__module__.startswith("PIL."):
+        load()
+
+    return output
+
+
 def time_transform(transform: Any, images: list[Any]) -> float:
     """Time the execution of a transform on a list of images"""
     import time
@@ -123,7 +139,7 @@ def time_transform(transform: Any, images: list[Any]) -> float:
     start = time.perf_counter()
 
     for img in images:
-        _ = transform(img)
+        _ = materialize_transform_output(transform(img))
 
     return time.perf_counter() - start
 

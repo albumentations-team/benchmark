@@ -1,0 +1,184 @@
+{
+  "destination_dir": "results/published/website-rgb-micro-macos-2026-04-29",
+  "entries": [
+    {
+      "benchmark_params": {
+        "max_warmup_iterations": 1000,
+        "min_warmup_windows": 3,
+        "num_channels": 3,
+        "num_images": 2000,
+        "num_runs": 5,
+        "timer_backend": "simple",
+        "warmup_threshold": 0.05,
+        "warmup_window": 5
+      },
+      "file": "albumentationsx_micro_results.json",
+      "library": "albumentationsx",
+      "library_versions": {
+        "albumentationsx": "2.2.5",
+        "av": "not installed",
+        "decord": "not installed",
+        "numpy": "2.4.4",
+        "opencv-python": "not installed",
+        "opencv-python-headless": "4.13.0.92",
+        "pillow": "not installed",
+        "torch": "not installed",
+        "torchcodec": "not installed",
+        "torchvision": "not installed"
+      },
+      "num_results": 59,
+      "system_info": {
+        "cpu_count": "16",
+        "machine": "arm64",
+        "memory_total_bytes": "137438953472",
+        "platform": "macOS-26.4.1-arm64-arm-64bit",
+        "processor": "arm",
+        "python_executable": "/Users/vladimiriglovikov/workspace/benchmark/.venv_albumentationsx/bin/python",
+        "python_version": "3.12.8 | packaged by Anaconda, Inc. | (main, Dec 11 2024, 10:37:40) [Clang 14.0.6 ]",
+        "system": "Darwin",
+        "timestamp": "2026-04-29T11:14:49.253621+00:00"
+      }
+    },
+    {
+      "benchmark_params": {
+        "max_warmup_iterations": 1000,
+        "min_warmup_windows": 3,
+        "num_channels": 3,
+        "num_images": 2000,
+        "num_runs": 5,
+        "timer_backend": "simple",
+        "warmup_threshold": 0.05,
+        "warmup_window": 5
+      },
+      "file": "kornia_micro_results.json",
+      "library": "kornia",
+      "library_versions": {
+        "av": "not installed",
+        "decord": "not installed",
+        "kornia": "0.8.2",
+        "numpy": "2.4.4",
+        "opencv-python": "not installed",
+        "opencv-python-headless": "4.13.0.92",
+        "pillow": "12.2.0",
+        "torch": "2.11.0",
+        "torchcodec": "not installed",
+        "torchvision": "0.26.0"
+      },
+      "num_results": 53,
+      "system_info": {
+        "cpu_count": "16",
+        "machine": "arm64",
+        "memory_total_bytes": "137438953472",
+        "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
+        "processor": "arm",
+        "python_executable": "/Users/vladimiriglovikov/workspace/benchmark/.venv_torch_stack/bin/python",
+        "python_version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
+        "system": "Darwin",
+        "timestamp": "2026-04-29T11:32:48.488992+00:00"
+      }
+    },
+    {
+      "benchmark_params": {
+        "max_warmup_iterations": 1000,
+        "min_warmup_windows": 3,
+        "num_channels": 3,
+        "num_images": 2000,
+        "num_runs": 5,
+        "timer_backend": "simple",
+        "warmup_threshold": 0.05,
+        "warmup_window": 5
+      },
+      "file": "pillow_micro_results.json",
+      "library": "pillow",
+      "library_versions": {
+        "av": "not installed",
+        "decord": "not installed",
+        "numpy": "2.4.4",
+        "opencv-python": "not installed",
+        "opencv-python-headless": "4.13.0.92",
+        "pillow": "12.2.0",
+        "torch": "2.11.0",
+        "torchcodec": "not installed",
+        "torchvision": "0.26.0"
+      },
+      "num_results": 24,
+      "system_info": {
+        "cpu_count": "16",
+        "machine": "arm64",
+        "memory_total_bytes": "137438953472",
+        "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
+        "processor": "arm",
+        "python_executable": "/Users/vladimiriglovikov/workspace/benchmark/.venv_torch_stack/bin/python",
+        "python_version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
+        "system": "Darwin",
+        "timestamp": "2026-04-29T11:56:59.332924+00:00"
+      }
+    },
+    {
+      "benchmark_params": {
+        "max_warmup_iterations": 1000,
+        "min_warmup_windows": 3,
+        "num_channels": 3,
+        "num_images": 2000,
+        "num_runs": 5,
+        "timer_backend": "simple",
+        "warmup_threshold": 0.05,
+        "warmup_window": 5
+      },
+      "file": "torchvision_micro_results.json",
+      "library": "torchvision",
+      "library_versions": {
+        "av": "not installed",
+        "decord": "not installed",
+        "numpy": "2.4.4",
+        "opencv-python": "not installed",
+        "opencv-python-headless": "4.13.0.92",
+        "pillow": "12.2.0",
+        "torch": "2.11.0",
+        "torchcodec": "not installed",
+        "torchvision": "0.26.0"
+      },
+      "num_results": 28,
+      "system_info": {
+        "cpu_count": "16",
+        "machine": "arm64",
+        "memory_total_bytes": "137438953472",
+        "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
+        "processor": "arm",
+        "python_executable": "/Users/vladimiriglovikov/workspace/benchmark/.venv_torch_stack/bin/python",
+        "python_version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
+        "system": "Darwin",
+        "timestamp": "2026-04-29T11:23:47.265581+00:00"
+      }
+    }
+  ],
+  "files": [
+    "albumentationsx_micro_results.json",
+    "kornia_micro_results.json",
+    "pillow_micro_results.json",
+    "torchvision_micro_results.json"
+  ],
+  "git": {
+    "branch": "docs/rgb-micro-macos-readme-2.2.4",
+    "commit": "1a0676bc4c382a10af8e2478f0bf1e79dcd36e39",
+    "dirty": true
+  },
+  "libraries": [
+    "albumentationsx",
+    "kornia",
+    "pillow",
+    "torchvision"
+  ],
+  "library_versions": {
+    "albumentationsx": "2.2.5",
+    "kornia": "0.8.2",
+    "pillow": "12.2.0",
+    "torchvision": "0.26.0"
+  },
+  "machine": "macos",
+  "notes": "RGB micro benchmark snapshot for website/repo tables; summary JSONs only.",
+  "published_at_utc": "2026-04-29T12:21:25.763917+00:00",
+  "purpose": "website-full",
+  "schema_version": 1,
+  "source_dir": "output/rgb_micro_macos/image-rgb/micro"
+}

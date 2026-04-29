@@ -11,6 +11,7 @@ from benchmark.utils import (
     get_system_info,
     get_video_loader,
     is_variance_stable,
+    materialize_transform_output,
     time_transform,
 )
 
@@ -136,3 +137,45 @@ class TestTimeTransform:
         images = [object() for _ in range(7)]
         time_transform(counting_transform, images)
         assert call_count == 7
+
+    def test_transform_output_is_materialized(self) -> None:
+        class TensorLike:
+            def __init__(self) -> None:
+                self.called = False
+
+            def contiguous(self) -> TensorLike:
+                self.called = True
+                return self
+
+        outputs = [TensorLike(), TensorLike()]
+
+        def transform(idx: int) -> TensorLike:
+            return outputs[idx]
+
+        time_transform(transform, [0, 1])
+
+        assert all(output.called for output in outputs)
+
+
+class TestMaterializeTransformOutput:
+    def test_copies_numpy_views(self) -> None:
+        output = utils_module.np.zeros((4, 4, 3), dtype=utils_module.np.uint8)[:, ::-1]
+
+        contiguous = materialize_transform_output(output)
+
+        assert contiguous.flags.c_contiguous
+        assert contiguous.shape == output.shape
+
+    def test_calls_tensor_contiguous(self) -> None:
+        class TensorLike:
+            def __init__(self) -> None:
+                self.called = False
+
+            def contiguous(self) -> TensorLike:
+                self.called = True
+                return self
+
+        output = TensorLike()
+
+        assert materialize_transform_output(output) is output
+        assert output.called
