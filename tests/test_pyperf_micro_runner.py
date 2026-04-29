@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 import numpy as np
 import pytest
@@ -42,7 +42,7 @@ def test_make_micro_output_contiguous_calls_tensor_contiguous() -> None:
         def __init__(self) -> None:
             self.called = False
 
-        def contiguous(self) -> TensorLike:
+        def contiguous(self) -> Self:
             self.called = True
             return self
 

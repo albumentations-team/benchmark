@@ -256,6 +256,8 @@ TRANSFORMS = [
             px=(-10, 20, -10, 20),
             border_mode=cv2.BORDER_CONSTANT,
             fill=0,
+            keep_size=True,
+            interpolation=cv2.INTER_LINEAR,
             p=1,
         ),
     },
