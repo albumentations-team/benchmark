@@ -1,0 +1,1716 @@
+{
+  "metadata": {
+    "system_info": {
+      "python_version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
+      "python_executable": ".venv_torch_stack/bin/python",
+      "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O",
+      "system": "Darwin",
+      "machine": "arm64",
+      "processor": "arm",
+      "cpu_count": "16",
+      "memory_total_bytes": "137438953472",
+      "timestamp": "2026-04-29T21:38:45.626593+00:00"
+    },
+    "library_versions": {
+      "kornia": "0.8.2",
+      "numpy": "2.4.4",
+      "pillow": "12.2.0",
+      "opencv-python-headless": "4.13.0.92",
+      "torch": "2.11.0",
+      "torchvision": "0.26.0",
+      "opencv-python": "not installed",
+      "av": "not installed",
+      "decord": "not installed",
+      "torchcodec": "not installed"
+    },
+    "thread_settings": {
+      "environment": "{'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1', 'VECLIB_MAXIMUM_THREADS': '1', 'NUMEXPR_NUM_THREADS': '1'}",
+      "opencv": "{'threads': 16, 'opencl': True}",
+      "pytorch": "{'threads': 1, 'gpu_available': False, 'gpu_device': None}",
+      "pillow": "{'threads': 'unknown', 'simd': False}"
+    },
+    "environment": {
+      "cwd": ".",
+      "python_executable": ".venv_torch_stack/bin/python",
+      "python_prefix": ".venv_torch_stack",
+      "argv": [
+        "benchmark/pyperf_micro_runner.py",
+        "--specs-file",
+        "benchmark/transforms/kornia_multichannel_impl.py",
+        "--data-dir",
+        "<external-path>",
+        "--json-output",
+        "<external-path>",
+        "--output",
+        "<external-path>",
+        "--media",
+        "image",
+        "--scenario",
+        "image-manual",
+        "--num-channels",
+        "9",
+        "--transforms",
+        "Resize",
+        "--media-cache",
+        "<external-path>",
+        "--processes",
+        "1",
+        "--values",
+        "5",
+        "--warmups",
+        "1",
+        "--min-time",
+        "0.001",
+        "--num-items",
+        "2000"
+      ],
+      "platform": {
+        "system": "Darwin",
+        "release": "25.4.0",
+        "machine": "arm64",
+        "processor": "arm"
+      },
+      "thread_env": {
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1",
+        "VECLIB_MAXIMUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1"
+      },
+      "git": {
+        "commit": "46dfb5f8d4f30edec82db94a513b0299f7e0b40d",
+        "branch": "main",
+        "dirty": true
+      }
+    },
+    "gpu": {
+      "torch_available": true,
+      "torch_version": "2.11.0",
+      "cuda_available": false
+    },
+    "dataset": {
+      "available": true,
+      "path": "<external-path>",
+      "media": "image",
+      "file_count": 50000,
+      "total_bytes": 6706560319,
+      "extensions": {
+        ".jpeg": 50000
+      },
+      "sample_paths": [
+        "ILSVRC2012_val_00000001.JPEG",
+        "ILSVRC2012_val_00000002.JPEG",
+        "ILSVRC2012_val_00000003.JPEG",
+        "ILSVRC2012_val_00000004.JPEG",
+        "ILSVRC2012_val_00000005.JPEG",
+        "ILSVRC2012_val_00000006.JPEG",
+        "ILSVRC2012_val_00000007.JPEG",
+        "ILSVRC2012_val_00000008.JPEG",
+        "ILSVRC2012_val_00000009.JPEG",
+        "ILSVRC2012_val_00000010.JPEG"
+      ]
+    },
+    "timing": {
+      "timing_backend": "pyperf",
+      "measurement_scope": "augmentation_only",
+      "data_source": "memory",
+      "includes_decode": false,
+      "includes_collate": false,
+      "includes_gpu_transfer": false,
+      "includes_dataloader_workers": false
+    },
+    "scenario": "image-manual",
+    "mode": "micro",
+    "library": "kornia",
+    "benchmark_params": {
+      "num_images": 2000,
+      "num_runs": 5,
+      "num_channels": 9,
+      "timer_backend": "pyperf",
+      "slow_skip_enabled": true,
+      "slow_threshold_sec_per_item": 0.1,
+      "slow_preflight_items": 10
+    }
+  },
+  "results": {
+    "RandomCrop128": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        2789.723540101573,
+        2867.185001074557,
+        2929.0040557017505,
+        2969.2653185696427,
+        3014.88543137362
+      ],
+      "median_throughput": 2929.0040557017505,
+      "mean_throughput": 2914.0126693642283,
+      "std_throughput": 88.16678682227425,
+      "cv_throughput": 0.030256143958876557,
+      "throughput_ci95": 77.28159604739645,
+      "p50_throughput": 2929.0040557017505,
+      "p75_throughput": 2969.2653185696427,
+      "p90_throughput": 2996.637386252029,
+      "p95_throughput": 3005.761408812825,
+      "times": [
+        0.00035845845856238156,
+        0.00034877414593938736,
+        0.00034141297894529996,
+        0.00033678364602383225,
+        0.0003316875625168905
+      ],
+      "mean_time": 0.0003434233583975583,
+      "std_time": 1.049453995162049e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "RandomCrop128",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 8.472195709124207,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "RandomResizedCrop": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        331.76119538097817,
+        334.48013095989774,
+        335.33607449007064,
+        335.7292252838789,
+        334.74823507190087
+      ],
+      "median_throughput": 334.74823507190087,
+      "mean_throughput": 334.4109722373453,
+      "std_throughput": 1.5599240213636292,
+      "cv_throughput": 0.004664691504967985,
+      "throughput_ci95": 1.3673336913895322,
+      "p50_throughput": 334.74823507190087,
+      "p75_throughput": 335.33607449007064,
+      "p90_throughput": 335.5719649663556,
+      "p95_throughput": 335.65059512511726,
+      "times": [
+        0.003014216291485354,
+        0.002989714208524674,
+        0.0029820829790551217,
+        0.0029785908544436098,
+        0.00298731970845256
+      ],
+      "mean_time": 0.0029903848083922637,
+      "std_time": 1.4016078698454155e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "RandomResizedCrop",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 72.29088279185817,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "CenterCrop128": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        4628.148073857754,
+        4608.869713038174,
+        4651.659059462954,
+        4621.301658712817,
+        4657.332858127784
+      ],
+      "median_throughput": 4628.148073857754,
+      "mean_throughput": 4633.4622726398975,
+      "std_throughput": 20.50514039065701,
+      "cv_throughput": 0.004425446714379803,
+      "throughput_ci95": 17.973548018260782,
+      "p50_throughput": 4628.148073857754,
+      "p75_throughput": 4651.659059462954,
+      "p90_throughput": 4655.063338661852,
+      "p95_throughput": 4656.198098394818,
+      "times": [
+        0.0002160691455937922,
+        0.0002169729374581948,
+        0.0002149770624237135,
+        0.000216389250010252,
+        0.00021471516648307443
+      ],
+      "mean_time": 0.00021582471239380536,
+      "std_time": 9.547871108194245e-07,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "CenterCrop128",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 5.443730375031009,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "HorizontalFlip": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        4050.9077577837384,
+        4070.7468606422995,
+        4066.7937025912165,
+        4074.4414062888577,
+        4068.89900870146
+      ],
+      "median_throughput": 4068.89900870146,
+      "mean_throughput": 4066.3577472015145,
+      "std_throughput": 9.082401955963732,
+      "cv_throughput": 0.0022335471988942147,
+      "throughput_ci95": 7.961076323624687,
+      "p50_throughput": 4068.89900870146,
+      "p75_throughput": 4070.7468606422995,
+      "p90_throughput": 4072.9635880302344,
+      "p95_throughput": 4073.702497159546,
+      "times": [
+        0.0002468582500005141,
+        0.0002456551670329645,
+        0.0002458939580246806,
+        0.0002454324164427817,
+        0.0002457667290000245
+      ],
+      "mean_time": 0.0002459213041001931,
+      "std_time": 5.505335979049348e-07,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "HorizontalFlip",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 6.93450254178606,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "VerticalFlip": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        3826.174043129312,
+        3809.582766998768,
+        3838.708655653976,
+        3808.5317762865693,
+        3809.18490820276
+      ],
+      "median_throughput": 3809.582766998768,
+      "mean_throughput": 3818.4364300542775,
+      "std_throughput": 13.536191849923988,
+      "cv_throughput": 0.0035449567114389743,
+      "throughput_ci95": 11.864995292100197,
+      "p50_throughput": 3809.582766998768,
+      "p75_throughput": 3826.174043129312,
+      "p90_throughput": 3833.6948106441105,
+      "p95_throughput": 3836.2017331490433,
+      "times": [
+        0.0002613576875301078,
+        0.0002624959375243634,
+        0.0002605042710201815,
+        0.00026256837509572507,
+        0.0002625233544968069
+      ],
+      "mean_time": 0.00026188992513343694,
+      "std_time": 9.262953518780665e-07,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "VerticalFlip",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 7.25413804105483,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "Rotate": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        249.1112502120966,
+        249.96571826473658,
+        247.7316132145576,
+        248.77465010245865,
+        249.5364509502563
+      ],
+      "median_throughput": 249.1112502120966,
+      "mean_throughput": 249.02393654882113,
+      "std_throughput": 0.8499251173673659,
+      "cv_throughput": 0.0034130257883893747,
+      "throughput_ci95": 0.7449922125814235,
+      "p50_throughput": 249.1112502120966,
+      "p75_throughput": 249.5364509502563,
+      "p90_throughput": 249.79401133894447,
+      "p95_throughput": 249.8798648018405,
+      "times": [
+        0.0040142707290360706,
+        0.004000548582989722,
+        0.004036626521032304,
+        0.004019702166551724,
+        0.004007430562516674
+      ],
+      "mean_time": 0.004015715712425299,
+      "std_time": 1.3728867710229748e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "Rotate",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 97.4976988749113,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "Affine": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        260.0150878169638,
+        260.04147584200444,
+        260.09342381178925,
+        260.05348064650076,
+        260.0344138399678
+      ],
+      "median_throughput": 260.04147584200444,
+      "mean_throughput": 260.0475763914452,
+      "std_throughput": 0.029166860975576178,
+      "cv_throughput": 0.00011215971085103211,
+      "throughput_ci95": 0.025565880862016273,
+      "p50_throughput": 260.04147584200444,
+      "p75_throughput": 260.05348064650076,
+      "p90_throughput": 260.07744654567387,
+      "p95_throughput": 260.08543517873153,
+      "times": [
+        0.0038459306665463372,
+        0.0038455403960542755,
+        0.0038447723335120827,
+        0.0038453628750285134,
+        0.0038456448330543933
+      ],
+      "mean_time": 0.0038454502208391203,
+      "std_time": 4.312754572583628e-07,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "Affine",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 93.34868158423342,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "Perspective": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        172.3485693334505,
+        172.03436464070552,
+        172.10349249483733,
+        172.12755684637992,
+        172.0820005835154
+      ],
+      "median_throughput": 172.10349249483733,
+      "mean_throughput": 172.13919677977773,
+      "std_throughput": 0.12197164885067388,
+      "cv_throughput": 0.0007085640640389153,
+      "throughput_ci95": 0.10691286407787362,
+      "p50_throughput": 172.10349249483733,
+      "p75_throughput": 172.12755684637992,
+      "p90_throughput": 172.26016433862227,
+      "p95_throughput": 172.3043668360364,
+      "times": [
+        0.005802194957970641,
+        0.005812792124925181,
+        0.005810457332991063,
+        0.005809645000030287,
+        0.005811183020938188
+      ],
+      "mean_time": 0.005809254487371072,
+      "std_time": 4.1131014533385e-06,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "Perspective",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 140.790794624947,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "Elastic": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [],
+      "median_throughput": 3.5081675919933057,
+      "mean_throughput": 3.5081675919933057,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 3.5081675919933057,
+      "p75_throughput": 3.5081675919933057,
+      "p90_throughput": 3.5081675919933057,
+      "p95_throughput": 3.5081675919933057,
+      "times": [],
+      "mean_time": 0.2850490957964212,
+      "std_time": 0.0,
+      "num_successful_runs": 0,
+      "variance_stable": false,
+      "unstable": true,
+      "unstable_reason": "early stopped during pyperf preflight",
+      "early_stopped": true,
+      "early_stop_reason": "Elastic slower than threshold: 0.285 sec/image >= 0.100",
+      "slow_threshold_sec_per_item": 0.1,
+      "slow_threshold_throughput": 10.0,
+      "slow_threshold_unit": "img/s",
+      "slow_marker": "\u226410 img/s",
+      "preflight_items": 10,
+      "preflight_elapsed": 2.8504909579642117
+    },
+    "ChannelShuffle": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1410.5651443448066,
+        1411.6682969521835,
+        1410.5391127582175,
+        1411.5862649401336,
+        1406.4937050015212
+      ],
+      "median_throughput": 1410.5651443448066,
+      "mean_throughput": 1410.1705047993723,
+      "std_throughput": 2.1247486357692678,
+      "cv_throughput": 0.0015067317239567139,
+      "throughput_ci95": 1.862424294794569,
+      "p50_throughput": 1410.5651443448066,
+      "p75_throughput": 1411.5862649401336,
+      "p90_throughput": 1411.6354841473635,
+      "p95_throughput": 1411.6518905497735,
+      "times": [
+        0.0007089357085060329,
+        0.0007083817084785551,
+        0.0007089487919583917,
+        0.0007084228749154136,
+        0.0007109878959599882
+      ],
+      "mean_time": 0.0007091353959636762,
+      "std_time": 1.070301761339967e-06,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "ChannelShuffle",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 17.916663208045065,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "Grayscale": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1235.2900122115389,
+        1241.4177624851159,
+        1243.0144212988948,
+        1241.7795805800833,
+        1232.2063623926538
+      ],
+      "median_throughput": 1241.4177624851159,
+      "mean_throughput": 1238.7416277936572,
+      "std_throughput": 4.724165596855665,
+      "cv_throughput": 0.0038136811509838033,
+      "throughput_ci95": 4.1409137213217715,
+      "p50_throughput": 1241.4177624851159,
+      "p75_throughput": 1241.7795805800833,
+      "p90_throughput": 1242.5204850113703,
+      "p95_throughput": 1242.7674531551324,
+      "times": [
+        0.0008095264999428764,
+        0.0008055306039750576,
+        0.0008044958955142648,
+        0.000805295896017924,
+        0.0008115523750893772
+      ],
+      "mean_time": 0.0008072802541078999,
+      "std_time": 3.0841629101786066e-06,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "Grayscale",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 20.531618959037587,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "GaussianBlur": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        298.73018017291895,
+        298.51278507732326,
+        298.9538893239368,
+        298.35633442516695,
+        298.2145355012381
+      ],
+      "median_throughput": 298.51278507732326,
+      "mean_throughput": 298.5535449001168,
+      "std_throughput": 0.29451501845993877,
+      "cv_throughput": 0.0009864730246578412,
+      "throughput_ci95": 0.25815379585504317,
+      "p50_throughput": 298.51278507732326,
+      "p75_throughput": 298.73018017291895,
+      "p90_throughput": 298.8644056635296,
+      "p95_throughput": 298.9091474937332,
+      "times": [
+        0.0033475024164654316,
+        0.0033499402705347166,
+        0.0033449974585091696,
+        0.003351696896017529,
+        0.003353290604427457
+      ],
+      "mean_time": 0.0033494855291908605,
+      "std_time": 3.3034468746172503e-06,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "GaussianBlur",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 81.55233654077165,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "GaussianNoise": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        71.52554324933404,
+        71.72589307881653,
+        71.50979208217682,
+        71.71301062764796,
+        71.81846156512233
+      ],
+      "median_throughput": 71.71301062764796,
+      "mean_throughput": 71.65854012061953,
+      "std_throughput": 0.1349930296700257,
+      "cv_throughput": 0.0018838372850297832,
+      "throughput_ci95": 0.11832660760568278,
+      "p50_throughput": 71.71301062764796,
+      "p75_throughput": 71.72589307881653,
+      "p90_throughput": 71.78143417060001,
+      "p95_throughput": 71.79994786786118,
+      "times": [
+        0.013981019291444682,
+        0.013941966521088034,
+        0.01398409883293789,
+        0.013944471041555516,
+        0.013923996396013535
+      ],
+      "mean_time": 0.01395511041660793,
+      "std_time": 2.6294669826401084e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "GaussianNoise",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 336.49647829076275,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "Invert": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        5277.018749061102,
+        5298.107980102891,
+        5333.059570007566,
+        5325.1982068278285,
+        5347.3064424125805
+      ],
+      "median_throughput": 5325.1982068278285,
+      "mean_throughput": 5316.138189682393,
+      "std_throughput": 28.263475074029028,
+      "cv_throughput": 0.005316542585157591,
+      "throughput_ci95": 24.77402820599272,
+      "p50_throughput": 5325.1982068278285,
+      "p75_throughput": 5333.059570007566,
+      "p90_throughput": 5341.6076934505745,
+      "p95_throughput": 5344.4570679315775,
+      "times": [
+        0.00018950093747116626,
+        0.00018874662497546523,
+        0.00018750962498597802,
+        0.00018778643745463342,
+        0.00018701004155445843
+      ],
+      "mean_time": 0.00018811073328834027,
+      "std_time": 1.0018791318898908e-06,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "Invert",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 5.586223165737465,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "Posterize": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        487.3412649453584,
+        484.1142644768742,
+        502.7456775222805,
+        480.90845525671824,
+        493.0231979000714
+      ],
+      "median_throughput": 487.3412649453584,
+      "mean_throughput": 489.6265720202606,
+      "std_throughput": 8.591590646131262,
+      "cv_throughput": 0.017547231169830677,
+      "throughput_ci95": 7.530861242083529,
+      "p50_throughput": 487.3412649453584,
+      "p75_throughput": 493.0231979000714,
+      "p90_throughput": 498.8566856733969,
+      "p95_throughput": 500.8011815978387,
+      "times": [
+        0.0020519501875387505,
+        0.002065628041513264,
+        0.0019890772704966365,
+        0.0020793978335568683,
+        0.0020283021250506864
+      ],
+      "mean_time": 0.002042871091631241,
+      "std_time": 3.549838589858411e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "Posterize",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 50.49533712491393,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "Solarize": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        504.40112566951245,
+        503.64249995830454,
+        502.1950947825845,
+        502.91739234913,
+        502.80346457741626
+      ],
+      "median_throughput": 502.91739234913,
+      "mean_throughput": 503.19191546738955,
+      "std_throughput": 0.8492826694343979,
+      "cv_throughput": 0.0016877907679529035,
+      "throughput_ci95": 0.7444290821393762,
+      "p50_throughput": 502.91739234913,
+      "p75_throughput": 503.64249995830454,
+      "p90_throughput": 504.0976753850293,
+      "p95_throughput": 504.2494005272709,
+      "times": [
+        0.0019825491044903176,
+        0.0019855353749589993,
+        0.001991257999907248,
+        0.001988398125045933,
+        0.001988848666427657
+      ],
+      "mean_time": 0.001987317854166031,
+      "std_time": 3.3523620556801492e-06,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "Solarize",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 48.75804558303207,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "Sharpen": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        202.03628500829743,
+        202.07252400381384,
+        200.67466738844558,
+        202.2160903386001,
+        203.24254598602278
+      ],
+      "median_throughput": 202.07252400381384,
+      "mean_throughput": 202.04842254503592,
+      "std_throughput": 0.914053432749532,
+      "cv_throughput": 0.004523932536745208,
+      "throughput_ci95": 0.8012031593924345,
+      "p50_throughput": 202.07252400381384,
+      "p75_throughput": 202.2160903386001,
+      "p90_throughput": 202.8319637270537,
+      "p95_throughput": 203.03725485653825,
+      "times": [
+        0.004949605957954191,
+        0.00494871831254568,
+        0.004983190021011979,
+        0.004945204896037467,
+        0.004920229645562358
+      ],
+      "mean_time": 0.004949389766622335,
+      "std_time": 2.2420864100867505e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "Sharpen",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 119.99521516589448,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "AutoContrast": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        540.71143691109,
+        539.9197179414132,
+        539.4965236330949,
+        540.6692538797603,
+        540.3475184706166
+      ],
+      "median_throughput": 540.3475184706166,
+      "mean_throughput": 540.228890167195,
+      "std_throughput": 0.5178784701127704,
+      "cv_throughput": 0.0009586278696655646,
+      "throughput_ci95": 0.45394049359625316,
+      "p50_throughput": 540.3475184706166,
+      "p75_throughput": 540.6692538797603,
+      "p90_throughput": 540.6945636985581,
+      "p95_throughput": 540.7030003048241,
+      "times": [
+        0.0018494152920320631,
+        0.001852127208490856,
+        0.0018535800625104457,
+        0.0018495595834683628,
+        0.0018506608540192245
+      ],
+      "mean_time": 0.0018510686001041905,
+      "std_time": 1.775169766016963e-06,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "AutoContrast",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 45.341353458119556,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "Normalize": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        2956.076766904242,
+        2957.043762911,
+        2960.946593968571,
+        2955.7946139235314,
+        2964.157409326408
+      ],
+      "median_throughput": 2957.043762911,
+      "mean_throughput": 2958.8038294067505,
+      "std_throughput": 3.634636835711726,
+      "cv_throughput": 0.0012284142664640535,
+      "throughput_ci95": 3.1858996549650525,
+      "p50_throughput": 2957.043762911,
+      "p75_throughput": 2960.946593968571,
+      "p90_throughput": 2962.873083183273,
+      "p95_throughput": 2963.515246254841,
+      "times": [
+        0.0003382862079888582,
+        0.00033817558351438494,
+        0.0003377298334380612,
+        0.0003383184999693185,
+        0.00033736399991903454
+      ],
+      "mean_time": 0.00033797482496593145,
+      "std_time": 4.148806986177083e-07,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "Normalize",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 9.358890041010454,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "Erasing": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        591.0369467538748,
+        592.0489381536431,
+        593.2668659913293,
+        592.9813247885731,
+        592.7977299675028
+      ],
+      "median_throughput": 592.7977299675028,
+      "mean_throughput": 592.4263611309847,
+      "std_throughput": 0.8979516007821385,
+      "cv_throughput": 0.0015157185089939012,
+      "throughput_ci95": 0.7870892813826171,
+      "p50_throughput": 592.7977299675028,
+      "p75_throughput": 592.9813247885731,
+      "p90_throughput": 593.1526495102269,
+      "p95_throughput": 593.2097577507781,
+      "times": [
+        0.0016919416044838727,
+        0.0016890495625557379,
+        0.0016855820834171028,
+        0.0016863937500165775,
+        0.0016869160414207727
+      ],
+      "mean_time": 0.0016879766083788127,
+      "std_time": 2.561074844599316e-06,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "Erasing",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 41.60351554234512,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "JpegCompression": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        72.68171714832532,
+        72.87136326114434,
+        72.79742727724836,
+        72.78020521770776,
+        72.77898329587593
+      ],
+      "median_throughput": 72.78020521770776,
+      "mean_throughput": 72.78193924006034,
+      "std_throughput": 0.06762534094932993,
+      "cv_throughput": 0.0009291500289141494,
+      "throughput_ci95": 0.059276224870806325,
+      "p50_throughput": 72.78020521770776,
+      "p75_throughput": 72.79742727724836,
+      "p90_throughput": 72.84178886758595,
+      "p95_throughput": 72.85657606436514,
+      "times": [
+        0.013758618250023573,
+        0.0137228117500199,
+        0.0137367491874611,
+        0.013739999729441479,
+        0.013740230416995474
+      ],
+      "mean_time": 0.013739681866788306,
+      "std_time": 1.2769005460928138e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "JpegCompression",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 332.74714066577144,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "RandomGamma": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        96.45921647738805,
+        96.12115187049625,
+        96.50424704358421,
+        96.5338699499286,
+        96.56101991370465
+      ],
+      "median_throughput": 96.50424704358421,
+      "mean_throughput": 96.43590105102035,
+      "std_throughput": 0.17995448410608586,
+      "cv_throughput": 0.001866052809636519,
+      "throughput_ci95": 0.15773706005230848,
+      "p50_throughput": 96.50424704358421,
+      "p75_throughput": 96.5338699499286,
+      "p90_throughput": 96.55015992819423,
+      "p95_throughput": 96.55558992094944,
+      "times": [
+        0.010367075708461926,
+        0.010403537416481413,
+        0.010362238249974325,
+        0.010359058437403292,
+        0.010356145791476593
+      ],
+      "mean_time": 0.010369611120759509,
+      "std_time": 1.93936542408706e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "RandomGamma",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 250.4523984589614,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "MedianBlur": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [],
+      "median_throughput": 2.2776081050344867,
+      "mean_throughput": 2.2776081050344867,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 2.2776081050344867,
+      "p75_throughput": 2.2776081050344867,
+      "p90_throughput": 2.2776081050344867,
+      "p95_throughput": 2.2776081050344867,
+      "times": [],
+      "mean_time": 0.43905709581449626,
+      "std_time": 0.0,
+      "num_successful_runs": 0,
+      "variance_stable": false,
+      "unstable": true,
+      "unstable_reason": "early stopped during pyperf preflight",
+      "early_stopped": true,
+      "early_stop_reason": "MedianBlur slower than threshold: 0.439 sec/image >= 0.100",
+      "slow_threshold_sec_per_item": 0.1,
+      "slow_threshold_throughput": 10.0,
+      "slow_threshold_unit": "img/s",
+      "slow_marker": "\u226410 img/s",
+      "preflight_items": 10,
+      "preflight_elapsed": 4.390570958144963
+    },
+    "MotionBlur": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        125.98620525101603,
+        125.56880510598941,
+        126.22335843845953,
+        126.55184896958272,
+        125.87830637229715
+      ],
+      "median_throughput": 125.98620525101603,
+      "mean_throughput": 126.04170482746898,
+      "std_throughput": 0.36968178371178967,
+      "cv_throughput": 0.0029330116108618586,
+      "throughput_ci95": 0.32404037058179097,
+      "p50_throughput": 125.98620525101603,
+      "p75_throughput": 126.22335843845953,
+      "p90_throughput": 126.42045275713345,
+      "p95_throughput": 126.48615086335808,
+      "times": [
+        0.007937376937479711,
+        0.00796376137493644,
+        0.007922463895520196,
+        0.007901899562450125,
+        0.007944180604419671
+      ],
+      "mean_time": 0.00793393647496123,
+      "std_time": 2.3260951568608748e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "MotionBlur",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 190.91928366571665,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "Brightness": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        2902.1444042406165,
+        2905.5857166331343,
+        2907.2906808096664,
+        2900.9078847706255,
+        2915.0864471294253
+      ],
+      "median_throughput": 2905.5857166331343,
+      "mean_throughput": 2906.2030267166933,
+      "std_throughput": 5.589950045100827,
+      "cv_throughput": 0.0019234547599436365,
+      "throughput_ci95": 4.899807250335998,
+      "p50_throughput": 2905.5857166331343,
+      "p75_throughput": 2907.2906808096664,
+      "p90_throughput": 2911.9681406015216,
+      "p95_throughput": 2913.5272938654734,
+      "times": [
+        0.0003445727919461206,
+        0.00034416468744166197,
+        0.000343962854007259,
+        0.00034471966698765755,
+        0.000343042999971658
+      ],
+      "mean_time": 0.0003440926000708714,
+      "std_time": 6.609629629378251e-07,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "Brightness",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 9.553537791129202,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "Contrast": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        2891.0728641427154,
+        2890.989112628454,
+        2898.8323819554553,
+        2900.089912182306,
+        2898.2174970021633
+      ],
+      "median_throughput": 2898.2174970021633,
+      "mean_throughput": 2895.840353582219,
+      "std_throughput": 4.441995251800442,
+      "cv_throughput": 0.0015339226992626149,
+      "throughput_ci95": 3.8935805087927764,
+      "p50_throughput": 2898.2174970021633,
+      "p75_throughput": 2898.8323819554553,
+      "p90_throughput": 2899.5869000915654,
+      "p95_throughput": 2899.8384061369356,
+      "times": [
+        0.0003458923544967547,
+        0.00034590237494558097,
+        0.0003449664789950475,
+        0.0003448168954346329,
+        0.0003450396669795737
+      ],
+      "mean_time": 0.00034532355417031795,
+      "std_time": 5.299445710495753e-07,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "Contrast",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 9.47726079216227,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "Blur": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        291.6796307308572,
+        292.02951970152503,
+        292.124918346506,
+        291.3893128669314,
+        292.5514820379935
+      ],
+      "median_throughput": 292.02951970152503,
+      "mean_throughput": 291.95497273676267,
+      "std_throughput": 0.4432962934750221,
+      "cv_throughput": 0.0015183721288238316,
+      "throughput_ci95": 0.38856633338246754,
+      "p50_throughput": 292.02951970152503,
+      "p75_throughput": 292.124918346506,
+      "p90_throughput": 292.3808565613985,
+      "p95_throughput": 292.466169299696,
+      "times": [
+        0.0034284190414473415,
+        0.003424311353941448,
+        0.00342319308349397,
+        0.003431834854069166,
+        0.0034182017914718018
+      ],
+      "mean_time": 0.0034251920248847454,
+      "std_time": 5.200373222909485e-06,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "Blur",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 83.56082604173571,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "ChannelDropout": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        3835.207829840622,
+        3844.3462648416275,
+        3840.0147480577407,
+        3844.929820313777,
+        3839.6062102784017
+      ],
+      "median_throughput": 3840.0147480577407,
+      "mean_throughput": 3840.820974666434,
+      "std_throughput": 3.9668416930709336,
+      "cv_throughput": 0.001032810880599673,
+      "throughput_ci95": 3.47709005122129,
+      "p50_throughput": 3840.0147480577407,
+      "p75_throughput": 3844.3462648416275,
+      "p90_throughput": 3844.6963981249173,
+      "p95_throughput": 3844.813109219347,
+      "times": [
+        0.00026074206258635966,
+        0.0002601222499506548,
+        0.00026041566650383173,
+        0.00026008277048822495,
+        0.00026044337498024104
+      ],
+      "mean_time": 0.0002603612249018624,
+      "std_time": 2.6897757950928414e-07,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "ChannelDropout",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 7.33086125086993,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "LinearIllumination": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1009.8948442101954,
+        1008.981596416119,
+        1009.6369636993487,
+        1002.9264974711746,
+        1004.7321423078507
+      ],
+      "median_throughput": 1008.981596416119,
+      "mean_throughput": 1007.2344088209377,
+      "std_throughput": 3.1907008946656727,
+      "cv_throughput": 0.003167783851229514,
+      "throughput_ci95": 2.7967726457660014,
+      "p50_throughput": 1008.981596416119,
+      "p75_throughput": 1009.6369636993487,
+      "p90_throughput": 1009.7916920058567,
+      "p95_throughput": 1009.8432681080261,
+      "times": [
+        0.000990202104439959,
+        0.0009910983545705675,
+        0.0009904550209175796,
+        0.0009970820419257507,
+        0.0009952901453943923
+      ],
+      "mean_time": 0.0009928255334496498,
+      "std_time": 3.149485384916995e-06,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "LinearIllumination",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 24.88590870797634,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "CornerIllumination": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        301.8818749905948,
+        302.19636698009464,
+        301.98796598815335,
+        302.3312345642959,
+        301.737713166091
+      ],
+      "median_throughput": 301.98796598815335,
+      "mean_throughput": 302.02703113784594,
+      "std_throughput": 0.23849299461393295,
+      "cv_throughput": 0.0007896412242157363,
+      "throughput_ci95": 0.20904832686078414,
+      "p50_throughput": 301.98796598815335,
+      "p75_throughput": 302.19636698009464,
+      "p90_throughput": 302.2772875306154,
+      "p95_throughput": 302.30426104745567,
+      "times": [
+        0.0033125539585016667,
+        0.0033091066249180583,
+        0.0033113902295008302,
+        0.0033076304584974425,
+        0.0033141366039635615
+      ],
+      "mean_time": 0.0033109635750763118,
+      "std_time": 2.6142587752313867e-06,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "CornerIllumination",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 80.66131787491031,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "GaussianIllumination": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        362.84011377948525,
+        361.8051580696547,
+        361.854938081434,
+        361.81636155617696,
+        361.41401243389436
+      ],
+      "median_throughput": 361.81636155617696,
+      "mean_throughput": 361.94611678412906,
+      "std_throughput": 0.5308919384952361,
+      "cv_throughput": 0.0014667706431337935,
+      "throughput_ci95": 0.46534730156733817,
+      "p50_throughput": 361.81636155617696,
+      "p75_throughput": 361.854938081434,
+      "p90_throughput": 362.44604350026475,
+      "p95_throughput": 362.643078639875,
+      "times": [
+        0.002756034853984602,
+        0.002763918583514169,
+        0.002763538354076445,
+        0.0027638329999754205,
+        0.0027669098750920966
+      ],
+      "mean_time": 0.0027628469333285466,
+      "std_time": 4.046935413533407e-06,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "GaussianIllumination",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 67.34933479200117,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "PlasmaBrightness": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        40.047412966716834,
+        39.94575619329778,
+        40.00117856830844,
+        39.858750188885075,
+        39.937460166692276
+      ],
+      "median_throughput": 39.94575619329778,
+      "mean_throughput": 39.95811161678008,
+      "std_throughput": 0.07120625964050302,
+      "cv_throughput": 0.0017820226421961477,
+      "throughput_ci95": 0.06241503849602848,
+      "p50_throughput": 39.94575619329778,
+      "p75_throughput": 40.00117856830844,
+      "p90_throughput": 40.028919207353475,
+      "p95_throughput": 40.03816608703516,
+      "times": [
+        0.02497040197905153,
+        0.025033948416472412,
+        0.024999263416510074,
+        0.025088593979016877,
+        0.025039148604497314
+      ],
+      "mean_time": 0.02502627127910964,
+      "std_time": 4.460853674504071e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "PlasmaBrightness",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 585.8825927090365,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "PlasmaContrast": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        42.324426986340185,
+        42.079639757901546,
+        42.23330293646546,
+        42.1977028519595,
+        42.17347423869659
+      ],
+      "median_throughput": 42.1977028519595,
+      "mean_throughput": 42.20170935427266,
+      "std_throughput": 0.08912355444356433,
+      "cv_throughput": 0.0021118470272233447,
+      "throughput_ci95": 0.0781202398438276,
+      "p50_throughput": 42.1977028519595,
+      "p75_throughput": 42.23330293646546,
+      "p90_throughput": 42.287977366390294,
+      "p95_throughput": 42.30620217636524,
+      "times": [
+        0.02362701804144308,
+        0.02376446199999191,
+        0.02367799652100075,
+        0.02369797245855443,
+        0.02371158691693563
+      ],
+      "mean_time": 0.023695807187585162,
+      "std_time": 5.004082831670494e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "PlasmaContrast",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 570.5894630830735,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "PlasmaShadow": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        284.2433954932078,
+        287.86907655672604,
+        287.82571521570077,
+        288.18773064734216,
+        285.5374462548754
+      ],
+      "median_throughput": 287.82571521570077,
+      "mean_throughput": 286.7326728335704,
+      "std_throughput": 1.7484576463425638,
+      "cv_throughput": 0.006097866800681725,
+      "throughput_ci95": 1.5325906999764936,
+      "p50_throughput": 287.82571521570077,
+      "p75_throughput": 287.86907655672604,
+      "p90_throughput": 288.0602690110957,
+      "p95_throughput": 288.1239998292189,
+      "times": [
+        0.0035181116460589693,
+        0.003473801395972259,
+        0.003474324728944339,
+        0.0034699603545013816,
+        0.0035021676250034943
+      ],
+      "mean_time": 0.0034876731500960885,
+      "std_time": 2.1336241918505983e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "PlasmaShadow",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 84.71660404186696,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "OpticalDistortion": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        193.21418888791118,
+        193.21589059486837,
+        193.74192668142916,
+        193.39066766446356,
+        193.98084941453905
+      ],
+      "median_throughput": 193.39066766446356,
+      "mean_throughput": 193.50870464864227,
+      "std_throughput": 0.34048697830515484,
+      "cv_throughput": 0.001759543473371826,
+      "throughput_ci95": 0.2984499953459784,
+      "p50_throughput": 193.39066766446356,
+      "p75_throughput": 193.74192668142916,
+      "p90_throughput": 193.88528032129508,
+      "p95_throughput": 193.93306486791707,
+      "times": [
+        0.005175603333045728,
+        0.00517555775004439,
+        0.005161505396012217,
+        0.005170880332938396,
+        0.005155148062389344
+      ],
+      "mean_time": 0.005167738974886015,
+      "std_time": 9.086227046049148e-06,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "OpticalDistortion",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 125.58561450010166,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "Shear": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        299.75674926915565,
+        299.5966455736865,
+        299.38447116026674,
+        300.0826933904227,
+        299.88458377376816
+      ],
+      "median_throughput": 299.75674926915565,
+      "mean_throughput": 299.7410286334599,
+      "std_throughput": 0.26719362009855624,
+      "cv_throughput": 0.0008914149034475209,
+      "throughput_ci95": 0.2342055342962933,
+      "p50_throughput": 299.75674926915565,
+      "p75_throughput": 299.88458377376816,
+      "p90_throughput": 300.0034495437609,
+      "p95_throughput": 300.0430714670918,
+      "times": [
+        0.0033360383125254885,
+        0.003337821083026938,
+        0.0033401866039494054,
+        0.0033324147710809483,
+        0.003334616229403764
+      ],
+      "mean_time": 0.0033362153999973087,
+      "std_time": 2.974145488228368e-06,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "Shear",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 80.94551258301362,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "ThinPlateSpline": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        70.39579389665575,
+        70.45992125092357,
+        70.54975755951543,
+        70.40660902326162,
+        70.51069882450716
+      ],
+      "median_throughput": 70.45992125092357,
+      "mean_throughput": 70.4645561109727,
+      "std_throughput": 0.0661362719423749,
+      "cv_throughput": 0.0009385750168952842,
+      "throughput_ci95": 0.05797099833789243,
+      "p50_throughput": 70.45992125092357,
+      "p75_throughput": 70.51069882450716,
+      "p90_throughput": 70.53413406551212,
+      "p95_throughput": 70.54194581251377,
+      "times": [
+        0.014205394166987389,
+        0.014192465478903614,
+        0.01417439314594958,
+        0.014203212082968094,
+        0.014182244917028583
+      ],
+      "mean_time": 0.014191541958367453,
+      "std_time": 1.3317705574023396e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "ThinPlateSpline",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 341.6956889582798,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "LongestMaxSize": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        409.52131597745347,
+        409.5147021807457,
+        409.6688436392827,
+        409.9971588436307,
+        409.5629850835641
+      ],
+      "median_throughput": 409.5629850835641,
+      "mean_throughput": 409.6530011449353,
+      "std_throughput": 0.20203092853191873,
+      "cv_throughput": 0.0004931757559868094,
+      "throughput_ci95": 0.17708791678387065,
+      "p50_throughput": 409.5629850835641,
+      "p75_throughput": 409.6688436392827,
+      "p90_throughput": 409.8658327618915,
+      "p95_throughput": 409.9314958027611,
+      "times": [
+        0.0024418753334321083,
+        0.002441914770519361,
+        0.002440995978889987,
+        0.002439041291945614,
+        0.002441626896033995
+      ],
+      "mean_time": 0.002441090854164213,
+      "std_time": 1.2032553109965695e-06,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "LongestMaxSize",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 59.427375751081854,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "SmallestMaxSize": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        249.52312883220148,
+        250.07062669813786,
+        249.9494464156727,
+        248.46045618015341,
+        250.1156224537525
+      ],
+      "median_throughput": 249.9494464156727,
+      "mean_throughput": 249.62385611598356,
+      "std_throughput": 0.6912113503988011,
+      "cv_throughput": 0.002769011588690631,
+      "throughput_ci95": 0.6058734619939691,
+      "p50_throughput": 249.9494464156727,
+      "p75_throughput": 250.07062669813786,
+      "p90_throughput": 250.09762415150664,
+      "p95_throughput": 250.10662330262957,
+      "times": [
+        0.004007644520490431,
+        0.0039988702919799834,
+        0.004000809020944871,
+        0.004024785333545879,
+        0.003998150895931758
+      ],
+      "mean_time": 0.004006052012578584,
+      "std_time": 1.112392817541621e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "SmallestMaxSize",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 97.28718362399377,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "RandomRotate90": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        258.7178552245614,
+        254.86771855603084,
+        256.5448451584161,
+        260.2838445372105,
+        259.0995491905165
+      ],
+      "median_throughput": 258.7178552245614,
+      "mean_throughput": 257.9027625333471,
+      "std_throughput": 2.1691967089544324,
+      "cv_throughput": 0.008410909164549773,
+      "throughput_ci95": 1.9013847487340474,
+      "p50_throughput": 258.7178552245614,
+      "p75_throughput": 259.0995491905165,
+      "p90_throughput": 259.8101263985329,
+      "p95_throughput": 260.0469854678717,
+      "times": [
+        0.003865214479039423,
+        0.003923604000010528,
+        0.003897953979088925,
+        0.003841959541430697,
+        0.00385952041647397
+      ],
+      "mean_time": 0.003877650483208708,
+      "std_time": 3.27152659163846e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "RandomRotate90",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 93.10873879119754,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    },
+    "RandomJigsaw": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        304.2130618848161,
+        304.48590713578443,
+        301.9647259694215,
+        300.089745627494,
+        301.6141787636818
+      ],
+      "median_throughput": 301.9647259694215,
+      "mean_throughput": 302.4735238762396,
+      "std_throughput": 1.8544154697795434,
+      "cv_throughput": 0.006130835671218278,
+      "throughput_ci95": 1.625466827190072,
+      "p50_throughput": 301.9647259694215,
+      "p75_throughput": 304.2130618848161,
+      "p90_throughput": 304.3767690353971,
+      "p95_throughput": 304.43133808559077,
+      "times": [
+        0.003287169833551161,
+        0.003284224250004627,
+        0.003311645083012991,
+        0.003332336457911879,
+        0.0033154939999803902
+      ],
+      "mean_time": 0.0033061739248922096,
+      "std_time": 2.0274486554575773e-05,
+      "num_successful_runs": 5,
+      "unstable": false,
+      "pyperf": {
+        "name": "RandomJigsaw",
+        "nrun": 2,
+        "nvalue": 5,
+        "total_duration": 80.11220912495628,
+        "loops": 1,
+        "inner_loops": 2000
+      }
+    }
+  }
+}
