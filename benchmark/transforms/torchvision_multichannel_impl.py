@@ -1,103 +1,76 @@
-"""Torchvision multi-channel image benchmark spec.
+"""TorchVision multi-channel image benchmark spec."""
 
-Tests transforms on 9-channel images (3x stacked RGB). Run with --num-channels 9.
-Excludes RGB-only transforms (ColorJitter, Hue, Saturation, CLAHE, Equalize, etc.).
-"""
-
+import os
 from typing import Any
 
 import torch
-import torchvision.transforms.v2 as tv_transforms
+from torch import nn
+
+from benchmark.transforms.specs import TRANSFORM_SPECS, TransformSpec
+from benchmark.transforms.torchvision_impl import create_transform as _create_rgb_transform
 
 LIBRARY = "torchvision"
 NUM_CHANNELS = 9
 
 torch.set_num_threads(1)
 
+_RGB_CHUNK_TRANSFORMS = {
+    "AutoContrast",
+    "Brightness",
+    "ColorJiggle",
+    "ColorJitter",
+    "Contrast",
+    "Grayscale",
+    "JpegCompression",
+    "PhotoMetricDistort",
+    "Sharpen",
+}
+
+
+def _transform_filter_names() -> set[str] | None:
+    filter_env = os.environ.get("BENCHMARK_TRANSFORMS_FILTER", "").strip()
+    if not filter_env:
+        return None
+    return {name.strip() for name in filter_env.split(",") if name.strip()}
+
+
+class _ApplyToRgbChunks(nn.Module):
+    def __init__(self, transform: nn.Module) -> None:
+        super().__init__()
+        self.transform = transform
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        chunks = torch.chunk(image, chunks=NUM_CHANNELS // 3, dim=0)
+        return torch.cat([self.transform(chunk) for chunk in chunks], dim=0)
+
 
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
     return transform(image)
 
 
+def create_transform(spec: TransformSpec) -> Any | None:
+    if spec.name == "Normalize":
+        normalize_spec = TransformSpec(
+            spec.name,
+            {
+                **spec.params,
+                "mean": (0.485, 0.456, 0.406) * (NUM_CHANNELS // 3),
+                "std": (0.229, 0.224, 0.225) * (NUM_CHANNELS // 3),
+            },
+        )
+        return _create_rgb_transform(normalize_spec)
+
+    transform = _create_rgb_transform(spec)
+    if transform is not None and spec.name in _RGB_CHUNK_TRANSFORMS:
+        return _ApplyToRgbChunks(transform)
+    return transform
+
+
+_ALLOWED_TRANSFORMS = _transform_filter_names()
+
 TRANSFORMS = [
-    {"name": "HorizontalFlip", "transform": tv_transforms.RandomHorizontalFlip(p=1)},
-    {"name": "VerticalFlip", "transform": tv_transforms.RandomVerticalFlip(p=1)},
-    {
-        "name": "Rotate",
-        "transform": tv_transforms.RandomRotation(
-            degrees=45,
-            interpolation=tv_transforms.InterpolationMode.NEAREST,
-            fill=0,
-        ),
-    },
-    {
-        "name": "Affine",
-        "transform": tv_transforms.RandomAffine(
-            degrees=25.0,
-            translate=(20 / 512, 20 / 512),
-            scale=(2.0, 2.0),
-            shear=(10.0, 15.0),
-            interpolation=tv_transforms.InterpolationMode.BILINEAR,
-        ),
-    },
-    {
-        "name": "Perspective",
-        "transform": tv_transforms.RandomPerspective(
-            distortion_scale=0.1,
-            interpolation=tv_transforms.InterpolationMode.BILINEAR,
-            fill=0,
-            p=1,
-        ),
-    },
-    {
-        "name": "Shear",
-        "transform": tv_transforms.RandomAffine(
-            degrees=0,
-            shear=10,
-            interpolation=tv_transforms.InterpolationMode.BILINEAR,
-        ),
-    },
-    {
-        "name": "Elastic",
-        "transform": tv_transforms.ElasticTransform(
-            alpha=50.0,
-            sigma=5.0,
-            interpolation=tv_transforms.InterpolationMode.BILINEAR,
-        ),
-    },
-    {"name": "RandomCrop128", "transform": tv_transforms.RandomCrop(size=(128, 128), pad_if_needed=True)},
-    {"name": "CenterCrop128", "transform": tv_transforms.CenterCrop(size=(128, 128))},
-    {
-        "name": "RandomResizedCrop",
-        "transform": tv_transforms.RandomResizedCrop(
-            size=(512, 512),
-            scale=(0.08, 1.0),
-            ratio=(0.75, 1.3333333333333333),
-            interpolation=tv_transforms.InterpolationMode.BILINEAR,
-        ),
-    },
-    {
-        "name": "Resize",
-        "transform": tv_transforms.Resize(
-            size=512,
-            interpolation=tv_transforms.InterpolationMode.BILINEAR,
-            antialias=True,
-        ),
-    },
-    {"name": "Pad", "transform": tv_transforms.Pad(padding=10, fill=0, padding_mode="constant")},
-    {"name": "Invert", "transform": tv_transforms.RandomInvert(p=1)},
-    {"name": "Posterize", "transform": tv_transforms.RandomPosterize(bits=4, p=1)},
-    {"name": "Solarize", "transform": tv_transforms.RandomSolarize(threshold=0.5, p=1)},
-    {"name": "GaussianBlur", "transform": tv_transforms.GaussianBlur(kernel_size=(5, 5), sigma=(2.0, 2.0))},
-    {
-        "name": "Normalize",
-        "transform": tv_transforms.Compose(
-            [
-                tv_transforms.ConvertImageDtype(torch.float32),
-                tv_transforms.Normalize(mean=(0.485, 0.456, 0.406) * 3, std=(0.229, 0.224, 0.225) * 3),
-            ],
-        ),
-    },
-    {"name": "Erasing", "transform": tv_transforms.RandomErasing(scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0, p=1)},
-    {"name": "ChannelShuffle", "transform": tv_transforms.RandomChannelPermutation()},
+    {"name": spec.name, "transform": transform}
+    for spec in TRANSFORM_SPECS
+    if (_ALLOWED_TRANSFORMS is None or spec.name in _ALLOWED_TRANSFORMS)
+    if (transform := create_transform(spec)) is not None
 ]

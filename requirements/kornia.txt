@@ -2,7 +2,7 @@
 #    uv pip compile -o /Users/vladimiriglovikov/workspace/benchmark/requirements/kornia.txt /Users/vladimiriglovikov/workspace/benchmark/requirements/kornia.in
 filelock==3.29.0
     # via torch
-fsspec==2026.3.0
+fsspec==2026.4.0
     # via torch
 jinja2==3.1.6
     # via torch
