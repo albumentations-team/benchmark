@@ -29,7 +29,7 @@ for transform_name, metrics in results.items():
 
 ## Identifying Slow Transforms
 
-Transforms with `time_per_image > 0.1` sec are considered slow:
+Transforms with `time_per_image >= 0.1` sec are considered slow for image benchmarks. This is `<=10 img/s`, below the practical floor for DataLoader training pipelines.
 
 ```python
 slow_transforms = {}
@@ -49,6 +49,8 @@ for name, metrics in results.items():
     if metrics.get('early_stopped'):
         print(f"{name}: {metrics['early_stop_reason']}")
 ```
+
+Early stopping is expected for transforms that are too slow for practical use. Micro and DataLoader pipeline runners both preflight slow transforms and write an `early_stopped` result instead of spending the full benchmark budget. Keep this enabled for paper sweeps so the benchmark does not appear stuck on transforms that are unusably slow.
 
 ## Analyzing Warmup Stability
 
@@ -199,10 +201,10 @@ stability = abs(recent - overall) / overall
 ### Early Stopping
 **Symptom**: `early_stopped=True`
 **Reasons**:
-1. Transform too slow (> 0.1 sec/image)
-2. Timeout (> 60 sec total)
+1. Transform too slow (`>=0.1 sec/image`, i.e. `<=10 img/s`)
+2. Preflight timeout (> 60 sec total for images)
 
-**Analysis**: Check `early_stop_reason` for details. Early stopping is expected policy for very slow transforms; do not force exhaustive pyperf runs unless the user explicitly asks for slow-transform measurements.
+**Analysis**: Check `early_stop_reason` for details. Early stopping is expected policy for very slow transforms in both micro and DataLoader pipeline modes; do not force exhaustive runs unless the user explicitly asks for slow-transform measurements.
 
 ### Cloud Setup Dominates Runtime
 **Symptom**: Runs spend most time copying data or rebuilding venvs.

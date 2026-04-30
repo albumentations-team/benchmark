@@ -56,27 +56,27 @@ TRANSFORM_SPECS = [
         },
     ),
     TransformSpec(
-        "RandomCrop128",
+        "RandomCrop224",
         {
-            "height": 128,
-            "width": 128,
+            "height": 224,
+            "width": 224,
         },
     ),
     TransformSpec(
         "RandomResizedCrop",
         {
-            "size": (512, 512),
-            "width": 512,
+            "size": (224, 224),
+            "width": 224,
             "scale": (0.08, 1.0),
             "ratio": (0.75, 1.3333333333333333),
             "interpolation": "bilinear",
         },
     ),
     TransformSpec(
-        "CenterCrop128",
+        "CenterCrop224",
         {
-            "height": 128,
-            "width": 128,
+            "height": 224,
+            "width": 224,
         },
     ),
     TransformSpec(
@@ -453,12 +453,6 @@ TRANSFORM_SPECS = [
             "sigma": 0.7,
             "max_delta": 2,
             "iterations": 2,
-        },
-    ),
-    TransformSpec(
-        "ModeFilter",
-        {
-            "kernel_range": (3, 7),
         },
     ),
     # Geometric

@@ -114,11 +114,6 @@ class TestBuildParser:
         args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out"])
         assert args.num_runs == 5
 
-    def test_timer_defaults_to_pyperf(self) -> None:
-        parser = build_parser()
-        args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out"])
-        assert args.timer == "pyperf"
-
     def test_libraries_default_none(self) -> None:
         parser = build_parser()
         args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out"])
@@ -136,20 +131,15 @@ class TestBuildParser:
         args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out"])
         assert args.transforms is None
 
+    def test_transform_set_paper_parses(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out", "--transform-set", "paper"])
+        assert args.transform_set == "paper"
+
     def test_verbose_flag(self) -> None:
         parser = build_parser()
         args = parser.parse_args(["--verbose", "run", "--data-dir", "/data", "--output", "/out"])
         assert args.verbose is True
-
-    def test_warmup_window_default(self) -> None:
-        parser = build_parser()
-        args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out"])
-        assert args.warmup_window == 5
-
-    def test_warmup_threshold_default(self) -> None:
-        parser = build_parser()
-        args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out"])
-        assert args.warmup_threshold == pytest.approx(0.05)
 
     def test_reliability_flags_parse(self) -> None:
         parser = build_parser()
@@ -160,15 +150,12 @@ class TestBuildParser:
                 "/data",
                 "--output",
                 "/out",
-                "--timer",
-                "pyperf",
                 "--min-time",
                 "1.5",
                 "--min-batches",
                 "3",
             ],
         )
-        assert args.timer == "pyperf"
         assert args.min_time == pytest.approx(1.5)
         assert args.min_batches == 3
 

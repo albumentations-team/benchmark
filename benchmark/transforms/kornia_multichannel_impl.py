@@ -12,8 +12,6 @@ from benchmark.transforms.specs import TRANSFORM_SPECS, TransformSpec
 LIBRARY = "kornia"
 NUM_CHANNELS = 9
 
-torch.set_num_threads(1)
-
 # These Kornia RGB transforms reject 9-channel tensors directly.
 _EXCLUDED_TRANSFORMS = {
     "ColorJitter",

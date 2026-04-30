@@ -16,6 +16,7 @@ from tqdm import tqdm
 from .results import build_metadata, summarize_runs
 from .slow_threshold import is_slow_time_per_item, slow_threshold_info
 from .term import configure_logging, tqdm_kwargs
+from .thread_policy import apply_thread_policy
 from .utils import (
     get_image_loader,
     get_video_loader,
@@ -24,13 +25,6 @@ from .utils import (
 )
 
 logger = logging.getLogger(__name__)
-
-# Environment variables for various libraries
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 
 class MediaType(Enum):
@@ -128,7 +122,12 @@ class BenchmarkRunner:
         logger.info("Found %d image paths in %s (searching recursively)", len(image_paths), self.data_dir)
         images: list[Any] = []
 
-        with tqdm(image_paths, desc="Loading RGB images", unit="img", **tqdm_kwargs()) as pbar:
+        with tqdm(
+            image_paths,
+            desc=f"Load images ({self.library}, {self.num_channels}ch)",
+            unit="img",
+            **tqdm_kwargs(),
+        ) as pbar:
             for path in pbar:
                 try:
                     import cv2
@@ -179,7 +178,7 @@ class BenchmarkRunner:
 
         videos: list[Any] = []
 
-        with tqdm(video_paths, desc="Loading videos", **tqdm_kwargs()) as pbar:
+        with tqdm(video_paths, desc=f"Load videos ({self.library})", unit="video", **tqdm_kwargs()) as pbar:
             for path in pbar:
                 try:
                     video = self._loader(path)
@@ -451,7 +450,7 @@ class BenchmarkRunner:
         results: dict[str, Any] = {}
         for transform_dict in tqdm(
             self.transforms,
-            desc=f"Transforms ({self.library})",
+            desc=f"Micro transforms ({self.library}, {self.media_type.value})",
             unit="transform",
             **tqdm_kwargs(),
         ):
@@ -568,6 +567,8 @@ def main() -> None:
 
     if not args.specs_file.exists():
         raise ValueError(f"Specs file {args.specs_file} does not exist")
+
+    apply_thread_policy("micro-single")
 
     logger.info("Loading from %s", args.specs_file)
     library, call_fn, transforms = load_from_python_file(args.specs_file)

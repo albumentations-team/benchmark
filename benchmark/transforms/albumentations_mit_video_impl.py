@@ -12,10 +12,6 @@ from benchmark.transforms.albumentations_compat import (
 from benchmark.transforms.registry import build_transforms, register_library
 from benchmark.transforms.specs import TransformSpec
 
-# Ensure single thread
-cv2.setNumThreads(0)
-cv2.ocl.setUseOpenCL(False)
-
 # Required: Library name for dependency installation
 LIBRARY = "albumentations_mit"
 
@@ -51,7 +47,7 @@ def create_transform(spec: TransformSpec) -> Any:
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             p=1,
         )
-    if spec.name == "RandomCrop128":
+    if spec.name == "RandomCrop224":
         return A.RandomCrop(
             height=params["height"],
             width=params["width"],
@@ -66,7 +62,7 @@ def create_transform(spec: TransformSpec) -> Any:
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             p=1,
         )
-    if spec.name == "CenterCrop128":
+    if spec.name == "CenterCrop224":
         return A.CenterCrop(
             height=params["height"],
             width=params["width"],

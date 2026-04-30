@@ -49,7 +49,7 @@ This benchmark suite measures the throughput and performance characteristics of 
 The image benchmarks compare the performance of various libraries on standard image transformations. Interpret the tables by benchmark mode:
 
 - **Micro / profiler benchmarks** preload decoded images and time augmentation only. These runs use one internal CPU thread for every library to measure single-stream transform cost.
-- **Pipeline benchmarks** read from disk through a dataloader and measure realistic input-pipeline throughput. These runs should use production-style settings: AlbumentationsX scales through dataloader workers, while torchvision, Kornia, OpenCV, and other libraries may use their normal threading/execution model. The result metadata records worker counts and thread settings.
+- **DataLoader benchmarks** use recipe-level training pipelines. `memory_dataloader_augment` preloads decoded samples and isolates worker/augmentation scaling; `decode_dataloader_augment` adds disk read/decode; `decode_dataloader_augment_batch_copy` also stacks tensors and copies to CUDA/MPS when requested. These runs record worker counts, thread policy, device target, and whether decode/collate/device transfer were included.
 
 For paper-quality RGB image results, use `2,000` ImageNet validation images for micro benchmarks and the full `50,000` ImageNet validation set for pipeline benchmarks.
 
@@ -408,6 +408,8 @@ All benchmarks use the unified CLI: `python -m benchmark.cli run`. Use `--media`
 
 The CLI creates joined virtual environments for compatible libraries, for example `.venv_albumentationsx` for AlbumentationsX and `.venv_torch_stack` for torchvision, Kornia, and Pillow image benchmarks. By default, each run refreshes `requirements/*.txt` from `requirements/*.in` with the latest compatible package versions, then installs dependencies only when the resolved requirement files changed. Pass `--no-refresh-requirements` for offline/debug reruns that should reuse the existing lock files and venv cache.
 
+For paper runs, pass `--transform-set paper` to use only transforms present in at least two selected libraries. The fixed sets live under `docs/paper_transform_sets/`.
+
 For RGB image paper runs, prefer scenario mode:
 
 ```bash
@@ -418,18 +420,34 @@ python -m benchmark.cli run \
   --data-dir /path/to/imagenet/val \
   --output output/rgb_micro \
   --num-items 2000 \
-  --timer pyperf
+  --transform-set paper
 
-# Pipeline/user guidance: full ImageNet validation from disk, production-style threading.
+# In-memory DataLoader: decoded samples are preloaded, workers run training recipes.
 python -m benchmark.cli run \
   --scenario image-rgb \
   --mode pipeline \
+  --pipeline-scope memory_dataloader_augment \
+  --data-dir /path/to/imagenet/val \
+  --output output/rgb_memory_dataloader \
+  --batch-size 64 \
+  --workers 8 \
+  --min-time 30
+
+# Disk DataLoader: full ImageNet validation from disk, production-style threading.
+python -m benchmark.cli run \
+  --scenario image-rgb \
+  --mode pipeline \
+  --pipeline-scope decode_dataloader_augment \
   --data-dir /path/to/imagenet/val \
   --output output/rgb_pipeline \
   --batch-size 64 \
   --workers 8 \
   --min-time 30
 ```
+
+Pipeline result filenames include the key sweep parameters, for example
+`albumentationsx_memory_dataloader_augment_n2000_r5_w8_b64_results.json` or
+`torchvision_decode_dataloader_augment_batch_copy_nall_r5_w8_b64_dev-mps_results.json`.
 
 Treat RGB micro results as an implementation profiler: preloaded decoded inputs, one process, one internal
 library thread, augmentation only. They are useful for checking algorithmic implementation quality and regressions,
@@ -470,9 +488,11 @@ python -m benchmark.cli run \
 - Libraries should only be listed for transforms they support directly. Do not recreate missing transforms with extensive benchmark-side helper code just to fill a table cell. For example, Pillow can benchmark direct `Image` / `ImageOps` / `ImageFilter` operations, but should skip Albumentations-style composites such as `RandomResizedCrop`, `PadIfNeeded`, `SafeRotate`, `ShiftScaleRotate`, `LongestMaxSize`, and `SmallestMaxSize`. When Pillow has a direct equivalent for an AlbumentationsX transform, keep the parameters exact; `Dithering` maps to grayscale, 2-color Floyd-Steinberg dithering, not palette quantization.
 - Compatible libraries share joined environments to avoid redundant dependency setup. Image benchmarks group torchvision, Kornia, and Pillow into the `torch_stack` environment; video benchmarks group torchvision and Kornia into `torch_video`.
 - Environment setup is cached by resolved requirement files, Python version, media type, and environment group. Detached GCP runs can additionally reuse the GCS venv cache unless `--gcp-no-venv-cache` or `--gcp-force-venv-cache-rebuild` is set.
-- Slow transforms are preflighted before exhaustive pyperf measurement. If a transform crosses the slow threshold, record an early-stop result instead of spending the full run budget.
+- Requirement lock refresh is expected once per library or joined-environment launch when refresh is enabled. Do not add extra cross-library refresh orchestration unless it removes real work without changing dependency freshness semantics; use `--no-refresh-requirements` for repeated local runs with fixed locks.
+- Slow transforms are preflighted before exhaustive micro or DataLoader pipeline measurement. If an image transform is slower than the practical floor (`>=0.1 sec/image`, `<=10 img/s`), record an early-stop result instead of spending the full run budget. This prevents paper sweeps from getting stuck on transforms that are too slow for practical training use.
 - Keep benchmark data local to the machine doing the timing. GCP runs should not benchmark against mounted buckets or network paths.
-- Preserve single-thread micro timing for fair augmentation-only comparisons. Pipeline benchmarks can use production-style workers and thread settings, but those settings must be recorded in metadata.
+- Preserve single-thread micro timing for fair augmentation-only comparisons. Pipeline benchmarks use an explicit `--thread-policy`; the main paper path is `pipeline-default`, and controlled appendix runs can use `pipeline-single-worker`.
+- Benchmark code must be fair but fast: avoid repeated decode, loader construction, conversion, synchronization, checksums, materialization, or dependency work unless it is explicitly part of the named measurement scope or needed to make lazy work complete.
 
 ### Google Cloud (detached)
 
@@ -504,8 +524,7 @@ python -m benchmark.cli run \
   --scenario image-rgb \
   --mode micro \
   --libraries albumentationsx torchvision kornia pillow \
-  --num-items 2000 \
-  --timer pyperf
+  --num-items 2000
 ```
 
 After submission, open `./gcp_runs/gcp_last_run.json` for `run_prefix`, `instance_name`, and a suggested `gcloud storage cp` command to pull `results/` when the run finishes.
@@ -635,11 +654,13 @@ This will show:
 
 The benchmark methodology is designed to ensure fair and reproducible comparisons:
 
-1. **Measurement scope**: Micro benchmarks measure augmentation-only cost from preloaded data. Pipeline benchmarks measure realistic dataloader throughput from disk.
-2. **Threading policy**: Micro benchmarks force one internal thread for every library. Pipeline benchmarks use production-style settings and record both dataloader workers and library thread settings.
-3. **Dataset size**: RGB micro paper runs use `2,000` images from the unpacked ImageNet validation tar. RGB pipeline paper runs use the full `50,000`-image ImageNet validation set.
-4. **Warmup and statistics**: Runs report robust summary statistics, coefficient of variation, confidence intervals, and unstable-result flags.
-5. **Environment metadata**: Results record CPU/GPU metadata, package versions, git state, timing backend, dataset fingerprint, batch size, workers, and whether decode/collate/GPU transfer are included.
+1. **Measurement scope**: Micro benchmarks measure primitive augmentation-only cost from preloaded data. DataLoader benchmarks split memory-only worker scaling, disk/decode pipelines, and optional tensor batch/device-copy pipelines.
+2. **Threading policy**: Micro benchmarks force one internal thread through runner-level policy. Pipeline benchmarks use explicit thread policies and record both dataloader workers and library thread settings.
+3. **Dataset size**: RGB micro and in-memory DataLoader paper runs can use `2,000` decoded ImageNet validation images. RGB disk pipeline paper runs use the full `50,000`-image ImageNet validation set.
+4. **Slow-transform guard**: Micro and DataLoader pipeline runs preflight transforms and early-stop impractically slow operations (`<=10 img/s` for images) instead of letting one unusable transform dominate runtime.
+5. **Visual progress**: Long-running loops use tqdm with descriptive labels for library loops, media loading, micro transforms, pyperf subprocess transforms, and DataLoader pipeline transforms.
+6. **Warmup and statistics**: Runs report robust summary statistics, coefficient of variation, confidence intervals, and unstable-result flags.
+7. **Environment metadata**: Results record CPU/GPU metadata, package versions, git state, timing backend, dataset fingerprint, batch size, workers, and whether decode/collate/GPU transfer are included.
 
 ## Contributing
 

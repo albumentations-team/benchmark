@@ -12,8 +12,6 @@ from benchmark.transforms.torchvision_impl import create_transform as _create_rg
 LIBRARY = "torchvision"
 NUM_CHANNELS = 9
 
-torch.set_num_threads(1)
-
 _RGB_CHUNK_TRANSFORMS = {
     "AutoContrast",
     "Brightness",

@@ -15,14 +15,10 @@ import os
 from typing import Any
 
 import albumentations as A
-import cv2
 import numpy as np
 
 from benchmark.transforms.albumentationsx_impl import create_transform as _create_rgb_transform
 from benchmark.transforms.specs import TRANSFORM_SPECS, TransformSpec
-
-cv2.setNumThreads(0)
-cv2.ocl.setUseOpenCL(False)
 
 LIBRARY = "albumentationsx"
 NUM_CHANNELS = 9  # 3 RGB repetitions stacked; must match --num-channels passed to runner

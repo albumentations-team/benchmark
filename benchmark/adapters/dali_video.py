@@ -18,7 +18,7 @@ def _build_transform(name: str, videos: Any, params: dict[str, Any]) -> Any:
 
     if name == "Resize":
         return fn.resize(videos, resize_x=params["target_size"], resize_y=params["target_size"])
-    if name == "CenterCrop128":
+    if name == "CenterCrop224":
         return fn.crop(videos, crop=(params["height"], params["width"]))
     if name == "HorizontalFlip":
         return fn.flip(videos, horizontal=1)

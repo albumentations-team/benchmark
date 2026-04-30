@@ -57,8 +57,8 @@ def test_dithering_matches_shared_floyd_steinberg_spec() -> None:
 
 
 def test_pillow_skips_non_native_or_composite_transforms() -> None:
-    assert _create_transform(TransformSpec("RandomCrop128", {"height": 128, "width": 128})) is None
-    assert _create_transform(TransformSpec("CenterCrop128", {"height": 128, "width": 128})) is None
+    assert _create_transform(TransformSpec("RandomCrop224", {"height": 224, "width": 224})) is None
+    assert _create_transform(TransformSpec("CenterCrop224", {"height": 224, "width": 224})) is None
     assert _create_transform(TransformSpec("RandomResizedCrop", {"size": (512, 512)})) is None
     assert _create_transform(TransformSpec("SquareSymmetry", {})) is None
     assert _create_transform(TransformSpec("RandomRotate90", {"times": (0, 3)})) is None

@@ -163,10 +163,6 @@ def create_transform(spec: TransformSpec) -> Any | None:
     if spec.name == "Blur":
         return lambda img: img.filter(ImageFilter.BoxBlur(radius=params["radius"]))
 
-    if spec.name == "ModeFilter":
-        kernel_lo, kernel_hi = params["kernel_range"]
-        return lambda img: img.filter(ImageFilter.ModeFilter(size=random.randrange(kernel_lo | 1, kernel_hi + 1, 2)))
-
     if spec.name == "UnsharpMask":
         blur_lo, blur_hi = params["blur_limit"]
         alpha_lo, alpha_hi = params["alpha"]
