@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
+import json
+from dataclasses import asdict
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
+from benchmark.dali_pipeline_worker import benchmark_job_from_json_dict
 from benchmark.jobs import BenchmarkJob
 from benchmark.orchestrator import execute_job
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_micro_job_builds_pyperf_command_with_filters_and_slow_skip(tmp_path: Path) -> None:
@@ -68,8 +68,7 @@ def test_execute_job_deletes_pyperf_sidecar_before_micro_run(tmp_path: Path) -> 
     run.assert_called_once()
 
 
-def test_execute_job_uses_dali_backend_without_subprocess(tmp_path: Path) -> None:
-    runner = MagicMock()
+def test_execute_job_runs_dali_via_subprocess_after_venv(tmp_path: Path) -> None:
     job = BenchmarkJob(
         library="dali",
         scenario="video-16f",
@@ -89,18 +88,41 @@ def test_execute_job_uses_dali_backend_without_subprocess(tmp_path: Path) -> Non
         disable_slow_skip=True,
     )
 
+    fake_python = tmp_path / "fake-venv" / "bin" / "python"
+    fake_python.parent.mkdir(parents=True)
+
     with (
-        patch("benchmark.pipeline_runner.PipelineBenchmarkRunner", return_value=runner) as runner_cls,
+        patch("benchmark.envs.ensure_venv", return_value=fake_python) as ensure,
         patch("benchmark.orchestrator.subprocess.run") as run,
     ):
         execute_job(job, repo_root=tmp_path)
 
-    run.assert_not_called()
-    runner.run.assert_called_once()
-    kwargs = runner_cls.call_args.kwargs
-    assert kwargs["library"] == "dali"
-    assert kwargs["slow_threshold_sec_per_item"] == pytest.approx(3.0)
-    assert kwargs["disable_slow_skip"] is True
+    ensure.assert_called_once_with("dali", "video", tmp_path, refresh_requirements=True)
+    run.assert_called_once()
+    cmd = run.call_args[0][0]
+    assert cmd[0] == str(fake_python)
+    assert cmd[1:4] == ["-m", "benchmark.dali_pipeline_worker", "--job-file"]
+    assert Path(cmd[4]).suffix == ".json"
+
+
+def test_dali_job_json_roundtrip_preserves_paths(tmp_path: Path) -> None:
+    job = BenchmarkJob(
+        library="dali",
+        scenario="video-16f",
+        mode="pipeline",
+        media="video",
+        data_dir=tmp_path / "videos",
+        output_file=tmp_path / "out.json",
+        num_items=1,
+        num_runs=2,
+        num_channels=3,
+        clip_length=8,
+        spec_file=None,
+        transforms_filter=("Resize",),
+        backend="dali_pipeline",
+    )
+    raw = json.loads(json.dumps(asdict(job), default=str))
+    assert benchmark_job_from_json_dict(raw) == job
 
 
 def test_attached_gcp_run_deletes_instance_when_setup_fails(tmp_path: Path) -> None:

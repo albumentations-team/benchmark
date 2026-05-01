@@ -9,7 +9,9 @@ features in these modules unless there is a strong reason to put logic directly 
 - `benchmark/matrix.py` is the declarative benchmark matrix: scenarios, modes, library spec files, requirements, joined
   environment groups, paper transform-set files, device support, pipeline scopes, and backend selection.
 - `benchmark/jobs.py` defines immutable `BenchmarkJob` objects and builds subprocess commands for micro and pipeline jobs.
-- `benchmark/orchestrator.py` executes jobs. It owns backend dispatch, including the `dali_pipeline` backend.
+- `benchmark/orchestrator.py` executes jobs and owns backend dispatch. The `dali_pipeline` backend runs in a subprocess
+  (`benchmark/dali_pipeline_worker.py`) using the DALI venv Python from `benchmark/envs.py`, so DALI is imported only after
+  `requirements/dali-video.txt` is installed or refreshed.
 - `benchmark/envs.py` owns virtualenv creation, requirement lock refresh, dependency cache keys, and dependency installs.
 - `benchmark/policy.py` owns shared media policy: default item counts, warmup limits, item labels, throughput units, and
   slow-transform preflight defaults.
@@ -32,7 +34,7 @@ features in these modules unless there is a strong reason to put logic directly 
 - `benchmark/pipeline_runner.py` runs DataLoader-style recipes. It measures one of three scopes:
   `memory_dataloader_augment`, `decode_dataloader_augment`, or `decode_dataloader_augment_batch_copy`.
 - DALI video pipeline runs are represented as `BenchmarkJob(backend="dali_pipeline")` and dispatched by
-  `benchmark/orchestrator.py`, not by CLI special cases.
+  `benchmark/orchestrator.py` via `benchmark/dali_pipeline_worker.py`, not by CLI special cases.
 
 ## Scenario Flow
 

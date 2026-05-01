@@ -9,6 +9,7 @@ ARCHITECTURE_MODULES = (
     "benchmark/policy.py",
     "benchmark/jobs.py",
     "benchmark/orchestrator.py",
+    "benchmark/dali_pipeline_worker.py",
     "benchmark/envs.py",
     "benchmark/specs/load.py",
     "benchmark/media/loaders.py",

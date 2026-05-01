@@ -288,7 +288,7 @@ def _load_media(args: argparse.Namespace, library: str) -> list[Any]:
         library=library,
         data_dir=args.data_dir,
         media=media_type.value,
-        num_items=args.num_items or media_policy(media_type).num_items,
+        num_items=args.num_items if args.num_items is not None else media_policy(media_type).num_items,
         num_channels=args.num_channels,
     ).load()
 
