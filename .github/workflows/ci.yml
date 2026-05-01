@@ -16,20 +16,23 @@ jobs:
         python-version: ["3.13"]
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     - name: Install uv and set Python version ${{ matrix.python-version }}
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@v7
       with:
         python-version: ${{ matrix.python-version }}
-        activate-environment: true
+        enable-cache: true
 
     - name: Install dependencies
-      run: uv pip install -r requirements-dev.txt
+      run: |
+        uv python install ${{ matrix.python-version }}
+        uv venv --python ${{ matrix.python-version }}
+        uv pip install --python .venv -r requirements-dev.txt
 
     - name: Check code formatting with pre-commit
-      run: pre-commit run --all-files
+      run: uv run pre-commit run --all-files
 
     - name: Run tests with coverage
       run: |
-        uv pip install numpy
-        pytest -n auto --cov=benchmark --cov=tools --cov-report=xml
+        uv pip install --python .venv numpy
+        uv run pytest -n auto --cov=benchmark --cov=tools --cov-report=xml
