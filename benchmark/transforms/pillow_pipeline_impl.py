@@ -45,7 +45,10 @@ class _PillowCropRecipe:
         crop_height = params["height"]
         width, height = image.size
         if width < crop_width or height < crop_height:
-            image = image.resize((max(width, crop_width), max(height, crop_height)), Image.BILINEAR)
+            image = image.resize(
+                (max(width, crop_width), max(height, crop_height)),
+                Image.Resampling.BILINEAR,
+            )
             width, height = image.size
         left = random.randint(0, width - crop_width)  # noqa: S311
         top = random.randint(0, height - crop_height)  # noqa: S311
@@ -56,7 +59,7 @@ class _PillowRandomResizedCropRecipe:
     def __call__(self, image: Image.Image) -> np.ndarray:
         params = spec_by_name("RandomResizedCrop").params
         size = params["size"]
-        image = image.resize(size, Image.BILINEAR)
+        image = image.resize(size, Image.Resampling.BILINEAR)
         return _to_normalized_chw(image)
 
 
@@ -67,7 +70,10 @@ class _PillowCenterCropRecipe:
         crop_height = params["height"]
         width, height = image.size
         if width < crop_width or height < crop_height:
-            image = image.resize((max(width, crop_width), max(height, crop_height)), Image.BILINEAR)
+            image = image.resize(
+                (max(width, crop_width), max(height, crop_height)),
+                Image.Resampling.BILINEAR,
+            )
             width, height = image.size
         left = (width - crop_width) // 2
         top = (height - crop_height) // 2

@@ -9,6 +9,12 @@ Use `_internal/plans/paper_benchmark_execution_plan.md` as the source of truth.
 
 ## Rules
 
+- Use `benchmark/matrix.py` as the source of truth for built-in paper scenario/library/mode support, spec paths,
+  requirement groups, paper transform-set files, device support, pipeline scopes, and backend selection.
+- Use `benchmark/policy.py` as the source of truth for slow-transform thresholds and media defaults. Do not patch
+  separate image/video defaults in micro or DataLoader runners.
+- Paper run command construction should flow through `benchmark/jobs.py`, and backend-specific execution should flow
+  through `benchmark/orchestrator.py`. Do not add paper-only command branches in `benchmark/cli.py`.
 - Do not run every benchmark on every CPU.
 - CPU rows run on CPU-only machines, usually `c4-standard-16`.
 - GPU rows run only for GPU libraries/paths, usually `g2-standard-16` with L4.
@@ -20,6 +26,8 @@ Use `_internal/plans/paper_benchmark_execution_plan.md` as the source of truth.
 - Before cloud runs, local smoke runs should show visible tqdm progress for library loops, media loading, micro transforms, and pipeline transforms. Missing or anonymous progress bars are a benchmark UX bug because long paper sweeps must be diagnosable while running.
 - Do not run every transform from `benchmark/transforms/specs.py` for the paper. Use only transforms that exist in at least two selected libraries. The paper transform sets live in `docs/paper_transform_sets/rgb.md`, `docs/paper_transform_sets/9ch.md`, and `docs/paper_transform_sets/video.md`.
 - Use `--transform-set paper` for paper micro/pipeline runs unless explicitly testing a smaller smoke subset with `--transforms`.
+- If paper scenario support changes, update `docs/benchmark_architecture.md`, `docs/benchmark_scope.md`,
+  `.cursor/skills/benchmark-runner/SKILL.md`, and matrix/job tests in the same patch.
 
 ## Core Matrix
 

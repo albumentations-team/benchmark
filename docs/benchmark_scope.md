@@ -84,6 +84,23 @@ Very slow transforms can otherwise make the benchmark appear stuck and block the
 
 Use `--disable-slow-skip` only when explicitly measuring slow transforms.
 
+## Architecture Source Of Truth
+
+Benchmark policy is intentionally centralized:
+
+- `benchmark/matrix.py` declares scenario/mode/library support, spec paths, requirement groups, paper transform-set files,
+  device policy, pipeline scopes, and backend names.
+- `benchmark/policy.py` declares media defaults and slow-transform preflight thresholds.
+- `benchmark/jobs.py` builds immutable benchmark jobs and subprocess commands.
+- `benchmark/orchestrator.py` dispatches jobs to pyperf, DataLoader, or DALI pipeline backends.
+- `benchmark/envs.py` owns joined virtualenvs, dependency refresh, and dependency cache keys.
+- `benchmark/specs/load.py` and `benchmark/media/loaders.py` keep spec validation and media loading out of the CLI.
+
+Do not add new benchmark matrix constants directly to `benchmark/cli.py`. Add them to `benchmark/matrix.py`, then extend
+tests in `tests/test_matrix.py` and `tests/test_jobs_orchestrator.py`.
+
+For a full module map, see `docs/benchmark_architecture.md`.
+
 ## Visual Progress
 
 Long benchmark runs must show tqdm progress with descriptive labels. Progress bars should make it clear which dimension is moving:

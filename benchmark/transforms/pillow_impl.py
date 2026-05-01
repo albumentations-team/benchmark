@@ -30,7 +30,7 @@ def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
 
 
 def _pil_interp(name: str) -> int:
-    return Image.BILINEAR if name == "bilinear" else Image.NEAREST
+    return Image.Resampling.BILINEAR if name == "bilinear" else Image.Resampling.NEAREST
 
 
 def _affine_coeffs(angle_deg: float, tx: float, ty: float, scale: float, shear_deg: float) -> tuple[float, ...]:
@@ -60,13 +60,13 @@ def create_transform(spec: TransformSpec) -> Any | None:
         return lambda img: img.resize((size, size), _pil_interp(params["interpolation"]))
 
     if spec.name == "HorizontalFlip":
-        return lambda img: img.transpose(Image.FLIP_LEFT_RIGHT)
+        return lambda img: img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
 
     if spec.name == "VerticalFlip":
-        return lambda img: img.transpose(Image.FLIP_TOP_BOTTOM)
+        return lambda img: img.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
 
     if spec.name == "Transpose":
-        return lambda img: img.transpose(Image.TRANSPOSE)
+        return lambda img: img.transpose(Image.Transpose.TRANSPOSE)
 
     if spec.name == "Rotate":
         angle_lo, angle_hi = params["angle_range"]
@@ -83,7 +83,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
         coeffs = _affine_coeffs(params["angle"], tx, ty, params["scale"], shear)
         return lambda img: img.transform(
             img.size,
-            Image.AFFINE,
+            Image.Transform.AFFINE,
             coeffs,
             resample=_pil_interp(params["interpolation"]),
             fillcolor=params["fill"],
@@ -95,9 +95,9 @@ def create_transform(spec: TransformSpec) -> Any | None:
         shear = math.tan(math.radians(params["shear"]))
         return lambda img: img.transform(
             img.size,
-            Image.AFFINE,
+            Image.Transform.AFFINE,
             (1, shear, 0, 0, 1, 0),
-            resample=Image.BILINEAR,
+            resample=Image.Resampling.BILINEAR,
             fillcolor=0,
         )
 

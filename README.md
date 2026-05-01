@@ -26,6 +26,7 @@ A comprehensive benchmarking suite for comparing the performance of popular imag
     - [Google Cloud (detached)](#google-cloud-detached)
     - [RGB Image Benchmarks](#rgb-image-benchmarks-all-libraries)
     - [Video Benchmarks](#video-benchmarks-all-libraries)
+  - [Architecture](#architecture)
   - [Methodology](#methodology)
   - [Contributing](#contributing)
 
@@ -481,6 +482,12 @@ python -m benchmark.cli run \
 
 ### Benchmark execution policy
 
+- The benchmark matrix lives in `benchmark/matrix.py`. Add scenario/library/mode support there first so spec files,
+  requirement groups, paper transform sets, device support, pipeline scopes, and backend selection stay aligned.
+- Shared image/video defaults live in `benchmark/policy.py`. Do not duplicate slow-skip thresholds, warmup item counts, or
+  item labels separately in micro and pipeline runners.
+- Command construction lives in `benchmark/jobs.py`, and backend dispatch lives in `benchmark/orchestrator.py`. The CLI
+  should parse user intent and resolve scenarios, not grow backend-specific branches.
 - Cloud runs stage one compressed dataset object, such as `gs://.../val.tar`, onto the VM and unpack it locally. Do not upload or copy thousands of individual images for each run.
 - Micro benchmarks preload the requested number of images or videos once per library into that library's native in-memory representation. Per-transform timing must not reread or decode media from disk.
 - Pyperf micro runs isolate transform measurements in subprocesses, but those subprocesses reuse the per-library media cache and lazily construct only the transform being measured.
@@ -649,6 +656,24 @@ This will show:
 - Best and worst configurations for each transform
 - Performance differences between parameter choices
 - Optimal settings for your use case
+
+## Architecture
+
+The implementation is split between a control plane and timing engines:
+
+- `benchmark/cli.py`: argument parsing and backwards-compatible CLI helpers.
+- `benchmark/matrix.py`: declarative scenario/library/mode matrix.
+- `benchmark/policy.py`: shared media defaults and slow-transform policy.
+- `benchmark/jobs.py`: immutable `BenchmarkJob` plus subprocess command construction.
+- `benchmark/orchestrator.py`: backend dispatch, including DALI video pipeline jobs.
+- `benchmark/envs.py`: virtualenvs, requirement refresh, and dependency cache keys.
+- `benchmark/specs/load.py`: transform spec loading and validation.
+- `benchmark/media/loaders.py`: RGB, 9-channel, and video media loading for micro benchmarks.
+- `benchmark/pyperf_micro_runner.py`: production micro timing engine.
+- `benchmark/pipeline_runner.py`: DataLoader/pipeline timing engine.
+- `benchmark/runner.py`: compatibility/simple-timer runner.
+
+See `docs/benchmark_architecture.md` for extension rules and the test files that protect this split.
 
 ## Methodology
 

@@ -45,6 +45,14 @@ Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with 
 
 ## Optimization Policies
 
+- Treat `benchmark/matrix.py` as the source of truth for built-in scenario/library/mode support, spec paths,
+  requirements, joined environment groups, paper transform sets, device support, pipeline scopes, and backend names.
+- Treat `benchmark/policy.py` as the source of truth for media defaults and slow-transform preflight thresholds. Do not
+  duplicate image/video defaults in individual runners.
+- Use `benchmark/jobs.py` for command construction and `benchmark/orchestrator.py` for backend dispatch. Do not add
+  backend-specific branches to `benchmark/cli.py`; DALI should remain a `dali_pipeline` job backend.
+- `benchmark/runner.py` is a compatibility/simple-timer runner. Production CLI micro runs use
+  `benchmark/pyperf_micro_runner.py`; production DataLoader runs use `benchmark/pipeline_runner.py`.
 - Stage datasets as one archive/object in cloud runs; do not copy individual images one by one for each VM.
 - Keep timed data local to the benchmark machine. Detached GCP runs unpack to local disk before running.
 - Micro benchmarks preload the requested number of media items once per library, in that library's native format.
@@ -63,6 +71,16 @@ Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with 
 - Keep benchmarks fair but fast. Avoid repeated decode, loader construction, conversion, synchronization, checksums, materialization, or dependency work unless it is explicitly part of the named measurement scope or needed to make lazy work complete.
 - Prefer `--no-refresh-requirements` for local reruns when dependency versions are intentionally fixed.
 - All long-running loops must expose visual progress with tqdm and a descriptive `desc`. Use labels such as `scenario/mode` for library loops, `Load images (<library>, <channels>ch)` for media loading, `Micro transforms (<library>, <media>)`, `Pyperf micro transforms (<library>, <media>)`, and `Pipeline transforms (<library>, <scope>, w=<workers>, b=<batch_size>)`. Never add anonymous progress bars.
+
+## Architecture And Tests
+
+When changing benchmark orchestration, update the architecture docs and tests:
+
+- Docs: `docs/benchmark_architecture.md`, `docs/benchmark_scope.md`, and relevant README sections.
+- Matrix tests: `tests/test_matrix.py`.
+- Job/orchestrator tests: `tests/test_jobs_orchestrator.py`.
+- Pipeline runner tests: `tests/test_pipeline_runner.py`.
+- Shared policy tests: `tests/test_slow_threshold.py`.
 
 ## Standard Parameters
 

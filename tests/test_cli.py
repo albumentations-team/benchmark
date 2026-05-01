@@ -586,12 +586,12 @@ class TestRequirementsCacheKey:
         req.with_suffix(".in").write_text("nvidia-dali-cuda120\n", encoding="utf-8")
 
         with (
-            patch("benchmark.cli.subprocess.run", side_effect=RuntimeError("wrong exception")),
+            patch("benchmark.envs.subprocess.run", side_effect=RuntimeError("wrong exception")),
             pytest.raises(RuntimeError),
         ):
             _compile_requirements(tmp_path / "python", req)
 
-        with patch("benchmark.cli.subprocess.run", side_effect=subprocess.CalledProcessError(1, "uv")):
+        with patch("benchmark.envs.subprocess.run", side_effect=subprocess.CalledProcessError(1, "uv")):
             _compile_requirements(tmp_path / "python", req)
 
         assert req.read_text(encoding="utf-8") == "nvidia-dali-cuda120\n"
