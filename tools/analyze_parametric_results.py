@@ -12,6 +12,18 @@ from pathlib import Path
 import pandas as pd
 
 
+def _sort_by_throughput_desc(frame: pd.DataFrame) -> pd.DataFrame:
+    """Descending sort by ``throughput`` without ``DataFrame.sort_values``.
+
+    Pyright + pandas-stubs in CI reject several ``sort_values`` overloads for filtered frames; row
+    reordering via ``iloc`` avoids that while preserving semantics for this script.
+    """
+    if len(frame) <= 1:
+        return frame
+    positions = sorted(range(len(frame)), key=lambda i: float(frame["throughput"].iloc[i]), reverse=True)
+    return frame.iloc[positions]
+
+
 def analyze_parametric_results(json_file: Path) -> pd.DataFrame:
     """Analyze results and group by transform type"""
     with json_file.open() as f:
@@ -44,7 +56,7 @@ def print_analysis(df: pd.DataFrame) -> None:
 
     # Group by transform type
     for transform in sorted(df["transform"].unique()):
-        transform_df = df[df["transform"] == transform].sort_values("throughput", ascending=False)
+        transform_df = _sort_by_throughput_desc(df[df["transform"] == transform])
 
         if len(transform_df) > 1:
             print(f"\n{transform}:")
@@ -76,7 +88,7 @@ def export_summary(df: pd.DataFrame, output_file: Path) -> None:
     # Create summary with best config for each transform
     summary = []
     for transform in df["transform"].unique():
-        transform_df = df[df["transform"] == transform].sort_values("throughput", ascending=False)
+        transform_df = _sort_by_throughput_desc(df[df["transform"] == transform])
         best = transform_df.iloc[0]
         summary.append(
             {
