@@ -22,6 +22,12 @@ Automate updating benchmark documentation with latest results.
 
 ## What Gets Updated
 
+### Architecture / Policy Docs
+- `docs/benchmark_architecture.md` - Control-plane and runner architecture.
+- `docs/benchmark_scope.md` - Paper benchmark scope, transform selection, pipeline recipes, and architecture source of truth.
+- `.cursor/skills/benchmark-runner/SKILL.md` - Agent-facing benchmark execution policy.
+- `.cursor/skills/paper-benchmark-execution/SKILL.md` - Agent-facing paper run policy.
+
 ### Image Benchmarks
 - `docs/images/README.md` - Detailed results table
 - `docs/images/images_speedup_analysis.webp` - Speedup visualization
@@ -218,6 +224,11 @@ git commit -m "docs: update benchmark results"
 
 Keep README guidance aligned with these policies:
 
+- Benchmark architecture docs should say that `benchmark/matrix.py` owns scenario/library/mode support, `benchmark/policy.py`
+  owns media defaults and slow-skip thresholds, `benchmark/jobs.py` owns command construction, and
+  `benchmark/orchestrator.py` owns backend dispatch.
+- If the benchmark matrix changes, update `docs/benchmark_architecture.md`, `docs/benchmark_scope.md`, and the relevant
+  skill docs in the same change.
 - Cloud benchmark docs should show `--gcp-gcs-data-uri` pointing at one dataset archive/object, not a directory of individual images.
 - Micro benchmark docs should state that media is preloaded once per library and reused across transform measurements.
 - Pyperf docs should mention per-transform subprocess isolation, media-cache reuse, lazy transform construction, and slow-transform preflight/early-stop behavior.

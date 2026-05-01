@@ -12,7 +12,8 @@ Add support for new augmentation libraries to the benchmark suite.
 ```
 - [ ] Create transform implementation file
 - [ ] Create requirements file
-- [ ] Register CLI spec maps and environment groups
+- [ ] Register matrix spec maps, requirements, and environment groups
+- [ ] Add or update matrix/job tests
 - [ ] Test with sample data
 - [ ] Generate baseline results
 - [ ] Update documentation
@@ -81,21 +82,31 @@ opencv-python>=4.5.0
 
 Add to `requirements/requirements.txt` if base dependencies needed.
 
-## Step 3: Register CLI Support
+## Step 3: Register Matrix Support
 
 ### For image benchmarks
 
-Add the library to the image spec and requirement maps in `benchmark/cli.py`:
+Add the library to the image spec and requirement maps in `benchmark/matrix.py`:
 
 ```python
-_IMAGE_SPECS["newlib"] = "benchmark/transforms/newlib_impl.py"
-_REQUIREMENTS["newlib"] = "requirements/newlib.txt"
+IMAGE_SPECS["newlib"] = "benchmark/transforms/newlib_impl.py"
+IMAGE_REQUIREMENTS["newlib"] = "requirements/newlib.txt"
 ```
 
 ### For video benchmarks
 
-Add the library to `_VIDEO_SPECS` and `_VIDEO_REQUIREMENTS` in `benchmark/cli.py`.
-If it can share dependencies with existing libraries, add it to the relevant `_ENV_GROUPS` entry instead of creating a separate venv.
+Add the library to `VIDEO_SPECS` and `VIDEO_REQUIREMENTS` in `benchmark/matrix.py`.
+If it can share dependencies with existing libraries, add it to the relevant `ENV_GROUPS` entry instead of creating a separate venv.
+If it needs a non-standard backend, add a `BenchmarkJob.backend` value in `benchmark/jobs.py` and route it through
+`benchmark/orchestrator.py`; do not add a library-specific branch to `benchmark/cli.py`.
+If it needs different media defaults or slow-skip thresholds, add them to `benchmark/policy.py`, not to individual
+runners.
+
+Update tests when the matrix changes:
+
+```bash
+python -m pytest tests/test_matrix.py tests/test_jobs_orchestrator.py
+```
 
 ## Step 4: Test Integration
 

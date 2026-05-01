@@ -1,3 +1,4 @@
+from benchmark.policy import media_policy, slow_skip_config
 from benchmark.slow_threshold import (
     is_slow_time_per_item,
     slow_marker_from_threshold,
@@ -29,3 +30,10 @@ def test_slow_threshold_reason_uses_shared_comparator() -> None:
     reason = slow_threshold_reason("Elastic", 0.1234, 0.1, "image")
 
     assert reason == "Elastic slower than threshold: 0.123 sec/image >= 0.100"
+
+
+def test_media_policy_centralizes_image_and_video_slow_defaults() -> None:
+    assert slow_skip_config("image") == (0.1, 10, 60.0)
+    assert slow_skip_config("video") == (2.0, 3, 120.0)
+    assert media_policy("image").throughput_unit == "img/s"
+    assert media_policy("video").throughput_unit == "vid/s"

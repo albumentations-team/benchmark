@@ -1,5 +1,6 @@
 """Kornia implementations of transforms for videos in custom format."""
 
+from collections.abc import Sequence
 from typing import Any
 
 import kornia
@@ -41,7 +42,10 @@ def __call__(transform: Any, video: Any) -> Any:  # noqa: N807
 
 
 # Helper function to create tensors with the correct dtype based on device
-def create_tensor(data: np.ndarray, device: torch.device = device) -> torch.Tensor:
+def create_tensor(
+    data: np.ndarray | Sequence[float] | Sequence[Sequence[float]],
+    device: torch.device = device,
+) -> torch.Tensor:
     """Create a tensor with the correct dtype based on device.
 
     Args:

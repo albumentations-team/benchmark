@@ -1,5 +1,3 @@
-import importlib
-import importlib.util
 import json
 import logging
 import os
@@ -7,22 +5,20 @@ import time
 from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any
 from warnings import warn
 
 import numpy as np
 from tqdm import tqdm
 
+from .media import BenchmarkMediaLoader
+from .policy import media_policy
 from .results import build_metadata, summarize_runs
 from .slow_threshold import is_slow_time_per_item, slow_threshold_info
+from .specs import load_from_python_file as load_spec_from_python_file
 from .term import configure_logging, tqdm_kwargs
 from .thread_policy import apply_thread_policy
-from .utils import (
-    get_image_loader,
-    get_video_loader,
-    make_multichannel_loader,
-    time_transform,
-)
+from .utils import time_transform
 
 logger = logging.getLogger(__name__)
 
@@ -33,30 +29,6 @@ class MediaType(Enum):
 
 
 class BenchmarkRunner:
-    # Defaults differ between image and video modes
-    _DEFAULTS: ClassVar[dict[MediaType, dict[str, Any]]] = {
-        MediaType.IMAGE: {
-            "num_items": 1000,
-            "max_warmup_iterations": 1000,
-            "warmup_subset_size": 10,
-            "slow_threshold": 0.1,
-            "min_iterations_before_stopping": 10,
-            "max_time_per_transform": 60,
-            "item_label": "images",
-            "item_label_singular": "image",
-        },
-        MediaType.VIDEO: {
-            "num_items": 50,
-            "max_warmup_iterations": 100,
-            "warmup_subset_size": 3,
-            "slow_threshold": 2.0,
-            "min_iterations_before_stopping": 5,
-            "max_time_per_transform": 120,
-            "item_label": "videos",
-            "item_label_singular": "video",
-        },
-    }
-
     def __init__(
         self,
         library: str,
@@ -82,24 +54,18 @@ class BenchmarkRunner:
         self.warmup_threshold = warmup_threshold
         self.min_warmup_windows = min_warmup_windows
 
-        defaults = self._DEFAULTS[media_type]
-        self.num_items = num_items if num_items is not None else defaults["num_items"]
+        policy = media_policy(media_type)
+        self.num_items = num_items if num_items is not None else policy.num_items
         self.max_warmup_iterations = (
-            max_warmup_iterations if max_warmup_iterations is not None else defaults["max_warmup_iterations"]
+            max_warmup_iterations if max_warmup_iterations is not None else policy.max_warmup_iterations
         )
-        self._warmup_subset_size: int = defaults["warmup_subset_size"]
-        self._slow_threshold: float = defaults["slow_threshold"]
-        self._min_iterations_before_stopping: int = defaults["min_iterations_before_stopping"]
-        self._max_time_per_transform: int = defaults["max_time_per_transform"]
-        self._item_label: str = defaults["item_label"]
-        self._item_label_singular: str = defaults["item_label_singular"]
+        self._warmup_subset_size = policy.warmup_subset_size
+        self._slow_threshold = policy.slow_skip.threshold_sec_per_item
+        self._min_iterations_before_stopping = policy.min_iterations_before_stopping
+        self._max_time_per_transform = policy.slow_skip.max_preflight_secs
+        self._item_label = policy.item_label
+        self._item_label_singular = policy.item_label_singular
 
-        if media_type == MediaType.IMAGE:
-            self._loader = get_image_loader(library)
-            if num_channels != 3:
-                self._loader = make_multichannel_loader(self._loader, num_channels)
-        else:
-            self._loader = get_video_loader(library)
         self.num_channels = num_channels
 
     def _time_media_simple(self, transform: Any, media: list[Any]) -> float:
@@ -113,105 +79,13 @@ class BenchmarkRunner:
     # ------------------------------------------------------------------
 
     def load_media(self) -> list[Any]:
-        if self.media_type == MediaType.IMAGE:
-            return self._load_images()
-        return self._load_videos()
-
-    def _load_images(self) -> list[Any]:
-        image_paths = sorted(self.data_dir.rglob("*.*"))
-        logger.info("Found %d image paths in %s (searching recursively)", len(image_paths), self.data_dir)
-        images: list[Any] = []
-
-        with tqdm(
-            image_paths,
-            desc=f"Load images ({self.library}, {self.num_channels}ch)",
-            unit="img",
-            **tqdm_kwargs(),
-        ) as pbar:
-            for path in pbar:
-                try:
-                    import cv2
-
-                    img_check = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
-                    if img_check is None:
-                        continue
-                    # Check the on-disk image (always 3-channel RGB); the loader may
-                    # later stack channels to produce num_channels > 3 in memory.
-                    if img_check.ndim < 3 or img_check.shape[2] < 3:
-                        continue
-
-                    img = self._loader(path)
-                    images.append(img)
-
-                    if len(images) >= self.num_items:
-                        break
-                except Exception:  # noqa: S112
-                    continue
-
-                pbar.set_postfix({"loaded": len(images)})
-
-        if not images:
-            raise ValueError("No valid RGB images found in the directory (only RGB images are used for benchmarking)")
-
-        if len(images) < self.num_items:
-            logger.warning("Only found %d valid RGB images, requested %d", len(images), self.num_items)
-
-        logger.info("Loaded %d images for benchmarking", len(images))
-        return images
-
-    def _load_videos(self) -> list[Any]:
-        try:
-            import torch
-
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            gpu_available = torch.cuda.is_available()
-        except ImportError:
-            torch = None
-            device = None
-            gpu_available = False
-
-        video_paths: list[Path] = []
-        for ext in ["mp4", "avi", "mov"]:
-            video_paths.extend(list(self.data_dir.rglob(f"*.{ext}")))
-        video_paths = sorted(video_paths)
-        logger.info("Found %d video files in %s (including subdirectories)", len(video_paths), self.data_dir)
-
-        videos: list[Any] = []
-
-        with tqdm(video_paths, desc=f"Load videos ({self.library})", unit="video", **tqdm_kwargs()) as pbar:
-            for path in pbar:
-                try:
-                    video = self._loader(path)
-                    if torch and isinstance(video, torch.Tensor) and gpu_available:
-                        video = video.to(device, non_blocking=True) if self.library == "kornia" else video.to(device)
-                    videos.append(video)
-
-                    if len(videos) >= self.num_items:
-                        break
-                except Exception as e:
-                    logger.warning("Error loading video %s: %s", path, e)
-                    continue
-
-                pbar.set_postfix({"loaded": len(videos)})
-
-        if not videos:
-            raise ValueError("No valid videos found in the directory (searched recursively)")
-
-        if len(videos) < self.num_items:
-            logger.warning(
-                "Only %d valid videos found, which is less than the requested %d",
-                len(videos),
-                self.num_items,
-            )
-
-        logger.info("Loaded %d videos", len(videos))
-
-        if torch and gpu_available:
-            allocated = torch.cuda.memory_allocated() / (1024**3)
-            total = torch.cuda.get_device_properties(torch.cuda.current_device()).total_memory / (1024**3)
-            logger.info("GPU memory: %.2fGB / %.2fGB", allocated, total)
-
-        return videos
+        return BenchmarkMediaLoader(
+            library=self.library,
+            data_dir=self.data_dir,
+            media=self.media_type.value,
+            num_items=self.num_items,
+            num_channels=self.num_channels,
+        ).load()
 
     # ------------------------------------------------------------------
     # Warmup
@@ -483,46 +357,8 @@ class BenchmarkRunner:
 
 
 def load_from_python_file(specs_file: Path) -> tuple[str, Callable[[Any, Any], Any], list[dict[str, Any]]]:
-    """Load library name, __call__ function, and transforms from a Python file.
-
-    The Python file must define:
-    - LIBRARY: str (e.g., "albumentationsx")
-    - __call__: function to apply transforms to images/videos
-    - TRANSFORMS: list of dicts with 'name' and 'transform' keys
-
-    Returns:
-        tuple of (library name, __call__ function, list of transform dicts)
-    """
-    spec = importlib.util.spec_from_file_location("custom_transforms", specs_file)
-    if spec is None or spec.loader is None:
-        raise ValueError(f"Could not load from {specs_file}")
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    if not hasattr(module, "LIBRARY"):
-        raise ValueError(f"Python file {specs_file} must define LIBRARY string")
-
-    if "__call__" not in module.__dict__:
-        raise TypeError(f"Python file {specs_file} must define __call__ function")
-
-    call_attr = module.__dict__["__call__"]
-    if not callable(call_attr):
-        raise TypeError("__call__ must be a callable function")
-
-    if not hasattr(module, "TRANSFORMS"):
-        raise ValueError(f"Python file {specs_file} must define TRANSFORMS list")
-
-    for i, t in enumerate(module.TRANSFORMS):
-        if not isinstance(t, dict):
-            raise TypeError(f"TRANSFORMS[{i}] must be a dictionary")
-
-        required_keys = {"name", "transform"}
-        missing = required_keys - t.keys()
-        if missing:
-            raise ValueError(f"TRANSFORMS[{i}] missing keys: {missing}")
-
-    return module.LIBRARY, call_attr, module.TRANSFORMS
+    """Compatibility wrapper; new code should import from benchmark.specs.load."""
+    return load_spec_from_python_file(specs_file)
 
 
 # ------------------------------------------------------------------

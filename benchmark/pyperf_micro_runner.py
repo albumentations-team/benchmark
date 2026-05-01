@@ -14,25 +14,15 @@ from typing import Any
 import pyperf
 from tqdm import tqdm
 
+from benchmark.media import BenchmarkMediaLoader
+from benchmark.policy import media_policy, slow_skip_config
 from benchmark.results import build_metadata, summarize_runs, write_results
-from benchmark.runner import BenchmarkRunner, MediaType, load_from_python_file
+from benchmark.runner import BenchmarkRunner, MediaType
 from benchmark.slow_threshold import is_slow_time_per_item, slow_threshold_info, slow_threshold_reason
+from benchmark.specs import load_from_python_file
 from benchmark.term import tqdm_kwargs
 from benchmark.thread_policy import apply_thread_policy
 from benchmark.utils import materialize_transform_output
-
-_SLOW_DEFAULTS: dict[MediaType, dict[str, float | int]] = {
-    MediaType.IMAGE: {
-        "threshold_sec_per_item": 0.1,
-        "preflight_items": 10,
-        "max_preflight_secs": 60,
-    },
-    MediaType.VIDEO: {
-        "threshold_sec_per_item": 2.0,
-        "preflight_items": 3,
-        "max_preflight_secs": 120,
-    },
-}
 
 
 def _make_micro_output_contiguous(output: Any) -> Any:
@@ -102,16 +92,11 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _slow_skip_config(args: argparse.Namespace, media_type: MediaType) -> tuple[float, int, float]:
-    defaults = _SLOW_DEFAULTS[media_type]
-    threshold = (
-        args.slow_threshold_sec_per_item
-        if args.slow_threshold_sec_per_item is not None
-        else float(defaults["threshold_sec_per_item"])
+    return slow_skip_config(
+        media_type,
+        threshold_sec_per_item=args.slow_threshold_sec_per_item,
+        preflight_items=args.slow_preflight_items,
     )
-    preflight_items = (
-        args.slow_preflight_items if args.slow_preflight_items is not None else int(defaults["preflight_items"])
-    )
-    return threshold, preflight_items, float(defaults["max_preflight_secs"])
 
 
 def _preflight_slow_transform(
@@ -184,6 +169,11 @@ def _run_transform_subprocesses(
     transforms: list[dict[str, Any]],
 ) -> None:
     """Run one transform per pyperf process; pyperf worker mode assumes one benchmark target."""
+    bench_args = runner.args
+    if bench_args is None:
+        msg = "pyperf.Runner.parse_args() must run before subprocess fan-out"
+        raise RuntimeError(msg)
+    pyperf_cli: Any = bench_args
     payload: dict[str, Any] | None = None
     combined_pyperf: dict[str, Any] = {"benchmarks": []}
 
@@ -225,13 +215,13 @@ def _run_transform_subprocesses(
                 "--media-cache",
                 str(media_cache),
                 "--processes",
-                str(runner.args.processes),
+                str(pyperf_cli.processes),
                 "--values",
-                str(runner.args.values),
+                str(pyperf_cli.values),
                 "--warmups",
-                str(runner.args.warmups),
+                str(pyperf_cli.warmups),
                 "--min-time",
-                str(runner.args.min_time),
+                str(pyperf_cli.min_time),
             ]
             if args.slow_threshold_sec_per_item is not None:
                 cmd.extend(["--slow-threshold-sec-per-item", str(args.slow_threshold_sec_per_item)])
@@ -264,7 +254,7 @@ def _run_transform_subprocesses(
     if payload is None:
         payload = {"metadata": {}, "results": {}}
     write_results(args.json_output, payload)
-    output_path = getattr(runner.args, "output", None)
+    output_path = getattr(pyperf_cli, "output", None)
     if output_path:
         Path(output_path).write_text(json.dumps(combined_pyperf, separators=(",", ":")), encoding="utf-8")
 
@@ -294,16 +284,13 @@ def _read_media_cache(media_cache: Path) -> list[Any]:
 
 def _load_media(args: argparse.Namespace, library: str) -> list[Any]:
     media_type = MediaType(args.media)
-    media_loader = BenchmarkRunner(
+    return BenchmarkMediaLoader(
         library=library,
         data_dir=args.data_dir,
-        transforms=[],
-        call_fn=lambda _transform, item: item,
-        media_type=media_type,
-        num_items=args.num_items,
+        media=media_type.value,
+        num_items=args.num_items or media_policy(media_type).num_items,
         num_channels=args.num_channels,
-    )
-    return media_loader.load_media()
+    ).load()
 
 
 def _run_filtered_transforms(
@@ -317,9 +304,16 @@ def _run_filtered_transforms(
     media_type = MediaType(args.media)
     media = _read_media_cache(args.media_cache) if args.media_cache is not None else _load_media(args, library)
 
+    bench_args = runner.args
+    if bench_args is None:
+        msg = "pyperf.Runner.parse_args() must run before benchmarking"
+        raise RuntimeError(msg)
+    pyperf_cli: Any = bench_args
+    worker_mode = bool(pyperf_cli.worker)
+
     results: dict[str, Any] = {}
     progress: tqdm[dict[str, Any]] | None = None
-    if not runner.args.worker:
+    if not worker_mode:
         progress = tqdm(
             transforms,
             desc=f"Pyperf micro transforms ({library}, {args.media})",
@@ -332,7 +326,7 @@ def _run_filtered_transforms(
         if progress is not None:
             progress.set_postfix_str(transform_name)
         slow_result = None
-        if not runner.args.worker:
+        if not worker_mode:
             slow_result = _preflight_slow_transform(
                 transform=transform_dict["transform"],
                 transform_name=transform_name,
@@ -353,7 +347,7 @@ def _run_filtered_transforms(
             call_fn,
             inner_loops=len(media),
         )
-        if runner.args.worker:
+        if worker_mode:
             return
         if bench is None:
             continue
@@ -378,7 +372,7 @@ def _run_filtered_transforms(
             library=library,
             benchmark_params={
                 num_key: len(media),
-                "num_runs": runner.args.values,
+                "num_runs": pyperf_cli.values,
                 "num_channels": args.num_channels,
                 "timer_backend": "pyperf",
                 "slow_skip_enabled": not args.disable_slow_skip,
@@ -418,11 +412,18 @@ def main() -> None:
     filter_names = [name.strip() for name in args.transforms.split(",") if name.strip()]
     transforms = BenchmarkRunner.filter_transforms(transforms, filter_names or None)
 
-    if not runner.args.worker and len(transforms) > 1:
+    bench_args = runner.args
+    if bench_args is None:
+        msg = "pyperf.Runner.parse_args() must run before benchmarking"
+        raise RuntimeError(msg)
+    pyperf_cli: Any = bench_args
+    worker_mode = bool(pyperf_cli.worker)
+
+    if not worker_mode and len(transforms) > 1:
         _run_transform_subprocesses(runner=runner, args=args, library=library, transforms=transforms)
         return
 
-    if not runner.args.worker and args.media_cache is None:
+    if not worker_mode and args.media_cache is None:
         with tempfile.TemporaryDirectory(prefix="pyperf-micro-") as tmp:
             args.media_cache = Path(tmp) / "media.pkl"
             _write_media_cache(args, args.media_cache, library)

@@ -23,94 +23,36 @@ Usage examples:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import logging
-import os
-import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import TypedDict
+from typing import Literal, TypedDict, cast
 
 from tqdm import tqdm
 
+from benchmark import envs
+from benchmark.jobs import BenchmarkJob
+from benchmark.matrix import (
+    IMAGE_SPECS as _IMAGE_SPECS,
+)
+from benchmark.matrix import (
+    MULTICHANNEL_IMAGE_SPECS as _MULTICHANNEL_IMAGE_SPECS,
+)
+from benchmark.matrix import (
+    VIDEO_SPECS as _VIDEO_SPECS,
+)
+from benchmark.matrix import (
+    library_env_group,
+    paper_transform_set_file,
+    requirements_for_env_group,
+    spec_map_for_scenario,
+)
+from benchmark.orchestrator import execute_job
 from benchmark.term import configure_logging, tqdm_kwargs
 
 logger = logging.getLogger(__name__)
-_REQUIREMENTS_REFRESH_TIMEOUT_SECONDS = 180
-
-# Built-in library → spec file mapping (image / video)
-_IMAGE_SPECS: dict[str, str] = {
-    "albumentationsx": "benchmark/transforms/albumentationsx_impl.py",
-    "albumentations_mit": "benchmark/transforms/albumentations_mit_impl.py",
-    "torchvision": "benchmark/transforms/torchvision_impl.py",
-    "kornia": "benchmark/transforms/kornia_impl.py",
-    "pillow": "benchmark/transforms/pillow_impl.py",
-}
-
-_IMAGE_PIPELINE_SPECS: dict[str, str] = {
-    "albumentationsx": "benchmark/transforms/albumentationsx_pipeline_impl.py",
-    "torchvision": "benchmark/transforms/torchvision_pipeline_impl.py",
-    "kornia": "benchmark/transforms/kornia_pipeline_impl.py",
-    "pillow": "benchmark/transforms/pillow_pipeline_impl.py",
-}
-
-_MULTICHANNEL_IMAGE_SPECS: dict[str, str] = {
-    "albumentationsx": "benchmark/transforms/albumentationsx_multichannel_impl.py",
-    "albumentations_mit": "benchmark/transforms/albumentations_mit_multichannel_impl.py",
-    "torchvision": "benchmark/transforms/torchvision_multichannel_impl.py",
-    "kornia": "benchmark/transforms/kornia_multichannel_impl.py",
-}
-
-_MULTICHANNEL_IMAGE_PIPELINE_SPECS: dict[str, str] = {
-    "albumentationsx": "benchmark/transforms/albumentationsx_multichannel_pipeline_impl.py",
-    "torchvision": "benchmark/transforms/torchvision_multichannel_pipeline_impl.py",
-    "kornia": "benchmark/transforms/kornia_multichannel_pipeline_impl.py",
-}
-
-_VIDEO_SPECS: dict[str, str] = {
-    "albumentationsx": "benchmark/transforms/albumentationsx_video_impl.py",
-    "albumentations_mit": "benchmark/transforms/albumentations_mit_video_impl.py",
-    "torchvision": "benchmark/transforms/torchvision_video_impl.py",
-    "kornia": "benchmark/transforms/kornia_video_impl.py",
-}
-
-_REQUIREMENTS: dict[str, str] = {
-    "albumentationsx": "requirements/albumentationsx.txt",
-    "albumentations_mit": "requirements/albumentations_mit.txt",
-    "torchvision": "requirements/torchvision.txt",
-    "kornia": "requirements/kornia.txt",
-    "pillow": "requirements/pillow.txt",
-}
-
-_VIDEO_REQUIREMENTS: dict[str, str] = {
-    "albumentationsx": "requirements/albumentationsx.txt",
-    "albumentations_mit": "requirements/albumentations_mit.txt",
-    "torchvision": "requirements/torchvision-video.txt",
-    "kornia": "requirements/kornia-video.txt",
-    "dali": "requirements/dali-video.txt",
-}
-
-_ENV_GROUPS: dict[str, dict[str, tuple[str, ...]]] = {
-    "image": {
-        "albumentationsx": ("albumentationsx",),
-        "albumentations_mit": ("albumentations_mit",),
-        "torch_stack": ("torchvision", "kornia", "pillow"),
-    },
-    "video": {
-        "albumentationsx_video": ("albumentationsx",),
-        "albumentations_mit_video": ("albumentations_mit",),
-        "torch_video": ("torchvision", "kornia"),
-        "dali_video": ("dali",),
-    },
-}
-
-_PAPER_TRANSFORM_SET_FILES: dict[str, str] = {
-    "image-rgb": "docs/paper_transform_sets/rgb.md",
-    "image-9ch": "docs/paper_transform_sets/9ch.md",
-    "video-16f": "docs/paper_transform_sets/video.md",
-}
 
 
 # ---------------------------------------------------------------------------
@@ -147,12 +89,7 @@ def _read_markdown_text_block(path: Path) -> list[str]:
 
 
 def _paper_transform_names(repo_root: Path, scenario_name: str, mode: str) -> list[str]:
-    try:
-        transform_set_path = repo_root / _PAPER_TRANSFORM_SET_FILES[scenario_name]
-    except KeyError as e:
-        msg = f"--transform-set paper is not defined for scenario {scenario_name!r}"
-        raise ValueError(msg) from e
-
+    transform_set_path = repo_root / paper_transform_set_file(scenario_name)
     names = _read_markdown_text_block(transform_set_path)
     if mode == "pipeline" and scenario_name in {"image-rgb", "image-9ch"}:
         from benchmark.transforms.image_recipe_specs import recipe_name, spec_by_name
@@ -172,43 +109,8 @@ def _apply_transform_set(args: argparse.Namespace, repo_root: Path, scenario_nam
     raise ValueError(msg)
 
 
-def _venv_python(venv_dir: Path) -> Path:
-    if sys.platform == "win32":
-        return venv_dir / "Scripts" / "python.exe"
-    return venv_dir / "bin" / "python"
-
-
-def _requirement_input_path(requirements_path: Path) -> Path:
-    return requirements_path.with_suffix(".in")
-
-
 def _compile_requirements(python: Path, requirements_path: Path) -> None:
-    requirements_input = _requirement_input_path(requirements_path)
-    if not requirements_input.exists():
-        return
-    logger.info("Refreshing %s from %s", requirements_path, requirements_input)
-    try:
-        subprocess.run(
-            [
-                str(python),
-                "-m",
-                "uv",
-                "pip",
-                "compile",
-                "--upgrade",
-                "--quiet",
-                "-o",
-                str(requirements_path),
-                str(requirements_input),
-            ],
-            check=True,
-            timeout=_REQUIREMENTS_REFRESH_TIMEOUT_SECONDS,
-        )
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
-        if requirements_path.exists():
-            logger.warning("Could not refresh %s (%s); keeping existing lock", requirements_path, e)
-            return
-        raise
+    envs.compile_requirements(python, requirements_path)
 
 
 def _requirements_cache_key(
@@ -216,116 +118,22 @@ def _requirements_cache_key(
     python: Path,
     requirements_paths: list[Path],
     env_group: str,
-    media: str,
+    media: Literal["image", "video"],
 ) -> str:
-    digest = hashlib.sha256()
-    digest.update(f"python={python}\n".encode())
-    try:
-        python_version = subprocess.check_output(
-            [str(python), "--version"],
-            text=True,
-            stderr=subprocess.STDOUT,
-        ).strip()
-    except (OSError, subprocess.CalledProcessError):
-        python_version = "unknown"
-    digest.update(f"python_version={python_version}\n".encode())
-    digest.update(f"env_group={env_group}\nmedia={media}\n".encode())
-    for path in requirements_paths:
-        digest.update(f"path={path.name}\n".encode())
-        digest.update(path.read_bytes())
-        digest.update(b"\n")
-    return digest.hexdigest()
-
-
-def _ensure_uv(python: Path) -> None:
-    try:
-        subprocess.run(
-            [str(python), "-m", "uv", "--version"],
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-    except (OSError, subprocess.CalledProcessError):
-        logger.info("Installing uv into %s", python.parent.parent)
-        subprocess.run([str(python), "-m", "pip", "install", "-q", "uv"], check=True)
-
-
-def _install_requirements_if_needed(
-    *,
-    python: Path,
-    venv_dir: Path,
-    requirements_paths: list[Path],
-    env_group: str,
-    media: str,
-) -> None:
-    cache_file = venv_dir / ".benchmark_requirements_hash"
-    cache_key = _requirements_cache_key(
+    return envs.requirements_cache_key(
         python=python,
         requirements_paths=requirements_paths,
         env_group=env_group,
         media=media,
     )
-    if cache_file.exists() and cache_file.read_text(encoding="utf-8").strip() == cache_key:
-        logger.info("Using cached dependencies for %s (%s)", env_group, media)
-        return
-
-    logger.info("Installing dependencies for %s (%s)...", env_group, media)
-    for requirements_path in requirements_paths:
-        subprocess.run(
-            [str(python), "-m", "uv", "pip", "install", "-q", "-U", "-r", str(requirements_path)],
-            check=True,
-        )
-    cache_file.write_text(f"{cache_key}\n", encoding="utf-8")
-    logger.info("Dependencies ready for %s", env_group)
 
 
 def _library_env_group(library: str, media: str) -> str:
-    for group, libraries in _ENV_GROUPS.get(media, {}).items():
-        if library in libraries:
-            return group
-    suffix = "_video" if media == "video" else ""
-    return f"{library}{suffix}"
+    return library_env_group(library, media)
 
 
 def _requirements_for_env_group(env_group: str, media: str, repo_root: Path) -> list[Path]:
-    req_map = _VIDEO_REQUIREMENTS if media == "video" else _REQUIREMENTS
-    group_libraries = _ENV_GROUPS.get(media, {}).get(env_group, (env_group.removesuffix("_video"),))
-    requirements_paths = [repo_root / "requirements" / "requirements.txt"]
-    seen = {requirements_paths[0]}
-    for library in group_libraries:
-        req = repo_root / req_map[library]
-        if req not in seen:
-            requirements_paths.append(req)
-            seen.add(req)
-    return requirements_paths
-
-
-def _ensure_venv(library: str, media: str, repo_root: Path, *, refresh_requirements: bool = True) -> Path:
-    env_group = _library_env_group(library, media)
-    venv_dir = repo_root / f".venv_{env_group}"
-
-    if not venv_dir.exists():
-        logger.info("Creating venv for %s (%s)...", env_group, media)
-        subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
-
-    python = _venv_python(venv_dir)
-
-    _ensure_uv(python)
-
-    requirements_paths = _requirements_for_env_group(env_group, media, repo_root)
-    if refresh_requirements:
-        for requirements_path in requirements_paths:
-            _compile_requirements(python, requirements_path)
-
-    _install_requirements_if_needed(
-        python=python,
-        venv_dir=venv_dir,
-        requirements_paths=requirements_paths,
-        env_group=env_group,
-        media=media,
-    )
-
-    return python
+    return requirements_for_env_group(env_group, media, repo_root)
 
 
 class _SlowSkipKwargs(TypedDict):
@@ -360,76 +168,29 @@ def _run_single(
     slow_preflight_items: int | None = None,
     disable_slow_skip: bool = False,
 ) -> None:
-    python = _ensure_venv(library, media, repo_root, refresh_requirements=refresh_requirements)
-
-    pyperf_output_file = output_file.with_suffix(".pyperf.json")
-    pyperf_output_file.unlink(missing_ok=True)
-    cmd = [
-        str(python),
-        "-m",
-        "benchmark.pyperf_micro_runner",
-        "--specs-file",
-        str(spec_file),
-        "--data-dir",
-        str(data_dir),
-        "--json-output",
-        str(output_file),
-        "--output",
-        str(pyperf_output_file),
-        "--media",
-        media,
-        "--scenario",
-        scenario,
-        "--num-channels",
-        str(num_channels),
-        "--processes",
-        "1",
-        "--values",
-        str(num_runs),
-    ]
-    if num_items is not None:
-        cmd += ["--num-items", str(num_items)]
-    if transforms_filter:
-        cmd += ["--transforms", ",".join(transforms_filter)]
-    if slow_threshold_sec_per_item is not None:
-        cmd += ["--slow-threshold-sec-per-item", str(slow_threshold_sec_per_item)]
-    if slow_preflight_items is not None:
-        cmd += ["--slow-preflight-items", str(slow_preflight_items)]
-    if disable_slow_skip:
-        cmd.append("--disable-slow-skip")
-    pyperf_env_extra: dict[str, str] = {}
-    if transforms_filter:
-        pyperf_env_extra["BENCHMARK_TRANSFORMS_FILTER"] = ",".join(transforms_filter)
-    if verbose:
-        pyperf_env_extra["BENCHMARK_VERBOSE"] = "1"
-    env = {**os.environ, **pyperf_env_extra}
-    logger.info("Running pyperf micro benchmark for %s %s → %s", library, media, output_file)
-    subprocess.run(cmd, check=True, env=env)
-
-
-def _dali_transforms_from_specs(transforms_filter: list[str] | None = None) -> list[dict[str, object]]:
-    from benchmark.transforms.specs import TRANSFORM_SPECS
-
-    transforms: list[dict[str, object]] = [{"name": spec.name, "transform": spec.params} for spec in TRANSFORM_SPECS]
-    if transforms_filter is None:
-        return transforms
-    allowed = set(transforms_filter)
-    return [transform for transform in transforms if str(transform["name"]) in allowed]
+    media_kind = cast("Literal['image', 'video']", media)
+    job = BenchmarkJob(
+        library=library,
+        scenario=scenario,
+        mode="micro",
+        media=media_kind,
+        data_dir=data_dir,
+        output_file=output_file,
+        num_items=num_items,
+        num_runs=num_runs,
+        num_channels=num_channels,
+        spec_file=spec_file,
+        transforms_filter=tuple(transforms_filter or ()),
+        refresh_requirements=refresh_requirements,
+        slow_threshold_sec_per_item=slow_threshold_sec_per_item,
+        slow_preflight_items=slow_preflight_items,
+        disable_slow_skip=disable_slow_skip,
+    )
+    execute_job(job, repo_root=repo_root, verbose=verbose)
 
 
 def _spec_map_for_scenario(scenario_name: str, mode: str) -> dict[str, str]:
-    if scenario_name == "image-9ch":
-        if mode == "pipeline":
-            return _MULTICHANNEL_IMAGE_PIPELINE_SPECS
-        return _MULTICHANNEL_IMAGE_SPECS
-    if scenario_name == "video-16f":
-        return _VIDEO_SPECS
-    if scenario_name == "image-rgb":
-        if mode == "pipeline":
-            return _IMAGE_PIPELINE_SPECS
-        return _IMAGE_SPECS
-    msg = f"No transform spec map for {scenario_name!r}/{mode!r}"
-    raise ValueError(msg)
+    return spec_map_for_scenario(scenario_name, mode)
 
 
 def _pipeline_output_file(output_dir: Path, library: str, args: argparse.Namespace) -> Path:
@@ -451,37 +212,11 @@ def _run_scenario_library(
     num_channels: int,
     clip_length: int,
 ) -> None:
-    import os
-
-    if args.mode == "pipeline" and library == "dali":
-        from benchmark.pipeline_runner import PipelineBenchmarkRunner
-
-        transforms = _dali_transforms_from_specs(args.transforms)
-        output_file = _pipeline_output_file(output_dir, "dali", args)
-        runner = PipelineBenchmarkRunner(
-            library=library,
-            data_dir=Path(args.data_dir),
-            output_file=output_file,
-            transforms=transforms,
-            call_fn=lambda _transform, item: item,
-            media=media,
-            scenario=scenario_name,
-            num_items=args.num_items,
-            num_runs=args.num_runs,
-            batch_size=args.batch_size,
-            workers=args.workers,
-            min_time=args.min_time,
-            min_batches=args.min_batches,
-            num_channels=num_channels,
-            clip_length=clip_length,
-            pipeline_scope=args.pipeline_scope,
-            device=args.device,
-            thread_policy=args.thread_policy,
-        )
-        runner.run()
-        return
-
-    spec_file = repo_root / spec_map[library]
+    backend: Literal["dali_pipeline"] | None = (
+        "dali_pipeline" if args.mode == "pipeline" and library == "dali" else None
+    )
+    media_name = cast("Literal['image', 'video']", media)
+    spec_file = None if backend == "dali_pipeline" else repo_root / spec_map[library]
     output_file = (
         _pipeline_output_file(output_dir, library, args)
         if args.mode == "pipeline"
@@ -489,12 +224,15 @@ def _run_scenario_library(
     )
 
     if args.mode == "micro":
+        if spec_file is None:
+            msg = f"{library} micro job requires a spec file"
+            raise ValueError(msg)
         _run_single(
             library=library,
             spec_file=spec_file,
             data_dir=Path(args.data_dir),
             output_file=output_file,
-            media=media,
+            media=media_name,
             num_items=args.num_items,
             num_runs=args.num_runs,
             repo_root=repo_root,
@@ -507,56 +245,20 @@ def _run_scenario_library(
         )
         return
 
-    python = _ensure_venv(library, media, repo_root, refresh_requirements=args.refresh_requirements)
-    cmd = [
-        str(python),
-        "-m",
-        "benchmark.pipeline_runner",
-        "--specs-file",
-        str(spec_file),
-        "--data-dir",
-        str(args.data_dir),
-        "--output",
-        str(output_file),
-        "--media",
-        media,
-        "--scenario",
-        scenario_name,
-        "--num-runs",
-        str(args.num_runs),
-        "--batch-size",
-        str(args.batch_size),
-        "--workers",
-        str(args.workers),
-        "--min-time",
-        str(args.min_time),
-        "--min-batches",
-        str(args.min_batches),
-        "--num-channels",
-        str(num_channels),
-        "--clip-length",
-        str(clip_length),
-        "--pipeline-scope",
-        args.pipeline_scope,
-        "--device",
-        args.device,
-        "--thread-policy",
-        args.thread_policy,
-    ]
-    if args.num_items is not None:
-        cmd += ["--num-items", str(args.num_items)]
-    if args.slow_threshold_sec_per_item is not None:
-        cmd += ["--slow-threshold-sec-per-item", str(args.slow_threshold_sec_per_item)]
-    if args.slow_preflight_items is not None:
-        cmd += ["--slow-preflight-items", str(args.slow_preflight_items)]
-    if args.disable_slow_skip:
-        cmd.append("--disable-slow-skip")
-
-    env_extra: dict[str, str] = {}
-    if args.transforms:
-        env_extra["BENCHMARK_TRANSFORMS_FILTER"] = ",".join(args.transforms)
-    env = {**os.environ, **env_extra}
-    subprocess.run(cmd, check=True, env=env)
+    job = BenchmarkJob.from_args(
+        library=library,
+        scenario_name=scenario_name,
+        mode="pipeline",
+        media=media_name,
+        data_dir=Path(args.data_dir),
+        output_file=output_file,
+        args=args,
+        num_channels=num_channels,
+        clip_length=clip_length,
+        spec_file=spec_file,
+        backend=backend,
+    )
+    execute_job(job, repo_root=repo_root)
 
 
 def _cmd_run_scenario(args: argparse.Namespace, repo_root: Path, output_dir: Path) -> None:

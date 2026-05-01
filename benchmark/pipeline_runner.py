@@ -12,27 +12,16 @@ import numpy as np
 from tqdm import tqdm
 
 from benchmark.decoders import decode_video
+from benchmark.policy import slow_skip_config
 from benchmark.results import build_metadata, summarize_runs, unsupported_result, write_results
-from benchmark.runner import BenchmarkRunner, load_from_python_file
+from benchmark.runner import BenchmarkRunner
 from benchmark.slow_threshold import is_slow_time_per_item, slow_threshold_info, slow_threshold_reason
+from benchmark.specs import load_from_python_file
 from benchmark.term import tqdm_kwargs
 from benchmark.thread_policy import ThreadPolicy, apply_thread_policy, worker_init_for_policy
 from benchmark.utils import get_image_loader, make_multichannel_loader, materialize_transform_output
 
 logger = logging.getLogger(__name__)
-_SLOW_DEFAULTS: dict[str, dict[str, float | int]] = {
-    "image": {
-        "threshold_sec_per_item": 0.1,
-        "preflight_items": 10,
-        "max_preflight_secs": 60,
-    },
-    "video": {
-        "threshold_sec_per_item": 2.0,
-        "preflight_items": 3,
-        "max_preflight_secs": 120,
-    },
-}
-
 _IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".bmp", ".webp")
 _VIDEO_EXTENSIONS = (".mp4", ".avi", ".mov", ".mkv", ".webm")
 PipelineScope = Literal[
@@ -343,16 +332,11 @@ class PipelineBenchmarkRunner:
             _shutdown_loader_iterator(iterator)
 
     def _slow_skip_config(self) -> tuple[float, int, float]:
-        defaults = _SLOW_DEFAULTS[self.media]
-        threshold = (
-            self.slow_threshold_sec_per_item
-            if self.slow_threshold_sec_per_item is not None
-            else float(defaults["threshold_sec_per_item"])
+        return slow_skip_config(
+            self.media,
+            threshold_sec_per_item=self.slow_threshold_sec_per_item,
+            preflight_items=self.slow_preflight_items,
         )
-        preflight_items = (
-            self.slow_preflight_items if self.slow_preflight_items is not None else int(defaults["preflight_items"])
-        )
-        return threshold, preflight_items, float(defaults["max_preflight_secs"])
 
     def _preflight_items(self, paths: list[Path], preloaded: list[Any] | None) -> list[Any]:
         _, preflight_items, _ = self._slow_skip_config()
