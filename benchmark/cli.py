@@ -38,6 +38,7 @@ from tqdm import tqdm
 from benchmark.term import configure_logging, tqdm_kwargs
 
 logger = logging.getLogger(__name__)
+_REQUIREMENTS_REFRESH_TIMEOUT_SECONDS = 180
 
 # Built-in library → spec file mapping (image / video)
 _IMAGE_SPECS: dict[str, str] = {
@@ -48,11 +49,24 @@ _IMAGE_SPECS: dict[str, str] = {
     "pillow": "benchmark/transforms/pillow_impl.py",
 }
 
+_IMAGE_PIPELINE_SPECS: dict[str, str] = {
+    "albumentationsx": "benchmark/transforms/albumentationsx_pipeline_impl.py",
+    "torchvision": "benchmark/transforms/torchvision_pipeline_impl.py",
+    "kornia": "benchmark/transforms/kornia_pipeline_impl.py",
+    "pillow": "benchmark/transforms/pillow_pipeline_impl.py",
+}
+
 _MULTICHANNEL_IMAGE_SPECS: dict[str, str] = {
     "albumentationsx": "benchmark/transforms/albumentationsx_multichannel_impl.py",
     "albumentations_mit": "benchmark/transforms/albumentations_mit_multichannel_impl.py",
     "torchvision": "benchmark/transforms/torchvision_multichannel_impl.py",
     "kornia": "benchmark/transforms/kornia_multichannel_impl.py",
+}
+
+_MULTICHANNEL_IMAGE_PIPELINE_SPECS: dict[str, str] = {
+    "albumentationsx": "benchmark/transforms/albumentationsx_multichannel_pipeline_impl.py",
+    "torchvision": "benchmark/transforms/torchvision_multichannel_pipeline_impl.py",
+    "kornia": "benchmark/transforms/kornia_multichannel_pipeline_impl.py",
 }
 
 _VIDEO_SPECS: dict[str, str] = {
@@ -92,6 +106,12 @@ _ENV_GROUPS: dict[str, dict[str, tuple[str, ...]]] = {
     },
 }
 
+_PAPER_TRANSFORM_SET_FILES: dict[str, str] = {
+    "image-rgb": "docs/paper_transform_sets/rgb.md",
+    "image-9ch": "docs/paper_transform_sets/9ch.md",
+    "video-16f": "docs/paper_transform_sets/video.md",
+}
+
 
 # ---------------------------------------------------------------------------
 # venv / runner helpers
@@ -107,6 +127,49 @@ def _extract_library(spec_file: Path) -> str:
             if len(parts) == 2:
                 return parts[1].strip().strip('"').strip("'")
     raise ValueError(f"Could not find LIBRARY assignment in {spec_file}")
+
+
+def _read_markdown_text_block(path: Path) -> list[str]:
+    lines: list[str] = []
+    in_block = False
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if stripped == "```text":
+            in_block = True
+            continue
+        if in_block and stripped == "```":
+            break
+        if in_block and stripped:
+            lines.append(stripped)
+    if not lines:
+        raise ValueError(f"No text transform block found in {path}")
+    return lines
+
+
+def _paper_transform_names(repo_root: Path, scenario_name: str, mode: str) -> list[str]:
+    try:
+        transform_set_path = repo_root / _PAPER_TRANSFORM_SET_FILES[scenario_name]
+    except KeyError as e:
+        msg = f"--transform-set paper is not defined for scenario {scenario_name!r}"
+        raise ValueError(msg) from e
+
+    names = _read_markdown_text_block(transform_set_path)
+    if mode == "pipeline" and scenario_name in {"image-rgb", "image-9ch"}:
+        from benchmark.transforms.image_recipe_specs import recipe_name, spec_by_name
+
+        return [recipe_name(spec_by_name(name)) for name in names if name != "Normalize"]
+    return names
+
+
+def _apply_transform_set(args: argparse.Namespace, repo_root: Path, scenario_name: str, mode: str) -> None:
+    if args.transform_set is None or args.transforms:
+        return
+    if args.transform_set == "paper":
+        args.transforms = _paper_transform_names(repo_root, scenario_name, mode)
+        logger.info("Using %s paper transform set (%d transforms)", scenario_name, len(args.transforms))
+        return
+    msg = f"Unknown transform set {args.transform_set!r}"
+    raise ValueError(msg)
 
 
 def _venv_python(venv_dir: Path) -> Path:
@@ -139,10 +202,11 @@ def _compile_requirements(python: Path, requirements_path: Path) -> None:
                 str(requirements_input),
             ],
             check=True,
+            timeout=_REQUIREMENTS_REFRESH_TIMEOUT_SECONDS,
         )
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
         if requirements_path.exists():
-            logger.warning("Could not refresh %s on this platform; keeping existing lock", requirements_path)
+            logger.warning("Could not refresh %s (%s); keeping existing lock", requirements_path, e)
             return
         raise
 
@@ -286,15 +350,10 @@ def _run_single(
     media: str,
     num_items: int | None,
     num_runs: int,
-    max_warmup: int | None,
-    warmup_window: int,
-    warmup_threshold: float,
-    min_warmup_windows: int,
     repo_root: Path,
     transforms_filter: list[str] | None = None,
     verbose: bool = False,
     num_channels: int = 3,
-    timer_backend: str = "pyperf",
     scenario: str = "manual",
     refresh_requirements: bool = True,
     slow_threshold_sec_per_item: float | None = None,
@@ -303,89 +362,48 @@ def _run_single(
 ) -> None:
     python = _ensure_venv(library, media, repo_root, refresh_requirements=refresh_requirements)
 
-    if timer_backend == "pyperf":
-        pyperf_output_file = output_file.with_suffix(".pyperf.json")
-        pyperf_output_file.unlink(missing_ok=True)
-        cmd = [
-            str(python),
-            "-m",
-            "benchmark.pyperf_micro_runner",
-            "--specs-file",
-            str(spec_file),
-            "--data-dir",
-            str(data_dir),
-            "--json-output",
-            str(output_file),
-            "--output",
-            str(pyperf_output_file),
-            "--media",
-            media,
-            "--scenario",
-            scenario,
-            "--num-channels",
-            str(num_channels),
-            "--processes",
-            "1",
-            "--values",
-            str(num_runs),
-        ]
-        if num_items is not None:
-            cmd += ["--num-items", str(num_items)]
-        if transforms_filter:
-            cmd += ["--transforms", ",".join(transforms_filter)]
-        if slow_threshold_sec_per_item is not None:
-            cmd += ["--slow-threshold-sec-per-item", str(slow_threshold_sec_per_item)]
-        if slow_preflight_items is not None:
-            cmd += ["--slow-preflight-items", str(slow_preflight_items)]
-        if disable_slow_skip:
-            cmd.append("--disable-slow-skip")
-        pyperf_env_extra: dict[str, str] = {}
-        if transforms_filter:
-            pyperf_env_extra["BENCHMARK_TRANSFORMS_FILTER"] = ",".join(transforms_filter)
-        if verbose:
-            pyperf_env_extra["BENCHMARK_VERBOSE"] = "1"
-        env = {**os.environ, **pyperf_env_extra}
-        logger.info("Running pyperf micro benchmark for %s %s → %s", library, media, output_file)
-        subprocess.run(cmd, check=True, env=env)
-        return
-
+    pyperf_output_file = output_file.with_suffix(".pyperf.json")
+    pyperf_output_file.unlink(missing_ok=True)
     cmd = [
         str(python),
         "-m",
-        "benchmark.runner",
+        "benchmark.pyperf_micro_runner",
         "--specs-file",
         str(spec_file),
         "--data-dir",
         str(data_dir),
-        "--output",
+        "--json-output",
         str(output_file),
+        "--output",
+        str(pyperf_output_file),
         "--media",
         media,
-        "--num-runs",
+        "--scenario",
+        scenario,
+        "--num-channels",
+        str(num_channels),
+        "--processes",
+        "1",
+        "--values",
         str(num_runs),
-        "--warmup-window",
-        str(warmup_window),
-        "--warmup-threshold",
-        str(warmup_threshold),
-        "--min-warmup-windows",
-        str(min_warmup_windows),
     ]
     if num_items is not None:
         cmd += ["--num-items", str(num_items)]
-    if max_warmup is not None:
-        cmd += ["--max-warmup", str(max_warmup)]
-    if num_channels != 3:
-        cmd += ["--num-channels", str(num_channels)]
-
-    env_extra: dict[str, str] = {}
     if transforms_filter:
-        env_extra["BENCHMARK_TRANSFORMS_FILTER"] = ",".join(transforms_filter)
+        cmd += ["--transforms", ",".join(transforms_filter)]
+    if slow_threshold_sec_per_item is not None:
+        cmd += ["--slow-threshold-sec-per-item", str(slow_threshold_sec_per_item)]
+    if slow_preflight_items is not None:
+        cmd += ["--slow-preflight-items", str(slow_preflight_items)]
+    if disable_slow_skip:
+        cmd.append("--disable-slow-skip")
+    pyperf_env_extra: dict[str, str] = {}
+    if transforms_filter:
+        pyperf_env_extra["BENCHMARK_TRANSFORMS_FILTER"] = ",".join(transforms_filter)
     if verbose:
-        env_extra["BENCHMARK_VERBOSE"] = "1"
-
-    env = {**os.environ, **env_extra}
-
-    logger.info("Running %s %s benchmark → %s", library, media, output_file)
+        pyperf_env_extra["BENCHMARK_VERBOSE"] = "1"
+    env = {**os.environ, **pyperf_env_extra}
+    logger.info("Running pyperf micro benchmark for %s %s → %s", library, media, output_file)
     subprocess.run(cmd, check=True, env=env)
 
 
@@ -401,13 +419,24 @@ def _dali_transforms_from_specs(transforms_filter: list[str] | None = None) -> l
 
 def _spec_map_for_scenario(scenario_name: str, mode: str) -> dict[str, str]:
     if scenario_name == "image-9ch":
+        if mode == "pipeline":
+            return _MULTICHANNEL_IMAGE_PIPELINE_SPECS
         return _MULTICHANNEL_IMAGE_SPECS
     if scenario_name == "video-16f":
         return _VIDEO_SPECS
     if scenario_name == "image-rgb":
+        if mode == "pipeline":
+            return _IMAGE_PIPELINE_SPECS
         return _IMAGE_SPECS
     msg = f"No transform spec map for {scenario_name!r}/{mode!r}"
     raise ValueError(msg)
+
+
+def _pipeline_output_file(output_dir: Path, library: str, args: argparse.Namespace) -> Path:
+    num_items = f"n{args.num_items}" if args.num_items is not None else "nall"
+    device = f"_dev-{args.device}" if args.device != "none" else ""
+    stem = f"{library}_{args.pipeline_scope}_{num_items}_r{args.num_runs}_w{args.workers}_b{args.batch_size}{device}"
+    return output_dir / f"{stem}_results.json"
 
 
 def _run_scenario_library(
@@ -428,7 +457,7 @@ def _run_scenario_library(
         from benchmark.pipeline_runner import PipelineBenchmarkRunner
 
         transforms = _dali_transforms_from_specs(args.transforms)
-        output_file = output_dir / "dali_pipeline_results.json"
+        output_file = _pipeline_output_file(output_dir, "dali", args)
         runner = PipelineBenchmarkRunner(
             library=library,
             data_dir=Path(args.data_dir),
@@ -445,13 +474,19 @@ def _run_scenario_library(
             min_batches=args.min_batches,
             num_channels=num_channels,
             clip_length=clip_length,
+            pipeline_scope=args.pipeline_scope,
+            device=args.device,
+            thread_policy=args.thread_policy,
         )
         runner.run()
         return
 
     spec_file = repo_root / spec_map[library]
-    suffix = "_pipeline" if args.mode == "pipeline" else "_micro"
-    output_file = output_dir / f"{library}{suffix}_results.json"
+    output_file = (
+        _pipeline_output_file(output_dir, library, args)
+        if args.mode == "pipeline"
+        else output_dir / f"{library}_micro_results.json"
+    )
 
     if args.mode == "micro":
         _run_single(
@@ -462,15 +497,10 @@ def _run_scenario_library(
             media=media,
             num_items=args.num_items,
             num_runs=args.num_runs,
-            max_warmup=args.max_warmup,
-            warmup_window=args.warmup_window,
-            warmup_threshold=args.warmup_threshold,
-            min_warmup_windows=args.min_warmup_windows,
             repo_root=repo_root,
             transforms_filter=args.transforms,
             verbose=args.verbose,
             num_channels=num_channels,
-            timer_backend=args.timer,
             scenario=scenario_name,
             refresh_requirements=args.refresh_requirements,
             **_slow_skip_kwargs(args),
@@ -506,9 +536,21 @@ def _run_scenario_library(
         str(num_channels),
         "--clip-length",
         str(clip_length),
+        "--pipeline-scope",
+        args.pipeline_scope,
+        "--device",
+        args.device,
+        "--thread-policy",
+        args.thread_policy,
     ]
     if args.num_items is not None:
         cmd += ["--num-items", str(args.num_items)]
+    if args.slow_threshold_sec_per_item is not None:
+        cmd += ["--slow-threshold-sec-per-item", str(args.slow_threshold_sec_per_item)]
+    if args.slow_preflight_items is not None:
+        cmd += ["--slow-preflight-items", str(args.slow_preflight_items)]
+    if args.disable_slow_skip:
+        cmd.append("--disable-slow-skip")
 
     env_extra: dict[str, str] = {}
     if args.transforms:
@@ -523,6 +565,13 @@ def _cmd_run_scenario(args: argparse.Namespace, repo_root: Path, output_dir: Pat
 
     scenario = get_scenario(args.scenario)
     args.mode = resolve_mode(scenario, args.mode)
+    try:
+        _apply_transform_set(args, repo_root, scenario.name, args.mode)
+    except ValueError as e:
+        logger.error("%s", e)  # noqa: TRY400
+        sys.exit(1)
+    if args.thread_policy is None:
+        args.thread_policy = "micro-single" if args.mode == "micro" else "pipeline-default"
     clip_length = args.clip_length or scenario.clip_length or 16
     num_channels = scenario.num_channels
 
@@ -582,23 +631,17 @@ def build_gcp_benchmark_cli_argv(
         args.media,
         "--num-runs",
         str(args.num_runs),
-        "--warmup-window",
-        str(args.warmup_window),
-        "--warmup-threshold",
-        str(args.warmup_threshold),
-        "--min-warmup-windows",
-        str(args.min_warmup_windows),
         "--num-channels",
         str(args.num_channels),
     ]
     if args.num_items is not None:
         argv += ["--num-items", str(args.num_items)]
-    if args.max_warmup is not None:
-        argv += ["--max-warmup", str(args.max_warmup)]
     if args.libraries:
         argv += ["--libraries", *args.libraries]
     if args.transforms:
         argv += ["--transforms", *args.transforms]
+    if getattr(args, "transform_set", None):
+        argv += ["--transform-set", args.transform_set]
     if args.spec:
         spec_path = Path(args.spec).resolve()
         try:
@@ -615,6 +658,12 @@ def build_gcp_benchmark_cli_argv(
         argv += ["--scenario", args.scenario]
     if getattr(args, "mode", None):
         argv += ["--mode", args.mode]
+    if getattr(args, "pipeline_scope", None):
+        argv += ["--pipeline-scope", args.pipeline_scope]
+    if getattr(args, "device", None):
+        argv += ["--device", args.device]
+    if getattr(args, "thread_policy", None):
+        argv += ["--thread-policy", args.thread_policy]
     if getattr(args, "batch_size", None):
         argv += ["--batch-size", str(args.batch_size)]
     if getattr(args, "workers", None) is not None:
@@ -627,8 +676,6 @@ def build_gcp_benchmark_cli_argv(
         argv += ["--clip-length", str(args.clip_length)]
     if getattr(args, "decoders", None):
         argv += ["--decoders", *args.decoders]
-    if getattr(args, "timer", None):
-        argv += ["--timer", args.timer]
     if not getattr(args, "refresh_requirements", True):
         argv.append("--no-refresh-requirements")
     if getattr(args, "slow_threshold_sec_per_item", None) is not None:
@@ -857,15 +904,10 @@ def cmd_run(args: argparse.Namespace) -> None:
             media=media,
             num_items=args.num_items,
             num_runs=args.num_runs,
-            max_warmup=args.max_warmup,
-            warmup_window=args.warmup_window,
-            warmup_threshold=args.warmup_threshold,
-            min_warmup_windows=args.min_warmup_windows,
             repo_root=repo_root,
             transforms_filter=args.transforms,
             verbose=args.verbose,
             num_channels=args.num_channels,
-            timer_backend=args.timer,
             scenario=f"{media}-manual",
             refresh_requirements=args.refresh_requirements,
             **_slow_skip_kwargs(args),
@@ -898,15 +940,10 @@ def cmd_run(args: argparse.Namespace) -> None:
             media=media,
             num_items=args.num_items,
             num_runs=args.num_runs,
-            max_warmup=args.max_warmup,
-            warmup_window=args.warmup_window,
-            warmup_threshold=args.warmup_threshold,
-            min_warmup_windows=args.min_warmup_windows,
             repo_root=repo_root,
             transforms_filter=args.transforms,
             verbose=args.verbose,
             num_channels=args.num_channels,
-            timer_backend=args.timer,
             scenario=f"{media}-manual",
             refresh_requirements=args.refresh_requirements,
             **_slow_skip_kwargs(args),
@@ -1012,6 +1049,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run only these transforms (by name). Default: all.",
     )
     run_p.add_argument(
+        "--transform-set",
+        choices=["paper"],
+        help=(
+            "Use a named transform set. 'paper' selects transforms present in 2+ selected libraries for the scenario."
+        ),
+    )
+    run_p.add_argument(
         "--spec",
         "-s",
         metavar="FILE",
@@ -1031,6 +1075,23 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument("--workers", type=int, default=0, help="Pipeline dataloader worker count")
     run_p.add_argument("--min-time", type=float, default=0.0, help="Minimum measured seconds per run")
     run_p.add_argument("--min-batches", type=int, default=1, help="Minimum measured dataloader batches per run")
+    run_p.add_argument(
+        "--pipeline-scope",
+        choices=["memory_dataloader_augment", "decode_dataloader_augment", "decode_dataloader_augment_batch_copy"],
+        default="decode_dataloader_augment",
+        help="Pipeline measurement scope for --mode pipeline",
+    )
+    run_p.add_argument(
+        "--device",
+        choices=["none", "cuda", "mps", "auto"],
+        default="none",
+        help="Device copy target for batch-copy pipeline scope",
+    )
+    run_p.add_argument(
+        "--thread-policy",
+        choices=["micro-single", "pipeline-default", "pipeline-single-worker"],
+        help="Thread policy. Defaults to micro-single for micro and pipeline-default for pipeline.",
+    )
     run_p.add_argument("--clip-length", type=int, help="Video frames per clip for scenario benchmarks")
     run_p.add_argument(
         "--decoders",
@@ -1115,32 +1176,22 @@ def build_parser() -> argparse.ArgumentParser:
 
     run_p.add_argument("--num-items", "-n", type=int, help="Number of images/videos (default depends on media type)")
     run_p.add_argument("--num-runs", "-r", type=int, default=5, help="Benchmark runs per transform (default: 5)")
-    run_p.add_argument("--max-warmup", type=int, help="Max warmup iterations (default depends on media type)")
-    run_p.add_argument("--warmup-window", type=int, default=5)
-    run_p.add_argument("--warmup-threshold", type=float, default=0.05)
-    run_p.add_argument("--min-warmup-windows", type=int, default=3)
     run_p.add_argument(
         "--slow-threshold-sec-per-item",
         type=float,
         default=None,
-        help="Skip pyperf for transforms slower than this many seconds per image/video in preflight.",
+        help="Skip micro/pipeline transforms slower than this many seconds per image/video in preflight.",
     )
     run_p.add_argument(
         "--slow-preflight-items",
         type=int,
         default=None,
-        help="Number of images/videos used for pyperf slow-transform preflight.",
+        help="Number of images/videos used for slow-transform preflight.",
     )
     run_p.add_argument(
         "--disable-slow-skip",
         action="store_true",
-        help="Run exhaustive pyperf measurements even when preflight says a transform is slow.",
-    )
-    run_p.add_argument(
-        "--timer",
-        choices=["simple", "pyperf"],
-        default="pyperf",
-        help="Micro benchmark timing backend (default: pyperf)",
+        help="Run exhaustive measurements even when preflight says a transform is slow.",
     )
     run_p.set_defaults(refresh_requirements=True)
     run_p.add_argument(

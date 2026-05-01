@@ -108,8 +108,7 @@ python -m benchmark.cli run \
   --output test_output/newlib \
   --libraries newlib \
   --num-items 10 \
-  --num-runs 1 \
-  --timer pyperf
+  --num-runs 1
 
 # Verify JSON output
 python -c "import json; print(json.load(open('test_output/newlib/image-rgb/micro/newlib_micro_results.json'))['metadata']['library_versions'])"
@@ -126,8 +125,7 @@ python -m benchmark.cli run \
   --output output/newlib_rgb_micro \
   --libraries newlib \
   --num-items 2000 \
-  --num-runs 5 \
-  --timer pyperf
+  --num-runs 5
 ```
 
 ## Step 6: Update Documentation

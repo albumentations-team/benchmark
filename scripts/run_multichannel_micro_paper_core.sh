@@ -9,7 +9,6 @@ DATA_DIR="${DATA_DIR:-}"
 OUTPUT="${OUTPUT:-output/multichannel_micro_paper_core}"
 NUM_ITEMS="${NUM_ITEMS:-2000}"
 NUM_RUNS="${NUM_RUNS:-5}"
-TIMER="${TIMER:-pyperf}"
 NO_REFRESH_REQUIREMENTS="${NO_REFRESH_REQUIREMENTS:-0}"
 PUBLISH_RESULTS="${PUBLISH_RESULTS:-1}"
 PUBLISH_FORCE="${PUBLISH_FORCE:-1}"
@@ -29,7 +28,7 @@ Usage:
   DATA_DIR=/path/to/imagenet/val scripts/run_multichannel_micro_paper_core.sh
 
 Smoke:
-  DATA_DIR=/path/to/imagenet/val NUM_ITEMS=50 NUM_RUNS=1 TIMER=simple \
+  DATA_DIR=/path/to/imagenet/val NUM_ITEMS=50 NUM_RUNS=1 \
     OUTPUT=output/multichannel_micro_paper_core_smoke PUBLISH_RESULTS=0 UPDATE_README=0 \
     scripts/run_multichannel_micro_paper_core.sh
 
@@ -44,9 +43,9 @@ fi
 
 PAPER_CORE_TRANSFORMS=(
   Resize
-  RandomCrop128
+  RandomCrop224
   RandomResizedCrop
-  CenterCrop128
+  CenterCrop224
   HorizontalFlip
   VerticalFlip
   Pad
@@ -99,7 +98,6 @@ cmd=(
   --transforms "${PAPER_CORE_TRANSFORMS[@]}"
   --num-items "$NUM_ITEMS"
   --num-runs "$NUM_RUNS"
-  --timer "$TIMER"
 )
 
 if [[ "$NO_REFRESH_REQUIREMENTS" == "1" ]]; then

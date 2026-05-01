@@ -8,9 +8,6 @@ import torchvision.transforms.v2 as tv_transforms
 from benchmark.transforms.registry import build_transforms, register_library
 from benchmark.transforms.specs import TransformSpec
 
-# Force CPU only for fair benchmarking
-torch.set_num_threads(1)
-
 # Required: Library name for dependency installation
 LIBRARY = "torchvision"
 
@@ -43,7 +40,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
             else tv_transforms.InterpolationMode.NEAREST,
             antialias=True,
         )
-    if spec.name == "RandomCrop128":
+    if spec.name == "RandomCrop224":
         return tv_transforms.RandomCrop(size=(params["height"], params["width"]), pad_if_needed=True)
     if spec.name == "RandomResizedCrop":
         return tv_transforms.RandomResizedCrop(
@@ -54,7 +51,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
             if params["interpolation"] == "bilinear"
             else tv_transforms.InterpolationMode.NEAREST,
         )
-    if spec.name == "CenterCrop128":
+    if spec.name == "CenterCrop224":
         return tv_transforms.CenterCrop(size=(params["height"], params["width"]))
     if spec.name == "HorizontalFlip":
         return tv_transforms.RandomHorizontalFlip(**params)

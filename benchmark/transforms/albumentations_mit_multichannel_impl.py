@@ -24,9 +24,6 @@ from benchmark.transforms.albumentations_compat import (
     ConstrainedCoarseDropoutWrapper as _ConstrainedCoarseDropoutWrapper,
 )
 
-cv2.setNumThreads(0)
-cv2.ocl.setUseOpenCL(False)
-
 LIBRARY = "albumentations_mit"
 
 NUM_CHANNELS = 9  # 3 RGB repetitions stacked; must match --num-channels passed to runner
@@ -78,8 +75,8 @@ TRANSFORMS = [
         "transform": A.ElasticTransform(alpha=50.0, sigma=5.0, interpolation=cv2.INTER_LINEAR, same_dxdy=True, p=1),
     },
     # --- Spatial crop / resize ---
-    {"name": "RandomCrop128", "transform": A.RandomCrop(height=128, width=128, pad_if_needed=True, p=1)},
-    {"name": "CenterCrop128", "transform": A.CenterCrop(height=128, width=128, pad_if_needed=True, p=1)},
+    {"name": "RandomCrop224", "transform": A.RandomCrop(height=224, width=224, pad_if_needed=True, p=1)},
+    {"name": "CenterCrop224", "transform": A.CenterCrop(height=224, width=224, pad_if_needed=True, p=1)},
     {
         "name": "RandomResizedCrop",
         "transform": A.RandomResizedCrop(

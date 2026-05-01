@@ -12,10 +12,13 @@ from pathlib import Path
 from typing import Any
 
 import pyperf
+from tqdm import tqdm
 
 from benchmark.results import build_metadata, summarize_runs, write_results
 from benchmark.runner import BenchmarkRunner, MediaType, load_from_python_file
 from benchmark.slow_threshold import is_slow_time_per_item, slow_threshold_info, slow_threshold_reason
+from benchmark.term import tqdm_kwargs
+from benchmark.thread_policy import apply_thread_policy
 from benchmark.utils import materialize_transform_output
 
 _SLOW_DEFAULTS: dict[MediaType, dict[str, float | int]] = {
@@ -188,8 +191,15 @@ def _run_transform_subprocesses(
         tmp_dir = Path(tmp)
         media_cache = tmp_dir / "media.pkl"
         _write_media_cache(args, media_cache, library)
-        for transform_dict in transforms:
+        transform_iter = tqdm(
+            transforms,
+            desc=f"Pyperf micro transforms ({library}, {args.media})",
+            unit="transform",
+            **tqdm_kwargs(),
+        )
+        for transform_dict in transform_iter:
             transform_name = str(transform_dict["name"])
+            transform_iter.set_postfix_str(transform_name)
             result_path = tmp_dir / f"{transform_name}.json"
             pyperf_path = tmp_dir / f"{transform_name}.pyperf.json"
             cmd = [
@@ -308,8 +318,19 @@ def _run_filtered_transforms(
     media = _read_media_cache(args.media_cache) if args.media_cache is not None else _load_media(args, library)
 
     results: dict[str, Any] = {}
-    for transform_dict in transforms:
+    progress: tqdm[dict[str, Any]] | None = None
+    if not runner.args.worker:
+        progress = tqdm(
+            transforms,
+            desc=f"Pyperf micro transforms ({library}, {args.media})",
+            unit="transform",
+            **tqdm_kwargs(),
+        )
+    transform_iter = progress if progress is not None else transforms
+    for transform_dict in transform_iter:
         transform_name = str(transform_dict["name"])
+        if progress is not None:
+            progress.set_postfix_str(transform_name)
         slow_result = None
         if not runner.args.worker:
             slow_result = _preflight_slow_transform(
@@ -387,6 +408,8 @@ def main() -> None:
         _argparser=_parser(),
     )
     args = runner.parse_args()
+
+    apply_thread_policy("micro-single")
 
     if args.transforms:
         os.environ["BENCHMARK_TRANSFORMS_FILTER"] = args.transforms

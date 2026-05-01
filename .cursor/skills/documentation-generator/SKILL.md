@@ -200,8 +200,7 @@ python -m benchmark.cli run \
   --mode micro \
   --data-dir /path/to/imagenet/val \
   --output output/rgb_micro \
-  --num-items 2000 \
-  --timer pyperf
+  --num-items 2000
 
 # 2. Update all documentation
 ./tools/update_docs.sh

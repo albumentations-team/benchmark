@@ -258,7 +258,7 @@ def doctor_report(repo_root: Path | None = None) -> dict[str, Any]:
     try:
         import pyperf  # noqa: F401
     except ImportError:
-        warnings.append("pyperf is not installed; default micro benchmarks require --timer simple or dependency setup")
+        warnings.append("pyperf is not installed; micro benchmarks require pyperf")
 
     if env["git"].get("dirty"):
         warnings.append("git working tree is dirty; record this in paper/release benchmark artifacts")

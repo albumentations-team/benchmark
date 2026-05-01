@@ -237,7 +237,6 @@ for MACHINE_TYPE in $MACHINE_TYPES; do
     --libraries albumentationsx torchvision kornia pillow
     --num-items "$NUM_ITEMS"
     --num-runs "$NUM_RUNS"
-    --timer pyperf
   )
   if [[ -n "$TRANSFORMS" ]]; then
     cmd+=(--transforms "$TRANSFORMS")

@@ -14,6 +14,7 @@ class CoverageRequirement:
     libraries: tuple[str, ...]
     needs_pyperf: bool = False
     optional_libraries: tuple[str, ...] = ()
+    pipeline_scopes: tuple[str, ...] = ()
 
     @property
     def relative_dir(self) -> Path:
@@ -37,11 +38,13 @@ CORE_REQUIREMENTS: tuple[CoverageRequirement, ...] = (
         scenario="image-rgb",
         mode="pipeline",
         libraries=("albumentationsx", "torchvision", "kornia", "pillow"),
+        pipeline_scopes=("memory_dataloader_augment", "decode_dataloader_augment"),
     ),
     CoverageRequirement(
         scenario="image-9ch",
         mode="pipeline",
         libraries=("albumentationsx", "torchvision", "kornia"),
+        pipeline_scopes=("memory_dataloader_augment", "decode_dataloader_augment"),
     ),
     CoverageRequirement(
         scenario="video-16f",
@@ -54,6 +57,7 @@ CORE_REQUIREMENTS: tuple[CoverageRequirement, ...] = (
         mode="pipeline",
         libraries=("albumentationsx", "torchvision", "kornia"),
         optional_libraries=("dali",),
+        pipeline_scopes=("memory_dataloader_augment", "decode_dataloader_augment"),
     ),
 )
 
@@ -72,6 +76,18 @@ def _has_file(dirs: list[Path], filename: str) -> bool:
     return any((directory / filename).is_file() for directory in dirs)
 
 
+def _has_pipeline_file(dirs: list[Path], library: str, scope: str) -> bool:
+    pattern = f"{library}_{scope}_n*_r*_w*_b*_results.json"
+    return any(any(directory.glob(pattern)) for directory in dirs)
+
+
+def _summary_files(requirement: CoverageRequirement, library: str) -> list[str]:
+    if not requirement.pipeline_scopes:
+        return [f"{library}_{requirement.mode}_results.json"]
+    scopes = ("decode_dataloader_augment",) if library == "dali" else requirement.pipeline_scopes
+    return [f"{library}_{scope}_n*_r*_w*_b*_results.json" for scope in scopes]
+
+
 def missing_artifacts(
     results_roots: list[Path],
     *,
@@ -88,9 +104,19 @@ def missing_artifacts(
         if require_optional_libraries:
             libraries += requirement.optional_libraries
         for library in libraries:
-            summary_file = f"{library}_{requirement.mode}_results.json"
-            if not _has_file(dirs, summary_file):
-                missing.append(f"{requirement.scenario}/{requirement.mode}: missing {summary_file}")
+            if requirement.pipeline_scopes:
+                scopes = ("decode_dataloader_augment",) if library == "dali" else requirement.pipeline_scopes
+                missing.extend(
+                    f"{requirement.scenario}/{requirement.mode}: missing {library}_{scope}_n*_r*_w*_b*_results.json"
+                    for scope in scopes
+                    if not _has_pipeline_file(dirs, library, scope)
+                )
+            else:
+                missing.extend(
+                    f"{requirement.scenario}/{requirement.mode}: missing {summary_file}"
+                    for summary_file in _summary_files(requirement, library)
+                    if not _has_file(dirs, summary_file)
+                )
             if requirement.needs_pyperf:
                 pyperf_file = f"{library}_{requirement.mode}_results.pyperf.json"
                 if not _has_file(dirs, pyperf_file):

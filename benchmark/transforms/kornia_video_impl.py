@@ -286,7 +286,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
             p=1,
             same_on_batch=True,
         ).to(device)
-    if spec.name == "CenterCrop128":
+    if spec.name == "CenterCrop224":
         return _CenterCropWithPad(size=(params["height"], params["width"])).to(device)
     if spec.name == "Affine":
         # Create a simple affine transform with fixed parameters
@@ -309,7 +309,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
             padding_mode="zeros",
             align_corners=True,
         ).to(device)
-    if spec.name == "RandomCrop128":
+    if spec.name == "RandomCrop224":
         return Kaug.RandomCrop(
             size=(params["height"], params["width"]),
             pad_if_needed=True,

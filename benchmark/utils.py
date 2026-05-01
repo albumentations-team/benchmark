@@ -25,8 +25,9 @@ def read_img_cv2(path: Path) -> np.ndarray:
 def read_img_torch(path: Path) -> Any:  # torch.Tensor
     """Read image using torchvision"""
     import torchvision
+    from torchvision.io import ImageReadMode
 
-    return torchvision.io.read_image(str(path))  # Shape: (C, H, W)
+    return torchvision.io.read_image(str(path), mode=ImageReadMode.RGB)  # Shape: (C, H, W)
 
 
 def read_img_kornia(path: Path) -> Any:  # torch.Tensor

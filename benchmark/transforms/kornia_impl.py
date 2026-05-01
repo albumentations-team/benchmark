@@ -17,9 +17,6 @@ from benchmark.transforms.specs import TransformSpec
 # Required: Library name for dependency installation
 LIBRARY = "kornia"
 
-# Force single thread for fair comparison with albumentationsx and torchvision
-torch.set_num_threads(1)
-
 
 class _CenterCropWithPad(torch.nn.Module):
     def __init__(self, size: tuple[int, int]) -> None:
@@ -260,7 +257,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
             thresholds=params["threshold"],
             p=1,
         )
-    if spec.name == "CenterCrop128":
+    if spec.name == "CenterCrop224":
         return _CenterCropWithPad(size=(params["height"], params["width"]))
     if spec.name == "Affine":
         angle_degrees = float(params["angle"])
@@ -278,7 +275,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
             padding_mode="zeros",
             align_corners=True,
         )
-    if spec.name == "RandomCrop128":
+    if spec.name == "RandomCrop224":
         return Kaug.RandomCrop(
             size=(params["height"], params["width"]),
             pad_if_needed=True,

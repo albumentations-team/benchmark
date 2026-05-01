@@ -185,8 +185,7 @@ python -m benchmark.cli run \
   --output test_output/custom_spec \
   --spec my_transforms.py \
   --num-items 10 \
-  --num-runs 1 \
-  --timer pyperf
+  --num-runs 1
 ```
 
 Check output:
