@@ -12,6 +12,12 @@ from pathlib import Path
 import pandas as pd
 
 
+def _rows_for_transform(df: pd.DataFrame, transform: str) -> pd.DataFrame:
+    """Boolean row filter as a DataFrame (``df[bool]`` is typed as a union in pandas-stubs)."""
+    mask = df["transform"] == transform
+    return df.loc[mask, :]
+
+
 def _sort_by_throughput_desc(frame: pd.DataFrame) -> pd.DataFrame:
     """Descending sort by ``throughput`` without ``DataFrame.sort_values``.
 
@@ -56,7 +62,7 @@ def print_analysis(df: pd.DataFrame) -> None:
 
     # Group by transform type
     for transform in sorted(df["transform"].unique()):
-        transform_df = _sort_by_throughput_desc(df[df["transform"] == transform])
+        transform_df = _sort_by_throughput_desc(_rows_for_transform(df, transform))
 
         if len(transform_df) > 1:
             print(f"\n{transform}:")
@@ -88,7 +94,7 @@ def export_summary(df: pd.DataFrame, output_file: Path) -> None:
     # Create summary with best config for each transform
     summary = []
     for transform in df["transform"].unique():
-        transform_df = _sort_by_throughput_desc(df[df["transform"] == transform])
+        transform_df = _sort_by_throughput_desc(_rows_for_transform(df, transform))
         best = transform_df.iloc[0]
         summary.append(
             {
