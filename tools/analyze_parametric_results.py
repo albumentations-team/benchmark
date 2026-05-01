@@ -44,7 +44,7 @@ def print_analysis(df: pd.DataFrame) -> None:
 
     # Group by transform type
     for transform in sorted(df["transform"].unique()):
-        transform_df = df[df["transform"] == transform].sort_values("throughput", ascending=False)
+        transform_df = df[df["transform"] == transform].sort_values(by=["throughput"], ascending=[False])
 
         if len(transform_df) > 1:
             print(f"\n{transform}:")
@@ -76,8 +76,8 @@ def export_summary(df: pd.DataFrame, output_file: Path) -> None:
     # Create summary with best config for each transform
     summary = []
     for transform in df["transform"].unique():
-        transform_df = df[df["transform"] == transform]
-        best = transform_df.loc[transform_df["throughput"].idxmax()]
+        transform_df = df[df["transform"] == transform].sort_values(by=["throughput"], ascending=[False])
+        best = transform_df.iloc[0]
         summary.append(
             {
                 "transform": transform,
