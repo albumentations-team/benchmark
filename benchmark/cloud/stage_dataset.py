@@ -48,11 +48,23 @@ def default_micro_limit(media: MediaName) -> int:
 
 
 def build_stage_plan(job: dict[str, Any]) -> DatasetStagePlan:
-    args = [str(arg) for arg in job["benchmark_cli_args"]]
+    run_config = job.get("run_config")
     gcs_data_uri = str(job["gcs_data_uri"])
-    media = infer_media(args)
-    mode = value_after_flag(args, "--mode")
-    num_items = value_after_flag(args, "--num-items")
+    if isinstance(run_config, dict):
+        selection = run_config.get("selection", {})
+        data = run_config.get("data", {})
+        media = (
+            "video" if str(selection.get("scenario", "")).startswith("video") else str(selection.get("media", "image"))
+        )
+        scenario = str(selection.get("scenario", ""))
+        mode = str(selection.get("mode") or ("decode" if scenario.startswith("video-decode") else "micro"))
+        num_items = str(data.get("num_items") or "")
+    else:
+        args = [str(arg) for arg in job["benchmark_cli_args"]]
+        media = infer_media(args)
+        mode = value_after_flag(args, "--mode")
+        num_items = value_after_flag(args, "--num-items")
+    media = cast("MediaName", media if media in MEDIA_SUFFIXES else "image")
     is_archive = gcs_data_uri.lower().endswith(ARCHIVE_SUFFIXES)
 
     if mode == "micro" and not is_archive:

@@ -71,3 +71,19 @@ def test_video_micro_plan_uses_video_default_limit() -> None:
 
     assert plan.media == "video"
     assert plan.limit == 50
+
+
+def test_stage_plan_accepts_typed_run_config_payload() -> None:
+    job = {
+        "gcs_data_uri": "gs://bucket/imagenet-val.tar",
+        "run_config": {
+            "selection": {"scenario": "image-rgb", "mode": "micro"},
+            "data": {"num_items": 123},
+        },
+    }
+
+    plan = build_stage_plan(job)
+
+    assert plan.media == "image"
+    assert plan.mode == "micro"
+    assert plan.limit == 123

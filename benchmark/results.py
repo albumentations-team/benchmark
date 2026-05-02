@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -118,6 +119,8 @@ def build_metadata(
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
     package_key = library or decoder or "benchmark"
+    run_config_json = os.environ.get("BENCHMARK_RUN_CONFIG_JSON")
+    run_config = json.loads(run_config_json) if run_config_json else None
     return {
         "system_info": get_system_info(),
         "library_versions": get_library_versions(package_key),
@@ -139,6 +142,7 @@ def build_metadata(
         "library": library,
         "decoder": decoder,
         "benchmark_params": benchmark_params or {},
+        "run_config": run_config,
     }
 
 

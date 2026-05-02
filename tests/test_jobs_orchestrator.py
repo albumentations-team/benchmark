@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
+from benchmark.config import load_run_config
 from benchmark.dali_pipeline_worker import benchmark_job_from_json_dict
 from benchmark.jobs import BenchmarkJob
 from benchmark.orchestrator import execute_job
@@ -63,6 +64,24 @@ def test_video_micro_job_passes_clip_length_to_pyperf_runner(tmp_path: Path) -> 
     cmd = job.micro_command(tmp_path / ".venv" / "bin" / "python")
 
     assert cmd[cmd.index("--clip-length") + 1] == "8"
+
+
+def test_job_can_be_built_from_run_config(tmp_path: Path) -> None:
+    config = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml"))
+
+    job = BenchmarkJob.from_run_config(
+        library="kornia",
+        config=config,
+        data_dir=tmp_path / "data",
+        output_file=tmp_path / "out.json",
+        num_channels=3,
+        clip_length=16,
+        spec_file=tmp_path / "spec.py",
+    )
+
+    assert job.mode == "pipeline"
+    assert job.pipeline_scope == "decode_dataloader_augment"
+    assert job.device == "cuda"
 
 
 def test_execute_job_deletes_pyperf_sidecar_before_micro_run(tmp_path: Path) -> None:

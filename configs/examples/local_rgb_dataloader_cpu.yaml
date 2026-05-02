@@ -1,0 +1,19 @@
+version: 1
+selection:
+  scenario: image-rgb
+  mode: pipeline
+  libraries: [albumentationsx, torchvision, kornia, pillow]
+  transform_set: paper
+data:
+  data_dir: /path/to/imagenet/val
+  num_items: 2000
+output:
+  output_dir: output/rgb_dataloader_memory
+execution:
+  pipeline_scope: memory_dataloader_augment
+  num_runs: 1
+  batch_size: 256
+  workers: 8
+  min_time: 0
+  thread_policy: pipeline-single-worker
+  device: none

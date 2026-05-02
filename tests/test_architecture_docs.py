@@ -5,6 +5,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCHITECTURE_MODULES = (
     "benchmark/cli.py",
+    "benchmark/config/models.py",
+    "benchmark/config/plan.py",
+    "benchmark/config/resolve.py",
     "benchmark/matrix.py",
     "benchmark/devices.py",
     "benchmark/policy.py",

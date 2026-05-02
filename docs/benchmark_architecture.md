@@ -5,7 +5,14 @@ features in these modules unless there is a strong reason to put logic directly 
 
 ## Control Plane
 
-- `benchmark/cli.py` parses arguments and keeps backwards-compatible helper wrappers for existing tests and scripts.
+- `benchmark/cli.py` parses arguments and keeps backwards-compatible helper wrappers for existing tests and scripts. It
+  resolves old flags or YAML files into typed run configs before launching work.
+- `benchmark/config/models.py` defines the Pydantic run config schema for selection, data, execution, output, and cloud
+  settings. Config validation catches unsupported combinations before local work or VM creation starts.
+- `benchmark/config/resolve.py` loads YAML configs, applies supported CLI overrides, writes `resolved_config.yaml`, and
+  converts typed configs to legacy namespaces during the migration.
+- `benchmark/config/plan.py` expands a resolved config into a dry-run plan: generated jobs, expected result files, and
+  cloud target settings.
 - `benchmark/matrix.py` is the declarative benchmark matrix: scenarios, modes, library spec files, requirements, joined
   environment groups, paper transform-set files, device support, pipeline scopes, and backend selection.
 - `benchmark/jobs.py` defines immutable `BenchmarkJob` objects and builds subprocess commands for micro and pipeline jobs.
@@ -57,6 +64,8 @@ features in these modules unless there is a strong reason to put logic directly 
 
 ```text
 benchmark.cli
+  -> benchmark.config resolves YAML/flags into BenchmarkRunConfig
+  -> benchmark.config.plan expands generated jobs for dry-run/debug output
   -> benchmark.scenarios resolves scenario/mode/libraries
   -> benchmark.matrix resolves spec/env/backend policy
   -> benchmark.jobs builds BenchmarkJob
@@ -67,6 +76,8 @@ benchmark.cli
 ## Extension Rules
 
 - Add new scenario/library/mode support in `benchmark/matrix.py` first.
+- Add new config fields in `benchmark/config/models.py` first, with validation and YAML examples when the field is
+  user-facing.
 - Add new shared defaults in `benchmark/policy.py`, not separately in micro and pipeline runners.
 - Add new device behavior in `benchmark/devices.py`, then plumb it through jobs/runners.
 - Add new command construction to `benchmark/jobs.py`, not inline in `benchmark/cli.py`.
@@ -79,6 +90,9 @@ benchmark.cli
 
 Architecture-sensitive tests live in:
 
+- `tests/test_config_models.py`: typed config loading, CLI override precedence, validation failures, legacy namespace
+  conversion.
+- `tests/test_config_plan.py`: config-to-plan expansion for micro, pipeline, decode, expected outputs, and cloud fields.
 - `tests/test_matrix.py`: scenario/mode/library matrix, spec paths, requirements, paper transform sets, device policy.
 - `tests/test_jobs_orchestrator.py`: job command construction, pyperf sidecar cleanup, DALI backend dispatch, GCP attached
   cleanup on failure.

@@ -393,16 +393,14 @@ repo = Path("""
     + repr(_VM_REPODIR)
     + r""")
 j = json.loads((work / "job.json").read_text())
-rc = subprocess.call(
-    [
-        os.environ["CONTROL_PYTHON"],
-        "-m",
-        "benchmark.cli",
-        "run",
-        *j["benchmark_cli_args"],
-    ],
-    cwd=repo,
-)
+cmd = [os.environ["CONTROL_PYTHON"], "-m", "benchmark.cli", "run"]
+if j.get("run_config"):
+    config_path = work / "job_config.yaml"
+    config_path.write_text(json.dumps(j["run_config"], indent=2), encoding="utf-8")
+    cmd.extend(["--resolved-config", str(config_path)])
+else:
+    cmd.extend(j["benchmark_cli_args"])
+rc = subprocess.call(cmd, cwd=repo)
 (work / "benchmark_exit_code.txt").write_text(str(rc))
 sys.exit(0)
 PY
@@ -888,6 +886,8 @@ def build_gcp_job_dict(
     run_id: str,
     gcs_data_uri: str,
     benchmark_cli_args: list[str],
+    run_config: dict[str, Any] | None = None,
+    cloud_config: dict[str, Any] | None = None,
     terminate_instance: bool,
     keep_instance_on_failure: bool,
     venv_cache_uri: str,
@@ -905,6 +905,8 @@ def build_gcp_job_dict(
         "venv_cache_uri": _validate_gs_uri(venv_cache_uri, kind="--gcp-venv-cache-uri") if venv_cache_uri else "",
         "force_venv_cache_rebuild": force_venv_cache_rebuild,
         "benchmark_cli_args": benchmark_cli_args,
+        "run_config": run_config,
+        "cloud_config": cloud_config,
         "submission": submission,
         "instance": instance_meta,
     }

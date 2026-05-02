@@ -25,14 +25,26 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 import time
 from pathlib import Path
 from typing import Literal, TypedDict, cast
 
+import yaml  # type: ignore[import-untyped,unused-ignore]
+from pydantic import ValidationError
 from tqdm import tqdm
 
 from benchmark import envs
+from benchmark.config import (
+    BenchmarkRunConfig,
+    apply_cli_overrides,
+    build_run_plan,
+    config_to_namespace,
+    load_run_config,
+    run_config_from_args,
+    write_resolved_config,
+)
 from benchmark.devices import ensure_supported_device
 from benchmark.jobs import BenchmarkJob
 from benchmark.matrix import (
@@ -54,6 +66,10 @@ from benchmark.orchestrator import execute_job
 from benchmark.term import configure_logging, tqdm_kwargs
 
 logger = logging.getLogger(__name__)
+
+
+def _collect_provided_flags(argv: list[str]) -> set[str]:
+    return {arg.split("=", 1)[0] for arg in argv if arg.startswith("--")}
 
 
 # ---------------------------------------------------------------------------
@@ -415,7 +431,25 @@ def _default_gcp_venv_cache_uri(results_uri: str) -> str:
     return f"{parent}/augmentation-cache"
 
 
-def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Path) -> None:
+def _remote_run_config(
+    config: BenchmarkRunConfig,
+    *,
+    data_dir: str,
+    output: str,
+) -> dict[str, object]:
+    data = config.model_dump(mode="json", exclude_none=True)
+    data["data"]["data_dir"] = data_dir
+    data["output"]["output_dir"] = output
+    data["cloud"] = None
+    return BenchmarkRunConfig.model_validate(data).model_dump(mode="json", exclude_none=True)
+
+
+def _cmd_run_gcp(
+    args: argparse.Namespace,
+    repo_root: Path,
+    local_output_dir: Path,
+    run_config: BenchmarkRunConfig | None = None,
+) -> None:
     """Run benchmarks on a GCP instance (detached by default)."""
     from benchmark.cloud.gcp import GCPRunner, build_gcp_job_dict, new_run_id
     from benchmark.cloud.instance import GCPInstanceConfig, is_gpu_machine_type
@@ -445,7 +479,6 @@ def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Pa
         except ValueError as e:
             logger.error("%s", e)  # noqa: TRY400
             sys.exit(1)
-
         config = GCPInstanceConfig(
             project=args.gcp_project,
             zone=args.gcp_zone,
@@ -497,6 +530,11 @@ def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Pa
     except ValueError as e:
         logger.error("%s", e)  # noqa: TRY400
         sys.exit(1)
+    remote_config = (
+        _remote_run_config(run_config, data_dir=_gcp_staged_data_dir(), output="/root/benchmark-work/results")
+        if run_config
+        else None
+    )
 
     submission = {
         "argv": sys.argv,
@@ -513,6 +551,10 @@ def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Pa
         run_id=run_id,
         gcs_data_uri=args.gcp_gcs_data_uri,
         benchmark_cli_args=bench_argv,
+        run_config=remote_config,
+        cloud_config=run_config.cloud.model_dump(mode="json", exclude_none=True)
+        if run_config and run_config.cloud
+        else None,
         terminate_instance=not args.gcp_keep_instance,
         keep_instance_on_failure=args.gcp_keep_on_failure,
         venv_cache_uri=""
@@ -589,11 +631,58 @@ def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Pa
 # ---------------------------------------------------------------------------
 
 
+def _resolve_run_config(args: argparse.Namespace) -> BenchmarkRunConfig:
+    try:
+        if getattr(args, "resolved_config", None):
+            return load_run_config(Path(args.resolved_config))
+        if getattr(args, "config", None):
+            return apply_cli_overrides(load_run_config(Path(args.config)), args)
+        return run_config_from_args(args)
+    except (TypeError, ValidationError, ValueError) as e:
+        logger.error("Invalid benchmark run config: %s", e)  # noqa: TRY400
+        sys.exit(1)
+
+
+def _log_run_summary(config: BenchmarkRunConfig) -> None:
+    cloud = config.cloud.provider if config.cloud and config.cloud.enabled else "local"
+    logger.info(
+        "Resolved run: scenario=%s mode=%s libraries=%s data=%s output=%s device=%s cloud=%s",
+        config.selection.scenario or "manual",
+        config.selection.mode or "default",
+        config.selection.libraries or "default",
+        config.data.gcs_uri or config.data.data_dir,
+        config.output.output_dir,
+        config.execution.device,
+        cloud,
+    )
+
+
+def _plan_payload(config: BenchmarkRunConfig, repo_root: Path) -> dict[str, object]:
+    plan = build_run_plan(config, repo_root)
+    return {
+        "resolved_config": json.loads(config.model_dump_json(exclude_none=True)),
+        "plan": plan.to_dict(),
+    }
+
+
+def _print_dry_run(config: BenchmarkRunConfig, repo_root: Path) -> None:
+    payload = _plan_payload(config, repo_root)
+    print(yaml.safe_dump(payload, sort_keys=False))
+
+
 def cmd_run(args: argparse.Namespace) -> None:
     repo_root = Path(__file__).parent.parent.resolve()
+    run_config = _resolve_run_config(args)
+    _log_run_summary(run_config)
+    os.environ["BENCHMARK_RUN_CONFIG_JSON"] = run_config.model_dump_json(exclude_none=True)
+    if args.dry_run:
+        _print_dry_run(run_config, repo_root)
+        return
+    args = config_to_namespace(run_config, verbose=args.verbose)
     media: str = args.media
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
+    write_resolved_config(run_config, output_dir / "resolved_config.yaml")
 
     # --multichannel: use 9ch specs, output to output/multichannel/
     if getattr(args, "multichannel", False) and media == "image":
@@ -606,7 +695,7 @@ def cmd_run(args: argparse.Namespace) -> None:
     # Cloud path: delegate the whole run to a GCP instance
     # ------------------------------------------------------------------
     if args.cloud == "gcp":
-        _cmd_run_gcp(args, repo_root, output_dir)
+        _cmd_run_gcp(args, repo_root, output_dir, run_config=run_config)
         return
 
     if args.scenario:
@@ -688,6 +777,14 @@ def cmd_run(args: argparse.Namespace) -> None:
     logger.info("All benchmarks complete. Results in: %s", output_dir)
 
 
+def cmd_plan(args: argparse.Namespace) -> None:
+    repo_root = Path(__file__).parent.parent.resolve()
+    run_config = _resolve_run_config(args)
+    _log_run_summary(run_config)
+    payload = _plan_payload(run_config, repo_root)
+    print(yaml.safe_dump(payload, sort_keys=False))
+
+
 # ---------------------------------------------------------------------------
 # `compare` subcommand  (Todo 4: regression detection)
 # ---------------------------------------------------------------------------
@@ -764,8 +861,11 @@ def build_parser() -> argparse.ArgumentParser:
     # run
     # ------------------------------------------------------------------
     run_p = subparsers.add_parser("run", help="Run benchmarks")
-    run_p.add_argument("--data-dir", "-d", required=True, help="Directory with images or videos")
-    run_p.add_argument("--output", "-o", required=True, help="Directory to write result JSON files")
+    run_p.add_argument("--config", type=Path, help="YAML benchmark run config")
+    run_p.add_argument("--resolved-config", type=Path, help=argparse.SUPPRESS)
+    run_p.add_argument("--dry-run", action="store_true", help="Print the resolved config and exit without running")
+    run_p.add_argument("--data-dir", "-d", help="Directory with images or videos")
+    run_p.add_argument("--output", "-o", help="Directory to write result JSON files")
     run_p.add_argument(
         "--media",
         choices=["image", "video"],
@@ -955,6 +1055,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     # ------------------------------------------------------------------
+    # plan
+    # ------------------------------------------------------------------
+    plan_p = subparsers.add_parser("plan", help="Print resolved config, generated jobs, and expected outputs")
+    plan_p.add_argument("--config", type=Path, required=True, help="YAML benchmark run config")
+    plan_p.add_argument("--resolved-config", type=Path, help=argparse.SUPPRESS)
+    plan_p.add_argument("--output", "-o", help="Override output.output_dir")
+    plan_p.add_argument("--num-items", "-n", type=int, help="Override data.num_items")
+    plan_p.add_argument("--num-runs", "-r", type=int, help="Override execution.num_runs")
+    plan_p.add_argument("--device", choices=["none", "cuda", "mps", "auto"], help="Override execution.device")
+    plan_p.add_argument("--workers", type=int, help="Override execution.workers")
+    plan_p.add_argument("--batch-size", type=int, help="Override execution.batch_size")
+    plan_p.add_argument("--gcp-dry-run", action="store_true", help="Override cloud.dry_run")
+
+    # ------------------------------------------------------------------
     # compare
     # ------------------------------------------------------------------
     cmp_p = subparsers.add_parser("compare", help="Compare two result directories")
@@ -1004,6 +1118,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
+    vars(args)["_provided_flags"] = _collect_provided_flags(sys.argv[1:])
 
     configure_logging(
         logging.DEBUG if args.verbose else logging.INFO,
@@ -1012,6 +1127,8 @@ def main() -> None:
 
     if args.command == "run":
         cmd_run(args)
+    elif args.command == "plan":
+        cmd_plan(args)
     elif args.command == "compare":
         cmd_compare(args)
     elif args.command == "doctor":

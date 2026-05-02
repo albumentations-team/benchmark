@@ -45,6 +45,14 @@ def test_build_metadata_includes_timing_and_dataset(tmp_path) -> None:
     assert metadata["environment"]["git"]["branch"] is not None
 
 
+def test_build_metadata_embeds_resolved_run_config(monkeypatch) -> None:
+    monkeypatch.setenv("BENCHMARK_RUN_CONFIG_JSON", json.dumps({"selection": {"scenario": "image-rgb"}}))
+
+    metadata = build_metadata(scenario="image-rgb", mode="micro", library="torchvision")
+
+    assert metadata["run_config"] == {"selection": {"scenario": "image-rgb"}}
+
+
 def test_dataset_fingerprint_counts_files(tmp_path) -> None:
     (tmp_path / "a.jpg").write_bytes(b"a")
     (tmp_path / "b.txt").write_bytes(b"b")

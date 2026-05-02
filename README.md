@@ -442,7 +442,21 @@ This will give you more relevant performance metrics for your specific use case.
 
 ## Running Benchmarks
 
-All benchmarks use the unified CLI: `python -m benchmark.cli run`. Use `--media` for image vs video, `--multichannel` for 9-channel image benchmarks, and `--libraries` to restrict to one or more libraries.
+All benchmarks use the unified CLI: `python -m benchmark.cli run`. Prefer checked-in YAML configs for paper and cloud
+runs, and use direct flags for quick local iteration. Config files are validated with Pydantic before work starts and the
+resolved config is written to `resolved_config.yaml` in the output directory.
+
+```bash
+python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml
+python -m benchmark.cli plan --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml
+python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml --num-items 25
+```
+
+Use `benchmark plan --config ...` or `benchmark run --config ... --dry-run` to print the resolved config, generated jobs,
+expected output files, and cloud VM settings without starting local measurements or creating a VM.
+
+The legacy flag interface remains supported. Use `--media` for image vs video, `--multichannel` for 9-channel image benchmarks, and `--libraries` to restrict to one or more libraries.
 
 The CLI creates joined virtual environments for compatible libraries, for example `.venv_albumentationsx` for AlbumentationsX and `.venv_torch_stack` for torchvision, Kornia, and Pillow image benchmarks. By default, each run refreshes `requirements/*.txt` from `requirements/*.in` with the latest compatible package versions, then installs dependencies only when the resolved requirement files changed. Pass `--no-refresh-requirements` for offline/debug reruns that should reuse the existing lock files and venv cache.
 
@@ -563,7 +577,10 @@ Run benchmarks on a **Compute Engine** VM that starts from your laptop, then kee
 
 **Submit a detached run**
 
-`--data-dir` and `--output` are still required by the parser; for detached mode they are only used locally to write `gcp_last_run.json` (and as a hint path for copying results). Point the real dataset at GCS:
+Config-based detached runs carry a typed `run_config` in `job.json`; the VM writes that config to disk and runs
+`benchmark.cli` with `--resolved-config`. Legacy `benchmark_cli_args` are still included as a compatibility fallback.
+
+For flag-based detached runs, `--data-dir` and `--output` are local hints; point the real dataset at GCS:
 
 ```bash
 python -m benchmark.cli run \

@@ -6,15 +6,13 @@ import argparse
 import json
 import subprocess
 import sys
-from typing import TYPE_CHECKING
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
 from benchmark.cli import (
+    _collect_provided_flags,
     _compile_requirements,
     _extract_library,
     _library_env_group,
@@ -41,6 +39,12 @@ class TestBuildParser:
         args = parser.parse_args(["compare", "--baseline", "/baseline", "--current", "/current"])
         assert args.command == "compare"
 
+    def test_plan_subcommand_exists(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["plan", "--config", "configs/examples/local_rgb_micro_cpu.yaml"])
+        assert args.command == "plan"
+        assert args.config == Path("configs/examples/local_rgb_micro_cpu.yaml")
+
     def test_doctor_subcommand_exists(self) -> None:
         parser = build_parser()
         args = parser.parse_args(["doctor", "--json"])
@@ -53,15 +57,21 @@ class TestBuildParser:
         assert args.command == "validate-results"
         assert args.path == "/results"
 
-    def test_run_requires_data_dir(self) -> None:
+    def test_run_allows_config_without_data_dir(self) -> None:
         parser = build_parser()
-        with pytest.raises(SystemExit):
-            parser.parse_args(["run", "--output", "/out"])
+        args = parser.parse_args(["run", "--config", "config.yaml"])
+        assert args.config == Path("config.yaml")
 
-    def test_run_requires_output(self) -> None:
+    def test_run_allows_config_without_output(self) -> None:
         parser = build_parser()
-        with pytest.raises(SystemExit):
-            parser.parse_args(["run", "--data-dir", "/data"])
+        args = parser.parse_args(["run", "--config", "config.yaml"])
+        assert args.output is None
+
+    def test_collect_provided_flags_supports_equals_form(self) -> None:
+        assert _collect_provided_flags(["run", "--config=c.yaml", "--num-items=5"]) == {
+            "--config",
+            "--num-items",
+        }
 
     def test_compare_requires_baseline(self) -> None:
         parser = build_parser()
@@ -569,6 +579,27 @@ class TestCmdRunGcp:
         assert "--media" in argv
         assert "video" in argv
         assert "kornia" in argv
+
+
+def test_gcp_job_dict_can_carry_typed_config() -> None:
+    from benchmark.cloud.gcp import build_gcp_job_dict
+
+    job = build_gcp_job_dict(
+        run_id="abc",
+        gcs_data_uri="gs://bucket/data.tar",
+        benchmark_cli_args=["--scenario", "image-rgb"],
+        run_config={"selection": {"scenario": "image-rgb"}},
+        cloud_config={"provider": "gcp", "project": "p"},
+        terminate_instance=True,
+        keep_instance_on_failure=False,
+        venv_cache_uri="",
+        force_venv_cache_rebuild=False,
+        submission={},
+        instance_meta={},
+    )
+
+    assert job["run_config"] == {"selection": {"scenario": "image-rgb"}}
+    assert job["cloud_config"] == {"provider": "gcp", "project": "p"}
 
 
 class TestExtractLibrary:
