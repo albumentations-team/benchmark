@@ -15,6 +15,7 @@ features in these modules unless there is a strong reason to put logic directly 
   cloud target settings.
 - `benchmark/config/transform_sets.py` expands named transform sets into concrete transform names before configs are
   written to metadata or executed.
+- `benchmark/config/env.py` owns the environment handoff that embeds resolved run configs in result metadata.
 - `benchmark/matrix.py` is the declarative benchmark matrix: scenarios, modes, library spec files, requirements, joined
   environment groups, paper transform-set files, device support, pipeline scopes, and backend selection.
 - `benchmark/jobs.py` defines immutable `BenchmarkJob` objects and builds subprocess commands for micro and pipeline jobs.
@@ -71,6 +72,7 @@ features in these modules unless there is a strong reason to put logic directly 
 benchmark.cli
   -> benchmark.config resolves YAML/flags into BenchmarkRunConfig
   -> benchmark.config.transform_sets expands named transform sets
+  -> benchmark.config.env installs resolved config metadata for runners
   -> benchmark.config.plan expands generated jobs for dry-run/debug output
   -> benchmark.scenarios resolves scenario/mode/libraries
   -> benchmark.matrix resolves spec/env/backend policy
