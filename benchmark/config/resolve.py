@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import json
 from typing import TYPE_CHECKING, Any
 
@@ -16,6 +15,7 @@ from benchmark.config.models import (
 )
 
 if TYPE_CHECKING:
+    import argparse
     from pathlib import Path
 
 
@@ -54,20 +54,6 @@ def remote_run_config_payload(
     data["output"]["output_dir"] = output_dir
     data["cloud"] = None
     return run_config_payload(BenchmarkRunConfig.model_validate(data))
-
-
-def config_to_namespace(config: BenchmarkRunConfig, *, verbose: bool = False) -> argparse.Namespace:
-    values = config.to_legacy_args()
-    values.update(
-        {
-            "command": "run",
-            "config": None,
-            "resolved_config": None,
-            "dry_run": False,
-            "verbose": verbose,
-        },
-    )
-    return argparse.Namespace(**values)
 
 
 def run_config_from_args(args: argparse.Namespace) -> BenchmarkRunConfig:

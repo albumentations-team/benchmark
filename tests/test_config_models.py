@@ -15,7 +15,6 @@ from benchmark.config import (
     OutputConfig,
     SelectionConfig,
     apply_cli_overrides,
-    config_to_namespace,
     install_run_config_env,
     load_run_config,
     remote_run_config_payload,
@@ -112,17 +111,6 @@ def test_cli_overrides_apply_after_yaml_config() -> None:
     assert resolved.execution.num_runs == 2
 
 
-def test_config_to_namespace_keeps_legacy_cli_shape() -> None:
-    config = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml"))
-
-    args = config_to_namespace(config)
-
-    assert args.scenario == "image-rgb"
-    assert args.mode == "pipeline"
-    assert args.gcp_machine_type == "g2-standard-16"
-    assert args.device == "cuda"
-
-
 def test_config_exposes_resolved_scenario_fields() -> None:
     config = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml"))
 
@@ -152,6 +140,8 @@ def test_run_config_env_roundtrip() -> None:
         install_run_config_env(config)
 
         assert RUN_CONFIG_ENV_VAR in os.environ
-        assert run_config_payload_from_env()["selection"]["scenario"] == "image-rgb"
+        payload = run_config_payload_from_env()
+        assert payload is not None
+        assert payload["selection"]["scenario"] == "image-rgb"
     finally:
         os.environ.pop(RUN_CONFIG_ENV_VAR, None)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -160,52 +160,3 @@ class BenchmarkRunConfig(StrictModel):
             raise ValueError("data.gcs_uri is required for detached GCP runs")
         if not self.output.gcs_results_uri:
             raise ValueError("output.gcs_results_uri is required for detached GCP runs")
-
-    def to_legacy_args(self) -> dict[str, Any]:
-        cloud = self.cloud or CloudConfig()
-        return {
-            "data_dir": self.data.data_dir or "unused",
-            "output": self.output.output_dir or "output",
-            "media": self.resolved_media(),
-            "libraries": self.selection.libraries,
-            "transforms": self.selection.transforms,
-            "transform_set": self.selection.transform_set,
-            "spec": self.selection.spec,
-            "scenario": self.selection.scenario,
-            "mode": self.resolved_mode(),
-            "batch_size": self.execution.batch_size,
-            "workers": self.execution.workers,
-            "min_time": self.execution.min_time,
-            "min_batches": self.execution.min_batches,
-            "pipeline_scope": self.execution.pipeline_scope,
-            "device": self.execution.device,
-            "thread_policy": self.execution.thread_policy,
-            "clip_length": self.data.clip_length,
-            "decoders": self.selection.decoders,
-            "cloud": cloud.provider,
-            "gcp_project": cloud.project,
-            "gcp_zone": cloud.zone,
-            "gcp_machine_type": cloud.machine_type,
-            "gcp_gpu_type": cloud.gpu_type,
-            "gcp_remote_data_dir": self.data.remote_data_dir,
-            "gcp_remote_repo_dir": cloud.remote_repo_dir,
-            "gcp_gcs_data_uri": self.data.gcs_uri,
-            "gcp_gcs_results_uri": self.output.gcs_results_uri,
-            "gcp_attached": cloud.attached,
-            "gcp_dry_run": cloud.dry_run,
-            "gcp_disk_size_gb": cloud.disk_size_gb,
-            "gcp_keep_instance": cloud.keep_instance,
-            "gcp_keep_on_failure": cloud.keep_on_failure,
-            "gcp_preemptible": cloud.preemptible,
-            "gcp_venv_cache_uri": cloud.venv_cache_uri,
-            "gcp_no_venv_cache": cloud.no_venv_cache,
-            "gcp_force_venv_cache_rebuild": cloud.force_venv_cache_rebuild,
-            "num_items": self.data.num_items,
-            "num_runs": self.execution.num_runs,
-            "slow_threshold_sec_per_item": self.execution.slow_threshold_sec_per_item,
-            "slow_preflight_items": self.execution.slow_preflight_items,
-            "disable_slow_skip": self.execution.disable_slow_skip,
-            "refresh_requirements": self.execution.refresh_requirements,
-            "num_channels": self.data.num_channels,
-            "multichannel": self.selection.multichannel,
-        }

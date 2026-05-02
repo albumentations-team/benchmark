@@ -10,7 +10,6 @@ from benchmark.config.models import (
 from benchmark.config.plan import RunPlan, build_run_plan
 from benchmark.config.resolve import (
     apply_cli_overrides,
-    config_to_namespace,
     load_run_config,
     remote_run_config_payload,
     run_config_from_args,
@@ -34,7 +33,6 @@ __all__ = [
     "SelectionConfig",
     "apply_cli_overrides",
     "build_run_plan",
-    "config_to_namespace",
     "install_run_config_env",
     "load_run_config",
     "paper_transform_names",

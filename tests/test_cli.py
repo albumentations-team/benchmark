@@ -22,7 +22,7 @@ from benchmark.cli import (
     build_gcp_benchmark_cli_argv_from_config,
     build_parser,
 )
-from benchmark.config import BenchmarkRunConfig, config_to_namespace, load_run_config, resolve_config_transform_set
+from benchmark.config import BenchmarkRunConfig, load_run_config, resolve_config_transform_set
 from benchmark.output_naming import micro_output_file
 
 
@@ -583,8 +583,10 @@ class TestCmdRunGcp:
 
     def test_detached_typed_job_payload_uses_vm_paths(self, tmp_path: Path) -> None:
         config = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml"))
-        args = config_to_namespace(config)
-        args.gcp_dry_run = True
+        data = config.model_dump()
+        data["cloud"]["dry_run"] = True
+        config = BenchmarkRunConfig.model_validate(data)
+        args = argparse.Namespace(verbose=False)
         mock_runner = MagicMock()
         mock_runner.run_detached.return_value = "gs://b/runs/abc123"
 
@@ -609,11 +611,13 @@ class TestCmdRunGcp:
         data["cloud"]["project"] = "typed-project"
         data["cloud"]["machine_type"] = "g2-standard-16"
         config = BenchmarkRunConfig.model_validate(data)
-        args = config_to_namespace(config)
-        args.gcp_project = "legacy-project"
-        args.gcp_machine_type = "n1-standard-8"
-        args.gcp_dry_run = False
-        args.device = "none"
+        args = argparse.Namespace(
+            gcp_project="legacy-project",
+            gcp_machine_type="n1-standard-8",
+            gcp_dry_run=False,
+            device="none",
+            verbose=False,
+        )
         mock_runner = MagicMock()
         mock_runner.run_detached.return_value = "gs://b/runs/abc123"
 
