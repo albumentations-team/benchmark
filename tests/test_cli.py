@@ -568,6 +568,33 @@ class TestCmdRunGcp:
         assert run_config["output"]["output_dir"] == "/root/benchmark-work/results"
         assert "cloud" not in run_config
 
+    def test_typed_gcp_config_takes_precedence_over_stale_namespace(self, tmp_path: Path) -> None:
+        data = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml")).model_dump()
+        data["cloud"]["dry_run"] = True
+        data["cloud"]["project"] = "typed-project"
+        data["cloud"]["machine_type"] = "g2-standard-16"
+        config = BenchmarkRunConfig.model_validate(data)
+        args = config_to_namespace(config)
+        args.gcp_project = "legacy-project"
+        args.gcp_machine_type = "n1-standard-8"
+        args.gcp_dry_run = False
+        mock_runner = MagicMock()
+        mock_runner.run_detached.return_value = "gs://b/runs/abc123"
+
+        with (
+            patch("benchmark.cloud.gcp.GCPRunner", return_value=mock_runner),
+            patch("benchmark.cloud.instance.GCPInstanceConfig") as mock_config,
+            patch("benchmark.cloud.gcp.new_run_id", return_value="abc123"),
+        ):
+            from benchmark.cli import _cmd_run_gcp
+
+            _cmd_run_gcp(args, tmp_path, tmp_path, run_config=config)
+
+        assert mock_config.call_args.kwargs["project"] == "typed-project"
+        assert mock_config.call_args.kwargs["machine_type"] == "g2-standard-16"
+        _, kwargs = mock_runner.run_detached.call_args
+        assert kwargs["dry_run"] is True
+
     def test_attached_calls_run_attached_with_correct_argv(self, tmp_path: Path) -> None:
         parser = build_parser()
         args = self._base_args(
