@@ -227,6 +227,14 @@ Keep README guidance aligned with these policies:
 - Benchmark architecture docs should say that `benchmark/matrix.py` owns scenario/library/mode support, `benchmark/policy.py`
   owns media defaults and slow-skip thresholds, `benchmark/jobs.py` owns command construction, and
   `benchmark/orchestrator.py` owns backend dispatch.
+- Benchmark architecture docs should say that `benchmark/config/models.py` owns `BenchmarkRunConfig` validation,
+  `benchmark/config/resolve.py` owns YAML loading/CLI overrides/payload shaping, `benchmark/config/plan.py` owns dry-run
+  job expansion, and `benchmark/config/env.py` owns resolved-config metadata handoff.
+- Benchmark docs should prefer `python -m benchmark.cli plan --config ...` and
+  `python -m benchmark.cli run --config ...` examples for reproducible runs. Flag-only examples are compatibility/debug
+  examples and should not be the primary paper/cloud workflow. Checked-in run examples live under `configs/`.
+- Benchmark docs should mention `benchmark/output_naming.py` for result filename policy and `benchmark/cloud/paths.py` for
+  detached GCP VM path policy whenever those rules are described.
 - If the benchmark matrix changes, update `docs/benchmark_architecture.md`, `docs/benchmark_scope.md`, and the relevant
   skill docs in the same change.
 - Cloud benchmark docs should show `--gcp-gcs-data-uri` pointing at one dataset tarball, not a directory of individual images/videos. For macOS-created tarballs, document `COPYFILE_DISABLE=1`, `tar --no-xattrs`, and excludes for `.DS_Store`, AppleDouble `._*`, and `__MACOSX`.

@@ -13,6 +13,14 @@ Use `_internal/plans/paper_benchmark_execution_plan.md` as the source of truth.
   requirement groups, paper transform-set files, device support, pipeline scopes, and backend selection.
 - Use `benchmark/policy.py` as the source of truth for slow-transform thresholds and media defaults. Do not patch
   separate image/video defaults in micro or DataLoader runners.
+- Use checked-in YAML configs under `configs/paper/` for paper and GCP runs. Run `python -m benchmark.cli plan --config ...`
+  before launch, then use `python -m benchmark.cli run --config ...`; use small overrides such as `--num-items`,
+  `--num-runs`, `--device`, `--workers`, `--batch-size`, and `--output` instead of rebuilding long flag commands.
+- `BenchmarkRunConfig` in `benchmark/config/models.py` is the typed source of truth for run shape. `resolved_config.yaml`
+  and result metadata must contain the resolved config, including expanded paper transform names.
+- `benchmark/config/resolve.py` owns YAML loading and CLI overrides, while `benchmark/config/plan.py` owns dry-run job and
+  expected-output expansion.
+- Keep result filename changes in `benchmark/output_naming.py`, and detached GCP path changes in `benchmark/cloud/paths.py`.
 - Paper run command construction should flow through `benchmark/jobs.py`, and backend-specific execution should flow
   through `benchmark/orchestrator.py`. Do not add paper-only command branches in `benchmark/cli.py`.
 - Do not run every benchmark on every CPU.
@@ -32,10 +40,15 @@ Use `_internal/plans/paper_benchmark_execution_plan.md` as the source of truth.
 - Before cloud runs, reduced local production-path runs should show visible tqdm progress for library loops, media loading, micro transforms, and pipeline transforms. Missing or anonymous progress bars are a benchmark UX bug because long paper sweeps must be diagnosable while running.
 - Do not run every transform from `benchmark/transforms/specs.py` for the paper. Use only transforms that exist in at least two selected libraries. The paper transform sets live in `docs/paper_transform_sets/rgb.md`, `docs/paper_transform_sets/9ch.md`, and `docs/paper_transform_sets/video.md`.
 - Use `--transform-set paper` for paper micro/pipeline runs unless explicitly testing a smaller transform subset with `--transforms`.
+- Prefer the checked-in examples over raw commands for current smoke runs:
+  - `configs/paper/gcp_c4_rgb_micro_cpu.yaml`
+  - `configs/paper/gcp_g2_rgb_gpu_smoke.yaml`
+  - `configs/paper/gcp_g2_9ch_gpu_smoke.yaml`
+  - `configs/paper/gcp_g2_video_smoke.yaml`
 - Use `gs://imagenet_validation/ucf101/ucf101.tar` for paper video cloud runs; uploaded object size is `14136559616` bytes.
 - Cloud paper runs should use one dataset tarball per dataset (`val.tar`, `ucf101.tar`) rather than GCS directories full of individual media files. Create tarballs on macOS with `COPYFILE_DISABLE=1`, `tar --no-xattrs`, and excludes for `.DS_Store`, AppleDouble `._*`, and `__MACOSX`; detached GCP staging filters those entries again while extracting.
 - If paper scenario support changes, update `docs/benchmark_architecture.md`, `docs/benchmark_scope.md`,
-  `.cursor/skills/benchmark-runner/SKILL.md`, and matrix/job tests in the same patch.
+  `.cursor/skills/benchmark-runner/SKILL.md`, config examples, and matrix/config/job tests in the same patch.
 
 ## Core Matrix
 

@@ -9,7 +9,24 @@ Run augmentation benchmarks with standardized configurations and automatic resul
 
 ## Running Image Benchmarks
 
-Use the unified CLI. Legacy `run_all.sh` / `run_single.sh` examples are stale for this repo.
+Use the config-first CLI for paper, cloud, or repeatable runs. Legacy `run_all.sh` / `run_single.sh` examples are stale
+for this repo, and long flag-only commands should be treated as compatibility/debug paths.
+
+### Config-first runs
+```bash
+python -m benchmark.cli plan --config configs/examples/local_rgb_micro_cpu.yaml
+python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml
+python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml --gcp-dry-run
+```
+
+`benchmark/config/models.py` defines `BenchmarkRunConfig`. `benchmark/config/resolve.py` loads YAML, applies supported
+CLI overrides, writes `resolved_config.yaml`, and shapes typed GCP payloads. `benchmark/config/plan.py` prints generated
+jobs and expected files. `benchmark/config/env.py` embeds the resolved config in result metadata. `benchmark/cloud/paths.py`
+and `benchmark/output_naming.py` keep dry-run plans aligned with real VM paths and result filenames.
+
+Use checked-in configs under `configs/examples/` for local smoke runs and `configs/paper/` for paper/GCP runs. Prefer
+`--num-items`, `--num-runs`, `--device`, `--workers`, `--batch-size`, and `--output` as overrides instead of editing many
+flags by hand.
 
 ### Single library
 ```bash
@@ -41,7 +58,7 @@ Use the unified CLI (`python -m benchmark.cli run --media video ...`). Legacy `r
 
 ### Google Cloud (detached)
 
-Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with a startup script that downloads one **dataset tarball** from `gs://` (for example `val.tar` or `ucf101.tar`), unpacks/stages media files on local disk, runs the same `benchmark.cli run` flags (including `--spec`, warmup, `--multichannel`), writes artifacts under `gs://<results-base>/<run_id>/`, then deletes the VM. See README **Google Cloud (detached)** and `benchmark/cloud/gcp.py`. Use `--gcp-attached` for blocking SSH/debug runs.
+Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with a startup script that downloads one **dataset tarball** from `gs://` (for example `val.tar` or `ucf101.tar`), unpacks/stages media files on local disk, runs `benchmark.cli run --resolved-config /root/benchmark-work/job_config.yaml` when a typed `run_config` is present, writes artifacts under `gs://<results-base>/<run_id>/`, then deletes the VM. Legacy `benchmark_cli_args` remain only as a compatibility fallback. See README **Google Cloud (detached)**, `benchmark/cloud/gcp.py`, and `benchmark/cloud/paths.py`. Use `--gcp-attached` for blocking SSH/debug runs.
 
 ## Optimization Policies
 
@@ -49,6 +66,10 @@ Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with 
   requirements, joined environment groups, paper transform sets, device support, pipeline scopes, and backend names.
 - Treat `benchmark/policy.py` as the source of truth for media defaults and slow-transform preflight thresholds. Do not
   duplicate image/video defaults in individual runners.
+- Treat `benchmark/config/models.py` as the source of truth for run shape and validation. Add user-facing config fields
+  there first, then update `benchmark/config/resolve.py`, `benchmark/config/plan.py`, examples under `configs/`, and tests.
+- Use `benchmark/output_naming.py` for result filenames and `benchmark/cloud/paths.py` for detached GCP VM paths. Do not
+  duplicate filename or VM staging inference in CLI, planner, or cloud code.
 - Use `benchmark/jobs.py` for command construction and `benchmark/orchestrator.py` for backend dispatch. Do not add
   backend-specific branches to `benchmark/cli.py`; DALI should remain a `dali_pipeline` job backend.
 - `benchmark/runner.py` is a compatibility/simple-timer runner. Production CLI micro runs use
@@ -91,6 +112,8 @@ Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with 
 When changing benchmark orchestration, update the architecture docs and tests:
 
 - Docs: `docs/benchmark_architecture.md`, `docs/benchmark_scope.md`, and relevant README sections.
+- Config tests: `tests/test_config_models.py`, `tests/test_config_plan.py`, `tests/test_cloud_paths.py`, and
+  `tests/test_output_naming.py`.
 - Matrix tests: `tests/test_matrix.py`.
 - Job/orchestrator tests: `tests/test_jobs_orchestrator.py`.
 - Pipeline runner tests: `tests/test_pipeline_runner.py`.

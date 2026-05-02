@@ -53,10 +53,16 @@ def test_skills_document_centralized_policy_and_matrix() -> None:
         ".cursor/skills/paper-benchmark-execution/SKILL.md",
     )
     required_refs = (
+        "benchmark/config/models.py",
+        "benchmark/config/plan.py",
+        "benchmark/config/resolve.py",
+        "benchmark/cloud/paths.py",
         "benchmark/matrix.py",
+        "benchmark/output_naming.py",
         "benchmark/policy.py",
         "benchmark/jobs.py",
         "benchmark/orchestrator.py",
+        "configs/",
     )
 
     for skill_path in skill_paths:
