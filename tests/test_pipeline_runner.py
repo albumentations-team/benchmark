@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 
 
 def test_pipeline_runner_executes_tiny_memory_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("torch.utils.data")
+
     output_file = tmp_path / "pipeline.json"
     paths = [tmp_path / "a.jpg", tmp_path / "b.jpg"]
     runner = PipelineBenchmarkRunner(
