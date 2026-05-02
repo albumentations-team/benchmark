@@ -52,6 +52,8 @@ Use `_internal/plans/paper_benchmark_execution_plan.md` as the source of truth.
   - `configs/paper/gcp_g2_video_smoke.yaml`
 - Use `gs://imagenet_validation/ucf101/ucf101.tar` for paper video cloud runs; uploaded object size is `14136559616` bytes.
 - Cloud paper runs should use one dataset tarball per dataset (`val.tar`, `ucf101.tar`) rather than GCS directories full of individual media files. Create tarballs on macOS with `COPYFILE_DISABLE=1`, `tar --no-xattrs`, and excludes for `.DS_Store`, AppleDouble `._*`, and `__MACOSX`; detached GCP staging filters those entries again while extracting.
+- `benchmark/cloud/stage_dataset.py` runs in the VM bootstrap before the control venv exists. Keep it stdlib-only: no
+  Pydantic, no `benchmark.config`, and no imports that require benchmark dependencies.
 - If paper scenario support changes, update `docs/benchmark_architecture.md`, `docs/benchmark_scope.md`,
   `.cursor/skills/benchmark-runner/SKILL.md`, config examples, and matrix/config/job tests in the same patch.
 

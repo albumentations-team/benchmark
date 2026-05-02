@@ -75,6 +75,8 @@ Default `--cloud gcp` path: uploads repo + typed `job.json` to GCS, creates a VM
 - `benchmark/runner.py` is a compatibility/simple-timer runner. Production CLI micro runs use
   `benchmark/pyperf_micro_runner.py`; production DataLoader runs use `benchmark/pipeline_runner.py`.
 - Stage datasets as one tarball in cloud runs; do not copy individual images/videos one by one for each VM. On macOS, create dataset tarballs with `COPYFILE_DISABLE=1`, `tar --no-xattrs`, and excludes for `.DS_Store`, AppleDouble `._*`, and `__MACOSX`.
+- Keep `benchmark/cloud/stage_dataset.py` stdlib-only. It runs before the VM control venv exists, so importing Pydantic or
+  `benchmark.config` there breaks detached cloud runs.
 - Keep timed data local to the benchmark machine. Detached GCP runs unpack to local disk before running.
 - Micro benchmarks preload the requested number of media items once per library, in that library's native format. Video micro preloads fixed-length clips from `--clip-length` (16 frames for `video-16f`), not full source videos. Torchvision video clips stay `uint8` tensors so `torchvision.transforms.v2.JPEG` can run; Kornia video clips use float16 on CUDA.
 - Micro specs measure only the named transform in native layout, then force returned outputs into contiguous memory before

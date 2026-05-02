@@ -45,6 +45,14 @@ def test_architecture_doc_references_existing_core_modules() -> None:
     assert "converts typed configs to legacy namespaces during the migration" not in doc
 
 
+def test_stage_dataset_is_bootstrap_safe() -> None:
+    source = _read("benchmark/cloud/stage_dataset.py")
+
+    assert "pydantic" not in source
+    assert "benchmark.config" not in source
+    assert "BenchmarkRunConfig" not in source
+
+
 def test_scope_and_readme_link_to_architecture_doc() -> None:
     assert "docs/benchmark_architecture.md" in _read("README.md")
     assert "docs/benchmark_architecture.md" in _read("docs/benchmark_scope.md")

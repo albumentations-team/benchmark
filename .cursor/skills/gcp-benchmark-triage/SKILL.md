@@ -73,5 +73,8 @@ PY
   A `g2-standard-16` GPU VM also consumes 16 vCPUs.
 - `No image files found in dataset tarball` for a video scenario usually means the detached `job.json` has the wrong typed
   `run_config.selection.scenario` or media-derived staging fields. Detached runs should not carry flag argv payloads.
+- `ModuleNotFoundError` from `benchmark/cloud/stage_dataset.py` before `Installing uv...` means bootstrap staging imported
+  a dependency too early. That script must stay stdlib-only because it runs before the control venv and library venvs are
+  created.
 - Result directories contain both summary JSON and raw pyperf JSON; docs should load only `*_results.json`.
 - Do not assume VM disappearance means success.

@@ -30,7 +30,9 @@ features in these modules unless there is a strong reason to put logic directly 
 - `benchmark/cloud/launch.py` owns GCP launch option resolution, typed job payload assembly, attached/detached VM
   dispatch, and local `gcp_last_run.json` metadata.
 - `benchmark/cloud/stage_dataset.py` owns detached-cloud dataset tarball validation and extraction. It filters media files
-  by benchmark media type and ignores macOS archive junk such as `.DS_Store`, AppleDouble `._*`, and `__MACOSX`.
+  by benchmark media type and ignores macOS archive junk such as `.DS_Store`, AppleDouble `._*`, and `__MACOSX`. It runs
+  on the VM before the control venv exists, so it must stay stdlib-only and must not import Pydantic or
+  `benchmark.config`.
 - `benchmark/policy.py` owns shared media policy: default item counts, warmup limits, item labels, throughput units, and
   slow-transform preflight defaults.
 - `benchmark/devices.py` owns CUDA/MPS device resolution, transform/sample movement, support validation, and

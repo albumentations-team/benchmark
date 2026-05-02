@@ -97,7 +97,23 @@ def test_stage_plan_accepts_typed_run_config_payload() -> None:
     assert plan.limit == 123
 
 
-def test_stage_plan_uses_validated_run_config_when_available() -> None:
+def test_stage_plan_uses_stdlib_partial_run_config() -> None:
+    job = {
+        "gcs_data_uri": "gs://bucket/imagenet-val.tar",
+        "run_config": {
+            "selection": {"scenario": "image-rgb", "mode": "micro"},
+            "data": {"num_items": 321},
+        },
+    }
+
+    plan = build_stage_plan(job)
+
+    assert plan.media == "image"
+    assert plan.mode == "micro"
+    assert plan.limit == 321
+
+
+def test_stage_plan_reads_pipeline_fields_from_run_config_payload() -> None:
     config = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml"))
     job = {
         "gcs_data_uri": "gs://bucket/imagenet/val.tar",
@@ -109,3 +125,11 @@ def test_stage_plan_uses_validated_run_config_when_available() -> None:
     assert plan.media == "image"
     assert plan.mode == "pipeline"
     assert plan.limit == 0
+
+
+def test_stage_dataset_module_remains_bootstrap_stdlib_only() -> None:
+    source = Path("benchmark/cloud/stage_dataset.py").read_text(encoding="utf-8")
+
+    assert "from pydantic" not in source
+    assert "import pydantic" not in source
+    assert "benchmark.config" not in source

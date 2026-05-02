@@ -8,10 +8,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, cast
 
-from pydantic import ValidationError
-
-from benchmark.config import BenchmarkRunConfig
-
 ARCHIVE_SUFFIXES = (".tar", ".tar.gz", ".tgz")
 MediaName = Literal["image", "video"]
 MEDIA_SUFFIXES = {
@@ -44,12 +40,7 @@ def _stage_fields_from_partial_run_config(run_config: dict[str, Any]) -> tuple[M
 
 
 def _stage_fields_from_run_config(run_config: dict[str, Any]) -> tuple[MediaName, str, str]:
-    try:
-        config = BenchmarkRunConfig.model_validate(run_config)
-    except ValidationError:
-        return _stage_fields_from_partial_run_config(run_config)
-    num_items = str(config.data.num_items or "")
-    return config.resolved_media(), config.resolved_mode(), num_items
+    return _stage_fields_from_partial_run_config(run_config)
 
 
 def build_stage_plan(job: dict[str, Any]) -> DatasetStagePlan:

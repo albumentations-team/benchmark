@@ -541,6 +541,10 @@ python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml -
 
 Run benchmarks on a **Compute Engine** VM that starts from your laptop, then keeps going after you disconnect. The default path is **detached**: the CLI uploads the repo and a typed job definition to **GCS**, creates a VM whose **startup script** downloads one dataset tarball such as `gs://.../val.tar` or `gs://.../ucf101.tar`, unpacks media files to **local disk** (benchmarks do not read from a mounted bucket), writes the typed run config to disk, runs `python -m benchmark.cli run --resolved-config /root/benchmark-work/job_config.yaml`, uploads **results**, **vm.log**, **exit_code.txt**, and **run_meta.json** under a unique prefix, and **deletes the VM** when finished (unless you set `cloud.keep_instance: true` or pass `--gcp-keep-instance` as an override).
 
+The VM bootstrap stages the dataset before benchmark dependencies are installed. `benchmark/cloud/stage_dataset.py` must
+therefore remain stdlib-only; Pydantic validation happens later inside the control venv and the per-library benchmark
+venvs.
+
 **Prerequisites**
 
 - [Google Cloud SDK](https://cloud.google.com/sdk) (`gcloud`) authenticated for your project.
