@@ -64,6 +64,7 @@ from benchmark.matrix import (
     spec_map_for_scenario,
 )
 from benchmark.orchestrator import execute_job
+from benchmark.output_naming import manual_micro_output_file, micro_output_file, pipeline_output_file
 from benchmark.term import configure_logging, tqdm_kwargs
 
 logger = logging.getLogger(__name__)
@@ -176,15 +177,20 @@ def _spec_map_for_scenario(scenario_name: str, mode: str) -> dict[str, str]:
 
 
 def _pipeline_output_file(output_dir: Path, library: str, args: argparse.Namespace) -> Path:
-    num_items = f"n{args.num_items}" if args.num_items is not None else "nall"
-    device = f"_dev-{args.device}" if args.device != "none" else ""
-    stem = f"{library}_{args.pipeline_scope}_{num_items}_r{args.num_runs}_w{args.workers}_b{args.batch_size}{device}"
-    return output_dir / f"{stem}_results.json"
+    return pipeline_output_file(
+        output_dir,
+        library,
+        pipeline_scope=args.pipeline_scope,
+        num_items=args.num_items,
+        num_runs=args.num_runs,
+        workers=args.workers,
+        batch_size=args.batch_size,
+        device=args.device,
+    )
 
 
 def _micro_output_file(output_dir: Path, library: str, args: argparse.Namespace) -> Path:
-    device = f"_dev-{args.device}" if args.device != "none" else ""
-    return output_dir / f"{library}_micro{device}_results.json"
+    return micro_output_file(output_dir, library, device=args.device)
 
 
 def _run_scenario_library(
@@ -696,7 +702,6 @@ def cmd_run(args: argparse.Namespace) -> None:
         logger.error("Unknown libraries for %s mode: %s. Available: %s", media, sorted(unknown), available)
         sys.exit(1)
 
-    suffix = "_video" if media == "video" else ""
     logger.info("Running %s benchmarks for %d libraries: %s", media, len(requested), requested)
     for library in tqdm(requested, desc="Libraries", unit="lib", **tqdm_kwargs()):
         try:
@@ -705,8 +710,7 @@ def cmd_run(args: argparse.Namespace) -> None:
             logger.error("%s", e)  # noqa: TRY400
             sys.exit(1)
         spec_file = repo_root / spec_map[library]
-        device_suffix = f"_dev-{args.device}" if args.device != "none" else ""
-        output_file = output_dir / f"{library}{suffix}{device_suffix}_results.json"
+        output_file = manual_micro_output_file(output_dir, library, media=media, device=args.device)
         _run_single(
             library=library,
             spec_file=spec_file,

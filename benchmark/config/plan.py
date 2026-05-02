@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from benchmark.cloud.paths import VM_RESULTS, staged_data_dir_for_gcs_uri
 from benchmark.matrix import IMAGE_SPECS, MULTICHANNEL_IMAGE_SPECS, VIDEO_SPECS, spec_map_for_scenario
+from benchmark.output_naming import manual_micro_output_file, micro_output_file, pipeline_output_file
 from benchmark.scenarios import get_scenario, resolve_decoders, resolve_libraries, resolve_mode
 
 if TYPE_CHECKING:
@@ -45,21 +46,6 @@ class RunPlan:
         if self.cloud is not None:
             data["cloud"] = self.cloud
         return data
-
-
-def _pipeline_output_file(output_dir: Path, library: str, config: BenchmarkRunConfig) -> Path:
-    num_items = f"n{config.data.num_items}" if config.data.num_items is not None else "nall"
-    device = f"_dev-{config.execution.device}" if config.execution.device != "none" else ""
-    stem = (
-        f"{library}_{config.execution.pipeline_scope}_{num_items}_r{config.execution.num_runs}"
-        f"_w{config.execution.workers}_b{config.execution.batch_size}{device}"
-    )
-    return output_dir / f"{stem}_results.json"
-
-
-def _micro_output_file(output_dir: Path, library: str, config: BenchmarkRunConfig) -> Path:
-    device = f"_dev-{config.execution.device}" if config.execution.device != "none" else ""
-    return output_dir / f"{library}_micro{device}_results.json"
 
 
 def _cloud_plan(config: BenchmarkRunConfig) -> dict[str, object] | None:
@@ -176,9 +162,18 @@ def _scenario_jobs(config: BenchmarkRunConfig, repo_root: Path, output_dir: Path
         )
         spec_file = None if backend == "dali_pipeline" else repo_root / spec_map[library]
         output_file = (
-            _pipeline_output_file(scenario_output_dir, library, config)
+            pipeline_output_file(
+                scenario_output_dir,
+                library,
+                pipeline_scope=config.execution.pipeline_scope,
+                num_items=config.data.num_items,
+                num_runs=config.execution.num_runs,
+                workers=config.execution.workers,
+                batch_size=config.execution.batch_size,
+                device=config.execution.device,
+            )
             if mode == "pipeline"
-            else _micro_output_file(scenario_output_dir, library, config)
+            else micro_output_file(scenario_output_dir, library, device=config.execution.device)
         )
         jobs.append(
             _planned_job(
@@ -234,15 +229,18 @@ def _manual_library_jobs(
         else IMAGE_SPECS
     )
     libraries = config.selection.libraries or list(spec_map)
-    suffix = "_video" if media == "video" else ""
-    device_suffix = f"_dev-{config.execution.device}" if config.execution.device != "none" else ""
     return [
         _planned_job(
             config=config,
             scenario=f"{media}-manual",
             mode="micro",
             media=media,
-            output_file=output_dir / f"{library}{suffix}{device_suffix}_results.json",
+            output_file=manual_micro_output_file(
+                output_dir,
+                library,
+                media=media,
+                device=config.execution.device,
+            ),
             data_dir=data_dir,
             library=library,
             backend="pyperf",
