@@ -71,7 +71,7 @@ PY
 - Current quota is **64 vCPUs** and **1 GPU**. CPU quota errors can still happen when overlapping VMs, stale
   `STOPPING` instances, or a second launch while a blipped client thinks the VM is gone consume the remaining vCPUs.
   A `g2-standard-16` GPU VM also consumes 16 vCPUs.
-- `No image files found in dataset tarball` for a video scenario means the VM received `--media image`; cloud command
-  construction must derive media from `--scenario video-*`, not from the parser's default media value.
+- `No image files found in dataset tarball` for a video scenario usually means the detached `job.json` has the wrong typed
+  `run_config.selection.scenario` or media-derived staging fields. Detached runs should not carry flag argv payloads.
 - Result directories contain both summary JSON and raw pyperf JSON; docs should load only `*_results.json`.
 - Do not assume VM disappearance means success.

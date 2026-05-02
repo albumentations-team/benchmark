@@ -98,7 +98,7 @@ def test_stage_plan_accepts_typed_run_config_payload() -> None:
 
 
 def test_stage_plan_uses_validated_run_config_when_available() -> None:
-    config = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml"))
+    config = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml"))
     job = {
         "gcs_data_uri": "gs://bucket/imagenet/val.tar",
         "run_config": config.model_dump(mode="json", exclude_none=True),

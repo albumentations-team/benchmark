@@ -42,8 +42,13 @@ Use `_internal/plans/paper_benchmark_execution_plan.md` as the source of truth.
 - Use `--transform-set paper` for paper micro/pipeline runs unless explicitly testing a smaller transform subset with `--transforms`.
 - Prefer the checked-in examples over raw commands for current smoke runs:
   - `configs/paper/gcp_c4_rgb_micro_cpu.yaml`
-  - `configs/paper/gcp_g2_rgb_gpu_smoke.yaml`
-  - `configs/paper/gcp_g2_9ch_gpu_smoke.yaml`
+  - `configs/paper/gcp_c4_rgb_dataloader_cpu.yaml`
+  - `configs/paper/gcp_c4_9ch_micro_cpu.yaml`
+  - `configs/paper/gcp_c4_9ch_dataloader_cpu.yaml`
+  - `configs/paper/gcp_g2_rgb_micro_gpu_smoke.yaml`
+  - `configs/paper/gcp_g2_9ch_micro_gpu_smoke.yaml`
+  - `configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml`
+  - `configs/paper/gcp_g2_9ch_dataloader_gpu_smoke.yaml`
   - `configs/paper/gcp_g2_video_smoke.yaml`
 - Use `gs://imagenet_validation/ucf101/ucf101.tar` for paper video cloud runs; uploaded object size is `14136559616` bytes.
 - Cloud paper runs should use one dataset tarball per dataset (`val.tar`, `ucf101.tar`) rather than GCS directories full of individual media files. Create tarballs on macOS with `COPYFILE_DISABLE=1`, `tar --no-xattrs`, and excludes for `.DS_Store`, AppleDouble `._*`, and `__MACOSX`; detached GCP staging filters those entries again while extracting.

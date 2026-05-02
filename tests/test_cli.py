@@ -320,7 +320,7 @@ class TestCmdRunGcp:
             _cmd_run_gcp(args, tmp_path, tmp_path)
 
     def test_detached_dry_run_does_not_create_vm(self, tmp_path: Path) -> None:
-        data = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml")).model_dump()
+        data = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml")).model_dump()
         data["data"]["gcs_uri"] = "gs://b/d.tar"
         data["output"]["gcs_results_uri"] = "gs://b/r"
         data["cloud"]["project"] = "proj"
@@ -347,7 +347,7 @@ class TestCmdRunGcp:
         mock_runner.create_instance.assert_not_called()
 
     def test_g2_machine_uses_gpu_image_without_explicit_accelerator(self, tmp_path: Path) -> None:
-        data = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml")).model_dump()
+        data = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml")).model_dump()
         data["data"]["gcs_uri"] = "gs://b/d.tar"
         data["output"]["gcs_results_uri"] = "gs://b/r"
         data["cloud"]["project"] = "proj"
@@ -375,7 +375,7 @@ class TestCmdRunGcp:
     def test_detached_writes_metadata_json(self, tmp_path: Path) -> None:
         out_dir = tmp_path / "out"
         out_dir.mkdir()
-        data = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml")).model_dump()
+        data = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml")).model_dump()
         data["data"]["gcs_uri"] = "gs://b/data.tar"
         data["output"]["output_dir"] = str(out_dir)
         data["output"]["gcs_results_uri"] = "gs://b/runs"
@@ -401,7 +401,7 @@ class TestCmdRunGcp:
         assert "fetch_results_hint" in meta
 
     def test_detached_typed_job_payload_uses_vm_paths(self, tmp_path: Path) -> None:
-        config = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml"))
+        config = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml"))
         data = config.model_dump()
         data["cloud"]["dry_run"] = True
         config = BenchmarkRunConfig.model_validate(data)
@@ -425,7 +425,7 @@ class TestCmdRunGcp:
         assert "cloud" not in run_config
 
     def test_typed_gcp_config_takes_precedence_over_stale_namespace(self, tmp_path: Path) -> None:
-        data = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml")).model_dump()
+        data = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml")).model_dump()
         data["cloud"]["dry_run"] = True
         data["cloud"]["project"] = "typed-project"
         data["cloud"]["machine_type"] = "g2-standard-16"

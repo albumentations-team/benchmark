@@ -18,7 +18,7 @@ def test_plan_lists_micro_jobs_and_outputs() -> None:
 
 
 def test_plan_lists_gpu_pipeline_device_outputs_and_cloud() -> None:
-    config = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml"))
+    config = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml"))
 
     plan = build_run_plan(config, Path.cwd())
 

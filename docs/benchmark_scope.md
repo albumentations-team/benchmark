@@ -181,6 +181,9 @@ Run these for video/GPU tables:
 
 - GPU image micro and DataLoader sanity checks for `torchvision` and `kornia` on RGB and 9-channel images. These rows
   answer whether moving image augmentation to the GPU helps after accounting for transfer and batch-level execution.
+  The four smoke configs are `configs/paper/gcp_g2_rgb_micro_gpu_smoke.yaml`,
+  `configs/paper/gcp_g2_9ch_micro_gpu_smoke.yaml`, `configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml`, and
+  `configs/paper/gcp_g2_9ch_dataloader_gpu_smoke.yaml`.
 - GPU video micro benchmarks for GPU-capable libraries, especially `torchvision` and `kornia`. Micro video preload uses
   fixed-length clips from `--clip-length` (16 frames for `video-16f`), not full source videos.
 - GPU video DataLoader/pipeline benchmarks for GPU-capable paths. These use dedicated video pipeline specs rather than

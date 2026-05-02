@@ -67,7 +67,7 @@ def test_video_micro_job_passes_clip_length_to_pyperf_runner(tmp_path: Path) -> 
 
 
 def test_job_can_be_built_from_run_config(tmp_path: Path) -> None:
-    config = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml"))
+    config = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml"))
 
     job = BenchmarkJob.from_run_config(
         library="kornia",

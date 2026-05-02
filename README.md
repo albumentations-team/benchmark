@@ -450,9 +450,9 @@ Named transform sets such as `paper` are expanded to concrete transform names, a
 
 ```bash
 python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml
-python -m benchmark.cli plan --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml
-python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml --num-items 25
+python -m benchmark.cli plan --config configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml
+python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml --num-items 25
 ```
 
 Use `benchmark plan --config ...` or `benchmark run --config ... --dry-run` to print the resolved config, generated jobs,
@@ -472,8 +472,10 @@ For RGB image paper runs, prefer the checked-in configs:
 python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml
 python -m benchmark.cli run --config configs/examples/local_rgb_dataloader_cpu.yaml
 python -m benchmark.cli run --config configs/paper/gcp_c4_rgb_micro_cpu.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/gcp_g2_9ch_gpu_smoke.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_micro_gpu_smoke.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/gcp_g2_9ch_micro_gpu_smoke.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/gcp_g2_9ch_dataloader_gpu_smoke.yaml --gcp-dry-run
 ```
 
 Pipeline result filenames include the key sweep parameters, for example
@@ -564,7 +566,7 @@ After submission, open `./gcp_runs/gcp_last_run.json` for `run_prefix`, `instanc
 **Dry run (no upload, no VM)**
 
 ```bash
-python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml --gcp-dry-run
 ```
 
 **Attached / SSH mode (debug)**

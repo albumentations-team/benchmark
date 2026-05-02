@@ -16,7 +16,7 @@ commands are stale for this repo; start from YAML and use CLI flags only as over
 ```bash
 python -m benchmark.cli plan --config configs/examples/local_rgb_micro_cpu.yaml
 python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml
-python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml --gcp-dry-run
 ```
 
 `benchmark/parser.py` owns parser construction and provided-flag tracking. `benchmark/config/models.py` defines

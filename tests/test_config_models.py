@@ -128,7 +128,7 @@ def test_cli_overrides_apply_after_yaml_config() -> None:
 
 
 def test_config_exposes_resolved_scenario_fields() -> None:
-    config = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml"))
+    config = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml"))
 
     assert config.resolved_mode() == "pipeline"
     assert config.resolved_media() == "image"
@@ -136,7 +136,7 @@ def test_config_exposes_resolved_scenario_fields() -> None:
 
 
 def test_remote_run_config_payload_uses_vm_paths_and_strips_cloud() -> None:
-    config = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml"))
+    config = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml"))
 
     payload = remote_run_config_payload(
         config,

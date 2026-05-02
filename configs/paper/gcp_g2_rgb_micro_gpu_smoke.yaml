@@ -1,7 +1,7 @@
 version: 1
 selection:
-  scenario: image-9ch
-  mode: pipeline
+  scenario: image-rgb
+  mode: micro
   libraries: [torchvision, kornia]
   transform_set: paper
 data:
@@ -9,14 +9,10 @@ data:
   gcs_uri: gs://imagenet_validation/imagenet/val.tar
   num_items: 100
 output:
-  output_dir: gcp_runs/g2-standard-16-9ch-dataloader-gpu-smoke
+  output_dir: gcp_runs/g2-standard-16-rgb-micro-gpu-smoke
   gcs_results_uri: gs://imagenet_validation/augmentation-results
 execution:
-  pipeline_scope: decode_dataloader_augment
   num_runs: 1
-  batch_size: 32
-  workers: 2
-  min_time: 0
   device: cuda
 cloud:
   provider: gcp
