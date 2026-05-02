@@ -20,6 +20,7 @@ ARCHITECTURE_MODULES = (
     "benchmark/envs.py",
     "benchmark/parser.py",
     "benchmark/output_naming.py",
+    "benchmark/cloud/launch.py",
     "benchmark/cloud/paths.py",
     "benchmark/cloud/stage_dataset.py",
     "benchmark/specs/load.py",

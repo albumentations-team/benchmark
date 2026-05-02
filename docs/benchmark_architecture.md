@@ -27,6 +27,8 @@ features in these modules unless there is a strong reason to put logic directly 
 - `benchmark/output_naming.py` owns result filename rules shared by execution and dry-run plans, including device suffixes.
 - `benchmark/cloud/paths.py` owns detached-VM path constants and GCS-to-staged-data path inference shared by plans and
   GCP launch code.
+- `benchmark/cloud/launch.py` owns GCP launch option resolution, typed job payload assembly, attached/detached VM
+  dispatch, and local `gcp_last_run.json` metadata.
 - `benchmark/cloud/stage_dataset.py` owns detached-cloud dataset tarball validation and extraction. It filters media files
   by benchmark media type and ignores macOS archive junk such as `.DS_Store`, AppleDouble `._*`, and `__MACOSX`.
 - `benchmark/policy.py` owns shared media policy: default item counts, warmup limits, item labels, throughput units, and
