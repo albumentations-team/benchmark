@@ -10,7 +10,8 @@ features in these modules unless there is a strong reason to put logic directly 
 - `benchmark/config/models.py` defines the Pydantic run config schema for selection, data, execution, output, and cloud
   settings. Config validation catches unsupported combinations before local work or VM creation starts.
 - `benchmark/config/resolve.py` loads YAML configs, applies supported CLI overrides, writes `resolved_config.yaml`, and
-  converts typed configs to legacy namespaces during the migration.
+  converts old flag-based commands into typed configs. Its legacy namespace helper is kept only for compatibility tests
+  and transitional callers.
 - `benchmark/config/plan.py` expands a resolved config into a dry-run plan: generated jobs, expected result files, and
   cloud target settings.
 - `benchmark/config/transform_sets.py` expands named transform sets into concrete transform names before configs are
@@ -100,8 +101,8 @@ benchmark.cli
 
 Architecture-sensitive tests live in:
 
-- `tests/test_config_models.py`: typed config loading, CLI override precedence, validation failures, legacy namespace
-  conversion.
+- `tests/test_config_models.py`: typed config loading, CLI override precedence, validation failures, and compatibility
+  conversion from old flags.
 - `tests/test_config_plan.py`: config-to-plan expansion for micro, pipeline, decode, expected outputs, and cloud fields.
 - `tests/test_cloud_paths.py`: detached GCP VM path constants and staged-data path inference.
 - `tests/test_output_naming.py`: result filename policy for micro, pipeline, manual, and device-suffixed outputs.

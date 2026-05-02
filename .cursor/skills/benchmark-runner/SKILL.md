@@ -58,7 +58,7 @@ Use the unified CLI (`python -m benchmark.cli run --media video ...`). Legacy `r
 
 ### Google Cloud (detached)
 
-Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with a startup script that downloads one **dataset tarball** from `gs://` (for example `val.tar` or `ucf101.tar`), unpacks/stages media files on local disk, runs `benchmark.cli run --resolved-config /root/benchmark-work/job_config.yaml` when a typed `run_config` is present, writes artifacts under `gs://<results-base>/<run_id>/`, then deletes the VM. Legacy `benchmark_cli_args` remain only as a compatibility fallback. See README **Google Cloud (detached)**, `benchmark/cloud/gcp.py`, and `benchmark/cloud/paths.py`. Use `--gcp-attached` for blocking SSH/debug runs.
+Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with a startup script that downloads one **dataset tarball** from `gs://` (for example `val.tar` or `ucf101.tar`), unpacks/stages media files on local disk, runs `benchmark.cli run --resolved-config /root/benchmark-work/job_config.yaml` when a typed `run_config` is present, writes artifacts under `gs://<results-base>/<run_id>/`, then deletes the VM. Legacy `benchmark_cli_args` remain only as a compatibility fallback and are generated from the typed config for config-based runs. See README **Google Cloud (detached)**, `benchmark/cloud/gcp.py`, and `benchmark/cloud/paths.py`. Use `--gcp-attached` for blocking SSH/debug runs.
 
 ## Optimization Policies
 

@@ -579,7 +579,8 @@ Run benchmarks on a **Compute Engine** VM that starts from your laptop, then kee
 **Submit a detached run**
 
 Config-based detached runs carry a typed `run_config` in `job.json`; the VM writes that config to disk and runs
-`benchmark.cli` with `--resolved-config`. Legacy `benchmark_cli_args` are still included as a compatibility fallback.
+`benchmark.cli` with `--resolved-config`. Legacy `benchmark_cli_args` are still included as a compatibility fallback and
+are generated from the same resolved typed config.
 
 For flag-based detached runs, `--data-dir` and `--output` are local hints; point the real dataset at GCS:
 

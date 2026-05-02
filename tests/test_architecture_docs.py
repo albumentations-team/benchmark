@@ -39,6 +39,8 @@ def test_architecture_doc_references_existing_core_modules() -> None:
         assert module_path in doc
         assert (REPO_ROOT / module_path).exists()
 
+    assert "converts typed configs to legacy namespaces during the migration" not in doc
+
 
 def test_scope_and_readme_link_to_architecture_doc() -> None:
     assert "docs/benchmark_architecture.md" in _read("README.md")
