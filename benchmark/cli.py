@@ -35,7 +35,6 @@ import yaml  # type: ignore[import-untyped,unused-ignore]
 from pydantic import ValidationError
 from tqdm import tqdm
 
-from benchmark import envs
 from benchmark.cloud.paths import VM_RESULTS, staged_data_dir_for_gcs_uri
 from benchmark.config import (
     BenchmarkRunConfig,
@@ -63,8 +62,6 @@ from benchmark.matrix import (
     VIDEO_SPECS as _VIDEO_SPECS,
 )
 from benchmark.matrix import (
-    library_env_group,
-    requirements_for_env_group,
     spec_map_for_scenario,
 )
 from benchmark.orchestrator import execute_job
@@ -78,11 +75,6 @@ def _collect_provided_flags(argv: list[str]) -> set[str]:
     return {arg.split("=", 1)[0] for arg in argv if arg.startswith("--")}
 
 
-# ---------------------------------------------------------------------------
-# venv / runner helpers
-# ---------------------------------------------------------------------------
-
-
 def _extract_library(spec_file: Path) -> str:
     """Extract LIBRARY string from a spec file without importing it."""
     for line in spec_file.read_text().splitlines():
@@ -92,33 +84,6 @@ def _extract_library(spec_file: Path) -> str:
             if len(parts) == 2:
                 return parts[1].strip().strip('"').strip("'")
     raise ValueError(f"Could not find LIBRARY assignment in {spec_file}")
-
-
-def _compile_requirements(python: Path, requirements_path: Path) -> None:
-    envs.compile_requirements(python, requirements_path)
-
-
-def _requirements_cache_key(
-    *,
-    python: Path,
-    requirements_paths: list[Path],
-    env_group: str,
-    media: Literal["image", "video"],
-) -> str:
-    return envs.requirements_cache_key(
-        python=python,
-        requirements_paths=requirements_paths,
-        env_group=env_group,
-        media=media,
-    )
-
-
-def _library_env_group(library: str, media: str) -> str:
-    return library_env_group(library, media)
-
-
-def _requirements_for_env_group(env_group: str, media: str, repo_root: Path) -> list[Path]:
-    return requirements_for_env_group(env_group, media, repo_root)
 
 
 def _manual_micro_config(config: BenchmarkRunConfig) -> BenchmarkRunConfig:

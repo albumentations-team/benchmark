@@ -13,11 +13,7 @@ import pytest
 
 from benchmark.cli import (
     _collect_provided_flags,
-    _compile_requirements,
     _extract_library,
-    _library_env_group,
-    _requirements_cache_key,
-    _requirements_for_env_group,
     build_parser,
 )
 from benchmark.config import (
@@ -27,6 +23,8 @@ from benchmark.config import (
     load_run_config,
     resolve_config_transform_set,
 )
+from benchmark.envs import compile_requirements, requirements_cache_key
+from benchmark.matrix import library_env_group, requirements_for_env_group
 from benchmark.output_naming import micro_output_file
 
 
@@ -793,11 +791,11 @@ class TestExtractLibrary:
 
 class TestRequirementsCacheKey:
     def test_torch_libraries_share_image_env_group(self, tmp_path: Path) -> None:
-        assert _library_env_group("torchvision", "image") == "torch_stack"
-        assert _library_env_group("kornia", "image") == "torch_stack"
-        assert _library_env_group("pillow", "image") == "torch_stack"
+        assert library_env_group("torchvision", "image") == "torch_stack"
+        assert library_env_group("kornia", "image") == "torch_stack"
+        assert library_env_group("pillow", "image") == "torch_stack"
 
-        reqs = _requirements_for_env_group("torch_stack", "image", tmp_path)
+        reqs = requirements_for_env_group("torch_stack", "image", tmp_path)
         assert [path.name for path in reqs] == ["requirements.txt", "torchvision.txt", "kornia.txt", "pillow.txt"]
 
     def test_cache_key_changes_when_requirements_change(self, tmp_path: Path) -> None:
@@ -805,14 +803,14 @@ class TestRequirementsCacheKey:
         req.write_text("numpy\n", encoding="utf-8")
         python = tmp_path / "python"
 
-        first = _requirements_cache_key(
+        first = requirements_cache_key(
             python=python,
             requirements_paths=[req],
             env_group="pillow",
             media="image",
         )
         req.write_text("numpy\npillow\n", encoding="utf-8")
-        second = _requirements_cache_key(
+        second = requirements_cache_key(
             python=python,
             requirements_paths=[req],
             env_group="pillow",
@@ -830,9 +828,9 @@ class TestRequirementsCacheKey:
             patch("benchmark.envs.subprocess.run", side_effect=RuntimeError("wrong exception")),
             pytest.raises(RuntimeError),
         ):
-            _compile_requirements(tmp_path / "python", req)
+            compile_requirements(tmp_path / "python", req)
 
         with patch("benchmark.envs.subprocess.run", side_effect=subprocess.CalledProcessError(1, "uv")):
-            _compile_requirements(tmp_path / "python", req)
+            compile_requirements(tmp_path / "python", req)
 
         assert req.read_text(encoding="utf-8") == "nvidia-dali-cuda120\n"
