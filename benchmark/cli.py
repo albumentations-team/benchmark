@@ -33,6 +33,7 @@ from typing import Literal, TypedDict, cast
 from tqdm import tqdm
 
 from benchmark import envs
+from benchmark.devices import ensure_supported_device
 from benchmark.jobs import BenchmarkJob
 from benchmark.matrix import (
     IMAGE_SPECS as _IMAGE_SPECS,
@@ -163,6 +164,7 @@ def _run_single(
     verbose: bool = False,
     num_channels: int = 3,
     scenario: str = "manual",
+    device: str = "none",
     refresh_requirements: bool = True,
     slow_threshold_sec_per_item: float | None = None,
     slow_preflight_items: int | None = None,
@@ -181,6 +183,7 @@ def _run_single(
         num_channels=num_channels,
         spec_file=spec_file,
         transforms_filter=tuple(transforms_filter or ()),
+        device=device,
         refresh_requirements=refresh_requirements,
         slow_threshold_sec_per_item=slow_threshold_sec_per_item,
         slow_preflight_items=slow_preflight_items,
@@ -198,6 +201,11 @@ def _pipeline_output_file(output_dir: Path, library: str, args: argparse.Namespa
     device = f"_dev-{args.device}" if args.device != "none" else ""
     stem = f"{library}_{args.pipeline_scope}_{num_items}_r{args.num_runs}_w{args.workers}_b{args.batch_size}{device}"
     return output_dir / f"{stem}_results.json"
+
+
+def _micro_output_file(output_dir: Path, library: str, args: argparse.Namespace) -> Path:
+    device = f"_dev-{args.device}" if args.device != "none" else ""
+    return output_dir / f"{library}_micro{device}_results.json"
 
 
 def _run_scenario_library(
@@ -220,8 +228,13 @@ def _run_scenario_library(
     output_file = (
         _pipeline_output_file(output_dir, library, args)
         if args.mode == "pipeline"
-        else output_dir / f"{library}_micro_results.json"
+        else _micro_output_file(output_dir, library, args)
     )
+    try:
+        ensure_supported_device(library, media, args.device)
+    except ValueError as e:
+        logger.error("%s", e)  # noqa: TRY400
+        sys.exit(1)
 
     if args.mode == "micro":
         if spec_file is None:
@@ -240,6 +253,7 @@ def _run_scenario_library(
             verbose=args.verbose,
             num_channels=num_channels,
             scenario=scenario_name,
+            device=args.device,
             refresh_requirements=args.refresh_requirements,
             **_slow_skip_kwargs(args),
         )
@@ -604,6 +618,11 @@ def cmd_run(args: argparse.Namespace) -> None:
     if args.spec:
         spec_file = Path(args.spec)
         library = _extract_library(spec_file)
+        try:
+            ensure_supported_device(library, media, args.device)
+        except ValueError as e:
+            logger.error("%s", e)  # noqa: TRY400
+            sys.exit(1)
         output_file = output_dir / f"{spec_file.stem}.json"
         _run_single(
             library=library,
@@ -618,6 +637,7 @@ def cmd_run(args: argparse.Namespace) -> None:
             verbose=args.verbose,
             num_channels=args.num_channels,
             scenario=f"{media}-manual",
+            device=args.device,
             refresh_requirements=args.refresh_requirements,
             **_slow_skip_kwargs(args),
         )
@@ -639,8 +659,14 @@ def cmd_run(args: argparse.Namespace) -> None:
     suffix = "_video" if media == "video" else ""
     logger.info("Running %s benchmarks for %d libraries: %s", media, len(requested), requested)
     for library in tqdm(requested, desc="Libraries", unit="lib", **tqdm_kwargs()):
+        try:
+            ensure_supported_device(library, media, args.device)
+        except ValueError as e:
+            logger.error("%s", e)  # noqa: TRY400
+            sys.exit(1)
         spec_file = repo_root / spec_map[library]
-        output_file = output_dir / f"{library}{suffix}_results.json"
+        device_suffix = f"_dev-{args.device}" if args.device != "none" else ""
+        output_file = output_dir / f"{library}{suffix}{device_suffix}_results.json"
         _run_single(
             library=library,
             spec_file=spec_file,
@@ -654,6 +680,7 @@ def cmd_run(args: argparse.Namespace) -> None:
             verbose=args.verbose,
             num_channels=args.num_channels,
             scenario=f"{media}-manual",
+            device=args.device,
             refresh_requirements=args.refresh_requirements,
             **_slow_skip_kwargs(args),
         )

@@ -19,7 +19,8 @@ Use `_internal/plans/paper_benchmark_execution_plan.md` as the source of truth.
 - CPU rows run on CPU-only machines, usually `c4-standard-16`.
 - GPU rows run only for GPU libraries/paths, usually `g2-standard-16` with L4.
 - Do not run CPU-only rows on GPU VMs for hardware symmetry; label hardware per row instead.
-- Respect the 32-vCPU quota by running at most two 16-vCPU CPU machines at once.
+- Respect the current 64-vCPU quota by running at most four 16-vCPU CPU machines at once. The current GPU quota is one
+  GPU, so run at most one `g2-standard-16` GPU benchmark VM at a time and remember it also consumes 16 vCPUs.
 - Treat RGB micro as a profiler, not the main user-facing training throughput table.
 - Keep micro specs native: no `Normalize`, `ToTensor`, axis conversion, or DataLoader collation work in micro rows.
 - DataLoader pipeline rows use recipe specs with `Normalize+ToTensor`; the conversion belongs in `*_pipeline_impl.py`,
@@ -43,12 +44,18 @@ Already done:
 - MacBook M4 RGB micro.
 - `n2-standard-16` RGB micro.
 - `n2d-standard-16` RGB micro.
+- Reduced `g2-standard-16` video smoke:
+  - `821ae79852204f5cb4d5bea42fab99b1`: video micro, `torchvision kornia`, `DONE`, `exit_code=0`.
+  - `861bd4a840a84ec28ff711f3f68c81a8`: video pipeline CUDA batch-copy smoke,
+    `albumentationsx torchvision kornia`, `DONE`, `exit_code=0`.
+  - `b7e8cdf6fd154357be68a0b38d134136`: repeat video pipeline CUDA batch-copy smoke,
+    `albumentationsx torchvision kornia`, `DONE`, `exit_code=0`.
 
 Core remaining:
 
 - `c4-standard-16`: CPU-only paper tables.
 - `c4d-standard-16`: RGB micro AMD sanity check only.
-- `g2-standard-16`: torchvision/Kornia/DALI GPU video rows only.
+- `g2-standard-16`: final torchvision/Kornia/DALI GPU video rows only.
 
 ## Required Paper Runs
 

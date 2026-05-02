@@ -127,6 +127,11 @@ Do not add anonymous tqdm bars. Every tqdm must have a useful `desc` and a unit 
 
 The paper does not need the full benchmark matrix on every CPU vendor. Run the complete CPU suite once on a modern Intel VM, run a small AMD sanity check, and run video GPU benchmarks separately.
 
+**GCP quota:** Current project quota is **64 vCPUs** (`CPUS_ALL_REGIONS`) and **1 GPU**
+(`GPUS_ALL_REGIONS`). That allows up to four concurrent `c4-standard-16` CPU benchmark VMs if no other
+vCPU-consuming jobs are running. A `g2-standard-16` GPU run also consumes 16 vCPUs, so leave room for it when mixing
+CPU and GPU jobs.
+
 ### Main CPU Suite
 
 Machine: `c4-standard-16` or equivalent modern Intel CPU.
@@ -141,6 +146,9 @@ Run these as the main paper tables:
 - 9-channel DataLoader disk/decode pipeline: `image-9ch`, `pipeline`, `decode_dataloader_augment`.
 - Video micro benchmarks use transforms from `docs/paper_transform_sets/video.md`. Video DataLoader benchmarks use
   dedicated recipe specs with `crop + transform + Normalize + ToTensor` semantics, matching RGB pipeline structure.
+- GPU image sanity benchmarks: `image-rgb` and `image-9ch`, modes `micro` and `pipeline`, libraries
+  `torchvision kornia`, `--device cuda` on `g2-standard-16`. Micro rows are device-resident transform-only measurements;
+  DataLoader rows include CPU load/decode, batch collation, host-to-device copy, GPU recipe execution, and synchronization.
 
 Recommended DataLoader settings for final paper runs:
 
@@ -171,16 +179,22 @@ Machine: `g2-standard-16` with an L4 GPU, or equivalent.
 
 Run these for video/GPU tables:
 
+- GPU image micro and DataLoader sanity checks for `torchvision` and `kornia` on RGB and 9-channel images. These rows
+  answer whether moving image augmentation to the GPU helps after accounting for transfer and batch-level execution.
 - GPU video micro benchmarks for GPU-capable libraries, especially `torchvision` and `kornia`. Micro video preload uses
   fixed-length clips from `--clip-length` (16 frames for `video-16f`), not full source videos.
 - GPU video DataLoader/pipeline benchmarks for GPU-capable paths. These use dedicated video pipeline specs rather than
   micro specs, so AlbumentationsX, torchvision, and Kornia all run recipe-style clips through DataLoader collation.
+- Reduced G2 smoke has already succeeded on UCF101 for `torchvision kornia` video micro and for
+  `albumentationsx torchvision kornia` video pipeline with `decode_dataloader_augment_batch_copy`, `--device cuda`,
+  `--num-items 10`, `--batch-size 2`, and `--workers 2`.
 - Kornia video DataLoader/pipeline rows exclude transforms in `benchmark/transforms/kornia_unstable.py` due to CUDA
   stability issues in that recipe path only. Kornia image micro, image pipeline, 9-channel, and video micro keep those
   transforms unless a separate failure is observed.
 - DALI video pipeline benchmarks when DALI is available on the target image.
 
-CPU-only image rows should not be rerun on GPU machines for hardware symmetry. Label each result row with the machine class that actually ran it.
+CPU-only image rows should not be rerun on GPU machines for hardware symmetry. GPU image rows are a separate
+TorchVision/Kornia sanity section and must be labeled with device, machine class, and whether transfer is included.
 
 ### Validation
 

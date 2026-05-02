@@ -25,6 +25,7 @@ def test_micro_job_builds_pyperf_command_with_filters_and_slow_skip(tmp_path: Pa
         num_channels=9,
         spec_file=tmp_path / "spec.py",
         transforms_filter=("HorizontalFlip", "GaussianBlur"),
+        device="cuda",
         slow_threshold_sec_per_item=0.2,
         slow_preflight_items=5,
         disable_slow_skip=True,
@@ -35,6 +36,7 @@ def test_micro_job_builds_pyperf_command_with_filters_and_slow_skip(tmp_path: Pa
     assert cmd[cmd.index("--scenario") + 1] == "image-9ch"
     assert cmd[cmd.index("--num-channels") + 1] == "9"
     assert cmd[cmd.index("--clip-length") + 1] == "16"
+    assert cmd[cmd.index("--device") + 1] == "cuda"
     assert cmd[cmd.index("--transforms") + 1] == "HorizontalFlip,GaussianBlur"
     assert cmd[cmd.index("--slow-threshold-sec-per-item") + 1] == "0.2"
     assert cmd[cmd.index("--slow-preflight-items") + 1] == "5"

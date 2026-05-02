@@ -167,6 +167,8 @@ def requirements_for_env_group(env_group: str, media: str, repo_root: Path) -> l
 
 
 def _devices_for(scenario_name: ScenarioName, mode: BenchmarkMode, library: str) -> tuple[DeviceOption, ...]:
+    if mode == "micro" and scenario_name.startswith("image-") and library in {"torchvision", "kornia"}:
+        return ("none", "cuda", "mps", "auto")
     if mode != "pipeline":
         return ("none",)
     if scenario_name == "video-16f" or library in {"torchvision", "kornia"}:

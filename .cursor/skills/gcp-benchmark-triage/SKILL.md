@@ -46,9 +46,19 @@ gcloud compute machine-types list \
 Check GPU quota:
 
 ```bash
-gcloud compute project-info describe \
-  --project albumentations \
-  --format="flattened(quotas[].metric,quotas[].limit,quotas[].usage)" | rg 'GPUS|NVIDIA'
+python - <<'PY'
+import json
+import subprocess
+
+raw = subprocess.check_output(
+    ["gcloud", "compute", "project-info", "describe", "--project", "albumentations", "--format=json"],
+    text=True,
+)
+for quota in json.loads(raw).get("quotas", []):
+    metric = quota.get("metric", "")
+    if "CPU" in metric or "GPU" in metric or "NVIDIA" in metric:
+        print(f"{metric}: limit={quota.get('limit')} usage={quota.get('usage')}")
+PY
 ```
 
 ## Common Gotchas
@@ -58,6 +68,9 @@ gcloud compute project-info describe \
   treat `g2-standard-16` as a CPU VM just because `--gcp-gpu-type` is omitted.
 - `Quota 'GPUS_ALL_REGIONS' exceeded. Limit: 0.0 globally.` means the project has zero GPU quota anywhere. Changing zone
   will not help; request global GPU quota and regional L4/G2 quota before retrying.
+- Current quota is **64 vCPUs** and **1 GPU**. CPU quota errors can still happen when overlapping VMs, stale
+  `STOPPING` instances, or a second launch while a blipped client thinks the VM is gone consume the remaining vCPUs.
+  A `g2-standard-16` GPU VM also consumes 16 vCPUs.
 - `No image files found in dataset tarball` for a video scenario means the VM received `--media image`; cloud command
   construction must derive media from `--scenario video-*`, not from the parser's default media value.
 - Result directories contain both summary JSON and raw pyperf JSON; docs should load only `*_results.json`.

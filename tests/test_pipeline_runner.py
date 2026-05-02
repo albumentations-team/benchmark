@@ -46,6 +46,67 @@ def test_pipeline_runner_executes_tiny_memory_pipeline(tmp_path: Path, monkeypat
     assert written["metadata"]["benchmark_params"]["num_images"] == 2
 
 
+def test_gpu_image_loader_path_defers_transform_until_batch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("torch.utils.data")
+    paths = [tmp_path / "a.jpg", tmp_path / "b.jpg"]
+    loader_transforms: list[object | None] = []
+    batch_transforms: list[object] = []
+    transform = object()
+    runner = PipelineBenchmarkRunner(
+        library="kornia",
+        data_dir=tmp_path,
+        output_file=tmp_path / "pipeline.json",
+        transforms=[{"name": "Identity", "transform": transform}],
+        call_fn=lambda _transform, _item: (_ for _ in ()).throw(RuntimeError("per-sample transform used")),
+        media="image",
+        scenario="image-rgb",
+        num_items=2,
+        num_runs=1,
+        batch_size=2,
+        workers=0,
+        min_time=0.0,
+        min_batches=1,
+        pipeline_scope="memory_dataloader_augment",
+        device="cuda",
+    )
+
+    monkeypatch.setattr(runner, "_paths", lambda: paths)
+    monkeypatch.setattr(runner, "_preload_items", lambda _paths: [np.zeros((3, 4, 5), dtype=np.float32)] * 2)
+    monkeypatch.setattr(runner, "_preflight_slow_transform", lambda **_kwargs: None)
+
+    def skip_warm_loader(_loader: object, batch_transform: object | None = None) -> None:
+        _ = batch_transform
+
+    monkeypatch.setattr(runner, "_warm_loader_once", skip_warm_loader)
+    monkeypatch.setattr(runner, "_resolved_device", lambda: "cuda")
+
+    original_loader = runner._loader
+
+    def capture_loader(
+        paths_arg: list[Path],
+        transform_arg: object | None,
+        preloaded: list[object] | None = None,
+    ) -> object:
+        loader_transforms.append(transform_arg)
+        return original_loader(paths_arg, transform_arg, preloaded)
+
+    def capture_batch(_batch: object, transform_arg: object) -> int:
+        batch_transforms.append(transform_arg)
+        return 2
+
+    monkeypatch.setattr(runner, "_loader", capture_loader)
+    monkeypatch.setattr(runner, "_materialize_gpu_image_batch", capture_batch)
+
+    result = runner._run_transform({"name": "Identity", "transform": transform}, paths)
+
+    assert result["supported"] is True
+    assert loader_transforms == [None, None]
+    assert batch_transforms == [transform]
+
+
 def test_pipeline_runner_resolves_none_device_without_torch(tmp_path: Path) -> None:
     runner = PipelineBenchmarkRunner(
         library="testlib",

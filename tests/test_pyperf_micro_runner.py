@@ -13,12 +13,14 @@ import pytest
 
 pytest.importorskip("pyperf")
 
+from benchmark.devices import DeviceUnavailableError
 from benchmark.pyperf_micro_runner import (
     _load_media,
     _make_micro_output_contiguous,
     _merge_pyperf_payload,
     _merge_transform_payload,
     _preflight_slow_transform,
+    _prepare_device_media,
     _pyperf_value_throughputs,
     _run_filtered_transforms,
 )
@@ -26,6 +28,14 @@ from benchmark.runner import MediaType
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+class _FakePyperfRunner:
+    def __init__(self) -> None:
+        self.args = argparse.Namespace(worker=False, values=1)
+
+    def bench_time_func(self, *_args: Any, **_kwargs: Any) -> Any:
+        raise AssertionError("bench_time_func should not run in this test")
 
 
 def test_pyperf_value_throughputs_use_normalized_per_item_times() -> None:
@@ -65,6 +75,22 @@ def test_make_micro_output_contiguous_calls_tensor_contiguous() -> None:
 
     assert _make_micro_output_contiguous(output) is output
     assert output.called
+
+
+def test_prepare_device_media_moves_tensor_like_samples() -> None:
+    class TensorLike:
+        def __init__(self) -> None:
+            self.device: str | None = None
+
+        def to(self, device: str) -> TensorLike:
+            self.device = device
+            return self
+
+    sample = TensorLike()
+    args = argparse.Namespace(resolved_device="cuda")
+
+    assert _prepare_device_media(args, [sample]) == [sample]
+    assert sample.device == "cuda"
 
 
 def test_preflight_slow_transform_returns_visible_skip_payload() -> None:
@@ -181,8 +207,6 @@ def test_load_media_passes_clip_length_to_video_loader(tmp_path: Path, monkeypat
 
 
 def test_preflight_exception_records_unsupported_result(tmp_path: Path) -> None:
-    pyperf = pytest.importorskip("pyperf")
-
     def broken_call(_transform: Any, _item: Any) -> Any:
         raise RuntimeError("bad dtype")
 
@@ -200,12 +224,10 @@ def test_preflight_exception_records_unsupported_result(tmp_path: Path) -> None:
         slow_threshold_sec_per_item=None,
         slow_preflight_items=None,
         json_output=tmp_path / "out.json",
+        device="none",
     )
-    runner = pyperf.Runner(processes=1, values=1, min_time=0.001)
-    runner.parse_args([])
-
     _run_filtered_transforms(
-        runner=runner,
+        runner=_FakePyperfRunner(),
         args=args,
         library="torchvision",
         call_fn=broken_call,
@@ -216,3 +238,42 @@ def test_preflight_exception_records_unsupported_result(tmp_path: Path) -> None:
     result = output["results"]["JpegCompression"]
     assert result["supported"] is False
     assert "bad dtype" in result["reason"]
+
+
+def test_cuda_unavailable_records_unsupported_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    media_cache = tmp_path / "media.pkl"
+    media_cache.write_bytes(pickle.dumps([object()]))
+    args = argparse.Namespace(
+        media="image",
+        media_cache=media_cache,
+        data_dir=tmp_path,
+        num_items=1,
+        num_channels=3,
+        clip_length=16,
+        scenario="image-rgb",
+        disable_slow_skip=False,
+        slow_threshold_sec_per_item=None,
+        slow_preflight_items=None,
+        json_output=tmp_path / "out.json",
+        device="cuda",
+    )
+
+    def unavailable(_device: str) -> str | None:
+        raise DeviceUnavailableError("Requested --device cuda, but CUDA is not available")
+
+    monkeypatch.setattr("benchmark.pyperf_micro_runner.resolve_device", unavailable)
+
+    _run_filtered_transforms(
+        runner=_FakePyperfRunner(),
+        args=args,
+        library="torchvision",
+        call_fn=lambda _transform, item: item,
+        transforms=[{"name": "Resize", "transform": object()}],
+    )
+
+    output = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
+    assert output["results"]["Resize"]["supported"] is False
+    assert "CUDA is not available" in output["results"]["Resize"]["reason"]

@@ -6,6 +6,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCHITECTURE_MODULES = (
     "benchmark/cli.py",
     "benchmark/matrix.py",
+    "benchmark/devices.py",
     "benchmark/policy.py",
     "benchmark/jobs.py",
     "benchmark/orchestrator.py",

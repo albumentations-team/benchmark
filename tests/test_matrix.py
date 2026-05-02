@@ -47,6 +47,11 @@ def test_paper_transform_sets_are_declared_in_matrix() -> None:
 def test_pipeline_device_policy_includes_gpu_and_mps_where_applicable() -> None:
     entries = {(entry.scenario, entry.mode, entry.library): entry for entry in benchmark_matrix()}
 
+    assert entries[("image-rgb", "micro", "torchvision")].devices == ("none", "cuda", "mps", "auto")
+    assert entries[("image-rgb", "micro", "kornia")].devices == ("none", "cuda", "mps", "auto")
+    assert entries[("image-9ch", "micro", "torchvision")].devices == ("none", "cuda", "mps", "auto")
+    assert entries[("image-rgb", "micro", "albumentationsx")].devices == ("none",)
+    assert entries[("image-rgb", "micro", "pillow")].devices == ("none",)
     assert entries[("image-rgb", "pipeline", "kornia")].devices == ("none", "cuda", "mps", "auto")
     assert entries[("image-rgb", "pipeline", "pillow")].devices == ("none",)
     assert entries[("video-16f", "pipeline", "dali")].devices == ("cuda", "auto")

@@ -17,6 +17,8 @@ features in these modules unless there is a strong reason to put logic directly 
   by benchmark media type and ignores macOS archive junk such as `.DS_Store`, AppleDouble `._*`, and `__MACOSX`.
 - `benchmark/policy.py` owns shared media policy: default item counts, warmup limits, item labels, throughput units, and
   slow-transform preflight defaults.
+- `benchmark/devices.py` owns CUDA/MPS device resolution, transform/sample movement, support validation, and
+  synchronization helpers shared by micro and pipeline runners.
 
 ## Data And Spec Loading
 
@@ -37,14 +39,17 @@ features in these modules unless there is a strong reason to put logic directly 
 - `benchmark/pyperf_micro_runner.py` runs augmentation-only micro benchmarks with pyperf. It preloads media once per
   library, reuses the media cache across per-transform subprocesses, constructs only the measured transform, and applies
   the shared slow-skip policy from `benchmark/policy.py`. Micro specs keep each library's native image layout and do not
-  add DataLoader recipe steps such as `Normalize` or `ToTensor`.
+  add DataLoader recipe steps such as `Normalize` or `ToTensor`. For image `torchvision` and `kornia`, `--device` moves
+  samples and transforms to CUDA/MPS before timing and synchronizes device work without copying outputs back to CPU.
 - `benchmark/pipeline_runner.py` runs DataLoader-style recipes. It measures one of three scopes:
   `memory_dataloader_augment`, `decode_dataloader_augment`, or `decode_dataloader_augment_batch_copy`. Pipeline specs own
   recipe-level tensor conversion (`Normalize+ToTensor`) so the runner can use PyTorch default collation without
   benchmark-side channel-layout guesses. Video pipeline recipes mirror RGB recipes: crop or crop-transform, then the
   measured transform, then `Normalize+ToTensor`/tensor-ready conversion. Default collation stacks fixed-shape tensor recipe
   outputs in every DataLoader scope; `decode_dataloader_augment_batch_copy` additionally materializes the collated tensor
-  batch on CUDA/MPS when requested.
+  batch on CUDA/MPS when requested. For image `torchvision` and `kornia` with `--device`, DataLoader workers still load
+  CPU samples, then the runner copies the collated batch to the selected device and applies the recipe once at batch
+  level.
 - DALI video pipeline runs are represented as `BenchmarkJob(backend="dali_pipeline")` and dispatched by
   `benchmark/orchestrator.py` via `benchmark/dali_pipeline_worker.py`, not by CLI special cases.
 
@@ -63,6 +68,7 @@ benchmark.cli
 
 - Add new scenario/library/mode support in `benchmark/matrix.py` first.
 - Add new shared defaults in `benchmark/policy.py`, not separately in micro and pipeline runners.
+- Add new device behavior in `benchmark/devices.py`, then plumb it through jobs/runners.
 - Add new command construction to `benchmark/jobs.py`, not inline in `benchmark/cli.py`.
 - Add new backend dispatch to `benchmark/orchestrator.py`, not as a CLI branch.
 - Keep transform implementations explicit and library-specific. Do not create benchmark-side recreations for transforms a
@@ -77,5 +83,6 @@ Architecture-sensitive tests live in:
 - `tests/test_jobs_orchestrator.py`: job command construction, pyperf sidecar cleanup, DALI backend dispatch, GCP attached
   cleanup on failure.
 - `tests/test_pipeline_runner.py`: tiny DataLoader execution, device resolution, shared slow-skip defaults.
+- `tests/test_pyperf_micro_runner.py`: pyperf micro timing helpers, media caching, device-resident micro setup.
 - `tests/test_stage_dataset.py`: GCP dataset tarball planning and extraction for image/video media.
 - `tests/test_slow_threshold.py`: shared slow-threshold formatting and policy defaults.

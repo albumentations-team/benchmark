@@ -18,6 +18,7 @@ from benchmark.cli import (
     _compile_requirements,
     _extract_library,
     _library_env_group,
+    _micro_output_file,
     _requirements_cache_key,
     _requirements_for_env_group,
     build_gcp_benchmark_cli_argv,
@@ -158,6 +159,12 @@ class TestBuildParser:
         )
         assert args.min_time == pytest.approx(1.5)
         assert args.min_batches == 3
+
+    def test_device_flag_parse(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out", "--device", "cuda"])
+
+        assert args.device == "cuda"
 
     def test_refresh_requirements_is_default(self) -> None:
         parser = build_parser()
@@ -353,6 +360,19 @@ class TestBuildGcpBenchmarkCliArgv:
         assert argv[argv.index("--slow-preflight-items") + 1] == "5"
         assert "--disable-slow-skip" in argv
 
+    def test_builds_device_argv(self, tmp_path: Path) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["run", "--data-dir", "/ignored", "--output", "/ignored", "--device", "cuda"])
+
+        argv = build_gcp_benchmark_cli_argv(
+            args,
+            data_dir="/remote/data",
+            output="/remote/out",
+            repo_root=tmp_path,
+        )
+
+        assert argv[argv.index("--device") + 1] == "cuda"
+
     def test_spec_must_be_inside_repo(self, tmp_path: Path) -> None:
         parser = build_parser()
         outside = tmp_path / "outside.py"
@@ -385,6 +405,12 @@ class TestBuildGcpBenchmarkCliArgv:
         )
         assert "--spec" in argv
         assert argv[argv.index("--spec") + 1] == str(spec_path.relative_to(repo_root))
+
+
+def test_micro_output_file_includes_device_suffix(tmp_path: Path) -> None:
+    args = argparse.Namespace(device="cuda")
+
+    assert _micro_output_file(tmp_path, "kornia", args).name == "kornia_micro_dev-cuda_results.json"
 
 
 class TestCmdRunGcp:

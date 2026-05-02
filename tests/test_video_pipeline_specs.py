@@ -57,6 +57,23 @@ def test_kornia_video_pipeline_shear_is_not_registered() -> None:
     assert "RandomCrop224+Shear+Normalize+ToTensor" not in names
 
 
+def test_albumentationsx_video_pipeline_shear_is_not_registered() -> None:
+    pytest.importorskip("albumentations")
+    from benchmark.transforms import albumentationsx_video_pipeline_impl as impl
+
+    names = {entry["name"] for entry in impl.TRANSFORMS}
+
+    assert "RandomCrop224+Shear+Normalize+ToTensor" not in names
+
+
+def test_shear_video_dataloader_requires_two_libraries() -> None:
+    """AlbumentationsX implements Shear, but Kornia video pipeline does not → <2 libs → no shared recipe row."""
+    shear = spec_by_name("Shear")
+    assert is_supported_by_library(shear, "albumentationsx")
+    assert not is_supported_by_library(shear, "kornia")
+    assert shear not in recipe_augmentation_specs()
+
+
 def test_kornia_unstable_video_pipeline_transforms_are_unsupported() -> None:
     for name in KORNIA_BENCHMARK_EXCLUDED_NAMES:
         assert not is_supported_by_library(spec_by_name(name), "kornia")

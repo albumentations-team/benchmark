@@ -4,6 +4,7 @@ import argparse
 import logging
 import os
 import time
+from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 from warnings import warn
@@ -12,6 +13,7 @@ import numpy as np
 from tqdm import tqdm
 
 from benchmark.decoders import decode_video
+from benchmark.devices import move_transform_to_device, resolve_device, synchronize_device
 from benchmark.policy import slow_skip_config
 from benchmark.results import build_metadata, summarize_runs, unsupported_result, write_results
 from benchmark.runner import BenchmarkRunner
@@ -36,15 +38,7 @@ if TYPE_CHECKING:
 
 
 def _torch_synchronize(device: str | None = None) -> None:
-    try:
-        import torch
-
-        if (device in {None, "cuda"}) and torch.cuda.is_available():
-            torch.cuda.synchronize()
-        if device in {None, "mps"} and hasattr(torch, "mps") and torch.backends.mps.is_available():
-            torch.mps.synchronize()
-    except ImportError:
-        return
+    synchronize_device(device)
 
 
 def _video_clip_for_library(path: Path, library: str, clip_length: int) -> Any:
@@ -69,7 +63,7 @@ class _PathDataset:
         library: str,
         num_channels: int,
         clip_length: int,
-        transform: Any,
+        transform: Any | None,
         call_fn: Callable[[Any, Any], Any],
     ) -> None:
         self.paths = paths
@@ -99,6 +93,8 @@ class _PathDataset:
     def __getitem__(self, index: int) -> Any:
         if self.preloaded is not None:
             item = self.preloaded[index]
+            if self.transform is None:
+                return item
             return self.call_fn(self.transform, item)
         if self.paths is None:
             msg = "Dataset has neither paths nor preloaded samples"
@@ -111,6 +107,8 @@ class _PathDataset:
             item = self._image_loader(path)
         else:
             item = _video_clip_for_library(path, self.library, self.clip_length)
+        if self.transform is None:
+            return item
         return self.call_fn(self.transform, item)
 
 
@@ -238,7 +236,7 @@ class PipelineBenchmarkRunner:
         self._preloaded_items = items
         return items
 
-    def _loader(self, paths: list[Path], transform: Any, preloaded: list[Any] | None = None) -> Any:
+    def _loader(self, paths: list[Path], transform: Any | None, preloaded: list[Any] | None = None) -> Any:
         dataset = _PathDataset(
             paths=None if preloaded is not None else paths,
             preloaded=preloaded,
@@ -267,26 +265,14 @@ class PipelineBenchmarkRunner:
         )
 
     def _resolved_device(self) -> str | None:
-        if self.device == "none":
-            self._last_device = None
-            return None
-        try:
-            import torch
-
-            if self.device == "cuda":
-                device = "cuda" if torch.cuda.is_available() else None
-            elif self.device == "mps":
-                device = "mps" if torch.backends.mps.is_available() else None
-            elif torch.cuda.is_available():
-                device = "cuda"
-            elif torch.backends.mps.is_available():
-                device = "mps"
-            else:
-                device = None
-        except ImportError:
-            device = None
+        device = resolve_device(self.device)
         self._last_device = device
         return device
+
+    def _uses_gpu_image_batch_transform(self) -> bool:
+        return (
+            self.media == "image" and self.library in {"torchvision", "kornia"} and self._resolved_device() is not None
+        )
 
     def _to_tensor(self, item: Any) -> Any:
         import torch
@@ -305,13 +291,35 @@ class PipelineBenchmarkRunner:
         stacked = self._to_tensor(batch)
         device = self._resolved_device()
         if device == "cuda":
-            stacked = stacked.pin_memory().to("cuda", non_blocking=True)
+            with suppress(RuntimeError):
+                stacked = stacked.pin_memory()
+            stacked = stacked.to("cuda", non_blocking=True)
         elif device == "mps":
             stacked = stacked.to("mps")
         materialize_transform_output(stacked)
         return batch_size
 
-    def _run_loader_once(self, loader: Any, *, desc: str) -> tuple[int, int]:
+    def _move_batch_to_resolved_device(self, batch: Any) -> Any:
+        stacked = self._to_tensor(batch)
+        device = self._resolved_device()
+        if device == "cuda":
+            with suppress(RuntimeError):
+                stacked = stacked.pin_memory()
+            return stacked.to("cuda", non_blocking=True)
+        if device == "mps":
+            return stacked.to("mps")
+        return stacked
+
+    def _materialize_gpu_image_batch(self, batch: Any, transform: Any) -> int:
+        batch_size = _batch_size(batch)
+        device_batch = self._move_batch_to_resolved_device(batch)
+        device_transform = move_transform_to_device(transform, self._last_device)
+        output = device_transform(device_batch)
+        materialize_transform_output(output)
+        _torch_synchronize(self._last_device)
+        return batch_size
+
+    def _run_loader_once(self, loader: Any, *, desc: str, transform: Any | None = None) -> tuple[int, int]:
         processed = 0
         batches = 0
         iterator = iter(loader)
@@ -319,17 +327,23 @@ class PipelineBenchmarkRunner:
             total_batches = len(loader) if hasattr(loader, "__len__") else None
             batch_iter = tqdm(iterator, total=total_batches, desc=desc, unit="batch", leave=False, **tqdm_kwargs())
             for batch in batch_iter:
-                processed += self._materialize_batch(batch)
+                if transform is None:
+                    processed += self._materialize_batch(batch)
+                else:
+                    processed += self._materialize_gpu_image_batch(batch, transform)
                 batches += 1
         finally:
             _shutdown_loader_iterator(iterator)
         return processed, batches
 
-    def _warm_loader_once(self, loader: Any) -> None:
+    def _warm_loader_once(self, loader: Any, transform: Any | None = None) -> None:
         iterator = iter(loader)
         try:
             batch = next(iterator)
-            self._materialize_batch(batch)
+            if transform is None:
+                self._materialize_batch(batch)
+            else:
+                self._materialize_gpu_image_batch(batch, transform)
         finally:
             _shutdown_loader_iterator(iterator)
 
@@ -364,11 +378,17 @@ class PipelineBenchmarkRunner:
             return None
 
         start = time.perf_counter()
-        for item in items:
-            materialize_transform_output(self.call_fn(transform, item))
+        if self._uses_gpu_image_batch_transform():
+            loader = self._loader(paths[: len(items)], None, items if preloaded is not None else None)
+            processed, _ = self._run_loader_once(loader, desc=f"{transform_name} GPU preflight", transform=transform)
+            item_count = processed
+        else:
+            for item in items:
+                materialize_transform_output(self.call_fn(transform, item))
+            item_count = len(items)
         elapsed = time.perf_counter() - start
-        time_per_item = elapsed / len(items)
-        throughput = len(items) / elapsed if elapsed > 0 else 0.0
+        time_per_item = elapsed / item_count
+        throughput = item_count / elapsed if elapsed > 0 else 0.0
         item_label = "video" if self.media == "video" else "image"
         unit = "vid/s" if self.media == "video" else "img/s"
 
@@ -404,7 +424,7 @@ class PipelineBenchmarkRunner:
             "early_stopped": True,
             "early_stop_reason": reason,
             **slow_threshold_info(threshold, unit),
-            "preflight_items": len(items),
+            "preflight_items": item_count,
             "preflight_elapsed": elapsed,
         }
 
@@ -432,6 +452,9 @@ class PipelineBenchmarkRunner:
         throughputs: list[float] = []
         times: list[float] = []
         preloaded = self._preload_items(paths)
+        gpu_batch_transform = self._uses_gpu_image_batch_transform()
+        dataset_transform = None if gpu_batch_transform else transform
+        batch_transform = transform if gpu_batch_transform else None
         slow_result = self._preflight_slow_transform(
             transform_name=str(transform_dict["name"]),
             transform=transform,
@@ -445,8 +468,8 @@ class PipelineBenchmarkRunner:
         try:
             warm_paths = paths[: min(len(paths), self.batch_size)]
             warm_preloaded = preloaded[: min(len(preloaded), self.batch_size)] if preloaded is not None else None
-            warm_loader = self._loader(warm_paths, transform, warm_preloaded)
-            self._warm_loader_once(warm_loader)
+            warm_loader = self._loader(warm_paths, dataset_transform, warm_preloaded)
+            self._warm_loader_once(warm_loader, batch_transform)
             del warm_loader
             _torch_synchronize(self._resolved_device())
         except Exception as e:
@@ -456,13 +479,17 @@ class PipelineBenchmarkRunner:
         for run_index in tqdm(range(self.num_runs), desc=run_desc, leave=False, **tqdm_kwargs()):
             processed = 0
             batches = 0
-            loader = self._loader(paths, transform, preloaded)
+            loader = self._loader(paths, dataset_transform, preloaded)
             _torch_synchronize(self._resolved_device())
             start = time.perf_counter()
             try:
                 while True:
                     batch_desc = f"{run_desc} run={run_index + 1}/{self.num_runs}"
-                    processed_epoch, batches_epoch = self._run_loader_once(loader, desc=batch_desc)
+                    processed_epoch, batches_epoch = self._run_loader_once(
+                        loader,
+                        desc=batch_desc,
+                        transform=batch_transform,
+                    )
                     processed += processed_epoch
                     batches += batches_epoch
                     elapsed_so_far = time.perf_counter() - start
@@ -507,6 +534,9 @@ class PipelineBenchmarkRunner:
         includes_decode = self.pipeline_scope != "memory_dataloader_augment"
         includes_gpu_transfer = (
             self.pipeline_scope == "decode_dataloader_augment_batch_copy" and self._last_device is not None
+        ) or (self.media == "image" and self.library in {"torchvision", "kornia"} and self._last_device is not None)
+        transform_on_device = (
+            self.media == "image" and self.library in {"torchvision", "kornia"} and self._last_device is not None
         )
         payload = {
             "metadata": build_metadata(
@@ -527,8 +557,10 @@ class PipelineBenchmarkRunner:
                     "decoder": "opencv" if self.media == "video" and self.library != "dali" else self.library,
                     "device": self._last_device or "none",
                     "device_option": self.device,
+                    "transform_on_device": transform_on_device,
+                    "includes_host_to_device_transfer": includes_gpu_transfer,
                     "thread_policy": self.thread_policy,
-                    "batch_collate": self.pipeline_scope.endswith("_batch_copy"),
+                    "batch_collate": True,
                     "preload_time": self._last_preload_time,
                     "slow_skip_enabled": not self.disable_slow_skip,
                     "slow_threshold_sec_per_item": self._slow_skip_config()[0],
