@@ -53,6 +53,14 @@ def _provided(args: argparse.Namespace, flag: str) -> bool:
     return flag in getattr(args, "_provided_flags", set())
 
 
+def _ensure_cloud(data: dict[str, Any]) -> dict[str, Any]:
+    cloud = data.get("cloud")
+    if not isinstance(cloud, dict):
+        cloud = {}
+        data["cloud"] = cloud
+    return cloud
+
+
 def apply_cli_overrides(config: BenchmarkRunConfig, args: argparse.Namespace) -> BenchmarkRunConfig:
     data = config.model_dump()
 
@@ -81,15 +89,40 @@ def apply_cli_overrides(config: BenchmarkRunConfig, args: argparse.Namespace) ->
         data["execution"]["batch_size"] = args.batch_size
     if _provided(args, "--no-refresh-requirements"):
         data["execution"]["refresh_requirements"] = args.refresh_requirements
+    if _provided(args, "--cloud"):
+        _ensure_cloud(data)["provider"] = args.cloud
+    if _provided(args, "--gcp-project"):
+        _ensure_cloud(data)["project"] = args.gcp_project
+    if _provided(args, "--gcp-zone"):
+        _ensure_cloud(data)["zone"] = args.gcp_zone
+    if _provided(args, "--gcp-machine-type"):
+        _ensure_cloud(data)["machine_type"] = args.gcp_machine_type
+    if _provided(args, "--gcp-gpu-type"):
+        _ensure_cloud(data)["gpu_type"] = args.gcp_gpu_type
+    if _provided(args, "--gcp-disk-size-gb"):
+        _ensure_cloud(data)["disk_size_gb"] = args.gcp_disk_size_gb
+    if _provided(args, "--gcp-gcs-data-uri"):
+        data["data"]["gcs_uri"] = args.gcp_gcs_data_uri
+    if _provided(args, "--gcp-gcs-results-uri"):
+        data["output"]["gcs_results_uri"] = args.gcp_gcs_results_uri
     if _provided(args, "--gcp-dry-run"):
-        data["cloud"] = data.get("cloud") or {}
-        data["cloud"]["dry_run"] = args.gcp_dry_run
+        _ensure_cloud(data)["dry_run"] = args.gcp_dry_run
     if _provided(args, "--gcp-attached"):
-        data["cloud"] = data.get("cloud") or {}
-        data["cloud"]["attached"] = args.gcp_attached
+        _ensure_cloud(data)["attached"] = args.gcp_attached
     if _provided(args, "--gcp-keep-instance"):
-        data["cloud"] = data.get("cloud") or {}
-        data["cloud"]["keep_instance"] = args.gcp_keep_instance
+        _ensure_cloud(data)["keep_instance"] = args.gcp_keep_instance
+    if _provided(args, "--gcp-keep-on-failure"):
+        _ensure_cloud(data)["keep_on_failure"] = args.gcp_keep_on_failure
+    if _provided(args, "--gcp-preemptible"):
+        _ensure_cloud(data)["preemptible"] = args.gcp_preemptible
+    if _provided(args, "--gcp-remote-repo-dir"):
+        _ensure_cloud(data)["remote_repo_dir"] = args.gcp_remote_repo_dir
+    if _provided(args, "--gcp-venv-cache-uri"):
+        _ensure_cloud(data)["venv_cache_uri"] = args.gcp_venv_cache_uri
+    if _provided(args, "--gcp-no-venv-cache"):
+        _ensure_cloud(data)["no_venv_cache"] = args.gcp_no_venv_cache
+    if _provided(args, "--gcp-force-venv-cache-rebuild"):
+        _ensure_cloud(data)["force_venv_cache_rebuild"] = args.gcp_force_venv_cache_rebuild
     if _provided(args, "--gcp-remote-data-dir"):
         data["data"]["remote_data_dir"] = args.gcp_remote_data_dir
     return BenchmarkRunConfig.model_validate(data)

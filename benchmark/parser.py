@@ -212,6 +212,8 @@ def build_parser() -> argparse.ArgumentParser:
     plan_p.add_argument("--device", choices=["none", "cuda", "mps", "auto"], help="Override execution.device")
     plan_p.add_argument("--workers", type=int, help="Override execution.workers")
     plan_p.add_argument("--batch-size", type=int, help="Override execution.batch_size")
+    plan_p.add_argument("--gcp-zone", metavar="ZONE", help="Override cloud.zone")
+    plan_p.add_argument("--gcp-machine-type", metavar="TYPE", help="Override cloud.machine_type")
     plan_p.add_argument("--gcp-dry-run", action="store_true", help="Override cloud.dry_run")
 
     cmp_p = subparsers.add_parser("compare", help="Compare two result directories")

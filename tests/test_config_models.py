@@ -91,7 +91,7 @@ def test_rejects_detached_cloud_without_gcs_data() -> None:
 
 
 def test_cli_overrides_apply_after_yaml_config() -> None:
-    config = load_run_config(Path("configs/examples/local_rgb_micro_cpu.yaml"))
+    config = load_run_config(Path("configs/paper/gcp_g2_rgb_micro_gpu_smoke.yaml"))
     args = argparse.Namespace(
         data_dir="/data/override",
         output="/override",
@@ -105,7 +105,24 @@ def test_cli_overrides_apply_after_yaml_config() -> None:
         workers=0,
         batch_size=32,
         refresh_requirements=False,
+        cloud="gcp",
+        gcp_project="override-project",
+        gcp_zone="us-central1-a",
+        gcp_machine_type="g2-standard-16",
+        gcp_gpu_type=None,
+        gcp_disk_size_gb=300,
+        gcp_gcs_data_uri="gs://bucket/data.tar",
+        gcp_gcs_results_uri="gs://bucket/results",
         gcp_dry_run=False,
+        gcp_attached=False,
+        gcp_keep_instance=True,
+        gcp_keep_on_failure=True,
+        gcp_preemptible=True,
+        gcp_remote_repo_dir="~/bench-override",
+        gcp_venv_cache_uri="gs://bucket/cache",
+        gcp_no_venv_cache=False,
+        gcp_force_venv_cache_rebuild=True,
+        gcp_remote_data_dir=None,
         dry_run=False,
         _provided_flags={
             "--data-dir",
@@ -114,6 +131,17 @@ def test_cli_overrides_apply_after_yaml_config() -> None:
             "--num-items",
             "--num-runs",
             "--no-refresh-requirements",
+            "--gcp-project",
+            "--gcp-zone",
+            "--gcp-disk-size-gb",
+            "--gcp-gcs-data-uri",
+            "--gcp-gcs-results-uri",
+            "--gcp-keep-instance",
+            "--gcp-keep-on-failure",
+            "--gcp-preemptible",
+            "--gcp-remote-repo-dir",
+            "--gcp-venv-cache-uri",
+            "--gcp-force-venv-cache-rebuild",
         },
     )
 
@@ -125,6 +153,18 @@ def test_cli_overrides_apply_after_yaml_config() -> None:
     assert resolved.data.num_items == 5
     assert resolved.execution.num_runs == 2
     assert resolved.execution.refresh_requirements is False
+    assert resolved.data.gcs_uri == "gs://bucket/data.tar"
+    assert resolved.output.gcs_results_uri == "gs://bucket/results"
+    assert resolved.cloud is not None
+    assert resolved.cloud.project == "override-project"
+    assert resolved.cloud.zone == "us-central1-a"
+    assert resolved.cloud.disk_size_gb == 300
+    assert resolved.cloud.keep_instance is True
+    assert resolved.cloud.keep_on_failure is True
+    assert resolved.cloud.preemptible is True
+    assert resolved.cloud.remote_repo_dir == "~/bench-override"
+    assert resolved.cloud.venv_cache_uri == "gs://bucket/cache"
+    assert resolved.cloud.force_venv_cache_rebuild is True
 
 
 def test_config_exposes_resolved_scenario_fields() -> None:

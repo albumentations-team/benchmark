@@ -569,6 +569,12 @@ After submission, open `./gcp_runs/gcp_last_run.json` for `run_prefix`, `instanc
 python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml --gcp-dry-run
 ```
 
+If a GPU zone is stocked out, keep the config fixed and override only the zone that GCP suggests:
+
+```bash
+python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_micro_gpu_smoke.yaml --gcp-zone us-central1-a
+```
+
 **Attached / SSH mode (debug)**
 
 Creates the VM, waits for SSH, uploads the repo, runs the benchmark in a live session, downloads results to `--output`, then deletes the VM. Requires a dataset path **on the VM** (you must stage data yourself):
