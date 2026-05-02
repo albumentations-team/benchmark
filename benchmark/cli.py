@@ -588,6 +588,7 @@ def _print_dry_run(config: BenchmarkRunConfig, repo_root: Path) -> None:
 
 def cmd_run(args: argparse.Namespace) -> None:
     repo_root = Path(__file__).parent.parent.resolve()
+    verbose = args.verbose
     run_config = _resolve_run_config(args)
     run_config = resolve_config_transform_set(run_config, repo_root)
     _log_run_summary(run_config)
@@ -595,37 +596,41 @@ def cmd_run(args: argparse.Namespace) -> None:
     if args.dry_run:
         _print_dry_run(run_config, repo_root)
         return
-    args = config_to_namespace(run_config, verbose=args.verbose)
-    media: str = args.media
-    output_dir = Path(args.output)
+    media = run_config.resolved_media()
+    output_dir = Path(run_config.output.output_dir or "output")
     output_dir.mkdir(parents=True, exist_ok=True)
     write_resolved_config(run_config, output_dir / "resolved_config.yaml")
 
     # --multichannel: use 9ch specs, output to output/multichannel/
-    if getattr(args, "multichannel", False) and media == "image":
-        args.num_channels = 9
-        if args.cloud != "gcp":
-            output_dir = output_dir / "multichannel"
-            output_dir.mkdir(parents=True, exist_ok=True)
+    if (
+        run_config.selection.multichannel
+        and media == "image"
+        and not (run_config.cloud and run_config.cloud.provider == "gcp")
+    ):
+        output_dir = output_dir / "multichannel"
+        output_dir.mkdir(parents=True, exist_ok=True)
 
     # ------------------------------------------------------------------
     # Cloud path: delegate the whole run to a GCP instance
     # ------------------------------------------------------------------
-    if args.cloud == "gcp":
-        _cmd_run_gcp(args, repo_root, output_dir, run_config=run_config)
+    if run_config.cloud and run_config.cloud.provider == "gcp":
+        cloud_args = config_to_namespace(run_config, verbose=verbose)
+        _cmd_run_gcp(cloud_args, repo_root, output_dir, run_config=run_config)
         return
 
-    if args.scenario:
-        _cmd_run_scenario(run_config=run_config, repo_root=repo_root, output_dir=output_dir, verbose=args.verbose)
+    if run_config.selection.scenario:
+        _cmd_run_scenario(run_config=run_config, repo_root=repo_root, output_dir=output_dir, verbose=verbose)
         logger.info("Scenario benchmark complete. Results in: %s", output_dir)
         return
 
     # Custom spec file path takes priority
-    if args.spec:
-        spec_file = Path(args.spec)
+    if run_config.selection.spec:
+        spec_file = Path(run_config.selection.spec)
+        if not spec_file.is_absolute():
+            spec_file = repo_root / spec_file
         library = _extract_library(spec_file)
         try:
-            ensure_supported_device(library, media, args.device)
+            ensure_supported_device(library, media, run_config.execution.device)
         except ValueError as e:
             logger.error("%s", e)  # noqa: TRY400
             sys.exit(1)
@@ -633,22 +638,22 @@ def cmd_run(args: argparse.Namespace) -> None:
         _run_micro_job(
             library=library,
             spec_file=spec_file,
-            data_dir=Path(args.data_dir),
+            data_dir=_required_data_dir(run_config),
             output_file=output_file,
             run_config=run_config,
             repo_root=repo_root,
-            verbose=args.verbose,
+            verbose=verbose,
         )
         return
 
     # Built-in libraries
-    if getattr(args, "multichannel", False) and media == "image":
+    if run_config.selection.multichannel and media == "image":
         spec_map = _MULTICHANNEL_IMAGE_SPECS
     else:
         spec_map = _VIDEO_SPECS if media == "video" else _IMAGE_SPECS
     available = list(spec_map.keys())
 
-    requested: list[str] = args.libraries or available
+    requested: list[str] = run_config.selection.libraries or available
     unknown = set(requested) - set(available)
     if unknown:
         logger.error("Unknown libraries for %s mode: %s. Available: %s", media, sorted(unknown), available)
@@ -657,20 +662,20 @@ def cmd_run(args: argparse.Namespace) -> None:
     logger.info("Running %s benchmarks for %d libraries: %s", media, len(requested), requested)
     for library in tqdm(requested, desc="Libraries", unit="lib", **tqdm_kwargs()):
         try:
-            ensure_supported_device(library, media, args.device)
+            ensure_supported_device(library, media, run_config.execution.device)
         except ValueError as e:
             logger.error("%s", e)  # noqa: TRY400
             sys.exit(1)
         spec_file = repo_root / spec_map[library]
-        output_file = manual_micro_output_file(output_dir, library, media=media, device=args.device)
+        output_file = manual_micro_output_file(output_dir, library, media=media, device=run_config.execution.device)
         _run_micro_job(
             library=library,
             spec_file=spec_file,
-            data_dir=Path(args.data_dir),
+            data_dir=_required_data_dir(run_config),
             output_file=output_file,
             run_config=run_config,
             repo_root=repo_root,
-            verbose=args.verbose,
+            verbose=verbose,
         )
 
     logger.info("All benchmarks complete. Results in: %s", output_dir)
