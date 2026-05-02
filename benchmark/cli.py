@@ -39,7 +39,6 @@ from benchmark.config import (
     install_run_config_env,
     load_run_config,
     resolve_config_transform_set,
-    run_config_from_args,
     write_resolved_config,
 )
 from benchmark.devices import ensure_supported_device
@@ -252,12 +251,13 @@ def _cmd_run_gcp(
 
 
 def _resolve_run_config(args: argparse.Namespace) -> BenchmarkRunConfig:
+    if not getattr(args, "resolved_config", None) and not getattr(args, "config", None):
+        logger.error("Invalid benchmark run config: run requires --config or --resolved-config")
+        sys.exit(1)
     try:
         if getattr(args, "resolved_config", None):
             return load_run_config(Path(args.resolved_config))
-        if getattr(args, "config", None):
-            return apply_cli_overrides(load_run_config(Path(args.config)), args)
-        return run_config_from_args(args)
+        return apply_cli_overrides(load_run_config(Path(args.config)), args)
     except (TypeError, ValidationError, ValueError) as e:
         logger.error("Invalid benchmark run config: %s", e)  # noqa: TRY400
         sys.exit(1)

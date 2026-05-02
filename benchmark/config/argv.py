@@ -4,82 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import argparse
-
     from benchmark.config.models import BenchmarkRunConfig
-
-
-def build_run_cli_argv_from_args(
-    args: argparse.Namespace,
-    *,
-    data_dir: str,
-    output: str,
-    repo_root: Path,
-) -> list[str]:
-    """Build a legacy ``benchmark.cli run`` argv from parsed flags."""
-    media = args.media
-    if getattr(args, "scenario", None):
-        from benchmark.scenarios import get_scenario
-
-        media = get_scenario(args.scenario).media
-
-    argv: list[str] = [
-        "--data-dir",
-        data_dir,
-        "--output",
-        output,
-        "--media",
-        media,
-        "--num-runs",
-        str(args.num_runs),
-        "--num-channels",
-        str(args.num_channels),
-    ]
-    if args.num_items is not None:
-        argv += ["--num-items", str(args.num_items)]
-    if args.libraries:
-        argv += ["--libraries", *args.libraries]
-    if args.transforms:
-        argv += ["--transforms", *args.transforms]
-    if getattr(args, "transform_set", None):
-        argv += ["--transform-set", args.transform_set]
-    if args.spec:
-        argv += ["--spec", repo_relative_spec_path(str(args.spec), repo_root)]
-    if getattr(args, "multichannel", False):
-        argv.append("--multichannel")
-    if args.verbose:
-        argv.append("--verbose")
-    if getattr(args, "scenario", None):
-        argv += ["--scenario", args.scenario]
-    if getattr(args, "mode", None):
-        argv += ["--mode", args.mode]
-    if getattr(args, "pipeline_scope", None):
-        argv += ["--pipeline-scope", args.pipeline_scope]
-    if getattr(args, "device", None):
-        argv += ["--device", args.device]
-    if getattr(args, "thread_policy", None):
-        argv += ["--thread-policy", args.thread_policy]
-    if getattr(args, "batch_size", None):
-        argv += ["--batch-size", str(args.batch_size)]
-    if getattr(args, "workers", None) is not None:
-        argv += ["--workers", str(args.workers)]
-    if getattr(args, "min_time", None):
-        argv += ["--min-time", str(args.min_time)]
-    if getattr(args, "min_batches", None):
-        argv += ["--min-batches", str(args.min_batches)]
-    if getattr(args, "clip_length", None):
-        argv += ["--clip-length", str(args.clip_length)]
-    if getattr(args, "decoders", None):
-        argv += ["--decoders", *args.decoders]
-    if not getattr(args, "refresh_requirements", True):
-        argv.append("--no-refresh-requirements")
-    if getattr(args, "slow_threshold_sec_per_item", None) is not None:
-        argv += ["--slow-threshold-sec-per-item", str(args.slow_threshold_sec_per_item)]
-    if getattr(args, "slow_preflight_items", None) is not None:
-        argv += ["--slow-preflight-items", str(args.slow_preflight_items)]
-    if getattr(args, "disable_slow_skip", False):
-        argv.append("--disable-slow-skip")
-    return argv
 
 
 def repo_relative_spec_path(spec: str, repo_root: Path) -> str:
@@ -99,7 +24,7 @@ def build_run_cli_argv_from_config(
     repo_root: Path,
     verbose: bool = False,
 ) -> list[str]:
-    """Build a legacy ``benchmark.cli run`` argv from a typed config for compatibility."""
+    """Build ``benchmark.cli run`` argv from a typed config for attached cloud runs."""
     media = config.resolved_media()
     argv: list[str] = [
         "--data-dir",

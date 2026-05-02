@@ -9,8 +9,8 @@ Run augmentation benchmarks with standardized configurations and automatic resul
 
 ## Running Image Benchmarks
 
-Use the config-first CLI for paper, cloud, or repeatable runs. Legacy `run_all.sh` / `run_single.sh` examples are stale
-for this repo, and long flag-only commands should be treated as compatibility/debug paths.
+Use the config-first CLI for paper, cloud, or repeatable runs. Legacy `run_all.sh`, `run_single.sh`, and flag-only
+commands are stale for this repo; start from YAML and use CLI flags only as overrides.
 
 ### Config-first runs
 ```bash
@@ -21,8 +21,8 @@ python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml --g
 
 `benchmark/parser.py` owns parser construction and provided-flag tracking. `benchmark/config/models.py` defines
 `BenchmarkRunConfig`. `benchmark/config/resolve.py` loads YAML, applies supported CLI overrides, writes
-`resolved_config.yaml`, and shapes typed GCP payloads. `benchmark/config/argv.py` builds
-compatibility CLI argv from typed configs for cloud fallback paths. `benchmark/config/plan.py` prints generated jobs and
+`resolved_config.yaml`, and shapes typed GCP payloads. `benchmark/config/argv.py` builds attached-mode CLI argv from
+typed configs for cloud debug runs. `benchmark/config/plan.py` prints generated jobs and
 expected files. `benchmark/config/env.py` embeds the resolved config in result metadata. `benchmark/cloud/paths.py` and
 `benchmark/output_naming.py` keep dry-run plans aligned with real VM paths and result filenames.
 
@@ -32,9 +32,7 @@ flags by hand.
 
 ### Single library
 ```bash
-python -m benchmark.cli run \
-  --scenario image-rgb \
-  --mode micro \
+python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml \
   --data-dir /path/to/imagenet/val \
   --output output/rgb_micro \
   --libraries albumentationsx \
@@ -44,9 +42,7 @@ python -m benchmark.cli run \
 
 ### All libraries
 ```bash
-python -m benchmark.cli run \
-  --scenario image-rgb \
-  --mode micro \
+python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml \
   --data-dir /path/to/imagenet/val \
   --output output/rgb_micro \
   --libraries albumentationsx torchvision kornia pillow \
@@ -56,11 +52,13 @@ python -m benchmark.cli run \
 
 ## Running Video Benchmarks
 
-Use the unified CLI (`python -m benchmark.cli run --media video ...`). Legacy `run_video_*.sh` scripts are not in-repo.
+Use the unified CLI with a YAML config, for example
+`python -m benchmark.cli run --config configs/examples/local_video_micro_cpu.yaml --data-dir /path/to/videos`.
+Legacy `run_video_*.sh` scripts are not in-repo.
 
 ### Google Cloud (detached)
 
-Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with a startup script that downloads one **dataset tarball** from `gs://` (for example `val.tar` or `ucf101.tar`), unpacks/stages media files on local disk, runs `benchmark.cli run --resolved-config /root/benchmark-work/job_config.yaml` when a typed `run_config` is present, writes artifacts under `gs://<results-base>/<run_id>/`, then deletes the VM. `benchmark/cloud/launch.py` owns launch option resolution and typed job payload assembly; `benchmark/cloud/gcp.py` owns the lower-level GCP runner. Legacy `benchmark_cli_args` remain only as a compatibility fallback and are generated from the typed config for config-based runs. See README **Google Cloud (detached)** and `benchmark/cloud/paths.py`. Use `--gcp-attached` for blocking SSH/debug runs.
+Default `--cloud gcp` path: uploads repo + typed `job.json` to GCS, creates a VM with a startup script that downloads one **dataset tarball** from `gs://` (for example `val.tar` or `ucf101.tar`), unpacks/stages media files on local disk, writes `/root/benchmark-work/job_config.yaml`, runs `benchmark.cli run --resolved-config /root/benchmark-work/job_config.yaml`, writes artifacts under `gs://<results-base>/<run_id>/`, then deletes the VM. `benchmark/cloud/launch.py` owns launch option resolution and typed job payload assembly; `benchmark/cloud/gcp.py` owns the lower-level GCP runner. See README **Google Cloud (detached)** and `benchmark/cloud/paths.py`. Use `--gcp-attached` for blocking SSH/debug runs.
 
 ## Optimization Policies
 

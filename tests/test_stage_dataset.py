@@ -52,7 +52,10 @@ def test_image_tar_extract_accepts_non_imagenet_layout(tmp_path: Path) -> None:
 def test_micro_gcp_requires_tar_source() -> None:
     job = {
         "gcs_data_uri": "gs://bucket/ucf101-dir",
-        "benchmark_cli_args": ["--media", "video", "--mode", "micro", "--num-items", "10"],
+        "run_config": {
+            "selection": {"scenario": "video-16f", "mode": "micro"},
+            "data": {"num_items": 10},
+        },
     }
 
     with pytest.raises(SystemExit, match="must point to a tarball"):
@@ -62,13 +65,20 @@ def test_micro_gcp_requires_tar_source() -> None:
 def test_video_micro_plan_uses_video_default_limit() -> None:
     job = {
         "gcs_data_uri": "gs://bucket/ucf101.tar",
-        "benchmark_cli_args": ["--scenario", "video-16f", "--mode", "micro"],
+        "run_config": {"selection": {"scenario": "video-16f", "mode": "micro"}, "data": {}},
     }
 
     plan = build_stage_plan(job)
 
     assert plan.media == "video"
     assert plan.limit == 50
+
+
+def test_stage_plan_requires_typed_run_config() -> None:
+    job = {"gcs_data_uri": "gs://bucket/ucf101.tar"}
+
+    with pytest.raises(SystemExit, match="missing typed run_config"):
+        build_stage_plan(job)
 
 
 def test_stage_plan_accepts_typed_run_config_payload() -> None:

@@ -443,7 +443,8 @@ This will give you more relevant performance metrics for your specific use case.
 ## Running Benchmarks
 
 All benchmarks use the unified CLI: `python -m benchmark.cli run`. Prefer checked-in YAML configs for paper and cloud
-runs, and use direct flags for quick local iteration. Config files are validated with Pydantic before work starts.
+runs; CLI flags are override knobs for an existing config, not a second source of truth. Config files are validated with
+Pydantic before work starts.
 Named transform sets such as `paper` are expanded to concrete transform names, and the resolved config is written to
 `resolved_config.yaml` in the output directory.
 
@@ -457,45 +458,22 @@ python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml --n
 Use `benchmark plan --config ...` or `benchmark run --config ... --dry-run` to print the resolved config, generated jobs,
 expected output files, and cloud VM settings without starting local measurements or creating a VM.
 
-The legacy flag interface remains supported. Use `--media` for image vs video, `--multichannel` for 9-channel image benchmarks, and `--libraries` to restrict to one or more libraries.
+Flag-only benchmark execution is intentionally unsupported. Start from a YAML file under `configs/examples/` or
+`configs/paper/`, then use supported overrides such as `--num-items`, `--num-runs`, `--device`, `--workers`,
+`--batch-size`, and `--output` when you need quick local changes.
 
 The CLI creates joined virtual environments for compatible libraries, for example `.venv_albumentationsx` for AlbumentationsX and `.venv_torch_stack` for torchvision, Kornia, and Pillow image benchmarks. By default, each run refreshes `requirements/*.txt` from `requirements/*.in` with the latest compatible package versions, then installs dependencies only when the resolved requirement files changed. Pass `--no-refresh-requirements` for offline/debug reruns that should reuse the existing lock files and venv cache.
 
 For paper runs, pass `--transform-set paper` to use only transforms present in at least two selected libraries. The fixed sets live under `docs/paper_transform_sets/`.
 
-For RGB image paper runs, prefer scenario mode:
+For RGB image paper runs, prefer the checked-in configs:
 
 ```bash
-# Micro/profiler: one internal thread per library, preloaded images, augmentation only.
-python -m benchmark.cli run \
-  --scenario image-rgb \
-  --mode micro \
-  --data-dir /path/to/imagenet/val \
-  --output output/rgb_micro \
-  --num-items 2000 \
-  --transform-set paper
-
-# In-memory DataLoader: decoded samples are preloaded, workers run training recipes.
-python -m benchmark.cli run \
-  --scenario image-rgb \
-  --mode pipeline \
-  --pipeline-scope memory_dataloader_augment \
-  --data-dir /path/to/imagenet/val \
-  --output output/rgb_memory_dataloader \
-  --batch-size 64 \
-  --workers 8 \
-  --min-time 30
-
-# Disk DataLoader: full ImageNet validation from disk, production-style threading.
-python -m benchmark.cli run \
-  --scenario image-rgb \
-  --mode pipeline \
-  --pipeline-scope decode_dataloader_augment \
-  --data-dir /path/to/imagenet/val \
-  --output output/rgb_pipeline \
-  --batch-size 64 \
-  --workers 8 \
-  --min-time 30
+python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml
+python -m benchmark.cli run --config configs/examples/local_rgb_dataloader_cpu.yaml
+python -m benchmark.cli run --config configs/paper/gcp_c4_rgb_micro_cpu.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/gcp_g2_9ch_gpu_smoke.yaml --gcp-dry-run
 ```
 
 Pipeline result filenames include the key sweep parameters, for example
@@ -529,13 +507,7 @@ paths on GPU.
 Skip dependency lock refresh when you intentionally want the fastest local rerun from existing locks:
 
 ```bash
-python -m benchmark.cli run \
-  --scenario image-rgb \
-  --mode micro \
-  --data-dir /path/to/imagenet/val \
-  --output output/rgb_micro \
-  --libraries albumentationsx \
-  --no-refresh-requirements
+python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml --no-refresh-requirements
 ```
 
 ### Benchmark execution policy
@@ -565,7 +537,7 @@ python -m benchmark.cli run \
 
 ### Google Cloud (detached)
 
-Run benchmarks on a **Compute Engine** VM that starts from your laptop, then keeps going after you disconnect. The default path is **detached**: the CLI uploads the repo and a job definition to **GCS**, creates a VM whose **startup script** downloads one dataset tarball such as `gs://.../val.tar` or `gs://.../ucf101.tar`, unpacks media files to **local disk** (benchmarks do not read from a mounted bucket), runs `python -m benchmark.cli run` with the same flags you would use locally (including `--spec`, `--multichannel`, warmup options, etc.), uploads **results**, **vm.log**, **exit_code.txt**, and **run_meta.json** under a unique prefix, and **deletes the VM** when finished (unless you pass `--gcp-keep-instance`).
+Run benchmarks on a **Compute Engine** VM that starts from your laptop, then keeps going after you disconnect. The default path is **detached**: the CLI uploads the repo and a typed job definition to **GCS**, creates a VM whose **startup script** downloads one dataset tarball such as `gs://.../val.tar` or `gs://.../ucf101.tar`, unpacks media files to **local disk** (benchmarks do not read from a mounted bucket), writes the typed run config to disk, runs `python -m benchmark.cli run --resolved-config /root/benchmark-work/job_config.yaml`, uploads **results**, **vm.log**, **exit_code.txt**, and **run_meta.json** under a unique prefix, and **deletes the VM** when finished (unless you set `cloud.keep_instance: true` or pass `--gcp-keep-instance` as an override).
 
 **Prerequisites**
 
@@ -578,26 +550,13 @@ Run benchmarks on a **Compute Engine** VM that starts from your laptop, then kee
 
 **Submit a detached run**
 
-Config-based detached runs carry a typed `run_config` in `job.json`; the VM writes that config to disk and runs
-`benchmark.cli` with `--resolved-config`. Legacy `benchmark_cli_args` are still included as a compatibility fallback and
-are generated from the same resolved typed config.
-
-For flag-based detached runs, `--data-dir` and `--output` are local hints; point the real dataset at GCS:
+Detached runs carry a typed `run_config` in `job.json`; the VM writes that config to disk and runs `benchmark.cli` with
+`--resolved-config`. Point the real dataset at GCS in the YAML config:
 
 ```bash
-python -m benchmark.cli run \
-  --cloud gcp \
-  --gcp-project my-gcp-project \
-  --gcp-zone us-central1-a \
-  --gcp-machine-type n1-standard-8 \
-  --gcp-gcs-data-uri gs://my-bucket/datasets/imagenet/val.tar \
-  --gcp-gcs-results-uri gs://my-bucket/benchmark-runs \
-  --data-dir /tmp/unused \
-  --output ./gcp_runs \
-  --scenario image-rgb \
-  --mode micro \
-  --libraries albumentationsx torchvision kornia pillow \
-  --num-items 2000
+python -m benchmark.cli plan --config configs/paper/gcp_c4_rgb_micro_cpu.yaml
+python -m benchmark.cli run --config configs/paper/gcp_c4_rgb_micro_cpu.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/gcp_c4_rgb_micro_cpu.yaml
 ```
 
 After submission, open `./gcp_runs/gcp_last_run.json` for `run_prefix`, `instance_name`, and a suggested `gcloud storage cp` command to pull `results/` when the run finishes.
@@ -605,7 +564,7 @@ After submission, open `./gcp_runs/gcp_last_run.json` for `run_prefix`, `instanc
 **Dry run (no upload, no VM)**
 
 ```bash
-python -m benchmark.cli run --cloud gcp ... --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml --gcp-dry-run
 ```
 
 **Attached / SSH mode (debug)**
@@ -613,13 +572,7 @@ python -m benchmark.cli run --cloud gcp ... --gcp-dry-run
 Creates the VM, waits for SSH, uploads the repo, runs the benchmark in a live session, downloads results to `--output`, then deletes the VM. Requires a dataset path **on the VM** (you must stage data yourself):
 
 ```bash
-python -m benchmark.cli run \
-  --cloud gcp --gcp-attached \
-  --gcp-project my-gcp-project \
-  --gcp-remote-data-dir /data/benchmark/videos \
-  --data-dir /tmp/unused \
-  --output ./results \
-  --media video
+python -m benchmark.cli run --config configs/paper/gcp_g2_video_smoke.yaml --gcp-attached --gcp-remote-data-dir /data/benchmark/videos
 ```
 
 **Cost note:** GCS storage for a subset and JSON results is usually small compared to **GPU/CPU VM uptime**; the expensive mistake is leaving instances running. Detached runs terminate the VM by default after uploading artifacts.
@@ -627,43 +580,43 @@ python -m benchmark.cli run \
 ### RGB image benchmarks (all libraries)
 
 ```bash
-python -m benchmark.cli run -d /path/to/images -o /path/to/output
+python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml --data-dir /path/to/images --output /path/to/output
 ```
 
 ### RGB image benchmarks (single library)
 
 ```bash
-python -m benchmark.cli run -d /path/to/images -o /path/to/output --libraries albumentationsx
-python -m benchmark.cli run -d /path/to/images -o /path/to/output --libraries torchvision
-python -m benchmark.cli run -d /path/to/images -o /path/to/output --libraries kornia
+python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml --data-dir /path/to/images --output /path/to/output --libraries albumentationsx
+python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml --data-dir /path/to/images --output /path/to/output --libraries torchvision
+python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml --data-dir /path/to/images --output /path/to/output --libraries kornia
 ```
 
 ### Multi-channel image benchmarks (9ch, all libraries)
 
 ```bash
-python -m benchmark.cli run -d /path/to/images -o /path/to/output --multichannel
+python -m benchmark.cli run --config configs/examples/local_9ch_micro_cpu.yaml --data-dir /path/to/images --output /path/to/output
 ```
 
 ### Multi-channel image benchmarks (9ch, single library)
 
 ```bash
-python -m benchmark.cli run -d /path/to/images -o /path/to/output --multichannel --libraries albumentationsx
-python -m benchmark.cli run -d /path/to/images -o /path/to/output --multichannel --libraries torchvision
-python -m benchmark.cli run -d /path/to/images -o /path/to/output --multichannel --libraries kornia
+python -m benchmark.cli run --config configs/examples/local_9ch_micro_cpu.yaml --data-dir /path/to/images --output /path/to/output --libraries albumentationsx
+python -m benchmark.cli run --config configs/examples/local_9ch_micro_cpu.yaml --data-dir /path/to/images --output /path/to/output --libraries torchvision
+python -m benchmark.cli run --config configs/examples/local_9ch_micro_cpu.yaml --data-dir /path/to/images --output /path/to/output --libraries kornia
 ```
 
 ### Video benchmarks (all libraries)
 
 ```bash
-python -m benchmark.cli run -d /path/to/videos -o /path/to/output --media video
+python -m benchmark.cli run --config configs/examples/local_video_micro_cpu.yaml --data-dir /path/to/videos --output /path/to/output
 ```
 
 ### Video benchmarks (single library)
 
 ```bash
-python -m benchmark.cli run -d /path/to/videos -o /path/to/output --media video --libraries albumentationsx
-python -m benchmark.cli run -d /path/to/videos -o /path/to/output --media video --libraries torchvision
-python -m benchmark.cli run -d /path/to/videos -o /path/to/output --media video --libraries kornia
+python -m benchmark.cli run --config configs/examples/local_video_micro_cpu.yaml --data-dir /path/to/videos --output /path/to/output --libraries albumentationsx
+python -m benchmark.cli run --config configs/examples/local_video_micro_cpu.yaml --data-dir /path/to/videos --output /path/to/output --libraries torchvision
+python -m benchmark.cli run --config configs/examples/local_video_micro_cpu.yaml --data-dir /path/to/videos --output /path/to/output --libraries kornia
 ```
 
 After running benchmarks, update the README tables with:
@@ -699,10 +652,10 @@ CUSTOM_TRANSFORMS = [
 ]
 ```
 
-Then run:
+Then reference it from a YAML config:
 
 ```bash
-python -m benchmark.cli run -d /path/to/videos -o output/ --media video --spec my_transforms.py
+python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml --spec my_transforms.py
 ```
 
 The results will show each transform with all its parameters:
@@ -727,7 +680,8 @@ This will show:
 
 The implementation is split between a control plane and timing engines:
 
-- `benchmark/cli.py`: argument parsing and backwards-compatible CLI helpers.
+- `benchmark/parser.py`: argument parsing and CLI override tracking.
+- `benchmark/cli.py`: command handlers and typed config execution.
 - `benchmark/matrix.py`: declarative scenario/library/mode matrix.
 - `benchmark/policy.py`: shared media defaults and slow-transform policy.
 - `benchmark/jobs.py`: immutable `BenchmarkJob` plus subprocess command construction.

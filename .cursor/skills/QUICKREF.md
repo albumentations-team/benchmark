@@ -5,7 +5,7 @@
 ### 1. Test Benchmark Runner
 ```bash
 # Ask Cursor: "Show me how to run benchmarks for albumentationsx"
-# Expected: Should reference python -m benchmark.cli run with --scenario/--mode/--libraries
+# Expected: Should reference python -m benchmark.cli run --config ... with --libraries as an override
 ```
 
 ### 2. Test Pre-commit Validation

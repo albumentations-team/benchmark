@@ -1,4 +1,4 @@
-from benchmark.config.argv import build_run_cli_argv_from_args, build_run_cli_argv_from_config, repo_relative_spec_path
+from benchmark.config.argv import build_run_cli_argv_from_config, repo_relative_spec_path
 from benchmark.config.env import RUN_CONFIG_ENV_VAR, install_run_config_env, run_config_payload_from_env
 from benchmark.config.models import (
     BenchmarkRunConfig,
@@ -13,7 +13,6 @@ from benchmark.config.resolve import (
     apply_cli_overrides,
     load_run_config,
     remote_run_config_payload,
-    run_config_from_args,
     run_config_payload,
     write_resolved_config,
 )
@@ -33,7 +32,6 @@ __all__ = [
     "RunPlan",
     "SelectionConfig",
     "apply_cli_overrides",
-    "build_run_cli_argv_from_args",
     "build_run_cli_argv_from_config",
     "build_run_plan",
     "install_run_config_env",
@@ -43,7 +41,6 @@ __all__ = [
     "remote_run_config_payload",
     "repo_relative_spec_path",
     "resolve_config_transform_set",
-    "run_config_from_args",
     "run_config_payload",
     "run_config_payload_from_env",
     "write_resolved_config",

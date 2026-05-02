@@ -29,24 +29,6 @@ class DatasetStagePlan:
     is_archive: bool
 
 
-def value_after_flag(args: list[str], flag: str) -> str:
-    try:
-        return str(args[args.index(flag) + 1])
-    except (ValueError, IndexError):
-        return ""
-
-
-def infer_media(args: list[str]) -> MediaName:
-    media = value_after_flag(args, "--media")
-    if media in MEDIA_SUFFIXES:
-        return cast("MediaName", media)
-
-    scenario = value_after_flag(args, "--scenario")
-    if scenario.startswith("video"):
-        return "video"
-    return "image"
-
-
 def default_micro_limit(media: MediaName) -> int:
     return 50 if media == "video" else 1000
 
@@ -73,13 +55,10 @@ def _stage_fields_from_run_config(run_config: dict[str, Any]) -> tuple[MediaName
 def build_stage_plan(job: dict[str, Any]) -> DatasetStagePlan:
     run_config = job.get("run_config")
     gcs_data_uri = str(job["gcs_data_uri"])
-    if isinstance(run_config, dict):
-        media, mode, num_items = _stage_fields_from_run_config(run_config)
-    else:
-        args = [str(arg) for arg in job["benchmark_cli_args"]]
-        media = infer_media(args)
-        mode = value_after_flag(args, "--mode")
-        num_items = value_after_flag(args, "--num-items")
+    if not isinstance(run_config, dict):
+        msg = "job.json is missing typed run_config"
+        raise SystemExit(msg)
+    media, mode, num_items = _stage_fields_from_run_config(run_config)
     is_archive = gcs_data_uri.lower().endswith(ARCHIVE_SUFFIXES)
 
     if mode == "micro" and not is_archive:

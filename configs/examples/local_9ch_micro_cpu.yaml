@@ -1,0 +1,15 @@
+version: 1
+selection:
+  scenario: image-9ch
+  mode: micro
+  libraries: [albumentationsx, torchvision, kornia]
+  transform_set: paper
+data:
+  data_dir: /path/to/imagenet/val
+  num_items: 1000
+  num_channels: 9
+output:
+  output_dir: output/9ch_micro
+execution:
+  num_runs: 1
+  device: none

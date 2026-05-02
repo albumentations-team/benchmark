@@ -74,22 +74,23 @@ Core remaining:
 
 Main CPU suite on `c4-standard-16` or equivalent modern Intel CPU:
 
-- RGB micro: `--scenario image-rgb --mode micro --libraries albumentationsx torchvision kornia pillow --transform-set paper`.
-- 9ch micro: `--scenario image-9ch --mode micro --libraries albumentationsx torchvision kornia --transform-set paper`.
-- RGB DataLoader memory: `--scenario image-rgb --mode pipeline --pipeline-scope memory_dataloader_augment`.
-- RGB DataLoader decode: `--scenario image-rgb --mode pipeline --pipeline-scope decode_dataloader_augment`.
-- 9ch DataLoader memory: `--scenario image-9ch --mode pipeline --pipeline-scope memory_dataloader_augment`.
-- 9ch DataLoader decode: `--scenario image-9ch --mode pipeline --pipeline-scope decode_dataloader_augment`.
+- RGB micro: start from `configs/paper/gcp_c4_rgb_micro_cpu.yaml`.
+- 9ch micro: start from `configs/examples/local_9ch_micro_cpu.yaml` or the GCP 9ch config with CPU device/settings.
+- RGB DataLoader memory: use an RGB pipeline config with `execution.pipeline_scope: memory_dataloader_augment`.
+- RGB DataLoader decode: use an RGB pipeline config with `execution.pipeline_scope: decode_dataloader_augment`.
+- 9ch DataLoader memory: use a 9ch pipeline config with `execution.pipeline_scope: memory_dataloader_augment`.
+- 9ch DataLoader decode: use a 9ch pipeline config with `execution.pipeline_scope: decode_dataloader_augment`.
 - Video rows: transforms from `docs/paper_transform_sets/video.md`; run CPU/GPU subsets according to the machine plan.
 
-Recommended final DataLoader flags:
+Recommended final DataLoader config fields:
 
-```bash
---batch-size 256 \
---workers 8 \
---num-runs 3 \
---min-time 0 \
---thread-policy pipeline-single-worker
+```yaml
+execution:
+  batch_size: 256
+  workers: 8
+  num_runs: 3
+  min_time: 0
+  thread_policy: pipeline-single-worker
 ```
 
 AMD sanity on `c4d-standard-16` or equivalent:
@@ -109,7 +110,7 @@ Do not rerun CPU-only image rows on GPU machines for hardware symmetry. Label ha
 ## Execution Order
 
 1. Inventory existing results and avoid rerunning completed `n2`/`n2d` baselines.
-2. Run each scenario through the production path with tiny `--num-items`, `--num-runs 1`, and short or zero `--min-time`.
+2. Run each scenario through the production path with tiny `--num-items`, `--num-runs 1`, and short or zero `min_time`.
 3. Run RGB micro on `c4-standard-16` and `c4d-standard-16`.
 4. Run CPU suite on `c4-standard-16`: 9ch micro, RGB DataLoader, 9ch DataLoader, Albumentations video CPU micro.
 5. Run GPU suite on `g2-standard-16`: AlbumentationsX/torchvision/Kornia video micro and GPU video DataLoader.

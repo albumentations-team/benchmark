@@ -202,8 +202,7 @@ Complete documentation update workflow:
 ```bash
 # 1. Run benchmarks (if needed)
 python -m benchmark.cli run \
-  --scenario image-rgb \
-  --mode micro \
+  --config configs/examples/local_rgb_micro_cpu.yaml \
   --data-dir /path/to/imagenet/val \
   --output output/rgb_micro \
   --num-items 2000
@@ -230,9 +229,9 @@ Keep README guidance aligned with these policies:
 - Benchmark architecture docs should say that `benchmark/config/models.py` owns `BenchmarkRunConfig` validation,
   `benchmark/config/resolve.py` owns YAML loading/CLI overrides/payload shaping, `benchmark/config/plan.py` owns dry-run
   job expansion, and `benchmark/config/env.py` owns resolved-config metadata handoff.
-- Benchmark docs should prefer `python -m benchmark.cli plan --config ...` and
-  `python -m benchmark.cli run --config ...` examples for reproducible runs. Flag-only examples are compatibility/debug
-  examples and should not be the primary paper/cloud workflow. Checked-in run examples live under `configs/`.
+- Benchmark docs should use `python -m benchmark.cli plan --config ...` and
+  `python -m benchmark.cli run --config ...` examples for reproducible runs. Do not add flag-only benchmark run examples;
+  checked-in run examples live under `configs/`.
 - Benchmark docs should mention `benchmark/output_naming.py` for result filename policy and `benchmark/cloud/paths.py` for
   detached GCP VM path policy whenever those rules are described.
 - If the benchmark matrix changes, update `docs/benchmark_architecture.md`, `docs/benchmark_scope.md`, and the relevant

@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 from benchmark.cloud.paths import VM_RESULTS, staged_data_dir_for_gcs_uri
 from benchmark.config import (
     BenchmarkRunConfig,
-    build_run_cli_argv_from_args,
     build_run_cli_argv_from_config,
     remote_run_config_payload,
     run_config_payload,
@@ -83,6 +82,10 @@ def run_gcp(
     from benchmark.cloud.gcp import GCPRunner, build_gcp_job_dict, new_run_id
     from benchmark.cloud.instance import GCPInstanceConfig, is_gpu_machine_type
 
+    if run_config is None:
+        logger.error("GCP runs require a typed run config")
+        sys.exit(1)
+
     options = gcp_launch_options(args, run_config)
 
     if not options.project:
@@ -99,21 +102,12 @@ def run_gcp(
             sys.exit(1)
         remote_output = f"{options.remote_repo_dir}/results"
         try:
-            bench_argv = (
-                build_run_cli_argv_from_config(
-                    run_config,
-                    data_dir=options.remote_data_dir,
-                    output=remote_output,
-                    repo_root=repo_root,
-                    verbose=getattr(args, "verbose", False),
-                )
-                if run_config
-                else build_run_cli_argv_from_args(
-                    args,
-                    data_dir=options.remote_data_dir,
-                    output=remote_output,
-                    repo_root=repo_root,
-                )
+            bench_argv = build_run_cli_argv_from_config(
+                run_config,
+                data_dir=options.remote_data_dir,
+                output=remote_output,
+                repo_root=repo_root,
+                verbose=getattr(args, "verbose", False),
             )
         except ValueError as e:
             logger.error("%s", e)  # noqa: TRY400
@@ -149,33 +143,13 @@ def run_gcp(
 
     try:
         staged_data_dir = staged_data_dir_for_gcs_uri(options.gcs_data_uri)
-        bench_argv = (
-            build_run_cli_argv_from_config(
-                run_config,
-                data_dir=staged_data_dir,
-                output=VM_RESULTS,
-                repo_root=repo_root,
-                verbose=getattr(args, "verbose", False),
-            )
-            if run_config
-            else build_run_cli_argv_from_args(
-                args,
-                data_dir=staged_data_dir,
-                output=VM_RESULTS,
-                repo_root=repo_root,
-            )
-        )
     except ValueError as e:
         logger.error("%s", e)  # noqa: TRY400
         sys.exit(1)
-    remote_config = (
-        remote_run_config_payload(
-            run_config,
-            data_dir=staged_data_dir,
-            output_dir=VM_RESULTS,
-        )
-        if run_config
-        else None
+    remote_config = remote_run_config_payload(
+        run_config,
+        data_dir=staged_data_dir,
+        output_dir=VM_RESULTS,
     )
 
     submission = {
@@ -192,7 +166,6 @@ def run_gcp(
     job = build_gcp_job_dict(
         run_id=run_id,
         gcs_data_uri=options.gcs_data_uri,
-        benchmark_cli_args=bench_argv,
         run_config=remote_config,
         cloud_config=run_config_payload(run_config).get("cloud") if run_config and run_config.cloud else None,
         terminate_instance=not options.keep_instance,

@@ -6,12 +6,12 @@ features in these modules unless there is a strong reason to put logic directly 
 ## Control Plane
 
 - `benchmark/parser.py` owns argument parser construction and provided-flag tracking for CLI overrides.
-- `benchmark/cli.py` handles commands. It resolves old flags or YAML files into typed run configs before launching work.
+- `benchmark/cli.py` handles commands. It requires YAML or resolved typed run configs before launching work.
 - `benchmark/config/models.py` defines the Pydantic run config schema for selection, data, execution, output, and cloud
   settings. Config validation catches unsupported combinations before local work or VM creation starts.
-- `benchmark/config/argv.py` builds compatibility `benchmark.cli run` argv from typed configs for cloud fallback paths.
-- `benchmark/config/resolve.py` loads YAML configs, applies supported CLI overrides, writes `resolved_config.yaml`, and
-  converts old flag-based commands into typed configs.
+- `benchmark/config/argv.py` builds `benchmark.cli run` argv from typed configs for attached cloud debug paths.
+- `benchmark/config/resolve.py` loads YAML configs, applies supported CLI overrides, and writes
+  `resolved_config.yaml`.
 - `benchmark/config/plan.py` expands a resolved config into a dry-run plan: generated jobs, expected result files, and
   cloud target settings.
 - `benchmark/config/transform_sets.py` expands named transform sets into concrete transform names before configs are
@@ -73,7 +73,7 @@ features in these modules unless there is a strong reason to put logic directly 
 
 ```text
 benchmark.cli
-  -> benchmark.config resolves YAML/flags into BenchmarkRunConfig
+  -> benchmark.config resolves YAML into BenchmarkRunConfig and applies CLI overrides
   -> benchmark.config.transform_sets expands named transform sets
   -> benchmark.config.env installs resolved config metadata for runners
   -> benchmark.config.plan expands generated jobs for dry-run/debug output
@@ -103,8 +103,7 @@ benchmark.cli
 
 Architecture-sensitive tests live in:
 
-- `tests/test_config_models.py`: typed config loading, CLI override precedence, validation failures, and compatibility
-  conversion from old flags.
+- `tests/test_config_models.py`: typed config loading, CLI override precedence, and validation failures.
 - `tests/test_config_plan.py`: config-to-plan expansion for micro, pipeline, decode, expected outputs, and cloud fields.
 - `tests/test_cloud_paths.py`: detached GCP VM path constants and staged-data path inference.
 - `tests/test_output_naming.py`: result filename policy for micro, pipeline, manual, and device-suffixed outputs.

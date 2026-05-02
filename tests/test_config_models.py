@@ -93,22 +93,38 @@ def test_rejects_detached_cloud_without_gcs_data() -> None:
 def test_cli_overrides_apply_after_yaml_config() -> None:
     config = load_run_config(Path("configs/examples/local_rgb_micro_cpu.yaml"))
     args = argparse.Namespace(
+        data_dir="/data/override",
         output="/override",
+        libraries=["kornia"],
+        transforms=None,
+        transform_set="paper",
+        spec=None,
         num_items=5,
         num_runs=2,
         device="none",
         workers=0,
         batch_size=32,
+        refresh_requirements=False,
         gcp_dry_run=False,
         dry_run=False,
-        _provided_flags={"--output", "--num-items", "--num-runs"},
+        _provided_flags={
+            "--data-dir",
+            "--output",
+            "--libraries",
+            "--num-items",
+            "--num-runs",
+            "--no-refresh-requirements",
+        },
     )
 
     resolved = apply_cli_overrides(config, args)
 
+    assert resolved.data.data_dir == "/data/override"
     assert resolved.output.output_dir == "/override"
+    assert resolved.selection.libraries == ["kornia"]
     assert resolved.data.num_items == 5
     assert resolved.execution.num_runs == 2
+    assert resolved.execution.refresh_requirements is False
 
 
 def test_config_exposes_resolved_scenario_fields() -> None:
