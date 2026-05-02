@@ -9,6 +9,7 @@ features in these modules unless there is a strong reason to put logic directly 
   resolves old flags or YAML files into typed run configs before launching work.
 - `benchmark/config/models.py` defines the Pydantic run config schema for selection, data, execution, output, and cloud
   settings. Config validation catches unsupported combinations before local work or VM creation starts.
+- `benchmark/config/argv.py` builds compatibility `benchmark.cli run` argv from typed configs for cloud fallback paths.
 - `benchmark/config/resolve.py` loads YAML configs, applies supported CLI overrides, writes `resolved_config.yaml`, and
   converts old flag-based commands into typed configs.
 - `benchmark/config/plan.py` expands a resolved config into a dry-run plan: generated jobs, expected result files, and

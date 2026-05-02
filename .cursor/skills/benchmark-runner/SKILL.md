@@ -20,9 +20,10 @@ python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml --g
 ```
 
 `benchmark/config/models.py` defines `BenchmarkRunConfig`. `benchmark/config/resolve.py` loads YAML, applies supported
-CLI overrides, writes `resolved_config.yaml`, and shapes typed GCP payloads. `benchmark/config/plan.py` prints generated
-jobs and expected files. `benchmark/config/env.py` embeds the resolved config in result metadata. `benchmark/cloud/paths.py`
-and `benchmark/output_naming.py` keep dry-run plans aligned with real VM paths and result filenames.
+CLI overrides, writes `resolved_config.yaml`, and shapes typed GCP payloads. `benchmark/config/argv.py` builds
+compatibility CLI argv from typed configs for cloud fallback paths. `benchmark/config/plan.py` prints generated jobs and
+expected files. `benchmark/config/env.py` embeds the resolved config in result metadata. `benchmark/cloud/paths.py` and
+`benchmark/output_naming.py` keep dry-run plans aligned with real VM paths and result filenames.
 
 Use checked-in configs under `configs/examples/` for local smoke runs and `configs/paper/` for paper/GCP runs. Prefer
 `--num-items`, `--num-runs`, `--device`, `--workers`, `--batch-size`, and `--output` as overrides instead of editing many

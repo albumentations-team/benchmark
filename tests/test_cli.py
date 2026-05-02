@@ -19,10 +19,14 @@ from benchmark.cli import (
     _requirements_cache_key,
     _requirements_for_env_group,
     build_gcp_benchmark_cli_argv,
-    build_gcp_benchmark_cli_argv_from_config,
     build_parser,
 )
-from benchmark.config import BenchmarkRunConfig, load_run_config, resolve_config_transform_set
+from benchmark.config import (
+    BenchmarkRunConfig,
+    build_run_cli_argv_from_config,
+    load_run_config,
+    resolve_config_transform_set,
+)
 from benchmark.output_naming import micro_output_file
 
 
@@ -433,7 +437,7 @@ class TestBuildGcpBenchmarkCliArgv:
             },
         )
 
-        argv = build_gcp_benchmark_cli_argv_from_config(
+        argv = build_run_cli_argv_from_config(
             config,
             data_dir="/remote/data",
             output="/remote/out",
