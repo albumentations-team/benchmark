@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import albumentations as A
-import numpy as np
+from albumentations.pytorch import ToTensorV2
 
 from benchmark.transforms.albumentationsx_multichannel_impl import create_transform
 from benchmark.transforms.image_recipe_specs import (
@@ -19,7 +19,7 @@ NUM_CHANNELS = 9
 
 
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
-    return np.ascontiguousarray(transform(image=image)["image"])
+    return transform(image=image)["image"]
 
 
 def _normalize() -> A.Normalize:
@@ -33,7 +33,7 @@ def _random_crop() -> A.RandomCrop:
 
 
 def _recipe(name: str, transforms: list[Any]) -> dict[str, Any]:
-    return {"name": name, "transform": A.Compose([*transforms, _normalize()])}
+    return {"name": name, "transform": A.Compose([*transforms, _normalize(), ToTensorV2()])}
 
 
 def _is_compose_transform(transform: Any) -> bool:

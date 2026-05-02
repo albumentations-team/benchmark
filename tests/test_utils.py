@@ -11,6 +11,7 @@ from benchmark.utils import (
     get_system_info,
     get_video_loader,
     is_variance_stable,
+    make_contiguous_transform_output,
     materialize_transform_output,
     time_transform,
 )
@@ -179,3 +180,22 @@ class TestMaterializeTransformOutput:
 
         assert materialize_transform_output(output) is output
         assert output.called
+
+
+class TestMakeContiguousTransformOutput:
+    def test_converts_pillow_image_to_contiguous_array(self) -> None:
+        pil_image = pytest.importorskip("PIL.Image")
+        image = pil_image.new("RGB", (4, 3))
+
+        output = make_contiguous_transform_output(image)
+
+        assert utils_module.np.asarray(output).flags.c_contiguous
+        assert output.shape == (3, 4, 3)
+
+    def test_copies_numpy_views(self) -> None:
+        output = utils_module.np.zeros((4, 4, 3), dtype=utils_module.np.uint8)[:, ::-1]
+
+        contiguous = make_contiguous_transform_output(output)
+
+        assert contiguous.flags.c_contiguous
+        assert contiguous.shape == output.shape

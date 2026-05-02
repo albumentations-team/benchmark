@@ -15,6 +15,7 @@ pytest.importorskip("pyperf")
 from benchmark.pyperf_micro_runner import (
     _make_micro_output_contiguous,
     _merge_pyperf_payload,
+    _merge_transform_payload,
     _preflight_slow_transform,
     _pyperf_value_throughputs,
 )
@@ -35,6 +36,17 @@ def test_make_micro_output_contiguous_copies_numpy_views() -> None:
 
     assert contiguous.flags.c_contiguous
     assert contiguous.shape == output.shape
+
+
+def test_make_micro_output_contiguous_converts_pillow_images() -> None:
+    pil_image = pytest.importorskip("PIL.Image")
+    image = pil_image.new("RGB", (4, 3))
+
+    output = _make_micro_output_contiguous(image)
+
+    assert isinstance(output, np.ndarray)
+    assert output.flags.c_contiguous
+    assert output.shape == (3, 4, 3)
 
 
 def test_make_micro_output_contiguous_calls_tensor_contiguous() -> None:
@@ -86,6 +98,42 @@ def test_merge_pyperf_payload_allows_missing_file_for_slow_skips(tmp_path: Path)
     _merge_pyperf_payload(combined_pyperf, tmp_path / "SlowTransform.pyperf.json")
 
     assert combined_pyperf == {"benchmarks": []}
+
+
+def test_merge_transform_payload_keeps_first_transform_result() -> None:
+    first_payload = {
+        "metadata": {"library": "albumentationsx"},
+        "results": {
+            "Resize": {
+                "supported": True,
+                "median_throughput": 100.0,
+            },
+        },
+    }
+    second_payload = {
+        "metadata": {"library": "albumentationsx"},
+        "results": {
+            "HorizontalFlip": {
+                "supported": True,
+                "median_throughput": 200.0,
+            },
+        },
+    }
+
+    payload = _merge_transform_payload(None, first_payload)
+    payload = _merge_transform_payload(payload, second_payload)
+
+    assert payload["metadata"] == {"library": "albumentationsx"}
+    assert payload["results"] == {
+        "Resize": {
+            "supported": True,
+            "median_throughput": 100.0,
+        },
+        "HorizontalFlip": {
+            "supported": True,
+            "median_throughput": 200.0,
+        },
+    }
 
 
 def test_merge_pyperf_payload_appends_existing_benchmarks(tmp_path: Path) -> None:

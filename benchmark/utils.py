@@ -133,6 +133,23 @@ def materialize_transform_output(output: Any) -> Any:
     return output
 
 
+def make_contiguous_transform_output(output: Any) -> Any:
+    """Return micro-benchmark outputs as contiguous arrays/tensors when possible."""
+    if isinstance(output, np.ndarray):
+        return np.ascontiguousarray(output)
+
+    load = getattr(output, "load", None)
+    if callable(load) and output.__class__.__module__.startswith("PIL."):
+        load()
+        return np.ascontiguousarray(output)
+
+    contiguous = getattr(output, "contiguous", None)
+    if callable(contiguous):
+        return contiguous()
+
+    return output
+
+
 def time_transform(transform: Any, images: list[Any]) -> float:
     """Time the execution of a transform on a list of images"""
     import time
@@ -140,7 +157,7 @@ def time_transform(transform: Any, images: list[Any]) -> float:
     start = time.perf_counter()
 
     for img in images:
-        _ = materialize_transform_output(transform(img))
+        _ = make_contiguous_transform_output(transform(img))
 
     return time.perf_counter() - start
 

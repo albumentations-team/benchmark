@@ -198,7 +198,7 @@ For still-image RGB benchmarks in the broader paper package:
 - dataset source: same convention as `imread_benchmark` — download `ILSVRC2012_img_val.tar`, unpack it to `imagenet/val`, and point benchmark runs at that directory;
 - micro/profiler: `2,000` images from the unpacked ImageNet validation set, preloaded, one internal thread for every library;
 - pipeline/user guidance: full unpacked ImageNet validation set (`50,000` images) from disk, worker sweeps, production-style threading;
-- fallback subset for iteration: at least `10,000` images, clearly labeled as a sweep/smoke, not the final paper run.
+- reduced subset for iteration: at least `10,000` images, clearly labeled as a small production-path run, not the final paper run.
 
 RGB micro hardware should be representative of CPUs that feed model training jobs, not a survey of every available cloud
 CPU. Use Apple Silicon locally, modern Intel and AMD cloud CPUs (`c4-standard-16`, `c4d-standard-16`), cloud Arm

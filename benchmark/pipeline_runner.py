@@ -112,20 +112,36 @@ class _PathDataset:
         return self.call_fn(self.transform, item)
 
 
-class _SimpleDataLoader:
-    def __init__(self, dataset: _PathDataset, batch_size: int) -> None:
-        self.dataset = dataset
-        self.batch_size = batch_size
-
-    def __iter__(self) -> Any:
-        for start in range(0, len(self.dataset), self.batch_size):
-            yield [self.dataset[index] for index in range(start, min(start + self.batch_size, len(self.dataset)))]
-
-
 def _shutdown_loader_iterator(iterator: Any) -> None:
     shutdown = getattr(iterator, "_shutdown_workers", None)
     if callable(shutdown):
         shutdown()
+
+
+def _is_tensor_batch(batch: Any) -> bool:
+    try:
+        import torch
+
+        if isinstance(batch, torch.Tensor):
+            return True
+    except ImportError:
+        pass
+    return isinstance(batch, np.ndarray)
+
+
+def _batch_size(batch: Any) -> int:
+    if not _is_tensor_batch(batch):
+        msg = (
+            "Pipeline recipes must return one fixed-shape tensor or ndarray per sample so PyTorch default collation "
+            f"produces a single batched tensor/array; got {type(batch).__name__}"
+        )
+        raise TypeError(msg)
+
+    shape = getattr(batch, "shape", ())
+    if len(shape) == 0:
+        msg = "Pipeline batch must have a leading batch dimension"
+        raise TypeError(msg)
+    return len(batch)
 
 
 class PipelineBenchmarkRunner:
@@ -234,10 +250,8 @@ class PipelineBenchmarkRunner:
         try:
             from torch.utils.data import DataLoader
         except ImportError as e:
-            if self.library in {"torchvision", "kornia"}:
-                msg = f"Pipeline benchmarks for {self.library} require torch"
-                raise RuntimeError(msg) from e
-            return _SimpleDataLoader(dataset, self.batch_size)
+            msg = "Pipeline benchmarks require torch DataLoader"
+            raise RuntimeError(msg) from e
 
         multiprocessing_kwargs = {"multiprocessing_context": "fork"} if self.workers > 0 and hasattr(os, "fork") else {}
         return DataLoader(
@@ -245,7 +259,6 @@ class PipelineBenchmarkRunner:
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.workers,
-            collate_fn=list,
             pin_memory=self._resolved_device() == "cuda" and self.pipeline_scope.endswith("_batch_copy"),
             worker_init_fn=worker_init_for_policy(self.thread_policy),
             **multiprocessing_kwargs,
@@ -276,48 +289,35 @@ class PipelineBenchmarkRunner:
     def _to_tensor(self, item: Any) -> Any:
         import torch
 
-        if isinstance(item, torch.Tensor):
-            tensor = item
-        else:
-            array = np.asarray(item)
-            if self.media == "image":
-                if array.ndim == 3 and array.shape[0] in {self.num_channels, 1, 3, 9}:
-                    tensor = torch.from_numpy(np.ascontiguousarray(array))
-                else:
-                    tensor = torch.from_numpy(np.ascontiguousarray(array)).permute(2, 0, 1)
-            elif array.ndim == 4 and array.shape[1] in {self.num_channels, 1, 3, 9}:
-                tensor = torch.from_numpy(np.ascontiguousarray(array))
-            else:
-                tensor = torch.from_numpy(np.ascontiguousarray(array)).permute(0, 3, 1, 2)
+        tensor = item if isinstance(item, torch.Tensor) else torch.from_numpy(np.ascontiguousarray(np.asarray(item)))
         if tensor.dtype == torch.uint8:
             return tensor.float() / 255.0
         return tensor.float() if not tensor.is_floating_point() else tensor.contiguous()
 
-    def _materialize_batch(self, batch: list[Any]) -> None:
+    def _materialize_batch(self, batch: Any) -> int:
+        batch_size = _batch_size(batch)
         if self.pipeline_scope != "decode_dataloader_augment_batch_copy":
-            for item in batch:
-                materialize_transform_output(item)
-            return
+            materialize_transform_output(batch)
+            return batch_size
 
-        import torch
-
-        tensors = [self._to_tensor(item) for item in batch]
-        stacked = torch.stack(tensors)
+        stacked = self._to_tensor(batch)
         device = self._resolved_device()
         if device == "cuda":
             stacked = stacked.pin_memory().to("cuda", non_blocking=True)
         elif device == "mps":
             stacked = stacked.to("mps")
         materialize_transform_output(stacked)
+        return batch_size
 
-    def _run_loader_once(self, loader: Any) -> tuple[int, int]:
+    def _run_loader_once(self, loader: Any, *, desc: str) -> tuple[int, int]:
         processed = 0
         batches = 0
         iterator = iter(loader)
         try:
-            for batch in iterator:
-                self._materialize_batch(batch)
-                processed += len(batch)
+            total_batches = len(loader) if hasattr(loader, "__len__") else None
+            batch_iter = tqdm(iterator, total=total_batches, desc=desc, unit="batch", leave=False, **tqdm_kwargs())
+            for batch in batch_iter:
+                processed += self._materialize_batch(batch)
                 batches += 1
         finally:
             _shutdown_loader_iterator(iterator)
@@ -451,7 +451,7 @@ class PipelineBenchmarkRunner:
             return unsupported_result(f"Pipeline warmup failed: {type(e).__name__}: {e}")
 
         run_desc = f"{self.library} {self.pipeline_scope} w={self.workers} b={self.batch_size} {transform_dict['name']}"
-        for _ in tqdm(range(self.num_runs), desc=run_desc, leave=False, **tqdm_kwargs()):
+        for run_index in tqdm(range(self.num_runs), desc=run_desc, leave=False, **tqdm_kwargs()):
             processed = 0
             batches = 0
             loader = self._loader(paths, transform, preloaded)
@@ -459,7 +459,8 @@ class PipelineBenchmarkRunner:
             start = time.perf_counter()
             try:
                 while True:
-                    processed_epoch, batches_epoch = self._run_loader_once(loader)
+                    batch_desc = f"{run_desc} run={run_index + 1}/{self.num_runs}"
+                    processed_epoch, batches_epoch = self._run_loader_once(loader, desc=batch_desc)
                     processed += processed_epoch
                     batches += batches_epoch
                     elapsed_so_far = time.perf_counter() - start

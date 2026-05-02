@@ -199,7 +199,7 @@ def audit_result_payload(payload: dict[str, Any], *, source: Path) -> tuple[list
     if isinstance(benchmark_params, dict):
         num_runs = benchmark_params.get("num_runs")
         if isinstance(num_runs, int) and num_runs < 3:
-            warnings.append(f"{source}: num_runs={num_runs}; OK for smoke, weak for paper results")
+            warnings.append(f"{source}: num_runs={num_runs}; OK for production-path checks, weak for paper results")
 
     unsupported = 0
     unstable = 0

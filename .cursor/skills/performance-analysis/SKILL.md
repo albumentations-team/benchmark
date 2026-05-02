@@ -29,14 +29,14 @@ for transform_name, metrics in results.items():
 
 ## Identifying Slow Transforms
 
-Transforms with `time_per_image >= 0.1` sec are considered slow for image benchmarks. This is `<=10 img/s`, below the practical floor for DataLoader training pipelines.
+Transforms with `time_per_image >= 0.05` sec are considered slow for image benchmarks. This is `<=20 img/s`, below the practical floor for DataLoader training pipelines.
 
 ```python
 slow_transforms = {}
 for name, metrics in results.items():
     if 'mean_time' in metrics:
         time_per_img = metrics['mean_time'] / params['num_images']
-        if time_per_img > 0.1:
+        if time_per_img > 0.05:
             slow_transforms[name] = time_per_img
 
 # Sort by slowest
@@ -107,9 +107,9 @@ print(f"Min speedup: {df['albumentationsx'].min():.2f}×")
 
 When a library is unexpectedly faster, check whether it returns lazy or partially materialized outputs.
 
-- Pillow/PIL must call `Image.load()` on returned `Image.Image` objects inside the timed adapter so the image operation is complete before timing stops.
+- Pillow/PIL micro outputs must be converted to contiguous NumPy arrays inside the timed adapter so the image operation is complete before timing stops.
 - Do not add `np.asarray()`, pixel sums, checksums, or other cross-library output consumption to the timed benchmark. That measures extra conversion/validation work, not the transform API.
-- Use local diagnostics for suspicious transforms: compare raw Pillow call time against Pillow call + `Image.load()`, and inspect output identity / memory sharing. Keep those diagnostics out of production benchmark timing.
+- Use local diagnostics for suspicious transforms: compare raw Pillow call time against Pillow call + contiguous NumPy conversion, and inspect output identity / memory sharing. Keep checksums out of production benchmark timing.
 - Crop/transpose/resize-like transforms are the first place to check because they are the most likely to expose views, reused objects, or deferred buffers.
 - Treat benchmark-side reimplementations as suspect. If Pillow/Kornia/torchvision lacks a direct transform analogue, mark it unsupported instead of composing helpers that make the comparison about our glue code.
 
@@ -201,7 +201,7 @@ stability = abs(recent - overall) / overall
 ### Early Stopping
 **Symptom**: `early_stopped=True`
 **Reasons**:
-1. Transform too slow (`>=0.1 sec/image`, i.e. `<=10 img/s`)
+1. Transform too slow (`>=0.05 sec/image`, i.e. `<=20 img/s`)
 2. Preflight timeout (> 60 sec total for images)
 
 **Analysis**: Check `early_stop_reason` for details. Early stopping is expected policy for very slow transforms in both micro and DataLoader pipeline modes; do not force exhaustive runs unless the user explicitly asks for slow-transform measurements.
@@ -213,7 +213,7 @@ stability = abs(recent - overall) / overall
 - Reuse joined environments where dependency sets are compatible.
 - Reuse the local venv cache and detached GCP GCS venv cache.
 - Use `--no-refresh-requirements` for local reruns with fixed dependency versions.
-- Use smoke runs with small `--num-items` / selected `--transforms` before full cloud runs.
+- Use reduced production-path runs with small `--num-items` / selected `--transforms` before full cloud runs.
 
 ## Thread Configuration
 
@@ -234,7 +234,7 @@ Multi-threading invalidates comparisons between libraries.
 
 Based on results:
 
-**Slow transform (> 0.1 sec/img)**:
+**Slow transform (> 0.05 sec/img)**:
 - Profile with cProfile or py-spy
 - Check for unnecessary copies
 - Look for algorithmic improvements

@@ -18,9 +18,9 @@ ERROR: DATA_DIR is required.
 Usage:
   DATA_DIR=/path/to/imagenet/val scripts/run_rgb_micro_paper_core.sh
 
-Smoke:
+Reduced production run:
   DATA_DIR=/path/to/imagenet/val NUM_ITEMS=50 NUM_RUNS=1 \
-    OUTPUT=output/rgb_micro_paper_core_smoke scripts/run_rgb_micro_paper_core.sh
+    OUTPUT=output/rgb_micro_paper_core_small scripts/run_rgb_micro_paper_core.sh
 
 Extra benchmark.cli args can be appended after the script name.
 EOF

@@ -14,11 +14,11 @@ def test_slow_threshold_is_inclusive() -> None:
 
 
 def test_slow_threshold_info_formats_throughput_floor() -> None:
-    assert slow_threshold_info(0.1, "img/s") == {
-        "slow_threshold_sec_per_item": 0.1,
-        "slow_threshold_throughput": 10.0,
+    assert slow_threshold_info(0.05, "img/s") == {
+        "slow_threshold_sec_per_item": 0.05,
+        "slow_threshold_throughput": 20.0,
         "slow_threshold_unit": "img/s",
-        "slow_marker": "≤10 img/s",
+        "slow_marker": "≤20 img/s",
     }
 
 
@@ -33,7 +33,7 @@ def test_slow_threshold_reason_uses_shared_comparator() -> None:
 
 
 def test_media_policy_centralizes_image_and_video_slow_defaults() -> None:
-    assert slow_skip_config("image") == (0.1, 10, 60.0)
+    assert slow_skip_config("image") == (0.05, 10, 60.0)
     assert slow_skip_config("video") == (2.0, 3, 120.0)
     assert media_policy("image").throughput_unit == "img/s"
     assert media_policy("video").throughput_unit == "vid/s"

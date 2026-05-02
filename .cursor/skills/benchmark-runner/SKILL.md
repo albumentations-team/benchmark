@@ -56,16 +56,24 @@ Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with 
 - Stage datasets as one archive/object in cloud runs; do not copy individual images one by one for each VM.
 - Keep timed data local to the benchmark machine. Detached GCP runs unpack to local disk before running.
 - Micro benchmarks preload the requested number of media items once per library, in that library's native format.
+- Micro specs measure only the named transform in native layout, then force returned outputs into contiguous memory before
+  timing stops. Never add `Normalize`, `ToTensor`, axis conversion, or DataLoader collation work to `*_impl.py`.
+- Pipeline specs (`*_pipeline_impl.py`) own recipe-level `Normalize+ToTensor`: AlbumentationsX uses `ToTensorV2`, Pillow
+  uses `torchvision.transforms.PILToTensor` before normalization, and torchvision/Kornia already operate on tensors. The
+  pipeline runner should use default PyTorch collation and should not guess or repair channel layouts.
 - Pyperf runs may use per-transform subprocesses, but those subprocesses must reuse the per-library media cache and must not decode images again.
 - Construct only the transform being measured in pyperf subprocesses. Avoid eager construction of all transforms because some libraries warn or do setup in constructors.
 - Use joined environments for compatible libraries (`torch_stack` for torchvision/Kornia/Pillow image runs, `torch_video` for torchvision/Kornia video runs).
 - Cache environments by resolved requirements, Python version, media type, and environment group; reuse the GCS venv cache for detached GCP unless deliberately rebuilding.
 - Requirement lock refresh is expected once per library or joined-environment launch when refresh is enabled. Do not add extra cross-library refresh orchestration unless it removes real work without changing dependency freshness semantics. Prefer `--no-refresh-requirements` for repeated local reruns with fixed locks.
 - Pipeline result filenames include key sweep parameters: `library_scope_n{num_items|all}_r{num_runs}_w{workers}_b{batch_size}[_dev-{device}]_results.json`.
-- Preflight slow transforms in both micro and pipeline modes, then record an early-stop payload instead of spending the full benchmark budget on transforms that exceed the slow threshold. Defaults: images skip at `>=0.1 sec/image` (`<=10 img/s`), videos skip at `>=2.0 sec/video`.
+- Preflight slow transforms in both micro and pipeline modes, then record an early-stop payload instead of spending the full benchmark budget on transforms that exceed the slow threshold. Defaults: images skip at `>=0.05 sec/image` (`<=20 img/s`), videos skip at `>=2.0 sec/video`.
 - Keep the slow-transform guard enabled for paper/DataLoader sweeps. It prevents the benchmark from appearing stuck on transforms that are too slow for practical training use. Use `--disable-slow-skip` only when the user explicitly asks to measure slow transforms exhaustively.
 - Preserve single-thread internal execution for micro benchmarks; pipeline benchmarks can use production-style workers/threading and must record those settings.
-- Watch for lazy or partially lazy outputs. The timed call must force each library to finish its own transform work without adding cross-library work. For Pillow/PIL, call `Image.load()` on returned `Image.Image` objects inside the adapter. Do **not** add NumPy conversion, checksums, or `np.asarray()` to the timed benchmark for fairness; use those only in local diagnostics.
+- Watch for lazy or partially lazy outputs. Micro timing must force each library to finish its own transform work and return
+  contiguous outputs: NumPy arrays use `np.ascontiguousarray`, tensor-like outputs use `.contiguous()`, and Pillow
+  `Image.Image` outputs are converted to contiguous NumPy arrays. Do not add checksums or unrelated validation inside the
+  timed benchmark.
 - Only benchmark transforms a library supports directly. Do not build large benchmark-side helper implementations to imitate another library's API. For Pillow, keep direct `Image` / `ImageOps` / `ImageFilter` operations and skip Albumentations-style composites such as random crops, `PadIfNeeded`, `SafeRotate`, `ShiftScaleRotate`, `LongestMaxSize`, and `SmallestMaxSize`.
 - Paper runs do not use every transform from `benchmark/transforms/specs.py`. Use `--transform-set paper` to select transforms supported by at least two selected libraries; the fixed lists are `docs/paper_transform_sets/rgb.md`, `docs/paper_transform_sets/9ch.md`, and `docs/paper_transform_sets/video.md`.
 - Keep benchmarks fair but fast. Avoid repeated decode, loader construction, conversion, synchronization, checksums, materialization, or dependency work unless it is explicitly part of the named measurement scope or needed to make lazy work complete.
@@ -91,7 +99,7 @@ When changing benchmark orchestration, update the architecture docs and tests:
 | `--max-warmup` | 1000 | Maximum warmup iterations |
 | `--warmup-window` | 5 (images), 20 (videos) | Variance window size |
 | `--warmup-threshold` | 0.05 | Stability threshold |
-| `--slow-threshold-sec-per-item` | 0.1 image / 2.0 video | Early-stop threshold for impractically slow transforms |
+| `--slow-threshold-sec-per-item` | 0.05 image / 2.0 video | Early-stop threshold for impractically slow transforms |
 | `--slow-preflight-items` | 10 images / 3 videos | Items used for slow-transform preflight |
 
 ## Generating Reports

@@ -33,7 +33,7 @@ MEDIA_POLICIES: dict[MediaName, MediaBenchmarkPolicy] = {
         max_warmup_iterations=1000,
         warmup_subset_size=10,
         slow_skip=SlowSkipPolicy(
-            threshold_sec_per_item=0.1,
+            threshold_sec_per_item=0.05,
             preflight_items=10,
             max_preflight_secs=60.0,
         ),

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pytest
 
 pytest.importorskip("PIL")
@@ -90,3 +92,32 @@ def test_pillow_skips_dithering_variants_without_direct_equivalent() -> None:
         )
         is None
     )
+
+
+def test_pillow_micro_spec_does_not_use_torch_tensor_conversion() -> None:
+    source = Path(__file__).parents[1].joinpath("benchmark/transforms/pillow_impl.py").read_text(encoding="utf-8")
+
+    assert "import torch" not in source
+    assert "from_numpy" not in source
+
+
+def test_pillow_pipeline_center_crop_pads_small_images() -> None:
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("torchvision")
+
+    from benchmark.transforms.pillow_pipeline_impl import _PillowCenterCropRecipe
+
+    result = _PillowCenterCropRecipe()(Image.new("RGB", (64, 64), color=(255, 0, 0)))
+
+    assert isinstance(result, torch.Tensor)
+    assert result.shape == (3, 224, 224)
+    assert np.unique(result.numpy()[0]).size == 2
+
+
+def test_pillow_pipeline_uses_pil_to_tensor() -> None:
+    source = (
+        Path(__file__).parents[1].joinpath("benchmark/transforms/pillow_pipeline_impl.py").read_text(encoding="utf-8")
+    )
+
+    assert "PILToTensor" in source
+    assert "from_numpy" not in source

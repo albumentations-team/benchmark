@@ -27,6 +27,9 @@ Key details:
 - `name` appears verbatim in result JSON keys and comparison tables
 - All transforms must have `p=1` for deterministic benchmarking
 - The module is validated by `load_from_python_file()` in `benchmark/runner.py`
+- Micro specs must stay native: do not add `Normalize`, `ToTensor`, axis conversion, or DataLoader collation work to
+  `*_impl.py` micro transform specs. Pipeline recipe specs (`*_pipeline_impl.py`) are the place for
+  `Normalize+ToTensor`.
 
 ## BenchmarkRunner (`benchmark/runner.py`)
 
