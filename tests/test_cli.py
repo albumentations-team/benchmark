@@ -16,13 +16,13 @@ from benchmark.cli import (
     _compile_requirements,
     _extract_library,
     _library_env_group,
-    _micro_output_file,
     _requirements_cache_key,
     _requirements_for_env_group,
     build_gcp_benchmark_cli_argv,
     build_parser,
 )
 from benchmark.config import BenchmarkRunConfig, config_to_namespace, load_run_config, resolve_config_transform_set
+from benchmark.output_naming import micro_output_file
 
 
 class TestBuildParser:
@@ -419,9 +419,7 @@ class TestBuildGcpBenchmarkCliArgv:
 
 
 def test_micro_output_file_includes_device_suffix(tmp_path: Path) -> None:
-    args = argparse.Namespace(device="cuda")
-
-    assert _micro_output_file(tmp_path, "kornia", args).name == "kornia_micro_dev-cuda_results.json"
+    assert micro_output_file(tmp_path, "kornia", device="cuda").name == "kornia_micro_dev-cuda_results.json"
 
 
 class TestCmdRunGcp:
@@ -632,10 +630,9 @@ def test_scenario_run_builds_jobs_from_resolved_config(tmp_path: Path) -> None:
     data["selection"]["libraries"] = ["kornia"]
     data["data"]["data_dir"] = str(tmp_path / "data")
     config = resolve_config_transform_set(BenchmarkRunConfig.model_validate(data), Path.cwd())
-    args = config_to_namespace(config)
 
     with patch("benchmark.cli.execute_job") as execute:
-        _cmd_run_scenario(args, Path.cwd(), tmp_path / "out", config)
+        _cmd_run_scenario(run_config=config, repo_root=Path.cwd(), output_dir=tmp_path / "out", verbose=False)
 
     job = execute.call_args.args[0]
     assert job.library == "kornia"

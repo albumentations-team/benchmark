@@ -156,71 +156,69 @@ def _spec_map_for_scenario(scenario_name: str, mode: str) -> dict[str, str]:
     return spec_map_for_scenario(scenario_name, mode)
 
 
-def _pipeline_output_file(output_dir: Path, library: str, args: argparse.Namespace) -> Path:
-    return pipeline_output_file(
-        output_dir,
-        library,
-        pipeline_scope=args.pipeline_scope,
-        num_items=args.num_items,
-        num_runs=args.num_runs,
-        workers=args.workers,
-        batch_size=args.batch_size,
-        device=args.device,
-    )
-
-
-def _micro_output_file(output_dir: Path, library: str, args: argparse.Namespace) -> Path:
-    return micro_output_file(output_dir, library, device=args.device)
+def _required_data_dir(config: BenchmarkRunConfig) -> Path:
+    if not config.data.data_dir:
+        msg = "data.data_dir is required for benchmark execution"
+        raise ValueError(msg)
+    return Path(config.data.data_dir)
 
 
 def _run_scenario_library(
     *,
     library: str,
     spec_map: dict[str, str],
-    args: argparse.Namespace,
     run_config: BenchmarkRunConfig,
     repo_root: Path,
     output_dir: Path,
-    media: str,
+    media: Literal["image", "video"],
     num_channels: int,
     clip_length: int,
+    verbose: bool,
 ) -> None:
-    backend: Literal["dali_pipeline"] | None = (
-        "dali_pipeline" if args.mode == "pipeline" and library == "dali" else None
-    )
+    mode = run_config.resolved_mode()
+    backend: Literal["dali_pipeline"] | None = "dali_pipeline" if mode == "pipeline" and library == "dali" else None
     spec_file = None if backend == "dali_pipeline" else repo_root / spec_map[library]
     output_file = (
-        _pipeline_output_file(output_dir, library, args)
-        if args.mode == "pipeline"
-        else _micro_output_file(output_dir, library, args)
+        pipeline_output_file(
+            output_dir,
+            library,
+            pipeline_scope=run_config.execution.pipeline_scope,
+            num_items=run_config.data.num_items,
+            num_runs=run_config.execution.num_runs,
+            workers=run_config.execution.workers,
+            batch_size=run_config.execution.batch_size,
+            device=run_config.execution.device,
+        )
+        if mode == "pipeline"
+        else micro_output_file(output_dir, library, device=run_config.execution.device)
     )
     try:
-        ensure_supported_device(library, media, args.device)
+        ensure_supported_device(library, media, run_config.execution.device)
     except ValueError as e:
         logger.error("%s", e)  # noqa: TRY400
         sys.exit(1)
 
-    if args.mode == "micro":
+    if mode == "micro":
         if spec_file is None:
             msg = f"{library} micro job requires a spec file"
             raise ValueError(msg)
         job = BenchmarkJob.from_run_config(
             library=library,
             config=run_config,
-            data_dir=Path(args.data_dir),
+            data_dir=_required_data_dir(run_config),
             output_file=output_file,
             num_channels=num_channels,
             clip_length=clip_length,
             spec_file=spec_file,
             backend="pyperf",
         )
-        execute_job(job, repo_root=repo_root, verbose=args.verbose)
+        execute_job(job, repo_root=repo_root, verbose=verbose)
         return
 
     job = BenchmarkJob.from_run_config(
         library=library,
         config=run_config,
-        data_dir=Path(args.data_dir),
+        data_dir=_required_data_dir(run_config),
         output_file=output_file,
         num_channels=num_channels,
         clip_length=clip_length,
@@ -231,52 +229,54 @@ def _run_scenario_library(
 
 
 def _cmd_run_scenario(
-    args: argparse.Namespace,
+    *,
+    run_config: BenchmarkRunConfig,
     repo_root: Path,
     output_dir: Path,
-    run_config: BenchmarkRunConfig,
+    verbose: bool,
 ) -> None:
     from benchmark.decode_runner import VideoDecodeRunner
     from benchmark.scenarios import get_scenario, resolve_decoders, resolve_libraries, resolve_mode
 
-    scenario = get_scenario(args.scenario)
-    args.mode = resolve_mode(scenario, args.mode)
-    if args.thread_policy is None:
-        args.thread_policy = "micro-single" if args.mode == "micro" else "pipeline-default"
-    clip_length = args.clip_length or scenario.clip_length or 16
+    if run_config.selection.scenario is None:
+        msg = "selection.scenario is required for scenario execution"
+        raise ValueError(msg)
+    scenario = get_scenario(run_config.selection.scenario)
+    mode = resolve_mode(scenario, run_config.selection.mode)
+    clip_length = run_config.data.clip_length or scenario.clip_length or 16
     num_channels = scenario.num_channels
 
-    if args.mode == "decode":
-        decoders = resolve_decoders(scenario, args.decoders)
+    if mode == "decode":
+        decoders = resolve_decoders(scenario, run_config.selection.decoders)
         runner = VideoDecodeRunner(
-            data_dir=Path(args.data_dir),
+            data_dir=_required_data_dir(run_config),
             decoders=decoders,
             output_dir=output_dir,
-            num_items=args.num_items,
-            num_runs=args.num_runs,
+            num_items=run_config.data.num_items,
+            num_runs=run_config.execution.num_runs,
             clip_length=clip_length,
             scenario=scenario.name,
-            min_time=args.min_time,
+            min_time=run_config.execution.min_time,
         )
         runner.run()
         return
 
-    libraries = resolve_libraries(scenario, args.mode, args.libraries)
-    spec_map = _spec_map_for_scenario(scenario.name, args.mode)
-    scenario_output_dir = output_dir / scenario.name / args.mode
+    libraries = resolve_libraries(scenario, mode, run_config.selection.libraries)
+    spec_map = _spec_map_for_scenario(scenario.name, mode)
+    scenario_output_dir = output_dir / scenario.name / mode
     scenario_output_dir.mkdir(parents=True, exist_ok=True)
-    logger.info("Running scenario %s/%s for libraries: %s", scenario.name, args.mode, libraries)
-    for library in tqdm(libraries, desc=f"{scenario.name}/{args.mode}", unit="lib", **tqdm_kwargs()):
+    logger.info("Running scenario %s/%s for libraries: %s", scenario.name, mode, libraries)
+    for library in tqdm(libraries, desc=f"{scenario.name}/{mode}", unit="lib", **tqdm_kwargs()):
         _run_scenario_library(
             library=library,
             spec_map=spec_map,
-            args=args,
             run_config=run_config,
             repo_root=repo_root,
             output_dir=scenario_output_dir,
             media=scenario.media,
             num_channels=num_channels,
             clip_length=clip_length,
+            verbose=verbose,
         )
 
 
@@ -616,7 +616,7 @@ def cmd_run(args: argparse.Namespace) -> None:
         return
 
     if args.scenario:
-        _cmd_run_scenario(args, repo_root, output_dir, run_config)
+        _cmd_run_scenario(run_config=run_config, repo_root=repo_root, output_dir=output_dir, verbose=args.verbose)
         logger.info("Scenario benchmark complete. Results in: %s", output_dir)
         return
 
