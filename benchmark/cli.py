@@ -40,7 +40,6 @@ from benchmark.config import (
     BenchmarkRunConfig,
     apply_cli_overrides,
     build_run_plan,
-    config_to_namespace,
     install_run_config_env,
     load_run_config,
     remote_run_config_payload,
@@ -320,13 +319,7 @@ def build_gcp_benchmark_cli_argv(
     if getattr(args, "transform_set", None):
         argv += ["--transform-set", args.transform_set]
     if args.spec:
-        spec_path = Path(args.spec).resolve()
-        try:
-            rel = spec_path.relative_to(repo_root.resolve())
-        except ValueError as e:
-            msg = "--spec must be inside the repository when using --cloud gcp"
-            raise ValueError(msg) from e
-        argv += ["--spec", str(rel)]
+        argv += ["--spec", _repo_relative_spec_path(str(args.spec), repo_root)]
     if getattr(args, "multichannel", False):
         argv.append("--multichannel")
     if args.verbose:
@@ -360,6 +353,82 @@ def build_gcp_benchmark_cli_argv(
     if getattr(args, "slow_preflight_items", None) is not None:
         argv += ["--slow-preflight-items", str(args.slow_preflight_items)]
     if getattr(args, "disable_slow_skip", False):
+        argv.append("--disable-slow-skip")
+    return argv
+
+
+def _repo_relative_spec_path(spec: str, repo_root: Path) -> str:
+    spec_path = Path(spec).resolve()
+    try:
+        return str(spec_path.relative_to(repo_root.resolve()))
+    except ValueError as e:
+        msg = "--spec must be inside the repository when using --cloud gcp"
+        raise ValueError(msg) from e
+
+
+def build_gcp_benchmark_cli_argv_from_config(
+    config: BenchmarkRunConfig,
+    *,
+    data_dir: str,
+    output: str,
+    repo_root: Path,
+    verbose: bool = False,
+) -> list[str]:
+    """Build legacy fallback argv from the typed run config for VM compatibility."""
+    media = config.resolved_media()
+    argv: list[str] = [
+        "--data-dir",
+        data_dir,
+        "--output",
+        output,
+        "--media",
+        media,
+        "--num-runs",
+        str(config.execution.num_runs),
+        "--num-channels",
+        str(config.data.num_channels),
+    ]
+    if config.data.num_items is not None:
+        argv += ["--num-items", str(config.data.num_items)]
+    if config.selection.libraries:
+        argv += ["--libraries", *config.selection.libraries]
+    if config.selection.transforms:
+        argv += ["--transforms", *config.selection.transforms]
+    if config.selection.transform_set:
+        argv += ["--transform-set", config.selection.transform_set]
+    if config.selection.spec:
+        argv += ["--spec", _repo_relative_spec_path(config.selection.spec, repo_root)]
+    if config.selection.multichannel:
+        argv.append("--multichannel")
+    if verbose:
+        argv.append("--verbose")
+    if config.selection.scenario:
+        argv += ["--scenario", config.selection.scenario]
+    if config.selection.mode:
+        argv += ["--mode", config.selection.mode]
+    if config.execution.pipeline_scope:
+        argv += ["--pipeline-scope", config.execution.pipeline_scope]
+    if config.execution.device:
+        argv += ["--device", config.execution.device]
+    if config.execution.thread_policy:
+        argv += ["--thread-policy", config.execution.thread_policy]
+    argv += ["--batch-size", str(config.execution.batch_size)]
+    argv += ["--workers", str(config.execution.workers)]
+    if config.execution.min_time:
+        argv += ["--min-time", str(config.execution.min_time)]
+    if config.execution.min_batches:
+        argv += ["--min-batches", str(config.execution.min_batches)]
+    if config.data.clip_length:
+        argv += ["--clip-length", str(config.data.clip_length)]
+    if config.selection.decoders:
+        argv += ["--decoders", *config.selection.decoders]
+    if not config.execution.refresh_requirements:
+        argv.append("--no-refresh-requirements")
+    if config.execution.slow_threshold_sec_per_item is not None:
+        argv += ["--slow-threshold-sec-per-item", str(config.execution.slow_threshold_sec_per_item)]
+    if config.execution.slow_preflight_items is not None:
+        argv += ["--slow-preflight-items", str(config.execution.slow_preflight_items)]
+    if config.execution.disable_slow_skip:
         argv.append("--disable-slow-skip")
     return argv
 
@@ -413,11 +482,21 @@ def _cmd_run_gcp(
             sys.exit(1)
         remote_output = f"{remote_repo_dir}/results"
         try:
-            bench_argv = build_gcp_benchmark_cli_argv(
-                args,
-                data_dir=remote_data_dir,
-                output=remote_output,
-                repo_root=repo_root,
+            bench_argv = (
+                build_gcp_benchmark_cli_argv_from_config(
+                    run_config,
+                    data_dir=remote_data_dir,
+                    output=remote_output,
+                    repo_root=repo_root,
+                    verbose=getattr(args, "verbose", False),
+                )
+                if run_config
+                else build_gcp_benchmark_cli_argv(
+                    args,
+                    data_dir=remote_data_dir,
+                    output=remote_output,
+                    repo_root=repo_root,
+                )
             )
         except ValueError as e:
             logger.error("%s", e)  # noqa: TRY400
@@ -452,11 +531,22 @@ def _cmd_run_gcp(
     instance_name = f"benchmark-{machine_slug}-{run_id[:12]}".lower().replace("_", "-")
 
     try:
-        bench_argv = build_gcp_benchmark_cli_argv(
-            args,
-            data_dir=staged_data_dir_for_gcs_uri(gcs_data_uri),
-            output=VM_RESULTS,
-            repo_root=repo_root,
+        staged_data_dir = staged_data_dir_for_gcs_uri(gcs_data_uri)
+        bench_argv = (
+            build_gcp_benchmark_cli_argv_from_config(
+                run_config,
+                data_dir=staged_data_dir,
+                output=VM_RESULTS,
+                repo_root=repo_root,
+                verbose=getattr(args, "verbose", False),
+            )
+            if run_config
+            else build_gcp_benchmark_cli_argv(
+                args,
+                data_dir=staged_data_dir,
+                output=VM_RESULTS,
+                repo_root=repo_root,
+            )
         )
     except ValueError as e:
         logger.error("%s", e)  # noqa: TRY400
@@ -464,7 +554,7 @@ def _cmd_run_gcp(
     remote_config = (
         remote_run_config_payload(
             run_config,
-            data_dir=staged_data_dir_for_gcs_uri(gcs_data_uri),
+            data_dir=staged_data_dir,
             output_dir=VM_RESULTS,
         )
         if run_config
@@ -629,8 +719,7 @@ def cmd_run(args: argparse.Namespace) -> None:
     # Cloud path: delegate the whole run to a GCP instance
     # ------------------------------------------------------------------
     if run_config.cloud and run_config.cloud.provider == "gcp":
-        cloud_args = config_to_namespace(run_config, verbose=verbose)
-        _cmd_run_gcp(cloud_args, repo_root, output_dir, run_config=run_config)
+        _cmd_run_gcp(args, repo_root, output_dir, run_config=run_config)
         return
 
     if run_config.selection.scenario:

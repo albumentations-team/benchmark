@@ -19,6 +19,7 @@ from benchmark.cli import (
     _requirements_cache_key,
     _requirements_for_env_group,
     build_gcp_benchmark_cli_argv,
+    build_gcp_benchmark_cli_argv_from_config,
     build_parser,
 )
 from benchmark.config import BenchmarkRunConfig, config_to_namespace, load_run_config, resolve_config_transform_set
@@ -417,6 +418,40 @@ class TestBuildGcpBenchmarkCliArgv:
         assert "--spec" in argv
         assert argv[argv.index("--spec") + 1] == str(spec_path.relative_to(repo_root))
 
+    def test_builds_fallback_argv_from_typed_config(self, tmp_path: Path) -> None:
+        config = BenchmarkRunConfig.model_validate(
+            {
+                "selection": {
+                    "scenario": "image-rgb",
+                    "mode": "pipeline",
+                    "libraries": ["torchvision", "kornia"],
+                    "transforms": ["HorizontalFlip"],
+                },
+                "data": {"data_dir": "/ignored", "num_items": 11},
+                "execution": {"num_runs": 2, "batch_size": 8, "workers": 3, "device": "cuda"},
+                "output": {"output_dir": "/ignored"},
+            },
+        )
+
+        argv = build_gcp_benchmark_cli_argv_from_config(
+            config,
+            data_dir="/remote/data",
+            output="/remote/out",
+            repo_root=tmp_path,
+            verbose=True,
+        )
+
+        assert argv[argv.index("--data-dir") + 1] == "/remote/data"
+        assert argv[argv.index("--output") + 1] == "/remote/out"
+        assert argv[argv.index("--scenario") + 1] == "image-rgb"
+        assert argv[argv.index("--mode") + 1] == "pipeline"
+        assert argv[argv.index("--device") + 1] == "cuda"
+        assert argv[argv.index("--batch-size") + 1] == "8"
+        assert argv[argv.index("--workers") + 1] == "3"
+        assert "torchvision" in argv
+        assert "HorizontalFlip" in argv
+        assert "--verbose" in argv
+
 
 def test_micro_output_file_includes_device_suffix(tmp_path: Path) -> None:
     assert micro_output_file(tmp_path, "kornia", device="cuda").name == "kornia_micro_dev-cuda_results.json"
@@ -578,6 +613,7 @@ class TestCmdRunGcp:
         args.gcp_project = "legacy-project"
         args.gcp_machine_type = "n1-standard-8"
         args.gcp_dry_run = False
+        args.device = "none"
         mock_runner = MagicMock()
         mock_runner.run_detached.return_value = "gs://b/runs/abc123"
 
@@ -594,6 +630,8 @@ class TestCmdRunGcp:
         assert mock_config.call_args.kwargs["machine_type"] == "g2-standard-16"
         _, kwargs = mock_runner.run_detached.call_args
         assert kwargs["dry_run"] is True
+        argv = kwargs["job"]["benchmark_cli_args"]
+        assert argv[argv.index("--device") + 1] == "cuda"
 
     def test_attached_calls_run_attached_with_correct_argv(self, tmp_path: Path) -> None:
         parser = build_parser()
