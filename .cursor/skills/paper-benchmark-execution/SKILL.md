@@ -107,10 +107,16 @@ AMD sanity on `c4d-standard-16` or equivalent:
 
 GPU/video suite on `g2-standard-16` with L4 or equivalent:
 
+- GPU image micro and DataLoader smoke rows for `torchvision` and `kornia` on RGB and 9-channel images.
 - Video micro on the G2 machine for `albumentationsx`, `torchvision`, and `kornia`, labeled by execution device:
   host CPU for AlbumentationsX, L4 GPU for torchvision/Kornia.
 - GPU video pipeline/DataLoader for GPU-capable paths.
 - DALI video pipeline when DALI is available.
+
+Kornia image GPU rows intentionally exclude `Shear` in micro and DataLoader modes because Kornia's current CUDA shear
+parameter generator can fail with mixed CPU/CUDA tensors when moved to GPU. Keep `Shear` in the global RGB/9-channel paper
+transform sets for AlbumentationsX, Pillow, torchvision where supported, and Kornia CPU rows; mention this as a benchmark
+methodology limitation.
 
 Do not rerun CPU-only image rows on GPU machines for hardware symmetry. Label hardware per row instead.
 
@@ -120,7 +126,8 @@ Do not rerun CPU-only image rows on GPU machines for hardware symmetry. Label ha
 2. Run each scenario through the production path with tiny `--num-items`, `--num-runs 1`, and short or zero `min_time`.
 3. Run RGB micro on `c4-standard-16` and `c4d-standard-16`.
 4. Run CPU suite on `c4-standard-16`: 9ch micro, RGB DataLoader, 9ch DataLoader, Albumentations video CPU micro.
-5. Run GPU suite on `g2-standard-16`: AlbumentationsX/torchvision/Kornia video micro and GPU video DataLoader.
+5. Run GPU suite on `g2-standard-16`: torchvision/Kornia GPU image smoke, AlbumentationsX/torchvision/Kornia video micro,
+   and GPU video DataLoader.
 6. Pull and validate artifacts before generating plots/tables.
 
 ## Validation

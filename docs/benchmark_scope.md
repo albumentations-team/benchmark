@@ -184,6 +184,9 @@ Run these for video/GPU tables:
   The four smoke configs are `configs/paper/gcp_g2_rgb_micro_gpu_smoke.yaml`,
   `configs/paper/gcp_g2_9ch_micro_gpu_smoke.yaml`, `configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml`, and
   `configs/paper/gcp_g2_9ch_dataloader_gpu_smoke.yaml`.
+- Kornia image GPU rows exclude `Shear` in both micro and DataLoader modes because the current Kornia CUDA shear path can
+  fail while moving the transform's parameter generator to GPU. This is a library/device limitation, not a global paper
+  transform-set removal: `Shear` remains in RGB/9-channel CPU rows and in other libraries that support it.
 - GPU video micro benchmarks for GPU-capable libraries, especially `torchvision` and `kornia`. Micro video preload uses
   fixed-length clips from `--clip-length` (16 frames for `video-16f`), not full source videos.
 - GPU video DataLoader/pipeline benchmarks for GPU-capable paths. These use dedicated video pipeline specs rather than
@@ -192,8 +195,8 @@ Run these for video/GPU tables:
   `albumentationsx torchvision kornia` video pipeline with `decode_dataloader_augment_batch_copy`, `--device cuda`,
   `--num-items 10`, `--batch-size 2`, and `--workers 2`.
 - Kornia video DataLoader/pipeline rows exclude transforms in `benchmark/transforms/kornia_unstable.py` due to CUDA
-  stability issues in that recipe path only. Kornia image micro, image pipeline, 9-channel, and video micro keep those
-  transforms unless a separate failure is observed.
+  stability issues in that recipe path only. Kornia image GPU rows additionally exclude only `Shear`; Kornia image CPU
+  rows, 9-channel CPU rows, and video micro keep the global paper transform sets.
 - DALI video pipeline benchmarks when DALI is available on the target image.
 
 CPU-only image rows should not be rerun on GPU machines for hardware symmetry. GPU image rows are a separate

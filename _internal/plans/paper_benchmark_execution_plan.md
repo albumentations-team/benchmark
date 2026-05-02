@@ -110,6 +110,10 @@ python -m benchmark.cli run --config configs/paper/gcp_c4_9ch_dataloader_cpu.yam
 The following four GPU image smoke runs are **not done**. Run them before interpreting GPU image rows.
 If `us-central1-b` is out of L4 capacity, retry the same config with `--gcp-zone us-central1-a` or
 `--gcp-zone us-central1-c`, matching the zones suggested by GCP.
+Kornia image GPU jobs intentionally exclude `Shear` in both micro and DataLoader modes because Kornia's current CUDA
+shear parameter generator can fail with mixed CPU/CUDA tensors when the transform is moved to GPU. Keep `Shear` in the
+overall RGB/9-channel paper transform sets for AlbumentationsX, Pillow, torchvision where supported, and Kornia CPU rows;
+call out this Kornia GPU limitation in the paper methodology.
 
 - [ ] GPU RGB image micro smoke on `g2-standard-16` for tensor-native libraries.
 

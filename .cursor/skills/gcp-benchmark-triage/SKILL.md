@@ -76,5 +76,8 @@ PY
 - `ModuleNotFoundError` from `benchmark/cloud/stage_dataset.py` before `Installing uv...` means bootstrap staging imported
   a dependency too early. That script must stay stdlib-only because it runs before the control venv and library venvs are
   created.
+- Kornia image GPU `Shear` failures with mixed CPU/CUDA tensors are a known Kornia CUDA limitation. Current benchmark
+  jobs filter `Shear` only for Kornia image GPU micro/DataLoader rows; rerun with the patched code instead of removing
+  `Shear` from the global paper transform sets.
 - Result directories contain both summary JSON and raw pyperf JSON; docs should load only `*_results.json`.
 - Do not assume VM disappearance means success.

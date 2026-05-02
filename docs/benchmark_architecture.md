@@ -37,6 +37,8 @@ features in these modules unless there is a strong reason to put logic directly 
   slow-transform preflight defaults.
 - `benchmark/devices.py` owns CUDA/MPS device resolution, transform/sample movement, support validation, and
   synchronization helpers shared by micro and pipeline runners.
+- `benchmark/transform_filters.py` owns narrow library/device-specific exclusions after global transform-set expansion,
+  such as omitting Kornia image `Shear` on CUDA/MPS while keeping the transform in CPU and other-library rows.
 
 ## Data And Spec Loading
 
@@ -97,6 +99,8 @@ benchmark.cli
 - Add new result filename policy in `benchmark/output_naming.py`, not separately in execution and plan code.
 - Add new detached GCP VM path policy in `benchmark/cloud/paths.py`, not separately in cloud launch and plan code.
 - Add new backend dispatch to `benchmark/orchestrator.py`, not as a CLI branch.
+- Add library/device-specific transform exclusions to `benchmark/transform_filters.py`, not by editing paper transform
+  sets unless the transform should disappear from every library.
 - Keep transform implementations explicit and library-specific. Do not create benchmark-side recreations for transforms a
   library does not directly support.
 - Add tests for matrix invariants and command construction whenever the benchmark matrix changes.

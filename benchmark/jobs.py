@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, cast
 
+from benchmark.transform_filters import filter_transforms_for_library_device
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -56,6 +58,12 @@ class BenchmarkJob:
         mode = cast("Literal['micro', 'pipeline']", mode)
         selected_backend = backend or ("pyperf" if mode == "micro" else "pipeline")
         media = config.resolved_media()
+        transforms_filter = filter_transforms_for_library_device(
+            tuple(config.selection.transforms or ()),
+            library=library,
+            media=media,
+            device=config.execution.device,
+        )
         return cls(
             library=library,
             scenario=config.selection.scenario or f"{media}-manual",
@@ -68,7 +76,7 @@ class BenchmarkJob:
             num_channels=num_channels,
             clip_length=clip_length,
             spec_file=spec_file,
-            transforms_filter=tuple(config.selection.transforms or ()),
+            transforms_filter=transforms_filter,
             pipeline_scope=config.execution.pipeline_scope,
             batch_size=config.execution.batch_size,
             workers=config.execution.workers,

@@ -39,3 +39,8 @@ def test_kornia_video_pipeline_unstable_rows_stay_in_micro_paper_sets() -> None:
 
     for path, expected_names in expected.items():
         assert _paper_names(path) & KORNIA_BENCHMARK_EXCLUDED_NAMES == expected_names
+
+
+def test_shear_stays_in_image_paper_sets_for_non_kornia_gpu_paths() -> None:
+    assert "Shear" in _paper_names("docs/paper_transform_sets/rgb.md")
+    assert "Shear" in _paper_names("docs/paper_transform_sets/9ch.md")

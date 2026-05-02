@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from benchmark.config import load_run_config
+from benchmark.config.models import BenchmarkRunConfig
 from benchmark.dali_pipeline_worker import benchmark_job_from_json_dict
 from benchmark.jobs import BenchmarkJob
 from benchmark.orchestrator import execute_job
@@ -82,6 +83,124 @@ def test_job_can_be_built_from_run_config(tmp_path: Path) -> None:
     assert job.mode == "pipeline"
     assert job.pipeline_scope == "decode_dataloader_augment"
     assert job.device == "cuda"
+
+
+def test_kornia_gpu_image_micro_excludes_shear(tmp_path: Path) -> None:
+    config = BenchmarkRunConfig.model_validate(
+        {
+            "selection": {
+                "scenario": "image-rgb",
+                "mode": "micro",
+                "libraries": ["kornia"],
+                "transforms": ["Resize", "Shear", "HorizontalFlip"],
+            },
+            "data": {"data_dir": "/data"},
+            "output": {"output_dir": "/out"},
+            "execution": {"device": "cuda"},
+        },
+    )
+
+    job = BenchmarkJob.from_run_config(
+        library="kornia",
+        config=config,
+        data_dir=tmp_path / "data",
+        output_file=tmp_path / "out.json",
+        num_channels=3,
+        clip_length=16,
+        spec_file=tmp_path / "spec.py",
+    )
+
+    assert job.transforms_filter == ("Resize", "HorizontalFlip")
+    cmd = job.micro_command(tmp_path / ".venv" / "bin" / "python")
+    assert cmd[cmd.index("--transforms") + 1] == "Resize,HorizontalFlip"
+
+
+def test_kornia_cpu_image_keeps_shear(tmp_path: Path) -> None:
+    config = BenchmarkRunConfig.model_validate(
+        {
+            "selection": {
+                "scenario": "image-rgb",
+                "mode": "micro",
+                "libraries": ["kornia"],
+                "transforms": ["Resize", "Shear"],
+            },
+            "data": {"data_dir": "/data"},
+            "output": {"output_dir": "/out"},
+            "execution": {"device": "none"},
+        },
+    )
+
+    job = BenchmarkJob.from_run_config(
+        library="kornia",
+        config=config,
+        data_dir=tmp_path / "data",
+        output_file=tmp_path / "out.json",
+        num_channels=3,
+        clip_length=16,
+        spec_file=tmp_path / "spec.py",
+    )
+
+    assert job.transforms_filter == ("Resize", "Shear")
+
+
+def test_kornia_gpu_image_pipeline_excludes_shear_recipe(tmp_path: Path) -> None:
+    config = BenchmarkRunConfig.model_validate(
+        {
+            "selection": {
+                "scenario": "image-rgb",
+                "mode": "pipeline",
+                "libraries": ["kornia"],
+                "transforms": [
+                    "RandomCrop224+Resize+Normalize+ToTensor",
+                    "RandomCrop224+Shear+Normalize+ToTensor",
+                ],
+            },
+            "data": {"data_dir": "/data"},
+            "output": {"output_dir": "/out"},
+            "execution": {"device": "cuda"},
+        },
+    )
+
+    job = BenchmarkJob.from_run_config(
+        library="kornia",
+        config=config,
+        data_dir=tmp_path / "data",
+        output_file=tmp_path / "out.json",
+        num_channels=3,
+        clip_length=16,
+        spec_file=tmp_path / "spec.py",
+    )
+
+    assert job.transforms_filter == ("RandomCrop224+Resize+Normalize+ToTensor",)
+    assert job.env_extra()["BENCHMARK_TRANSFORMS_FILTER"] == "RandomCrop224+Resize+Normalize+ToTensor"
+
+
+def test_kornia_gpu_9ch_image_excludes_shear(tmp_path: Path) -> None:
+    config = BenchmarkRunConfig.model_validate(
+        {
+            "selection": {
+                "scenario": "image-9ch",
+                "mode": "micro",
+                "libraries": ["kornia"],
+                "transforms": ["Resize", "Shear", "HorizontalFlip"],
+            },
+            "data": {"data_dir": "/data"},
+            "output": {"output_dir": "/out"},
+            "execution": {"device": "cuda"},
+        },
+    )
+
+    job = BenchmarkJob.from_run_config(
+        library="kornia",
+        config=config,
+        data_dir=tmp_path / "data",
+        output_file=tmp_path / "out.json",
+        num_channels=9,
+        clip_length=16,
+        spec_file=tmp_path / "spec.py",
+    )
+
+    assert job.transforms_filter == ("Resize", "HorizontalFlip")
 
 
 def test_job_from_run_config_rejects_decode_mode(tmp_path: Path) -> None:

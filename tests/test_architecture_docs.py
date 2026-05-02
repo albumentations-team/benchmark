@@ -13,6 +13,7 @@ ARCHITECTURE_MODULES = (
     "benchmark/config/transform_sets.py",
     "benchmark/matrix.py",
     "benchmark/devices.py",
+    "benchmark/transform_filters.py",
     "benchmark/policy.py",
     "benchmark/jobs.py",
     "benchmark/orchestrator.py",
