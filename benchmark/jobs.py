@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, cast
 
 if TYPE_CHECKING:
-    import argparse
     from pathlib import Path
 
     from benchmark.config import BenchmarkRunConfig
@@ -36,50 +35,6 @@ class BenchmarkJob:
     slow_preflight_items: int | None = None
     disable_slow_skip: bool = False
     backend: Literal["pyperf", "pipeline", "dali_pipeline"] = "pyperf"
-
-    @classmethod
-    def from_args(
-        cls,
-        *,
-        library: str,
-        scenario_name: str,
-        mode: Literal["micro", "pipeline"],
-        media: Literal["image", "video"],
-        data_dir: Path,
-        output_file: Path,
-        args: argparse.Namespace,
-        num_channels: int,
-        clip_length: int,
-        spec_file: Path | None,
-        backend: Literal["pyperf", "pipeline", "dali_pipeline"] | None = None,
-    ) -> BenchmarkJob:
-        selected_backend = backend or ("pyperf" if mode == "micro" else "pipeline")
-        return cls(
-            library=library,
-            scenario=scenario_name,
-            mode=mode,
-            media=media,
-            data_dir=data_dir,
-            output_file=output_file,
-            num_items=args.num_items,
-            num_runs=args.num_runs,
-            num_channels=num_channels,
-            clip_length=clip_length,
-            spec_file=spec_file,
-            transforms_filter=tuple(args.transforms or ()),
-            pipeline_scope=args.pipeline_scope,
-            batch_size=args.batch_size,
-            workers=args.workers,
-            min_time=args.min_time,
-            min_batches=args.min_batches,
-            device=args.device,
-            thread_policy=args.thread_policy,
-            refresh_requirements=args.refresh_requirements,
-            slow_threshold_sec_per_item=args.slow_threshold_sec_per_item,
-            slow_preflight_items=args.slow_preflight_items,
-            disable_slow_skip=args.disable_slow_skip,
-            backend=selected_backend,
-        )
 
     @classmethod
     def from_run_config(
