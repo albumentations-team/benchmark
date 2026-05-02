@@ -53,15 +53,17 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .instance import GCPInstanceConfig
 
+from benchmark.cloud.paths import VM_DATADIR, VM_REPODIR, VM_RESULTS, VM_WORKDIR
+
 logger = logging.getLogger(__name__)
 
 _GCLOUD = "gcloud"
 
 # VM paths (must match bootstrap.sh)
-_VM_WORKDIR = "/root/benchmark-work"
-_VM_REPODIR = f"{_VM_WORKDIR}/repo"
-_VM_DATADIR = "/root/benchmark-data"
-_VM_RESULTS = f"{_VM_WORKDIR}/results"
+_VM_WORKDIR = VM_WORKDIR
+_VM_REPODIR = VM_REPODIR
+_VM_DATADIR = VM_DATADIR
+_VM_RESULTS = VM_RESULTS
 
 _REPO_EXCLUDE_PATTERNS = [
     ".venv*",

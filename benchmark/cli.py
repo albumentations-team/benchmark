@@ -36,6 +36,7 @@ from pydantic import ValidationError
 from tqdm import tqdm
 
 from benchmark import envs
+from benchmark.cloud.paths import VM_RESULTS, staged_data_dir_for_gcs_uri
 from benchmark.config import (
     BenchmarkRunConfig,
     apply_cli_overrides,
@@ -461,18 +462,6 @@ def _cmd_run_gcp(
         logger.error("Detached GCP runs require --gcp-gcs-data-uri and --gcp-gcs-results-uri")
         sys.exit(1)
 
-    def _gcp_staged_data_dir() -> str:
-        """Where the dataset ended up on the VM after staging from GCS."""
-        p = (args.gcp_gcs_data_uri or "").rstrip("/")
-        if not p.startswith("gs://"):
-            return "/root/benchmark-data"
-        base = p.rsplit("/", 1)[-1].lower()
-        if base.endswith(".tar") and base.startswith("val"):
-            return "/root/benchmark-data/val"
-        if base in {"val", "train", "test"}:
-            return "/root/benchmark-data/val"
-        return "/root/benchmark-data"
-
     run_id = new_run_id()
     machine_slug = args.gcp_machine_type.replace("/", "-").lower()[:24]
     instance_name = f"benchmark-{machine_slug}-{run_id[:12]}".lower().replace("_", "-")
@@ -480,15 +469,19 @@ def _cmd_run_gcp(
     try:
         bench_argv = build_gcp_benchmark_cli_argv(
             args,
-            data_dir=_gcp_staged_data_dir(),
-            output="/root/benchmark-work/results",
+            data_dir=staged_data_dir_for_gcs_uri(args.gcp_gcs_data_uri),
+            output=VM_RESULTS,
             repo_root=repo_root,
         )
     except ValueError as e:
         logger.error("%s", e)  # noqa: TRY400
         sys.exit(1)
     remote_config = (
-        _remote_run_config(run_config, data_dir=_gcp_staged_data_dir(), output="/root/benchmark-work/results")
+        _remote_run_config(
+            run_config,
+            data_dir=staged_data_dir_for_gcs_uri(args.gcp_gcs_data_uri),
+            output=VM_RESULTS,
+        )
         if run_config
         else None
     )

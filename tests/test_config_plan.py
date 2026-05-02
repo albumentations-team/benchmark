@@ -25,7 +25,7 @@ def test_plan_lists_gpu_pipeline_device_outputs_and_cloud() -> None:
     assert [job.library for job in plan.jobs] == ["torchvision", "kornia"]
     assert all(job.backend == "pipeline" for job in plan.jobs)
     assert all(job.device == "cuda" for job in plan.jobs)
-    assert all(job.data_dir == "/root/benchmark-data" for job in plan.jobs)
+    assert all(job.data_dir == "/root/benchmark-data/val" for job in plan.jobs)
     assert any("_dev-cuda_results.json" in output for output in plan.expected_outputs)
     assert plan.cloud is not None
     assert plan.cloud["machine_type"] == "g2-standard-16"

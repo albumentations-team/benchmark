@@ -4,14 +4,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from benchmark.cloud.paths import VM_RESULTS, staged_data_dir_for_gcs_uri
 from benchmark.matrix import IMAGE_SPECS, MULTICHANNEL_IMAGE_SPECS, VIDEO_SPECS, spec_map_for_scenario
 from benchmark.scenarios import get_scenario, resolve_decoders, resolve_libraries, resolve_mode
 
 if TYPE_CHECKING:
     from benchmark.config.models import BenchmarkRunConfig
-
-GCP_STAGED_DATA_ROOT = "/root/benchmark-data"
-GCP_RESULTS_DIR = "/root/benchmark-work/results"
 
 
 @dataclass(frozen=True)
@@ -86,7 +84,7 @@ def _cloud_plan(config: BenchmarkRunConfig) -> dict[str, object] | None:
 
 def _base_output_dir(config: BenchmarkRunConfig) -> Path:
     if config.cloud and config.cloud.enabled and not config.cloud.attached:
-        return Path(GCP_RESULTS_DIR)
+        return Path(VM_RESULTS)
     output_dir = Path(config.output.output_dir or "output")
     is_local = not (config.cloud and config.cloud.enabled)
     if config.selection.multichannel and config.resolved_media() == "image" and is_local:
@@ -94,20 +92,11 @@ def _base_output_dir(config: BenchmarkRunConfig) -> Path:
     return output_dir
 
 
-def _gcp_staged_data_dir(gcs_uri: str | None) -> str:
-    uri = (gcs_uri or "").rstrip("/")
-    if uri.endswith((".tar", ".tar.gz", ".tgz")):
-        return GCP_STAGED_DATA_ROOT
-    if uri.endswith("/val"):
-        return f"{GCP_STAGED_DATA_ROOT}/val"
-    return GCP_STAGED_DATA_ROOT
-
-
 def _planned_data_dir(config: BenchmarkRunConfig) -> str:
     if config.cloud and config.cloud.enabled:
         if config.cloud.attached:
             return config.data.remote_data_dir or "unknown"
-        return _gcp_staged_data_dir(config.data.gcs_uri)
+        return staged_data_dir_for_gcs_uri(config.data.gcs_uri)
     return config.data.data_dir or config.data.gcs_uri or "unknown"
 
 
