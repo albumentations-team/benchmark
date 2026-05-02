@@ -116,3 +116,11 @@ def test_config_to_namespace_keeps_legacy_cli_shape() -> None:
     assert args.mode == "pipeline"
     assert args.gcp_machine_type == "g2-standard-16"
     assert args.device == "cuda"
+
+
+def test_config_exposes_resolved_scenario_fields() -> None:
+    config = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml"))
+
+    assert config.resolved_mode() == "pipeline"
+    assert config.resolved_media() == "image"
+    assert config.resolved_libraries() == ["torchvision", "kornia"]

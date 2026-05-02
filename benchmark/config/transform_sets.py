@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 from benchmark.config.models import BenchmarkRunConfig
 from benchmark.matrix import paper_transform_set_file
-from benchmark.scenarios import get_scenario, resolve_mode
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -45,8 +44,7 @@ def resolve_config_transform_set(config: BenchmarkRunConfig, repo_root: Path) ->
     if config.selection.transform_set != "paper":
         raise ValueError(f"Unknown transform set {config.selection.transform_set!r}")
 
-    scenario = get_scenario(config.selection.scenario)
-    mode = resolve_mode(scenario, config.selection.mode)
+    mode = config.resolved_mode()
     data = config.model_dump()
-    data["selection"]["transforms"] = paper_transform_names(repo_root, scenario.name, mode)
+    data["selection"]["transforms"] = paper_transform_names(repo_root, config.selection.scenario, mode)
     return BenchmarkRunConfig.model_validate(data)

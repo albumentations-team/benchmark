@@ -84,18 +84,12 @@ def _cloud_plan(config: BenchmarkRunConfig) -> dict[str, object] | None:
     }
 
 
-def _resolved_media(config: BenchmarkRunConfig) -> str:
-    if config.selection.scenario:
-        return get_scenario(config.selection.scenario).media
-    return config.selection.media
-
-
 def _base_output_dir(config: BenchmarkRunConfig) -> Path:
     if config.cloud and config.cloud.enabled and not config.cloud.attached:
         return Path(GCP_RESULTS_DIR)
     output_dir = Path(config.output.output_dir or "output")
     is_local = not (config.cloud and config.cloud.enabled)
-    if config.selection.multichannel and _resolved_media(config) == "image" and is_local:
+    if config.selection.multichannel and config.resolved_media() == "image" and is_local:
         return output_dir / "multichannel"
     return output_dir
 
@@ -222,9 +216,9 @@ def _manual_spec_jobs(config: BenchmarkRunConfig, repo_root: Path, output_dir: P
     return [
         _planned_job(
             config=config,
-            scenario=f"{_resolved_media(config)}-manual",
+            scenario=f"{config.resolved_media()}-manual",
             mode="micro",
-            media=_resolved_media(config),
+            media=config.resolved_media(),
             output_file=output_dir / f"{spec_file.stem}.json",
             data_dir=data_dir,
             library=None,
@@ -242,7 +236,7 @@ def _manual_library_jobs(
 ) -> list[PlannedJob]:
     if config.selection.scenario or config.selection.spec:
         return []
-    media = _resolved_media(config)
+    media = config.resolved_media()
     spec_map = (
         MULTICHANNEL_IMAGE_SPECS
         if config.selection.multichannel and media == "image"

@@ -100,9 +100,9 @@ class BenchmarkRunConfig(StrictModel):
 
     @model_validator(mode="after")
     def validate_run(self) -> BenchmarkRunConfig:
-        mode = self._resolved_mode()
-        media = self._resolved_media()
-        libraries = self._resolved_libraries(mode)
+        mode = self.resolved_mode()
+        media = self.resolved_media()
+        libraries = self.resolved_libraries(mode)
 
         if mode == "micro" and self.execution.workers != 0:
             raise ValueError("micro benchmarks do not use DataLoader workers; set execution.workers to 0")
@@ -127,17 +127,18 @@ class BenchmarkRunConfig(StrictModel):
 
         return self
 
-    def _resolved_mode(self) -> BenchmarkMode:
+    def resolved_mode(self) -> BenchmarkMode:
         if self.selection.scenario:
             return resolve_mode(get_scenario(self.selection.scenario), self.selection.mode)
         return self.selection.mode or "micro"
 
-    def _resolved_media(self) -> Literal["image", "video"]:
+    def resolved_media(self) -> Literal["image", "video"]:
         if self.selection.scenario:
             return get_scenario(self.selection.scenario).media
         return self.selection.media
 
-    def _resolved_libraries(self, mode: BenchmarkMode) -> list[str]:
+    def resolved_libraries(self, mode: BenchmarkMode | None = None) -> list[str]:
+        mode = mode or self.resolved_mode()
         if self.selection.spec:
             return []
         if self.selection.scenario:
@@ -165,13 +166,13 @@ class BenchmarkRunConfig(StrictModel):
         return {
             "data_dir": self.data.data_dir or "unused",
             "output": self.output.output_dir or "output",
-            "media": self._resolved_media(),
+            "media": self.resolved_media(),
             "libraries": self.selection.libraries,
             "transforms": self.selection.transforms,
             "transform_set": self.selection.transform_set,
             "spec": self.selection.spec,
             "scenario": self.selection.scenario,
-            "mode": self._resolved_mode(),
+            "mode": self.resolved_mode(),
             "batch_size": self.execution.batch_size,
             "workers": self.execution.workers,
             "min_time": self.execution.min_time,
