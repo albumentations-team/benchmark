@@ -119,10 +119,6 @@ def _run_micro_job(
     execute_job(job, repo_root=repo_root, verbose=verbose)
 
 
-def _spec_map_for_scenario(scenario_name: str, mode: str) -> dict[str, str]:
-    return spec_map_for_scenario(scenario_name, mode)
-
-
 def _required_data_dir(config: BenchmarkRunConfig) -> Path:
     if not config.data.data_dir:
         msg = "data.data_dir is required for benchmark execution"
@@ -229,7 +225,7 @@ def _cmd_run_scenario(
         return
 
     libraries = resolve_libraries(scenario, mode, run_config.selection.libraries)
-    spec_map = _spec_map_for_scenario(scenario.name, mode)
+    spec_map = spec_map_for_scenario(scenario.name, mode)
     scenario_output_dir = output_dir / scenario.name / mode
     scenario_output_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Running scenario %s/%s for libraries: %s", scenario.name, mode, libraries)
