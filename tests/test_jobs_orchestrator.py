@@ -84,6 +84,25 @@ def test_job_can_be_built_from_run_config(tmp_path: Path) -> None:
     assert job.device == "cuda"
 
 
+def test_job_from_run_config_rejects_decode_mode(tmp_path: Path) -> None:
+    data = load_run_config(Path("configs/paper/gcp_g2_video_smoke.yaml")).model_dump()
+    data["selection"] = {"scenario": "video-decode-16f", "mode": "decode"}
+    from benchmark.config import BenchmarkRunConfig
+
+    config = BenchmarkRunConfig.model_validate(data)
+
+    with pytest.raises(ValueError, match="does not support mode 'decode'"):
+        BenchmarkJob.from_run_config(
+            library="opencv",
+            config=config,
+            data_dir=tmp_path / "data",
+            output_file=tmp_path / "out.json",
+            num_channels=3,
+            clip_length=16,
+            spec_file=None,
+        )
+
+
 def test_execute_job_deletes_pyperf_sidecar_before_micro_run(tmp_path: Path) -> None:
     sidecar = tmp_path / "out.pyperf.json"
     sidecar.write_text("stale", encoding="utf-8")

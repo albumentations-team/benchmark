@@ -94,10 +94,13 @@ class BenchmarkJob:
         spec_file: Path | None,
         backend: Literal["pyperf", "pipeline", "dali_pipeline"] | None = None,
     ) -> BenchmarkJob:
-        legacy = config.to_legacy_args()
-        mode = cast("Literal['micro', 'pipeline']", legacy["mode"])
+        mode = config.resolved_mode()
+        if mode not in {"micro", "pipeline"}:
+            msg = f"BenchmarkJob does not support mode {mode!r}"
+            raise ValueError(msg)
+        mode = cast("Literal['micro', 'pipeline']", mode)
         selected_backend = backend or ("pyperf" if mode == "micro" else "pipeline")
-        media = cast("Literal['image', 'video']", legacy["media"])
+        media = config.resolved_media()
         return cls(
             library=library,
             scenario=config.selection.scenario or f"{media}-manual",
