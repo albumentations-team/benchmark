@@ -22,6 +22,9 @@ features in these modules unless there is a strong reason to put logic directly 
   (`benchmark/dali_pipeline_worker.py`) using the DALI venv Python from `benchmark/envs.py`, so DALI is imported only after
   `requirements/dali-video.txt` is installed or refreshed.
 - `benchmark/envs.py` owns virtualenv creation, requirement lock refresh, dependency cache keys, and dependency installs.
+- `benchmark/output_naming.py` owns result filename rules shared by execution and dry-run plans, including device suffixes.
+- `benchmark/cloud/paths.py` owns detached-VM path constants and GCS-to-staged-data path inference shared by plans and
+  GCP launch code.
 - `benchmark/cloud/stage_dataset.py` owns detached-cloud dataset tarball validation and extraction. It filters media files
   by benchmark media type and ignores macOS archive junk such as `.DS_Store`, AppleDouble `._*`, and `__MACOSX`.
 - `benchmark/policy.py` owns shared media policy: default item counts, warmup limits, item labels, throughput units, and
@@ -84,6 +87,8 @@ benchmark.cli
 - Add new shared defaults in `benchmark/policy.py`, not separately in micro and pipeline runners.
 - Add new device behavior in `benchmark/devices.py`, then plumb it through jobs/runners.
 - Add new command construction to `benchmark/jobs.py`, not inline in `benchmark/cli.py`.
+- Add new result filename policy in `benchmark/output_naming.py`, not separately in execution and plan code.
+- Add new detached GCP VM path policy in `benchmark/cloud/paths.py`, not separately in cloud launch and plan code.
 - Add new backend dispatch to `benchmark/orchestrator.py`, not as a CLI branch.
 - Keep transform implementations explicit and library-specific. Do not create benchmark-side recreations for transforms a
   library does not directly support.
@@ -96,6 +101,8 @@ Architecture-sensitive tests live in:
 - `tests/test_config_models.py`: typed config loading, CLI override precedence, validation failures, legacy namespace
   conversion.
 - `tests/test_config_plan.py`: config-to-plan expansion for micro, pipeline, decode, expected outputs, and cloud fields.
+- `tests/test_cloud_paths.py`: detached GCP VM path constants and staged-data path inference.
+- `tests/test_output_naming.py`: result filename policy for micro, pipeline, manual, and device-suffixed outputs.
 - `tests/test_matrix.py`: scenario/mode/library matrix, spec paths, requirements, paper transform sets, device policy.
 - `tests/test_jobs_orchestrator.py`: job command construction, pyperf sidecar cleanup, DALI backend dispatch, GCP attached
   cleanup on failure.
