@@ -12,9 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from benchmark.cli import (
-    _collect_provided_flags,
     _extract_library,
-    build_parser,
 )
 from benchmark.config import (
     BenchmarkRunConfig,
@@ -26,6 +24,7 @@ from benchmark.config import (
 from benchmark.envs import compile_requirements, requirements_cache_key
 from benchmark.matrix import library_env_group, requirements_for_env_group
 from benchmark.output_naming import micro_output_file
+from benchmark.parser import build_parser, collect_provided_flags
 
 
 class TestBuildParser:
@@ -72,7 +71,7 @@ class TestBuildParser:
         assert args.output is None
 
     def test_collect_provided_flags_supports_equals_form(self) -> None:
-        assert _collect_provided_flags(["run", "--config=c.yaml", "--num-items=5"]) == {
+        assert collect_provided_flags(["run", "--config=c.yaml", "--num-items=5"]) == {
             "--config",
             "--num-items",
         }

@@ -5,8 +5,8 @@ features in these modules unless there is a strong reason to put logic directly 
 
 ## Control Plane
 
-- `benchmark/cli.py` parses arguments and keeps backwards-compatible helper wrappers for existing tests and scripts. It
-  resolves old flags or YAML files into typed run configs before launching work.
+- `benchmark/parser.py` owns argument parser construction and provided-flag tracking for CLI overrides.
+- `benchmark/cli.py` handles commands. It resolves old flags or YAML files into typed run configs before launching work.
 - `benchmark/config/models.py` defines the Pydantic run config schema for selection, data, execution, output, and cloud
   settings. Config validation catches unsupported combinations before local work or VM creation starts.
 - `benchmark/config/argv.py` builds compatibility `benchmark.cli run` argv from typed configs for cloud fallback paths.

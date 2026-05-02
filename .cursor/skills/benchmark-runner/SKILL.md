@@ -19,8 +19,9 @@ python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml
 python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_gpu_smoke.yaml --gcp-dry-run
 ```
 
-`benchmark/config/models.py` defines `BenchmarkRunConfig`. `benchmark/config/resolve.py` loads YAML, applies supported
-CLI overrides, writes `resolved_config.yaml`, and shapes typed GCP payloads. `benchmark/config/argv.py` builds
+`benchmark/parser.py` owns parser construction and provided-flag tracking. `benchmark/config/models.py` defines
+`BenchmarkRunConfig`. `benchmark/config/resolve.py` loads YAML, applies supported CLI overrides, writes
+`resolved_config.yaml`, and shapes typed GCP payloads. `benchmark/config/argv.py` builds
 compatibility CLI argv from typed configs for cloud fallback paths. `benchmark/config/plan.py` prints generated jobs and
 expected files. `benchmark/config/env.py` embeds the resolved config in result metadata. `benchmark/cloud/paths.py` and
 `benchmark/output_naming.py` keep dry-run plans aligned with real VM paths and result filenames.

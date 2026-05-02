@@ -18,6 +18,7 @@ ARCHITECTURE_MODULES = (
     "benchmark/orchestrator.py",
     "benchmark/dali_pipeline_worker.py",
     "benchmark/envs.py",
+    "benchmark/parser.py",
     "benchmark/output_naming.py",
     "benchmark/cloud/paths.py",
     "benchmark/cloud/stage_dataset.py",
