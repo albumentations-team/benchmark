@@ -22,6 +22,7 @@ from benchmark.cli import (
     build_gcp_benchmark_cli_argv,
     build_parser,
 )
+from benchmark.config import config_to_namespace, load_run_config
 
 
 class TestBuildParser:
@@ -546,6 +547,28 @@ class TestCmdRunGcp:
         assert meta["run_id"] == "abc123"
         assert meta["run_prefix"] == "gs://b/runs/abc123"
         assert "fetch_results_hint" in meta
+
+    def test_detached_typed_job_payload_uses_vm_paths(self, tmp_path: Path) -> None:
+        config = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml"))
+        args = config_to_namespace(config)
+        args.gcp_dry_run = True
+        mock_runner = MagicMock()
+        mock_runner.run_detached.return_value = "gs://b/runs/abc123"
+
+        with (
+            patch("benchmark.cloud.gcp.GCPRunner", return_value=mock_runner),
+            patch("benchmark.cloud.instance.GCPInstanceConfig"),
+            patch("benchmark.cloud.gcp.new_run_id", return_value="abc123"),
+        ):
+            from benchmark.cli import _cmd_run_gcp
+
+            _cmd_run_gcp(args, tmp_path, tmp_path, run_config=config)
+
+        _, kwargs = mock_runner.run_detached.call_args
+        run_config = kwargs["job"]["run_config"]
+        assert run_config["data"]["data_dir"] == "/root/benchmark-data/val"
+        assert run_config["output"]["output_dir"] == "/root/benchmark-work/results"
+        assert "cloud" not in run_config
 
     def test_attached_calls_run_attached_with_correct_argv(self, tmp_path: Path) -> None:
         parser = build_parser()
