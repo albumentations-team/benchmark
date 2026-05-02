@@ -15,6 +15,7 @@ from benchmark.config import (
     apply_cli_overrides,
     config_to_namespace,
     load_run_config,
+    resolve_config_transform_set,
 )
 
 
@@ -49,6 +50,25 @@ def test_rejects_micro_workers() -> None:
             output=OutputConfig(output_dir="/out"),
             execution=ExecutionConfig(workers=1),
         )
+
+
+def test_rejects_transform_set_without_scenario() -> None:
+    with pytest.raises(ValidationError, match=r"selection\.transform_set requires selection\.scenario"):
+        BenchmarkRunConfig(
+            selection=SelectionConfig(media="image", libraries=["torchvision"], transform_set="paper"),
+            data=DataConfig(data_dir="/data"),
+            output=OutputConfig(output_dir="/out"),
+        )
+
+
+def test_resolve_transform_set_records_concrete_names() -> None:
+    config = load_run_config(Path("configs/examples/local_rgb_micro_cpu.yaml"))
+
+    resolved = resolve_config_transform_set(config, Path.cwd())
+
+    assert resolved.selection.transform_set == "paper"
+    assert resolved.selection.transforms
+    assert "HorizontalFlip" in resolved.selection.transforms
 
 
 def test_rejects_detached_cloud_without_gcs_data() -> None:

@@ -14,6 +14,11 @@ from benchmark.config.resolve import (
     run_config_from_args,
     write_resolved_config,
 )
+from benchmark.config.transform_sets import (
+    paper_transform_names,
+    read_markdown_text_block,
+    resolve_config_transform_set,
+)
 
 __all__ = [
     "BenchmarkRunConfig",
@@ -27,6 +32,9 @@ __all__ = [
     "build_run_plan",
     "config_to_namespace",
     "load_run_config",
+    "paper_transform_names",
+    "read_markdown_text_block",
+    "resolve_config_transform_set",
     "run_config_from_args",
     "write_resolved_config",
 ]

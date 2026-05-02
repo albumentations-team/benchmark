@@ -8,6 +8,7 @@ ARCHITECTURE_MODULES = (
     "benchmark/config/models.py",
     "benchmark/config/plan.py",
     "benchmark/config/resolve.py",
+    "benchmark/config/transform_sets.py",
     "benchmark/matrix.py",
     "benchmark/devices.py",
     "benchmark/policy.py",

@@ -443,8 +443,9 @@ This will give you more relevant performance metrics for your specific use case.
 ## Running Benchmarks
 
 All benchmarks use the unified CLI: `python -m benchmark.cli run`. Prefer checked-in YAML configs for paper and cloud
-runs, and use direct flags for quick local iteration. Config files are validated with Pydantic before work starts and the
-resolved config is written to `resolved_config.yaml` in the output directory.
+runs, and use direct flags for quick local iteration. Config files are validated with Pydantic before work starts.
+Named transform sets such as `paper` are expanded to concrete transform names, and the resolved config is written to
+`resolved_config.yaml` in the output directory.
 
 ```bash
 python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml

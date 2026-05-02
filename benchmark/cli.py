@@ -42,6 +42,7 @@ from benchmark.config import (
     build_run_plan,
     config_to_namespace,
     load_run_config,
+    resolve_config_transform_set,
     run_config_from_args,
     write_resolved_config,
 )
@@ -58,7 +59,6 @@ from benchmark.matrix import (
 )
 from benchmark.matrix import (
     library_env_group,
-    paper_transform_set_file,
     requirements_for_env_group,
     spec_map_for_scenario,
 )
@@ -86,44 +86,6 @@ def _extract_library(spec_file: Path) -> str:
             if len(parts) == 2:
                 return parts[1].strip().strip('"').strip("'")
     raise ValueError(f"Could not find LIBRARY assignment in {spec_file}")
-
-
-def _read_markdown_text_block(path: Path) -> list[str]:
-    lines: list[str] = []
-    in_block = False
-    for line in path.read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if stripped == "```text":
-            in_block = True
-            continue
-        if in_block and stripped == "```":
-            break
-        if in_block and stripped:
-            lines.append(stripped)
-    if not lines:
-        raise ValueError(f"No text transform block found in {path}")
-    return lines
-
-
-def _paper_transform_names(repo_root: Path, scenario_name: str, mode: str) -> list[str]:
-    transform_set_path = repo_root / paper_transform_set_file(scenario_name)
-    names = _read_markdown_text_block(transform_set_path)
-    if mode == "pipeline" and scenario_name in {"image-rgb", "image-9ch"}:
-        from benchmark.transforms.image_recipe_specs import recipe_name, spec_by_name
-
-        return [recipe_name(spec_by_name(name)) for name in names if name != "Normalize"]
-    return names
-
-
-def _apply_transform_set(args: argparse.Namespace, repo_root: Path, scenario_name: str, mode: str) -> None:
-    if args.transform_set is None or args.transforms:
-        return
-    if args.transform_set == "paper":
-        args.transforms = _paper_transform_names(repo_root, scenario_name, mode)
-        logger.info("Using %s paper transform set (%d transforms)", scenario_name, len(args.transforms))
-        return
-    msg = f"Unknown transform set {args.transform_set!r}"
-    raise ValueError(msg)
 
 
 def _compile_requirements(python: Path, requirements_path: Path) -> None:
@@ -297,11 +259,6 @@ def _cmd_run_scenario(args: argparse.Namespace, repo_root: Path, output_dir: Pat
 
     scenario = get_scenario(args.scenario)
     args.mode = resolve_mode(scenario, args.mode)
-    try:
-        _apply_transform_set(args, repo_root, scenario.name, args.mode)
-    except ValueError as e:
-        logger.error("%s", e)  # noqa: TRY400
-        sys.exit(1)
     if args.thread_policy is None:
         args.thread_policy = "micro-single" if args.mode == "micro" else "pipeline-default"
     clip_length = args.clip_length or scenario.clip_length or 16
@@ -673,6 +630,7 @@ def _print_dry_run(config: BenchmarkRunConfig, repo_root: Path) -> None:
 def cmd_run(args: argparse.Namespace) -> None:
     repo_root = Path(__file__).parent.parent.resolve()
     run_config = _resolve_run_config(args)
+    run_config = resolve_config_transform_set(run_config, repo_root)
     _log_run_summary(run_config)
     os.environ["BENCHMARK_RUN_CONFIG_JSON"] = run_config.model_dump_json(exclude_none=True)
     if args.dry_run:
@@ -780,6 +738,7 @@ def cmd_run(args: argparse.Namespace) -> None:
 def cmd_plan(args: argparse.Namespace) -> None:
     repo_root = Path(__file__).parent.parent.resolve()
     run_config = _resolve_run_config(args)
+    run_config = resolve_config_transform_set(run_config, repo_root)
     _log_run_summary(run_config)
     payload = _plan_payload(run_config, repo_root)
     print(yaml.safe_dump(payload, sort_keys=False))

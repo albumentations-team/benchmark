@@ -13,6 +13,8 @@ features in these modules unless there is a strong reason to put logic directly 
   converts typed configs to legacy namespaces during the migration.
 - `benchmark/config/plan.py` expands a resolved config into a dry-run plan: generated jobs, expected result files, and
   cloud target settings.
+- `benchmark/config/transform_sets.py` expands named transform sets into concrete transform names before configs are
+  written to metadata or executed.
 - `benchmark/matrix.py` is the declarative benchmark matrix: scenarios, modes, library spec files, requirements, joined
   environment groups, paper transform-set files, device support, pipeline scopes, and backend selection.
 - `benchmark/jobs.py` defines immutable `BenchmarkJob` objects and builds subprocess commands for micro and pipeline jobs.
@@ -65,6 +67,7 @@ features in these modules unless there is a strong reason to put logic directly 
 ```text
 benchmark.cli
   -> benchmark.config resolves YAML/flags into BenchmarkRunConfig
+  -> benchmark.config.transform_sets expands named transform sets
   -> benchmark.config.plan expands generated jobs for dry-run/debug output
   -> benchmark.scenarios resolves scenario/mode/libraries
   -> benchmark.matrix resolves spec/env/backend policy

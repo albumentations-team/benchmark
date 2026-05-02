@@ -110,6 +110,9 @@ class BenchmarkRunConfig(StrictModel):
         if self.selection.multichannel and media != "image":
             raise ValueError("selection.multichannel is only valid for image benchmarks")
 
+        if self.selection.transform_set and self.selection.scenario is None:
+            raise ValueError("selection.transform_set requires selection.scenario")
+
         if self.selection.spec is None:
             for library in libraries:
                 ensure_supported_device(library, media, self.execution.device)
