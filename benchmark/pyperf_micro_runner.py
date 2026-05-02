@@ -236,18 +236,7 @@ def _run_transform_subprocesses(
             subprocess.run(cmd, check=True, env=env)  # noqa: S603 - cmd is built from this runner's own executable/args.
 
             transform_payload = json.loads(result_path.read_text(encoding="utf-8"))
-            if payload is None:
-                transform_payload["results"] = {}
-                payload = transform_payload
-            payload_dict = payload
-            if payload_dict is None:
-                msg = "Combined pyperf payload was not initialized"
-                raise RuntimeError(msg)
-            results = payload_dict["results"]
-            if not isinstance(results, dict):
-                results = {}
-                payload_dict["results"] = results
-            results.update(transform_payload["results"])
+            payload = _merge_transform_payload(payload, transform_payload)
 
             _merge_pyperf_payload(combined_pyperf, pyperf_path)
 
@@ -257,6 +246,20 @@ def _run_transform_subprocesses(
     output_path = getattr(pyperf_cli, "output", None)
     if output_path:
         Path(output_path).write_text(json.dumps(combined_pyperf, separators=(",", ":")), encoding="utf-8")
+
+
+def _merge_transform_payload(payload: dict[str, Any] | None, transform_payload: dict[str, Any]) -> dict[str, Any]:
+    transform_results = transform_payload.get("results", {})
+    if not isinstance(transform_results, dict):
+        transform_results = {}
+    if payload is None:
+        payload = {**transform_payload, "results": {}}
+    results = payload.get("results")
+    if not isinstance(results, dict):
+        results = {}
+        payload["results"] = results
+    results.update(transform_results)
+    return payload
 
 
 def _merge_pyperf_payload(combined_pyperf: dict[str, Any], pyperf_path: Path) -> None:

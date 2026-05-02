@@ -68,3 +68,8 @@ class TestTransformSpecsList:
         expected = {"HorizontalFlip", "VerticalFlip", "Resize", "GaussianBlur", "Normalize", "Rotate"}
         missing = expected - names
         assert not missing, f"Expected transforms not found: {missing}"
+
+    def test_dithering_is_not_in_default_specs(self) -> None:
+        names = {spec.name for spec in TRANSFORM_SPECS}
+
+        assert "Dithering" not in names

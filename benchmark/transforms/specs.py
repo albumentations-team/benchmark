@@ -24,14 +24,10 @@ when changing specs.
 
   RGBShift: spec pixel_shift in [0,255]. Kornia expects normalized [0,1] -> /255.
 
-  Dithering: shared benchmark contract (method, n_colors, color_mode,
-    error_diffusion_algorithm) lives in ``benchmark.transforms.dithering_benchmark``.
 """
 
 from dataclasses import dataclass
 from typing import Any
-
-from benchmark.transforms.dithering_benchmark import DITHERING_BENCHMARK_PARAMS
 
 
 @dataclass
@@ -763,7 +759,6 @@ TRANSFORM_SPECS = [
             "intensity_range": (0.2, 0.5),
         },
     ),
-    TransformSpec("Dithering", dict(DITHERING_BENCHMARK_PARAMS)),
     TransformSpec(
         "FilmGrain",
         {

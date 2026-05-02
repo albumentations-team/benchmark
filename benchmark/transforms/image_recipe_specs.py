@@ -135,7 +135,6 @@ _PILLOW_PIPELINE_SUPPORTED_NAMES = {
     "Brightness",
     "CenterCrop224",
     "Contrast",
-    "Dithering",
     "EnhanceDetail",
     "EnhanceEdge",
     "Equalize",

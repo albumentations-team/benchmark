@@ -62,7 +62,7 @@ class VideoDecodeRunner:
         except DecoderUnavailableError as e:
             return unsupported_result(str(e))
         except Exception as e:
-            return unsupported_result(f"Decoder smoke test failed: {type(e).__name__}: {e}")
+            return unsupported_result(f"Decoder validation failed: {type(e).__name__}: {e}")
 
         for _ in tqdm(range(self.num_runs), desc=f"Decoding ({decoder})", leave=False, **tqdm_kwargs()):
             start = time.perf_counter()

@@ -9,7 +9,7 @@ RGB paper benchmarks use four libraries:
 
 A transform is included only when it exists in at least two of these libraries.
 
-Transform count: 59.
+Transform count: 58.
 
 ```text
 Resize
@@ -70,5 +70,4 @@ RandomJigsaw
 EnhanceEdge
 EnhanceDetail
 UnsharpMask
-Dithering
 ```

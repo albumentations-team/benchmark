@@ -4,13 +4,12 @@ import json
 from typing import TYPE_CHECKING
 
 import numpy as np
+import pytest
 
 from benchmark.pipeline_runner import PipelineBenchmarkRunner
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    import pytest
 
 
 def test_pipeline_runner_executes_tiny_memory_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -76,6 +75,40 @@ def test_pipeline_slow_preflight_uses_shared_defaults(tmp_path: Path, monkeypatc
 
     threshold, preflight_items, max_preflight_secs = runner._slow_skip_config()
 
-    assert threshold == 0.1
+    assert threshold == 0.05
     assert preflight_items == 10
     assert max_preflight_secs == 60.0
+
+
+def test_to_tensor_does_not_guess_image_layout(tmp_path: Path) -> None:
+    pytest.importorskip("torch")
+    runner = PipelineBenchmarkRunner(
+        library="albumentationsx",
+        data_dir=tmp_path,
+        output_file=tmp_path / "pipeline.json",
+        transforms=[],
+        call_fn=lambda _transform, item: item,
+        media="image",
+        scenario="image-rgb",
+    )
+
+    tensor = runner._to_tensor(np.zeros((2, 4, 5, 3), dtype=np.uint8))
+
+    assert tuple(tensor.shape) == (2, 4, 5, 3)
+
+
+def test_to_tensor_keeps_collated_chw_image_batch_shape(tmp_path: Path) -> None:
+    pytest.importorskip("torch")
+    runner = PipelineBenchmarkRunner(
+        library="torchvision",
+        data_dir=tmp_path,
+        output_file=tmp_path / "pipeline.json",
+        transforms=[],
+        call_fn=lambda _transform, item: item,
+        media="image",
+        scenario="image-rgb",
+    )
+
+    tensor = runner._to_tensor(np.zeros((2, 3, 4, 5), dtype=np.uint8))
+
+    assert tuple(tensor.shape) == (2, 3, 4, 5)

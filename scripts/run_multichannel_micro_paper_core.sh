@@ -27,9 +27,9 @@ ERROR: DATA_DIR is required.
 Usage:
   DATA_DIR=/path/to/imagenet/val scripts/run_multichannel_micro_paper_core.sh
 
-Smoke:
+Reduced production run:
   DATA_DIR=/path/to/imagenet/val NUM_ITEMS=50 NUM_RUNS=1 \
-    OUTPUT=output/multichannel_micro_paper_core_smoke PUBLISH_RESULTS=0 UPDATE_README=0 \
+    OUTPUT=output/multichannel_micro_paper_core_small PUBLISH_RESULTS=0 UPDATE_README=0 \
     scripts/run_multichannel_micro_paper_core.sh
 
 Publishing:

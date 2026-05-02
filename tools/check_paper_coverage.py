@@ -61,6 +61,38 @@ CORE_REQUIREMENTS: tuple[CoverageRequirement, ...] = (
     ),
 )
 
+RAM_REDUCED_REQUIREMENTS: tuple[CoverageRequirement, ...] = (
+    CoverageRequirement(
+        scenario="image-rgb",
+        mode="micro",
+        libraries=("albumentationsx", "torchvision", "kornia", "pillow"),
+        needs_pyperf=True,
+    ),
+    CoverageRequirement(
+        scenario="image-9ch",
+        mode="micro",
+        libraries=("albumentationsx", "torchvision", "kornia"),
+        needs_pyperf=True,
+    ),
+    CoverageRequirement(
+        scenario="image-rgb",
+        mode="pipeline",
+        libraries=("albumentationsx", "torchvision", "kornia", "pillow"),
+        pipeline_scopes=("memory_dataloader_augment",),
+    ),
+    CoverageRequirement(
+        scenario="image-9ch",
+        mode="pipeline",
+        libraries=("albumentationsx", "torchvision", "kornia"),
+        pipeline_scopes=("memory_dataloader_augment",),
+    ),
+)
+
+COVERAGE_PROFILES: dict[str, tuple[CoverageRequirement, ...]] = {
+    "full-paper": CORE_REQUIREMENTS,
+    "ram-reduced": RAM_REDUCED_REQUIREMENTS,
+}
+
 
 def _candidate_dirs(results_roots: list[Path], requirement: CoverageRequirement) -> list[Path]:
     dirs: list[Path] = []
@@ -92,9 +124,10 @@ def missing_artifacts(
     results_roots: list[Path],
     *,
     require_optional_libraries: bool = False,
+    requirements: tuple[CoverageRequirement, ...] = CORE_REQUIREMENTS,
 ) -> list[str]:
     missing: list[str] = []
-    for requirement in CORE_REQUIREMENTS:
+    for requirement in requirements:
         dirs = _candidate_dirs(results_roots, requirement)
         if not dirs:
             missing.append(f"{requirement.scenario}/{requirement.mode}: missing result directory")
@@ -138,15 +171,25 @@ def main() -> None:
         action="store_true",
         help="Require optional libraries such as DALI in addition to the core paper set.",
     )
+    parser.add_argument(
+        "--profile",
+        choices=sorted(COVERAGE_PROFILES),
+        default="full-paper",
+        help="Coverage profile to check. Use ram-reduced for the RAM-only reduced production-path pass.",
+    )
     args = parser.parse_args()
 
-    missing = missing_artifacts(args.results_roots, require_optional_libraries=args.require_optional_libraries)
+    missing = missing_artifacts(
+        args.results_roots,
+        require_optional_libraries=args.require_optional_libraries,
+        requirements=COVERAGE_PROFILES[args.profile],
+    )
     if missing:
-        print("Missing paper benchmark artifacts:")
+        print(f"Missing {args.profile} benchmark artifacts:")
         for item in missing:
             print(f"- {item}")
         raise SystemExit(1)
-    print("Paper benchmark artifact coverage is complete.")
+    print(f"{args.profile} benchmark artifact coverage is complete.")
 
 
 if __name__ == "__main__":

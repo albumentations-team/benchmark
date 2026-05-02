@@ -29,14 +29,14 @@ for transform_name, metrics in results.items():
 
 ## Identifying Slow Transforms
 
-Transforms with `time_per_image >= 0.1` sec are considered slow for image benchmarks. This is `<=10 img/s`, below the practical floor for DataLoader training pipelines.
+Transforms with `time_per_image >= 0.05` sec are considered slow for image benchmarks. This is `<=20 img/s`, below the practical floor for DataLoader training pipelines.
 
 ```python
 slow_transforms = {}
 for name, metrics in results.items():
     if 'mean_time' in metrics:
         time_per_img = metrics['mean_time'] / params['num_images']
-        if time_per_img > 0.1:
+        if time_per_img > 0.05:
             slow_transforms[name] = time_per_img
 
 # Sort by slowest
@@ -201,7 +201,7 @@ stability = abs(recent - overall) / overall
 ### Early Stopping
 **Symptom**: `early_stopped=True`
 **Reasons**:
-1. Transform too slow (`>=0.1 sec/image`, i.e. `<=10 img/s`)
+1. Transform too slow (`>=0.05 sec/image`, i.e. `<=20 img/s`)
 2. Preflight timeout (> 60 sec total for images)
 
 **Analysis**: Check `early_stop_reason` for details. Early stopping is expected policy for very slow transforms in both micro and DataLoader pipeline modes; do not force exhaustive runs unless the user explicitly asks for slow-transform measurements.
@@ -213,7 +213,7 @@ stability = abs(recent - overall) / overall
 - Reuse joined environments where dependency sets are compatible.
 - Reuse the local venv cache and detached GCP GCS venv cache.
 - Use `--no-refresh-requirements` for local reruns with fixed dependency versions.
-- Use smoke runs with small `--num-items` / selected `--transforms` before full cloud runs.
+- Use reduced production-path runs with small `--num-items` / selected `--transforms` before full cloud runs.
 
 ## Thread Configuration
 
@@ -234,7 +234,7 @@ Multi-threading invalidates comparisons between libraries.
 
 Based on results:
 
-**Slow transform (> 0.1 sec/img)**:
+**Slow transform (> 0.05 sec/img)**:
 - Profile with cProfile or py-spy
 - Check for unnecessary copies
 - Look for algorithmic improvements

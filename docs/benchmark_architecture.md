@@ -30,9 +30,12 @@ features in these modules unless there is a strong reason to put logic directly 
 
 - `benchmark/pyperf_micro_runner.py` runs augmentation-only micro benchmarks with pyperf. It preloads media once per
   library, reuses the media cache across per-transform subprocesses, constructs only the measured transform, and applies
-  the shared slow-skip policy from `benchmark/policy.py`.
+  the shared slow-skip policy from `benchmark/policy.py`. Micro specs keep each library's native image layout and do not
+  add DataLoader recipe steps such as `Normalize` or `ToTensor`.
 - `benchmark/pipeline_runner.py` runs DataLoader-style recipes. It measures one of three scopes:
-  `memory_dataloader_augment`, `decode_dataloader_augment`, or `decode_dataloader_augment_batch_copy`.
+  `memory_dataloader_augment`, `decode_dataloader_augment`, or `decode_dataloader_augment_batch_copy`. Pipeline specs own
+  recipe-level tensor conversion (`Normalize+ToTensor`) so the runner can use PyTorch default collation without
+  benchmark-side channel-layout guesses.
 - DALI video pipeline runs are represented as `BenchmarkJob(backend="dali_pipeline")` and dispatched by
   `benchmark/orchestrator.py` via `benchmark/dali_pipeline_worker.py`, not by CLI special cases.
 

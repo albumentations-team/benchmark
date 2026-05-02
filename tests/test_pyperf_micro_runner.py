@@ -15,6 +15,7 @@ pytest.importorskip("pyperf")
 from benchmark.pyperf_micro_runner import (
     _make_micro_output_contiguous,
     _merge_pyperf_payload,
+    _merge_transform_payload,
     _preflight_slow_transform,
     _pyperf_value_throughputs,
 )
@@ -86,6 +87,42 @@ def test_merge_pyperf_payload_allows_missing_file_for_slow_skips(tmp_path: Path)
     _merge_pyperf_payload(combined_pyperf, tmp_path / "SlowTransform.pyperf.json")
 
     assert combined_pyperf == {"benchmarks": []}
+
+
+def test_merge_transform_payload_keeps_first_transform_result() -> None:
+    first_payload = {
+        "metadata": {"library": "albumentationsx"},
+        "results": {
+            "Resize": {
+                "supported": True,
+                "median_throughput": 100.0,
+            },
+        },
+    }
+    second_payload = {
+        "metadata": {"library": "albumentationsx"},
+        "results": {
+            "HorizontalFlip": {
+                "supported": True,
+                "median_throughput": 200.0,
+            },
+        },
+    }
+
+    payload = _merge_transform_payload(None, first_payload)
+    payload = _merge_transform_payload(payload, second_payload)
+
+    assert payload["metadata"] == {"library": "albumentationsx"}
+    assert payload["results"] == {
+        "Resize": {
+            "supported": True,
+            "median_throughput": 100.0,
+        },
+        "HorizontalFlip": {
+            "supported": True,
+            "median_throughput": 200.0,
+        },
+    }
 
 
 def test_merge_pyperf_payload_appends_existing_benchmarks(tmp_path: Path) -> None:

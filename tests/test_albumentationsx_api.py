@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 
@@ -49,3 +50,28 @@ def test_albumentationsx_specs_include_motion_blur() -> None:
 
     assert "MotionBlur" in {transform["name"] for transform in IMAGE_TRANSFORMS}
     assert "MotionBlur" in {transform["name"] for transform in VIDEO_TRANSFORMS}
+
+
+def test_albumentationsx_micro_spec_does_not_use_to_tensor() -> None:
+    root = Path(__file__).parents[1]
+    spec_paths = [
+        root / "benchmark/transforms/albumentationsx_impl.py",
+        root / "benchmark/transforms/albumentationsx_multichannel_impl.py",
+    ]
+
+    for spec_path in spec_paths:
+        source = spec_path.read_text(encoding="utf-8")
+        assert "ToTensor" not in source
+
+
+def test_albumentationsx_pipeline_recipe_returns_chw_tensor() -> None:
+    pytest.importorskip("albumentations")
+    torch = pytest.importorskip("torch")
+
+    from benchmark.transforms.albumentationsx_pipeline_impl import TRANSFORMS, __call__
+
+    transform = next(item["transform"] for item in TRANSFORMS if item["name"] == "RandomCrop224+Normalize+ToTensor")
+    result = __call__(transform, np.zeros((256, 256, 3), dtype=np.uint8))
+
+    assert isinstance(result, torch.Tensor)
+    assert tuple(result.shape) == (3, 224, 224)

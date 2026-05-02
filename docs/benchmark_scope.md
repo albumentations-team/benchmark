@@ -42,6 +42,8 @@ Each library still reports only transforms it supports directly. We do not recre
 ## DataLoader Pipeline Recipes
 
 DataLoader pipeline benchmarks measure training-style recipes, not isolated transforms.
+Micro benchmarks are different: they measure only the named transform in the library's native format and must not add
+`Normalize`, `ToTensor`, axis conversion, or DataLoader collation work.
 
 For non-crop transforms, the recipe shape is:
 
@@ -66,11 +68,16 @@ CenterCrop224+Normalize+ToTensor
 
 `Normalize` is not benchmarked as a pipeline augmentation because it is already part of every pipeline recipe.
 
+`ToTensor` is implemented in the pipeline spec, not in the generic runner. AlbumentationsX pipeline recipes use
+`Normalize` followed by `ToTensorV2`; Pillow pipeline recipes use `torchvision.transforms.PILToTensor` before normalization;
+torchvision and Kornia already operate on tensors. The DataLoader runner should receive fixed-shape recipe outputs that
+PyTorch can default-collate, and should not guess or repair channel layout.
+
 ## Slow Transform Guard
 
 Micro and DataLoader pipeline benchmarks run a preflight check before spending the full benchmark budget on a transform.
 
-For image benchmarks, transforms slower than `0.1` seconds per image are early-stopped by default. This corresponds to `10 img/s`. For video benchmarks, transforms slower than `2.0` seconds per video are early-stopped by default.
+For image benchmarks, transforms slower than `0.05` seconds per image are early-stopped by default. This corresponds to `20 img/s`. For video benchmarks, transforms slower than `2.0` seconds per video are early-stopped by default.
 
 The result JSON keeps an `early_stopped` entry with the preflight throughput and reason, instead of hanging the benchmark on transforms that are too slow for practical training use.
 
@@ -141,7 +148,7 @@ Recommended DataLoader settings for final paper runs:
 --thread-policy pipeline-single-worker
 ```
 
-Use the full ImageNet validation set for final DataLoader runs. Use `--num-items 1000 --batch-size 64 --workers 8 --num-runs 1 --min-time 0` for smoke tests.
+Use the full ImageNet validation set for final DataLoader runs. For cheaper iteration, keep the same production path and reduce only explicit sizing flags, for example `--num-items 1000 --batch-size 64 --workers 8 --num-runs 1 --min-time 0`.
 
 ### AMD Sanity Check
 

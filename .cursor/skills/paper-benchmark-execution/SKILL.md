@@ -21,11 +21,14 @@ Use `_internal/plans/paper_benchmark_execution_plan.md` as the source of truth.
 - Do not run CPU-only rows on GPU VMs for hardware symmetry; label hardware per row instead.
 - Respect the 32-vCPU quota by running at most two 16-vCPU CPU machines at once.
 - Treat RGB micro as a profiler, not the main user-facing training throughput table.
-- Keep slow-transform preflight enabled for micro and DataLoader runs. Image transforms below the practical floor (`>=0.1 sec/image`, `<=10 img/s`) should early-stop instead of consuming full paper sweep time; these transforms are not usable in practical DataLoader training pipelines.
+- Keep micro specs native: no `Normalize`, `ToTensor`, axis conversion, or DataLoader collation work in micro rows.
+- DataLoader pipeline rows use recipe specs with `Normalize+ToTensor`; the conversion belongs in `*_pipeline_impl.py`,
+  not in `pipeline_runner.py`.
+- Keep slow-transform preflight enabled for micro and DataLoader runs. Image transforms below the practical floor (`>=0.05 sec/image`, `<=20 img/s`) should early-stop instead of consuming full paper sweep time; these transforms are not usable in practical DataLoader training pipelines.
 - DataLoader paper sweeps should default to epoch-based timing (`--min-time 0`) and rely on `--num-runs`, full dataset size, and slow-preflight guards rather than a fixed 30-second minimum per recipe.
-- Before cloud runs, local smoke runs should show visible tqdm progress for library loops, media loading, micro transforms, and pipeline transforms. Missing or anonymous progress bars are a benchmark UX bug because long paper sweeps must be diagnosable while running.
+- Before cloud runs, reduced local production-path runs should show visible tqdm progress for library loops, media loading, micro transforms, and pipeline transforms. Missing or anonymous progress bars are a benchmark UX bug because long paper sweeps must be diagnosable while running.
 - Do not run every transform from `benchmark/transforms/specs.py` for the paper. Use only transforms that exist in at least two selected libraries. The paper transform sets live in `docs/paper_transform_sets/rgb.md`, `docs/paper_transform_sets/9ch.md`, and `docs/paper_transform_sets/video.md`.
-- Use `--transform-set paper` for paper micro/pipeline runs unless explicitly testing a smaller smoke subset with `--transforms`.
+- Use `--transform-set paper` for paper micro/pipeline runs unless explicitly testing a smaller transform subset with `--transforms`.
 - If paper scenario support changes, update `docs/benchmark_architecture.md`, `docs/benchmark_scope.md`,
   `.cursor/skills/benchmark-runner/SKILL.md`, and matrix/job tests in the same patch.
 
@@ -81,7 +84,7 @@ Do not rerun CPU-only image rows on GPU machines for hardware symmetry. Label ha
 ## Execution Order
 
 1. Inventory existing results and avoid rerunning completed `n2`/`n2d` baselines.
-2. Smoke test each scenario with tiny `--num-items`, `--num-runs 1`, and short or zero `--min-time`.
+2. Run each scenario through the production path with tiny `--num-items`, `--num-runs 1`, and short or zero `--min-time`.
 3. Run RGB micro on `c4-standard-16` and `c4d-standard-16`.
 4. Run CPU suite on `c4-standard-16`: 9ch micro, RGB DataLoader, 9ch DataLoader, Albumentations video CPU micro.
 5. Run GPU suite on `g2-standard-16`: torchvision/Kornia video GPU micro and GPU video DataLoader.
