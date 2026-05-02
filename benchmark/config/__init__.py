@@ -1,3 +1,4 @@
+from benchmark.config.env import RUN_CONFIG_ENV_VAR, install_run_config_env, run_config_payload_from_env
 from benchmark.config.models import (
     BenchmarkRunConfig,
     CloudConfig,
@@ -23,6 +24,7 @@ from benchmark.config.transform_sets import (
 )
 
 __all__ = [
+    "RUN_CONFIG_ENV_VAR",
     "BenchmarkRunConfig",
     "CloudConfig",
     "DataConfig",
@@ -33,6 +35,7 @@ __all__ = [
     "apply_cli_overrides",
     "build_run_plan",
     "config_to_namespace",
+    "install_run_config_env",
     "load_run_config",
     "paper_transform_names",
     "read_markdown_text_block",
@@ -40,5 +43,6 @@ __all__ = [
     "resolve_config_transform_set",
     "run_config_from_args",
     "run_config_payload",
+    "run_config_payload_from_env",
     "write_resolved_config",
 ]

@@ -25,7 +25,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import sys
 import time
 from pathlib import Path
@@ -42,6 +41,7 @@ from benchmark.config import (
     apply_cli_overrides,
     build_run_plan,
     config_to_namespace,
+    install_run_config_env,
     load_run_config,
     remote_run_config_payload,
     resolve_config_transform_set,
@@ -618,7 +618,7 @@ def cmd_run(args: argparse.Namespace) -> None:
     run_config = _resolve_run_config(args)
     run_config = resolve_config_transform_set(run_config, repo_root)
     _log_run_summary(run_config)
-    os.environ["BENCHMARK_RUN_CONFIG_JSON"] = run_config.model_dump_json(exclude_none=True)
+    install_run_config_env(run_config)
     if args.dry_run:
         _print_dry_run(run_config, repo_root)
         return

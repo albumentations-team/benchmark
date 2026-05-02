@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 import math
-import os
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
+from benchmark.config import run_config_payload_from_env
 from benchmark.reliability import dataset_fingerprint, environment_snapshot, gpu_snapshot, timing_metadata
 from benchmark.utils import get_library_versions, get_system_info, verify_thread_settings
 
@@ -119,8 +119,7 @@ def build_metadata(
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
     package_key = library or decoder or "benchmark"
-    run_config_json = os.environ.get("BENCHMARK_RUN_CONFIG_JSON")
-    run_config = json.loads(run_config_json) if run_config_json else None
+    run_config = run_config_payload_from_env()
     return {
         "system_info": get_system_info(),
         "library_versions": get_library_versions(package_key),

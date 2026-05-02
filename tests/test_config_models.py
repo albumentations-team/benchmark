@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from benchmark.config import (
+    RUN_CONFIG_ENV_VAR,
     BenchmarkRunConfig,
     DataConfig,
     ExecutionConfig,
@@ -14,9 +16,11 @@ from benchmark.config import (
     SelectionConfig,
     apply_cli_overrides,
     config_to_namespace,
+    install_run_config_env,
     load_run_config,
     remote_run_config_payload,
     resolve_config_transform_set,
+    run_config_payload_from_env,
 )
 
 
@@ -139,3 +143,15 @@ def test_remote_run_config_payload_uses_vm_paths_and_strips_cloud() -> None:
     assert payload["data"]["data_dir"] == "/root/benchmark-data/val"
     assert payload["output"]["output_dir"] == "/root/benchmark-work/results"
     assert "cloud" not in payload
+
+
+def test_run_config_env_roundtrip() -> None:
+    config = load_run_config(Path("configs/examples/local_rgb_micro_cpu.yaml"))
+
+    try:
+        install_run_config_env(config)
+
+        assert RUN_CONFIG_ENV_VAR in os.environ
+        assert run_config_payload_from_env()["selection"]["scenario"] == "image-rgb"
+    finally:
+        os.environ.pop(RUN_CONFIG_ENV_VAR, None)
