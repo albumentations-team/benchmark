@@ -644,6 +644,46 @@ def test_scenario_run_builds_jobs_from_resolved_config(tmp_path: Path) -> None:
     assert "HorizontalFlip" in job.transforms_filter
 
 
+def test_manual_micro_job_uses_typed_config_and_preserves_micro_semantics(tmp_path: Path) -> None:
+    from benchmark.cli import _run_micro_job
+
+    config = BenchmarkRunConfig.model_validate(
+        {
+            "selection": {
+                "mode": "pipeline",
+                "media": "image",
+                "libraries": ["kornia"],
+                "transforms": ["HorizontalFlip"],
+            },
+            "data": {"data_dir": str(tmp_path / "data"), "num_items": 7, "num_channels": 9},
+            "execution": {"num_runs": 3, "workers": 2, "device": "none"},
+            "output": {"output_dir": str(tmp_path / "out")},
+        },
+    )
+    spec = tmp_path / "spec.py"
+    spec.write_text('LIBRARY = "kornia"\n', encoding="utf-8")
+
+    with patch("benchmark.cli.execute_job") as execute:
+        _run_micro_job(
+            library="kornia",
+            spec_file=spec,
+            data_dir=tmp_path / "data",
+            output_file=tmp_path / "out.json",
+            run_config=config,
+            repo_root=Path.cwd(),
+            verbose=True,
+        )
+
+    job = execute.call_args.args[0]
+    assert job.mode == "micro"
+    assert job.scenario == "image-manual"
+    assert job.workers == 0
+    assert job.num_items == 7
+    assert job.num_runs == 3
+    assert job.num_channels == 9
+    assert job.transforms_filter == ("HorizontalFlip",)
+
+
 class TestExtractLibrary:
     def test_extracts_double_quoted_library(self, tmp_path: Path) -> None:
         spec = tmp_path / "spec.py"

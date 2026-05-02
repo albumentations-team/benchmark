@@ -28,7 +28,7 @@ import logging
 import sys
 import time
 from pathlib import Path
-from typing import Literal, TypedDict, cast
+from typing import Literal
 
 import yaml  # type: ignore[import-untyped,unused-ignore]
 from pydantic import ValidationError
@@ -119,57 +119,35 @@ def _requirements_for_env_group(env_group: str, media: str, repo_root: Path) -> 
     return requirements_for_env_group(env_group, media, repo_root)
 
 
-class _SlowSkipKwargs(TypedDict):
-    slow_threshold_sec_per_item: float | None
-    slow_preflight_items: int | None
-    disable_slow_skip: bool
+def _manual_micro_config(config: BenchmarkRunConfig) -> BenchmarkRunConfig:
+    if config.resolved_mode() == "micro":
+        return config
+    data = config.model_dump()
+    data["selection"]["mode"] = "micro"
+    data["execution"]["workers"] = 0
+    return BenchmarkRunConfig.model_validate(data)
 
 
-def _slow_skip_kwargs(args: argparse.Namespace) -> _SlowSkipKwargs:
-    return {
-        "slow_threshold_sec_per_item": args.slow_threshold_sec_per_item,
-        "slow_preflight_items": args.slow_preflight_items,
-        "disable_slow_skip": args.disable_slow_skip,
-    }
-
-
-def _run_single(
+def _run_micro_job(
+    *,
     library: str,
     spec_file: Path,
     data_dir: Path,
     output_file: Path,
-    media: str,
-    num_items: int | None,
-    num_runs: int,
+    run_config: BenchmarkRunConfig,
     repo_root: Path,
-    transforms_filter: list[str] | None = None,
-    verbose: bool = False,
-    num_channels: int = 3,
-    scenario: str = "manual",
-    device: str = "none",
-    refresh_requirements: bool = True,
-    slow_threshold_sec_per_item: float | None = None,
-    slow_preflight_items: int | None = None,
-    disable_slow_skip: bool = False,
+    verbose: bool,
 ) -> None:
-    media_kind = cast("Literal['image', 'video']", media)
-    job = BenchmarkJob(
+    config = _manual_micro_config(run_config)
+    job = BenchmarkJob.from_run_config(
         library=library,
-        scenario=scenario,
-        mode="micro",
-        media=media_kind,
+        config=config,
         data_dir=data_dir,
         output_file=output_file,
-        num_items=num_items,
-        num_runs=num_runs,
-        num_channels=num_channels,
+        num_channels=config.data.num_channels,
+        clip_length=config.data.clip_length or 16,
         spec_file=spec_file,
-        transforms_filter=tuple(transforms_filter or ()),
-        device=device,
-        refresh_requirements=refresh_requirements,
-        slow_threshold_sec_per_item=slow_threshold_sec_per_item,
-        slow_preflight_items=slow_preflight_items,
-        disable_slow_skip=disable_slow_skip,
+        backend="pyperf",
     )
     execute_job(job, repo_root=repo_root, verbose=verbose)
 
@@ -652,22 +630,14 @@ def cmd_run(args: argparse.Namespace) -> None:
             logger.error("%s", e)  # noqa: TRY400
             sys.exit(1)
         output_file = output_dir / f"{spec_file.stem}.json"
-        _run_single(
+        _run_micro_job(
             library=library,
             spec_file=spec_file,
             data_dir=Path(args.data_dir),
             output_file=output_file,
-            media=media,
-            num_items=args.num_items,
-            num_runs=args.num_runs,
+            run_config=run_config,
             repo_root=repo_root,
-            transforms_filter=args.transforms,
             verbose=args.verbose,
-            num_channels=args.num_channels,
-            scenario=f"{media}-manual",
-            device=args.device,
-            refresh_requirements=args.refresh_requirements,
-            **_slow_skip_kwargs(args),
         )
         return
 
@@ -693,22 +663,14 @@ def cmd_run(args: argparse.Namespace) -> None:
             sys.exit(1)
         spec_file = repo_root / spec_map[library]
         output_file = manual_micro_output_file(output_dir, library, media=media, device=args.device)
-        _run_single(
+        _run_micro_job(
             library=library,
             spec_file=spec_file,
             data_dir=Path(args.data_dir),
             output_file=output_file,
-            media=media,
-            num_items=args.num_items,
-            num_runs=args.num_runs,
+            run_config=run_config,
             repo_root=repo_root,
-            transforms_filter=args.transforms,
             verbose=args.verbose,
-            num_channels=args.num_channels,
-            scenario=f"{media}-manual",
-            device=args.device,
-            refresh_requirements=args.refresh_requirements,
-            **_slow_skip_kwargs(args),
         )
 
     logger.info("All benchmarks complete. Results in: %s", output_dir)
