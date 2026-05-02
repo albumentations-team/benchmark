@@ -22,7 +22,7 @@ from benchmark.cli import (
     build_gcp_benchmark_cli_argv,
     build_parser,
 )
-from benchmark.config import config_to_namespace, load_run_config
+from benchmark.config import BenchmarkRunConfig, config_to_namespace, load_run_config, resolve_config_transform_set
 
 
 class TestBuildParser:
@@ -623,6 +623,25 @@ def test_gcp_job_dict_can_carry_typed_config() -> None:
 
     assert job["run_config"] == {"selection": {"scenario": "image-rgb"}}
     assert job["cloud_config"] == {"provider": "gcp", "project": "p"}
+
+
+def test_scenario_run_builds_jobs_from_resolved_config(tmp_path: Path) -> None:
+    from benchmark.cli import _cmd_run_scenario
+
+    data = load_run_config(Path("configs/examples/local_rgb_micro_cpu.yaml")).model_dump()
+    data["selection"]["libraries"] = ["kornia"]
+    data["data"]["data_dir"] = str(tmp_path / "data")
+    config = resolve_config_transform_set(BenchmarkRunConfig.model_validate(data), Path.cwd())
+    args = config_to_namespace(config)
+
+    with patch("benchmark.cli.execute_job") as execute:
+        _cmd_run_scenario(args, Path.cwd(), tmp_path / "out", config)
+
+    job = execute.call_args.args[0]
+    assert job.library == "kornia"
+    assert job.mode == "micro"
+    assert job.data_dir == tmp_path / "data"
+    assert "HorizontalFlip" in job.transforms_filter
 
 
 class TestExtractLibrary:

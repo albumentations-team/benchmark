@@ -200,9 +200,9 @@ def _run_scenario_library(
     library: str,
     spec_map: dict[str, str],
     args: argparse.Namespace,
+    run_config: BenchmarkRunConfig,
     repo_root: Path,
     output_dir: Path,
-    scenario_name: str,
     media: str,
     num_channels: int,
     clip_length: int,
@@ -210,7 +210,6 @@ def _run_scenario_library(
     backend: Literal["dali_pipeline"] | None = (
         "dali_pipeline" if args.mode == "pipeline" and library == "dali" else None
     )
-    media_name = cast("Literal['image', 'video']", media)
     spec_file = None if backend == "dali_pipeline" else repo_root / spec_map[library]
     output_file = (
         _pipeline_output_file(output_dir, library, args)
@@ -227,33 +226,24 @@ def _run_scenario_library(
         if spec_file is None:
             msg = f"{library} micro job requires a spec file"
             raise ValueError(msg)
-        _run_single(
+        job = BenchmarkJob.from_run_config(
             library=library,
-            spec_file=spec_file,
+            config=run_config,
             data_dir=Path(args.data_dir),
             output_file=output_file,
-            media=media_name,
-            num_items=args.num_items,
-            num_runs=args.num_runs,
-            repo_root=repo_root,
-            transforms_filter=args.transforms,
-            verbose=args.verbose,
             num_channels=num_channels,
-            scenario=scenario_name,
-            device=args.device,
-            refresh_requirements=args.refresh_requirements,
-            **_slow_skip_kwargs(args),
+            clip_length=clip_length,
+            spec_file=spec_file,
+            backend="pyperf",
         )
+        execute_job(job, repo_root=repo_root, verbose=args.verbose)
         return
 
-    job = BenchmarkJob.from_args(
+    job = BenchmarkJob.from_run_config(
         library=library,
-        scenario_name=scenario_name,
-        mode="pipeline",
-        media=media_name,
+        config=run_config,
         data_dir=Path(args.data_dir),
         output_file=output_file,
-        args=args,
         num_channels=num_channels,
         clip_length=clip_length,
         spec_file=spec_file,
@@ -262,7 +252,12 @@ def _run_scenario_library(
     execute_job(job, repo_root=repo_root)
 
 
-def _cmd_run_scenario(args: argparse.Namespace, repo_root: Path, output_dir: Path) -> None:
+def _cmd_run_scenario(
+    args: argparse.Namespace,
+    repo_root: Path,
+    output_dir: Path,
+    run_config: BenchmarkRunConfig,
+) -> None:
     from benchmark.decode_runner import VideoDecodeRunner
     from benchmark.scenarios import get_scenario, resolve_decoders, resolve_libraries, resolve_mode
 
@@ -298,9 +293,9 @@ def _cmd_run_scenario(args: argparse.Namespace, repo_root: Path, output_dir: Pat
             library=library,
             spec_map=spec_map,
             args=args,
+            run_config=run_config,
             repo_root=repo_root,
             output_dir=scenario_output_dir,
-            scenario_name=scenario.name,
             media=scenario.media,
             num_channels=num_channels,
             clip_length=clip_length,
@@ -643,7 +638,7 @@ def cmd_run(args: argparse.Namespace) -> None:
         return
 
     if args.scenario:
-        _cmd_run_scenario(args, repo_root, output_dir)
+        _cmd_run_scenario(args, repo_root, output_dir, run_config)
         logger.info("Scenario benchmark complete. Results in: %s", output_dir)
         return
 
