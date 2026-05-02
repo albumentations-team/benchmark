@@ -10,7 +10,9 @@ Video pipeline benchmarks may also include `dali` when DALI is available. The DA
 
 A transform is included only when it exists in at least two selected video libraries.
 
-Transform count: 52.
+`CenterCrop224` is omitted (redundant with `RandomCrop224` / `RandomResizedCrop`).
+
+Transform count: 51.
 
 ```text
 Affine
@@ -18,7 +20,6 @@ AutoContrast
 Blur
 Brightness
 CLAHE
-CenterCrop224
 ChannelDropout
 ChannelShuffle
 ColorJiggle

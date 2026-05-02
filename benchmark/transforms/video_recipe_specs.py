@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from benchmark.transforms.kornia_unstable import KORNIA_BENCHMARK_EXCLUDED_NAMES
 from benchmark.transforms.specs import TRANSFORM_SPECS, TransformSpec
 
 NORMALIZE_MEAN = (0.485, 0.456, 0.406)
@@ -9,27 +10,13 @@ _CROP_RECIPE_NAMES = {"RandomCrop224", "RandomResizedCrop"}
 _RECIPE_EXCLUDED_NAMES = {"Normalize"}
 _MIN_RECIPE_LIBRARY_SUPPORT = 2
 
-_ALBUMENTATIONSX_PIPELINE_EXCLUDED_NAMES = {
+_ALBUMENTATIONSX_VIDEO_PIPELINE_EXCLUDED_NAMES = {
     "Colorize",
     "ConstrainedCoarseDropout",
     "Normalize",
 }
 
-_ALBUMENTATIONSX_MULTICHANNEL_EXCLUDED_NAMES = _ALBUMENTATIONSX_PIPELINE_EXCLUDED_NAMES | {
-    "CLAHE",
-    "ColorJiggle",
-    "ColorJitter",
-    "Equalize",
-    "Hue",
-    "PhotoMetricDistort",
-    "PlankianJitter",
-    "RGBShift",
-    "Rain",
-    "Saturation",
-    "Snow",
-}
-
-_TORCHVISION_PIPELINE_SUPPORTED_NAMES = {
+_TORCHVISION_VIDEO_PIPELINE_SUPPORTED_NAMES = {
     "Affine",
     "AutoContrast",
     "Brightness",
@@ -47,7 +34,6 @@ _TORCHVISION_PIPELINE_SUPPORTED_NAMES = {
     "JpegCompression",
     "Pad",
     "Perspective",
-    "PhotoMetricDistort",
     "Posterize",
     "RandomCrop224",
     "RandomResizedCrop",
@@ -58,21 +44,17 @@ _TORCHVISION_PIPELINE_SUPPORTED_NAMES = {
     "VerticalFlip",
 }
 
-_KORNIA_PIPELINE_SUPPORTED_NAMES = {
+_KORNIA_VIDEO_PIPELINE_SUPPORTED_NAMES: set[str] = {
     "Affine",
     "AutoContrast",
     "Blur",
     "Brightness",
-    "CLAHE",
     "ChannelDropout",
     "ChannelShuffle",
-    "ColorJiggle",
     "ColorJitter",
     "Contrast",
-    "CornerIllumination",
     "Elastic",
     "Equalize",
-    "Erasing",
     "GaussianBlur",
     "GaussianIllumination",
     "GaussianNoise",
@@ -81,84 +63,38 @@ _KORNIA_PIPELINE_SUPPORTED_NAMES = {
     "Hue",
     "Invert",
     "JpegCompression",
-    "LinearIllumination",
-    "LongestMaxSize",
     "MedianBlur",
-    "MotionBlur",
     "OpticalDistortion",
-    "Perspective",
     "PlankianJitter",
     "PlasmaBrightness",
     "PlasmaContrast",
     "PlasmaShadow",
-    "Posterize",
     "RGBShift",
     "Rain",
     "RandomCrop224",
     "RandomGamma",
-    "RandomJigsaw",
     "RandomResizedCrop",
-    "RandomRotate90",
     "Resize",
     "Rotate",
     "SaltAndPepper",
     "Saturation",
     "Sharpen",
-    "Shear",
-    "SmallestMaxSize",
     "Snow",
     "Solarize",
     "ThinPlateSpline",
     "VerticalFlip",
 }
+_KORNIA_VIDEO_PIPELINE_SUPPORTED_NAMES.difference_update(KORNIA_BENCHMARK_EXCLUDED_NAMES)
 
-_KORNIA_MULTICHANNEL_EXCLUDED_NAMES = {
-    "CLAHE",
-    "ColorJiggle",
-    "ColorJitter",
-    "Equalize",
-    "Hue",
-    "PlankianJitter",
-    "RGBShift",
-    "Rain",
-    "SaltAndPepper",
-    "Saturation",
-    "Snow",
-}
-
-_PILLOW_PIPELINE_SUPPORTED_NAMES = {
-    "Affine",
-    "AutoContrast",
-    "Blur",
-    "Brightness",
-    "Contrast",
-    "EnhanceDetail",
-    "EnhanceEdge",
-    "Equalize",
-    "GaussianBlur",
-    "Grayscale",
-    "HorizontalFlip",
-    "Invert",
-    "JpegCompression",
-    "MedianBlur",
-    "Pad",
-    "Posterize",
-    "RandomCrop224",
-    "RandomResizedCrop",
-    "Resize",
-    "Rotate",
-    "Saturation",
-    "Shear",
-    "Solarize",
-    "Transpose",
-    "UnsharpMask",
-    "VerticalFlip",
+_VIDEO_PIPELINE_SUPPORT_BY_LIBRARY = {
+    "albumentationsx": {spec.name for spec in TRANSFORM_SPECS} - _ALBUMENTATIONSX_VIDEO_PIPELINE_EXCLUDED_NAMES,
+    "torchvision": _TORCHVISION_VIDEO_PIPELINE_SUPPORTED_NAMES,
+    "kornia": _KORNIA_VIDEO_PIPELINE_SUPPORTED_NAMES,
 }
 
 
-def repeated_stats(num_channels: int) -> tuple[tuple[float, ...], tuple[float, ...]]:
-    repeats = num_channels // 3
-    return NORMALIZE_MEAN * repeats, NORMALIZE_STD * repeats
+def repeated_stats() -> tuple[tuple[float, ...], tuple[float, ...]]:
+    return NORMALIZE_MEAN, NORMALIZE_STD
 
 
 def spec_by_name(name: str) -> TransformSpec:
@@ -178,29 +114,20 @@ def recipe_name(spec: TransformSpec) -> str:
     return f"{prefix}+Normalize+ToTensor"
 
 
-def _support_sets(num_channels: int) -> tuple[set[str], ...]:
-    all_names = {spec.name for spec in TRANSFORM_SPECS}
-    albumentationsx = all_names - _ALBUMENTATIONSX_PIPELINE_EXCLUDED_NAMES
-    if num_channels == 3:
-        return (
-            albumentationsx,
-            _TORCHVISION_PIPELINE_SUPPORTED_NAMES,
-            _KORNIA_PIPELINE_SUPPORTED_NAMES,
-            _PILLOW_PIPELINE_SUPPORTED_NAMES,
-        )
-    return (
-        albumentationsx - _ALBUMENTATIONSX_MULTICHANNEL_EXCLUDED_NAMES,
-        _TORCHVISION_PIPELINE_SUPPORTED_NAMES,
-        _KORNIA_PIPELINE_SUPPORTED_NAMES - _KORNIA_MULTICHANNEL_EXCLUDED_NAMES,
-    )
+def _support_sets() -> tuple[set[str], ...]:
+    return tuple(_VIDEO_PIPELINE_SUPPORT_BY_LIBRARY.values())
+
+
+def is_supported_by_library(spec: TransformSpec, library: str) -> bool:
+    return spec.name in _VIDEO_PIPELINE_SUPPORT_BY_LIBRARY.get(library, set())
 
 
 def _supported_by_enough_libraries(spec: TransformSpec, support_sets: tuple[set[str], ...]) -> bool:
     return sum(spec.name in supported_names for supported_names in support_sets) >= _MIN_RECIPE_LIBRARY_SUPPORT
 
 
-def recipe_augmentation_specs(num_channels: int) -> list[TransformSpec]:
-    support_sets = _support_sets(num_channels)
+def recipe_augmentation_specs() -> list[TransformSpec]:
+    support_sets = _support_sets()
     return [
         spec
         for spec in TRANSFORM_SPECS

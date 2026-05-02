@@ -41,7 +41,7 @@ Use the unified CLI (`python -m benchmark.cli run --media video ...`). Legacy `r
 
 ### Google Cloud (detached)
 
-Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with a startup script that downloads one **dataset archive/object** from `gs://` (for example `val.tar`), unpacks/stages it on local disk, runs the same `benchmark.cli run` flags (including `--spec`, warmup, `--multichannel`), writes artifacts under `gs://<results-base>/<run_id>/`, then deletes the VM. See README **Google Cloud (detached)** and `benchmark/cloud/gcp.py`. Use `--gcp-attached` for blocking SSH/debug runs.
+Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with a startup script that downloads one **dataset tarball** from `gs://` (for example `val.tar` or `ucf101.tar`), unpacks/stages media files on local disk, runs the same `benchmark.cli run` flags (including `--spec`, warmup, `--multichannel`), writes artifacts under `gs://<results-base>/<run_id>/`, then deletes the VM. See README **Google Cloud (detached)** and `benchmark/cloud/gcp.py`. Use `--gcp-attached` for blocking SSH/debug runs.
 
 ## Optimization Policies
 
@@ -53,14 +53,16 @@ Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with 
   backend-specific branches to `benchmark/cli.py`; DALI should remain a `dali_pipeline` job backend.
 - `benchmark/runner.py` is a compatibility/simple-timer runner. Production CLI micro runs use
   `benchmark/pyperf_micro_runner.py`; production DataLoader runs use `benchmark/pipeline_runner.py`.
-- Stage datasets as one archive/object in cloud runs; do not copy individual images one by one for each VM.
+- Stage datasets as one tarball in cloud runs; do not copy individual images/videos one by one for each VM. On macOS, create dataset tarballs with `COPYFILE_DISABLE=1`, `tar --no-xattrs`, and excludes for `.DS_Store`, AppleDouble `._*`, and `__MACOSX`.
 - Keep timed data local to the benchmark machine. Detached GCP runs unpack to local disk before running.
-- Micro benchmarks preload the requested number of media items once per library, in that library's native format.
+- Micro benchmarks preload the requested number of media items once per library, in that library's native format. Video micro preloads fixed-length clips from `--clip-length` (16 frames for `video-16f`), not full source videos. Torchvision video clips stay `uint8` tensors so `torchvision.transforms.v2.JPEG` can run; Kornia video clips use float16 on CUDA.
 - Micro specs measure only the named transform in native layout, then force returned outputs into contiguous memory before
   timing stops. Never add `Normalize`, `ToTensor`, axis conversion, or DataLoader collation work to `*_impl.py`.
 - Pipeline specs (`*_pipeline_impl.py`) own recipe-level `Normalize+ToTensor`: AlbumentationsX uses `ToTensorV2`, Pillow
-  uses `torchvision.transforms.PILToTensor` before normalization, and torchvision/Kornia already operate on tensors. The
-  pipeline runner should use default PyTorch collation and should not guess or repair channel layouts.
+  uses `torchvision.transforms.PILToTensor` before normalization, and torchvision/Kornia already operate on tensors. Video
+  pipeline specs are separate from video micro specs and use `crop + transform + Normalize + ToTensor` recipe semantics for
+  AlbumentationsX, torchvision, and Kornia. The pipeline runner should use default PyTorch collation and should not guess
+  or repair channel layouts.
 - Pyperf runs may use per-transform subprocesses, but those subprocesses must reuse the per-library media cache and must not decode images again.
 - Construct only the transform being measured in pyperf subprocesses. Avoid eager construction of all transforms because some libraries warn or do setup in constructors.
 - Use joined environments for compatible libraries (`torch_stack` for torchvision/Kornia/Pillow image runs, `torch_video` for torchvision/Kornia video runs).
@@ -75,7 +77,11 @@ Default `--cloud gcp` path: uploads repo + `job.json` to GCS, creates a VM with 
   `Image.Image` outputs are converted to contiguous NumPy arrays. Do not add checksums or unrelated validation inside the
   timed benchmark.
 - Only benchmark transforms a library supports directly. Do not build large benchmark-side helper implementations to imitate another library's API. For Pillow, keep direct `Image` / `ImageOps` / `ImageFilter` operations and skip Albumentations-style composites such as random crops, `PadIfNeeded`, `SafeRotate`, `ShiftScaleRotate`, `LongestMaxSize`, and `SmallestMaxSize`.
-- Paper runs do not use every transform from `benchmark/transforms/specs.py`. Use `--transform-set paper` to select transforms supported by at least two selected libraries; the fixed lists are `docs/paper_transform_sets/rgb.md`, `docs/paper_transform_sets/9ch.md`, and `docs/paper_transform_sets/video.md`.
+- Kornia excludes `benchmark/transforms/kornia_unstable.py` **only** from video DataLoader/pipeline recipes. Keep those
+  transforms in Kornia image micro, image pipeline, 9-channel, and video micro unless a separate failure is observed.
+- Paper runs do not use every transform from `benchmark/transforms/specs.py`. Use `--transform-set paper` for the curated
+  lists in `docs/paper_transform_sets/*.md`; within each scenario's library set, keep transforms with at least two
+  implementations. Video DataLoader/pipeline support is additionally filtered by dedicated video recipe specs.
 - Keep benchmarks fair but fast. Avoid repeated decode, loader construction, conversion, synchronization, checksums, materialization, or dependency work unless it is explicitly part of the named measurement scope or needed to make lazy work complete.
 - Prefer `--no-refresh-requirements` for local reruns when dependency versions are intentionally fixed.
 - All long-running loops must expose visual progress with tqdm and a descriptive `desc`. Use labels such as `scenario/mode` for library loops, `Load images (<library>, <channels>ch)` for media loading, `Micro transforms (<library>, <media>)`, `Pyperf micro transforms (<library>, <media>)`, and `Pipeline transforms (<library>, <scope>, w=<workers>, b=<batch_size>)`. Never add anonymous progress bars.

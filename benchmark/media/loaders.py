@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from tqdm import tqdm
 
+from benchmark.decoders.video import decode_video
 from benchmark.term import tqdm_kwargs
 from benchmark.utils import get_image_loader, get_video_loader, make_multichannel_loader
 
@@ -23,6 +24,7 @@ class BenchmarkMediaLoader:
     media: Literal["image", "video"]
     num_items: int
     num_channels: int = 3
+    clip_length: int = 16
 
     def load(self) -> list[Any]:
         if self.media == "image":
@@ -88,12 +90,11 @@ class BenchmarkMediaLoader:
         logger.info("Found %d video files in %s (including subdirectories)", len(video_paths), self.data_dir)
 
         videos: list[Any] = []
-        loader = get_video_loader(self.library)
-
-        with tqdm(video_paths, desc=f"Load videos ({self.library})", unit="video", **tqdm_kwargs()) as pbar:
+        progress_desc = f"Load videos ({self.library}, {self.clip_length}f)"
+        with tqdm(video_paths, desc=progress_desc, unit="video", **tqdm_kwargs()) as pbar:
             for path in pbar:
                 try:
-                    video = loader(path)
+                    video = self._load_video_clip(path)
                     if torch_module and isinstance(video, torch_module.Tensor) and gpu_available:
                         video = video.to(device, non_blocking=True) if self.library == "kornia" else video.to(device)
                     videos.append(video)
@@ -124,3 +125,20 @@ class BenchmarkMediaLoader:
             logger.info("GPU memory: %.2fGB / %.2fGB", allocated, total)
 
         return videos
+
+    def _load_video_clip(self, path: Path) -> Any:
+        if self.library in {"torchvision", "kornia"}:
+            import numpy as np
+            import torch
+
+            clip = decode_video("opencv", path, self.clip_length).frames
+            tensor = torch.from_numpy(np.ascontiguousarray(clip)).permute(0, 3, 1, 2)
+            if self.library == "torchvision":
+                return tensor.contiguous()
+            return (tensor.float() / 255.0).half()
+
+        try:
+            clip = decode_video("opencv", path, self.clip_length).frames
+        except Exception:
+            return get_video_loader(self.library)(path)
+        return clip

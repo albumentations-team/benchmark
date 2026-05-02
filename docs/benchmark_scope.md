@@ -63,8 +63,9 @@ Example recipe names:
 RandomCrop224+Affine+Normalize+ToTensor
 RandomCrop224+Brightness+Normalize+ToTensor
 RandomResizedCrop+Normalize+ToTensor
-CenterCrop224+Normalize+ToTensor
 ```
+
+`CenterCrop224` is not in the shared catalog (use `RandomCrop224` / `RandomResizedCrop` for crop coverage).
 
 `Normalize` is not benchmarked as a pipeline augmentation because it is already part of every pipeline recipe.
 
@@ -115,7 +116,7 @@ For a full module map, see `docs/benchmark_architecture.md`.
 Long benchmark runs must show tqdm progress with descriptive labels. Progress bars should make it clear which dimension is moving:
 
 - Library loops: `<scenario>/<mode>`.
-- Media loading: `Load images (<library>, <channels>ch)` or `Load videos (<library>)`.
+- Media loading: `Load images (<library>, <channels>ch)` or `Load videos (<library>, <clip-length>f)`.
 - Micro transforms: `Micro transforms (<library>, <media>)`.
 - Pyperf micro transforms: `Pyperf micro transforms (<library>, <media>)`.
 - Pipeline transforms: `Pipeline transforms (<library>, <scope>, w=<workers>, b=<batch_size>)`.
@@ -138,7 +139,8 @@ Run these as the main paper tables:
 - RGB DataLoader disk/decode pipeline: `image-rgb`, `pipeline`, `decode_dataloader_augment`.
 - 9-channel DataLoader memory pipeline: `image-9ch`, `pipeline`, `memory_dataloader_augment`.
 - 9-channel DataLoader disk/decode pipeline: `image-9ch`, `pipeline`, `decode_dataloader_augment`.
-- Video benchmarks use transforms from `docs/paper_transform_sets/video.md`.
+- Video micro benchmarks use transforms from `docs/paper_transform_sets/video.md`. Video DataLoader benchmarks use
+  dedicated recipe specs with `crop + transform + Normalize + ToTensor` semantics, matching RGB pipeline structure.
 
 Recommended DataLoader settings for final paper runs:
 
@@ -169,8 +171,13 @@ Machine: `g2-standard-16` with an L4 GPU, or equivalent.
 
 Run these for video/GPU tables:
 
-- GPU video micro benchmarks for GPU-capable libraries, especially `torchvision` and `kornia`.
-- GPU video DataLoader/pipeline benchmarks for GPU-capable paths.
+- GPU video micro benchmarks for GPU-capable libraries, especially `torchvision` and `kornia`. Micro video preload uses
+  fixed-length clips from `--clip-length` (16 frames for `video-16f`), not full source videos.
+- GPU video DataLoader/pipeline benchmarks for GPU-capable paths. These use dedicated video pipeline specs rather than
+  micro specs, so AlbumentationsX, torchvision, and Kornia all run recipe-style clips through DataLoader collation.
+- Kornia video DataLoader/pipeline rows exclude transforms in `benchmark/transforms/kornia_unstable.py` due to CUDA
+  stability issues in that recipe path only. Kornia image micro, image pipeline, 9-channel, and video micro keep those
+  transforms unless a separate failure is observed.
 - DALI video pipeline benchmarks when DALI is available on the target image.
 
 CPU-only image rows should not be rerun on GPU machines for hardware symmetry. Label each result row with the machine class that actually ran it.

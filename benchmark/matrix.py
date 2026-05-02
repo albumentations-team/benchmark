@@ -65,6 +65,12 @@ VIDEO_SPECS: dict[str, str] = {
     "kornia": "benchmark/transforms/kornia_video_impl.py",
 }
 
+VIDEO_PIPELINE_SPECS: dict[str, str] = {
+    "albumentationsx": "benchmark/transforms/albumentationsx_video_pipeline_impl.py",
+    "torchvision": "benchmark/transforms/torchvision_video_pipeline_impl.py",
+    "kornia": "benchmark/transforms/kornia_video_pipeline_impl.py",
+}
+
 IMAGE_REQUIREMENTS: dict[str, str] = {
     "albumentationsx": "requirements/albumentationsx.txt",
     "albumentations_mit": "requirements/albumentations_mit.txt",
@@ -115,7 +121,7 @@ def _scenario_spec_maps() -> dict[tuple[ScenarioName, BenchmarkMode], dict[str, 
         ("image-9ch", "micro"): MULTICHANNEL_IMAGE_SPECS,
         ("image-9ch", "pipeline"): MULTICHANNEL_IMAGE_PIPELINE_SPECS,
         ("video-16f", "micro"): VIDEO_SPECS,
-        ("video-16f", "pipeline"): VIDEO_SPECS,
+        ("video-16f", "pipeline"): VIDEO_PIPELINE_SPECS,
     }
 
 

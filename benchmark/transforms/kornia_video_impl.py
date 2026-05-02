@@ -59,25 +59,6 @@ def create_tensor(
     return torch.tensor(data, device=device, dtype=dtype)
 
 
-class _CenterCropWithPad(torch.nn.Module):
-    def __init__(self, size: tuple[int, int]) -> None:
-        super().__init__()
-        self.height, self.width = size
-        self.crop = Kaug.CenterCrop(size=size, p=1)
-
-    def forward(self, video: torch.Tensor) -> torch.Tensor:
-        height, width = video.shape[-2:]
-        pad_height = max(0, self.height - height)
-        pad_width = max(0, self.width - width)
-        if pad_height or pad_width:
-            top = pad_height // 2
-            bottom = pad_height - top
-            left = pad_width // 2
-            right = pad_width - left
-            video = F.pad(video, (left, right, top, bottom))
-        return self.crop(video)
-
-
 class _RandomJigsawWithPad(torch.nn.Module):
     def __init__(self, grid: tuple[int, int]) -> None:
         super().__init__()
@@ -290,8 +271,6 @@ def create_transform(spec: TransformSpec) -> Any | None:
             p=1,
             same_on_batch=True,
         ).to(device)
-    if spec.name == "CenterCrop224":
-        return _CenterCropWithPad(size=(params["height"], params["width"])).to(device)
     if spec.name == "Affine":
         # Create a simple affine transform with fixed parameters
         # This avoids the device mismatch issue by not using random parameters

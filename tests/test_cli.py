@@ -308,6 +308,7 @@ class TestBuildGcpBenchmarkCliArgv:
             repo_root=tmp_path,
         )
         assert argv[argv.index("--scenario") + 1] == "video-16f"
+        assert argv[argv.index("--media") + 1] == "video"
         assert argv[argv.index("--mode") + 1] == "pipeline"
         assert argv[argv.index("--batch-size") + 1] == "4"
         assert argv[argv.index("--workers") + 1] == "2"
@@ -439,6 +440,37 @@ class TestCmdRunGcp:
         assert kwargs["dry_run"] is True
         assert kwargs["job"]["venv_cache_uri"] == "gs://b/augmentation-cache"
         mock_runner.create_instance.assert_not_called()
+
+    def test_g2_machine_uses_gpu_image_without_explicit_accelerator(self, tmp_path: Path) -> None:
+        parser = build_parser()
+        args = self._base_args(
+            parser,
+            [
+                "--gcp-machine-type",
+                "g2-standard-16",
+                "--gcp-gcs-data-uri",
+                "gs://b/d.tar",
+                "--gcp-gcs-results-uri",
+                "gs://b/r",
+                "--gcp-dry-run",
+            ],
+        )
+        mock_runner = MagicMock()
+        mock_runner.run_detached.return_value = "gs://b/r/dryrunid"
+
+        with (
+            patch("benchmark.cloud.gcp.GCPRunner", return_value=mock_runner),
+            patch("benchmark.cloud.instance.GCPInstanceConfig") as mock_config,
+            patch("benchmark.cloud.gcp.new_run_id", return_value="testrunid"),
+        ):
+            from benchmark.cli import _cmd_run_gcp
+
+            _cmd_run_gcp(args, tmp_path, tmp_path)
+
+        assert mock_config.call_args.kwargs["accelerator_type"] is None
+        assert mock_config.call_args.kwargs["accelerator_count"] == 0
+        assert mock_config.call_args.kwargs["image_project"] == "deeplearning-platform-release"
+        assert mock_config.call_args.kwargs["image_family"] == "pytorch-2-9-cu129-ubuntu-2404-nvidia-580"
 
     def test_detached_writes_metadata_json(self, tmp_path: Path) -> None:
         out_dir = tmp_path / "out"

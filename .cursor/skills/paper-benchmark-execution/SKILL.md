@@ -24,11 +24,15 @@ Use `_internal/plans/paper_benchmark_execution_plan.md` as the source of truth.
 - Keep micro specs native: no `Normalize`, `ToTensor`, axis conversion, or DataLoader collation work in micro rows.
 - DataLoader pipeline rows use recipe specs with `Normalize+ToTensor`; the conversion belongs in `*_pipeline_impl.py`,
   not in `pipeline_runner.py`.
+- Video DataLoader rows also use dedicated `*_video_pipeline_impl.py` recipe specs. Do not run video DataLoader through
+  the transform-only `*_video_impl.py` micro specs.
 - Keep slow-transform preflight enabled for micro and DataLoader runs. Image transforms below the practical floor (`>=0.05 sec/image`, `<=20 img/s`) should early-stop instead of consuming full paper sweep time; these transforms are not usable in practical DataLoader training pipelines.
 - DataLoader paper sweeps should default to epoch-based timing (`--min-time 0`) and rely on `--num-runs`, full dataset size, and slow-preflight guards rather than a fixed 30-second minimum per recipe.
 - Before cloud runs, reduced local production-path runs should show visible tqdm progress for library loops, media loading, micro transforms, and pipeline transforms. Missing or anonymous progress bars are a benchmark UX bug because long paper sweeps must be diagnosable while running.
 - Do not run every transform from `benchmark/transforms/specs.py` for the paper. Use only transforms that exist in at least two selected libraries. The paper transform sets live in `docs/paper_transform_sets/rgb.md`, `docs/paper_transform_sets/9ch.md`, and `docs/paper_transform_sets/video.md`.
 - Use `--transform-set paper` for paper micro/pipeline runs unless explicitly testing a smaller transform subset with `--transforms`.
+- Use `gs://imagenet_validation/ucf101/ucf101.tar` for paper video cloud runs; uploaded object size is `14136559616` bytes.
+- Cloud paper runs should use one dataset tarball per dataset (`val.tar`, `ucf101.tar`) rather than GCS directories full of individual media files. Create tarballs on macOS with `COPYFILE_DISABLE=1`, `tar --no-xattrs`, and excludes for `.DS_Store`, AppleDouble `._*`, and `__MACOSX`; detached GCP staging filters those entries again while extracting.
 - If paper scenario support changes, update `docs/benchmark_architecture.md`, `docs/benchmark_scope.md`,
   `.cursor/skills/benchmark-runner/SKILL.md`, and matrix/job tests in the same patch.
 
@@ -75,7 +79,8 @@ AMD sanity on `c4d-standard-16` or equivalent:
 
 GPU/video suite on `g2-standard-16` with L4 or equivalent:
 
-- GPU video micro for `torchvision` and `kornia`.
+- Video micro on the G2 machine for `albumentationsx`, `torchvision`, and `kornia`, labeled by execution device:
+  host CPU for AlbumentationsX, L4 GPU for torchvision/Kornia.
 - GPU video pipeline/DataLoader for GPU-capable paths.
 - DALI video pipeline when DALI is available.
 
@@ -87,7 +92,7 @@ Do not rerun CPU-only image rows on GPU machines for hardware symmetry. Label ha
 2. Run each scenario through the production path with tiny `--num-items`, `--num-runs 1`, and short or zero `--min-time`.
 3. Run RGB micro on `c4-standard-16` and `c4d-standard-16`.
 4. Run CPU suite on `c4-standard-16`: 9ch micro, RGB DataLoader, 9ch DataLoader, Albumentations video CPU micro.
-5. Run GPU suite on `g2-standard-16`: torchvision/Kornia video GPU micro and GPU video DataLoader.
+5. Run GPU suite on `g2-standard-16`: AlbumentationsX/torchvision/Kornia video micro and GPU video DataLoader.
 6. Pull and validate artifacts before generating plots/tables.
 
 ## Validation

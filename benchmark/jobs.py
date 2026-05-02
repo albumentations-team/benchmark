@@ -104,6 +104,8 @@ class BenchmarkJob:
             self.scenario,
             "--num-channels",
             str(self.num_channels),
+            "--clip-length",
+            str(self.clip_length),
             "--processes",
             "1",
             "--values",

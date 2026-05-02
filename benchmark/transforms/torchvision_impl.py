@@ -51,8 +51,6 @@ def create_transform(spec: TransformSpec) -> Any | None:
             if params["interpolation"] == "bilinear"
             else tv_transforms.InterpolationMode.NEAREST,
         )
-    if spec.name == "CenterCrop224":
-        return tv_transforms.CenterCrop(size=(params["height"], params["width"]))
     if spec.name == "HorizontalFlip":
         return tv_transforms.RandomHorizontalFlip(p=1)
     if spec.name == "VerticalFlip":

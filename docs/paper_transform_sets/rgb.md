@@ -9,13 +9,14 @@ RGB paper benchmarks use four libraries:
 
 A transform is included only when it exists in at least two of these libraries.
 
-Transform count: 58.
+`CenterCrop224` is omitted (redundant with randomized crop coverage via `RandomCrop224` / `RandomResizedCrop`).
+
+Transform count: 57.
 
 ```text
 Resize
 RandomCrop224
 RandomResizedCrop
-CenterCrop224
 HorizontalFlip
 VerticalFlip
 Pad

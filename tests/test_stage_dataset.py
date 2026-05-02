@@ -1,0 +1,73 @@
+from __future__ import annotations
+
+import io
+import tarfile
+from typing import TYPE_CHECKING
+
+import pytest
+
+from benchmark.cloud.stage_dataset import build_stage_plan, extract_dataset_tar
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+def _add_file(tf: tarfile.TarFile, name: str, payload: bytes = b"x") -> None:
+    info = tarfile.TarInfo(name)
+    info.size = len(payload)
+    tf.addfile(info, io.BytesIO(payload))
+
+
+def test_video_tar_extract_filters_macos_junk_and_limits_items(tmp_path: Path) -> None:
+    tar_path = tmp_path / "ucf101.tar"
+    with tarfile.open(tar_path, "w") as tf:
+        _add_file(tf, "UCF101/ApplyEyeMakeup/v_0001.avi")
+        _add_file(tf, "UCF101/ApplyEyeMakeup/v_0002.mp4")
+        _add_file(tf, "__MACOSX/UCF101/._v_0003.avi")
+        _add_file(tf, "UCF101/.DS_Store")
+        _add_file(tf, "UCF101/ApplyEyeMakeup/notes.txt")
+
+    out_dir = tmp_path / "data"
+    count = extract_dataset_tar(tar_path, out_dir, media="video", limit=1)
+
+    assert count == 1
+    assert (out_dir / "UCF101" / "ApplyEyeMakeup" / "v_0001.avi").exists()
+    assert not (out_dir / "__MACOSX").exists()
+    assert not (out_dir / "UCF101" / ".DS_Store").exists()
+
+
+def test_image_tar_extract_accepts_non_imagenet_layout(tmp_path: Path) -> None:
+    tar_path = tmp_path / "images.tar"
+    with tarfile.open(tar_path, "w") as tf:
+        _add_file(tf, "class-a/image-001.jpg")
+        _add_file(tf, "class-a/image-002.png")
+        _add_file(tf, "class-a/._image-003.jpg")
+
+    out_dir = tmp_path / "data"
+    count = extract_dataset_tar(tar_path, out_dir, media="image", limit=0)
+
+    assert count == 2
+    assert (out_dir / "class-a" / "image-001.jpg").exists()
+    assert (out_dir / "class-a" / "image-002.png").exists()
+
+
+def test_micro_gcp_requires_tar_source() -> None:
+    job = {
+        "gcs_data_uri": "gs://bucket/ucf101-dir",
+        "benchmark_cli_args": ["--media", "video", "--mode", "micro", "--num-items", "10"],
+    }
+
+    with pytest.raises(SystemExit, match="must point to a tarball"):
+        build_stage_plan(job)
+
+
+def test_video_micro_plan_uses_video_default_limit() -> None:
+    job = {
+        "gcs_data_uri": "gs://bucket/ucf101.tar",
+        "benchmark_cli_args": ["--scenario", "video-16f", "--mode", "micro"],
+    }
+
+    plan = build_stage_plan(job)
+
+    assert plan.media == "video"
+    assert plan.limit == 50

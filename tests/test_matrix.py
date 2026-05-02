@@ -34,7 +34,8 @@ def test_spec_maps_are_scenario_and_mode_specific() -> None:
     assert spec_map_for_scenario("image-rgb", "micro")["kornia"].endswith("kornia_impl.py")
     assert spec_map_for_scenario("image-9ch", "micro")["kornia"].endswith("kornia_multichannel_impl.py")
     assert spec_map_for_scenario("image-rgb", "pipeline")["kornia"].endswith("kornia_pipeline_impl.py")
-    assert spec_map_for_scenario("video-16f", "pipeline")["kornia"].endswith("kornia_video_impl.py")
+    assert spec_map_for_scenario("video-16f", "micro")["kornia"].endswith("kornia_video_impl.py")
+    assert spec_map_for_scenario("video-16f", "pipeline")["kornia"].endswith("kornia_video_pipeline_impl.py")
 
 
 def test_paper_transform_sets_are_declared_in_matrix() -> None:

@@ -229,7 +229,7 @@ Keep README guidance aligned with these policies:
   `benchmark/orchestrator.py` owns backend dispatch.
 - If the benchmark matrix changes, update `docs/benchmark_architecture.md`, `docs/benchmark_scope.md`, and the relevant
   skill docs in the same change.
-- Cloud benchmark docs should show `--gcp-gcs-data-uri` pointing at one dataset archive/object, not a directory of individual images.
+- Cloud benchmark docs should show `--gcp-gcs-data-uri` pointing at one dataset tarball, not a directory of individual images/videos. For macOS-created tarballs, document `COPYFILE_DISABLE=1`, `tar --no-xattrs`, and excludes for `.DS_Store`, AppleDouble `._*`, and `__MACOSX`.
 - Micro benchmark docs should state that media is preloaded once per library and reused across transform measurements.
 - Pyperf docs should mention per-transform subprocess isolation, media-cache reuse, lazy transform construction, and slow-transform preflight/early-stop behavior.
 - Benchmark policy docs should mention lazy output materialization: micro timing should force returned outputs to contiguous memory, including contiguous NumPy conversion for Pillow/PIL `Image.Image` outputs. Checksums belong only in diagnostics.

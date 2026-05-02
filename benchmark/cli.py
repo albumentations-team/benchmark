@@ -324,13 +324,19 @@ def build_gcp_benchmark_cli_argv(
     repo_root: Path,
 ) -> list[str]:
     """Build argv for ``python -m benchmark.cli run`` on the VM (no cloud flags)."""
+    media = args.media
+    if getattr(args, "scenario", None):
+        from benchmark.scenarios import get_scenario
+
+        media = get_scenario(args.scenario).media
+
     argv: list[str] = [
         "--data-dir",
         data_dir,
         "--output",
         output,
         "--media",
-        args.media,
+        media,
         "--num-runs",
         str(args.num_runs),
         "--num-channels",
@@ -398,15 +404,16 @@ def _default_gcp_venv_cache_uri(results_uri: str) -> str:
 def _cmd_run_gcp(args: argparse.Namespace, repo_root: Path, local_output_dir: Path) -> None:
     """Run benchmarks on a GCP instance (detached by default)."""
     from benchmark.cloud.gcp import GCPRunner, build_gcp_job_dict, new_run_id
-    from benchmark.cloud.instance import GCPInstanceConfig
+    from benchmark.cloud.instance import GCPInstanceConfig, is_gpu_machine_type
 
     if not args.gcp_project:
         logger.error("--gcp-project is required when using --cloud gcp")
         sys.exit(1)
 
     remote_repo_dir = args.gcp_remote_repo_dir
-    image_family = "pytorch-2-9-cu129-ubuntu-2404-nvidia-580" if args.gcp_gpu_type else "ubuntu-2404-lts-amd64"
-    image_project = "deeplearning-platform-release" if args.gcp_gpu_type else "ubuntu-os-cloud"
+    gpu_machine = bool(args.gcp_gpu_type) or is_gpu_machine_type(args.gcp_machine_type)
+    image_family = "pytorch-2-9-cu129-ubuntu-2404-nvidia-580" if gpu_machine else "ubuntu-2404-lts-amd64"
+    image_project = "deeplearning-platform-release" if gpu_machine else "ubuntu-os-cloud"
 
     if args.gcp_attached:
         if not args.gcp_remote_data_dir:

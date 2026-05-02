@@ -76,7 +76,6 @@ TRANSFORMS = [
     },
     # --- Spatial crop / resize ---
     {"name": "RandomCrop224", "transform": A.RandomCrop(height=224, width=224, pad_if_needed=True, p=1)},
-    {"name": "CenterCrop224", "transform": A.CenterCrop(height=224, width=224, pad_if_needed=True, p=1)},
     {
         "name": "RandomResizedCrop",
         "transform": A.RandomResizedCrop(

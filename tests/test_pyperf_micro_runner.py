@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import pickle
 import time
 from typing import TYPE_CHECKING, Any, Self
 
@@ -13,11 +14,13 @@ import pytest
 pytest.importorskip("pyperf")
 
 from benchmark.pyperf_micro_runner import (
+    _load_media,
     _make_micro_output_contiguous,
     _merge_pyperf_payload,
     _merge_transform_payload,
     _preflight_slow_transform,
     _pyperf_value_throughputs,
+    _run_filtered_transforms,
 )
 from benchmark.runner import MediaType
 
@@ -150,3 +153,66 @@ def test_merge_pyperf_payload_appends_existing_benchmarks(tmp_path: Path) -> Non
         "benchmarks": [{"metadata": {"name": "FastTransform"}}],
         "metadata": {"host": "vm"},
     }
+
+
+def test_load_media_passes_clip_length_to_video_loader(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: dict[str, int] = {}
+
+    class FakeMediaLoader:
+        def __init__(self, **kwargs: Any) -> None:
+            seen.update(kwargs)
+
+        def load(self) -> list[object]:
+            return [object()]
+
+    monkeypatch.setattr("benchmark.pyperf_micro_runner.BenchmarkMediaLoader", FakeMediaLoader)
+    args = argparse.Namespace(
+        data_dir=tmp_path,
+        media="video",
+        num_items=2,
+        num_channels=3,
+        clip_length=8,
+    )
+
+    media = _load_media(args, "kornia")
+
+    assert len(media) == 1
+    assert seen["clip_length"] == 8
+
+
+def test_preflight_exception_records_unsupported_result(tmp_path: Path) -> None:
+    pyperf = pytest.importorskip("pyperf")
+
+    def broken_call(_transform: Any, _item: Any) -> Any:
+        raise RuntimeError("bad dtype")
+
+    media_cache = tmp_path / "media.pkl"
+    media_cache.write_bytes(pickle.dumps([object()]))
+    args = argparse.Namespace(
+        media="video",
+        media_cache=media_cache,
+        data_dir=tmp_path,
+        num_items=1,
+        num_channels=3,
+        clip_length=16,
+        scenario="video-16f",
+        disable_slow_skip=False,
+        slow_threshold_sec_per_item=None,
+        slow_preflight_items=None,
+        json_output=tmp_path / "out.json",
+    )
+    runner = pyperf.Runner(processes=1, values=1, min_time=0.001)
+    runner.parse_args([])
+
+    _run_filtered_transforms(
+        runner=runner,
+        args=args,
+        library="torchvision",
+        call_fn=broken_call,
+        transforms=[{"name": "JpegCompression", "transform": object()}],
+    )
+
+    output = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
+    result = output["results"]["JpegCompression"]
+    assert result["supported"] is False
+    assert "bad dtype" in result["reason"]

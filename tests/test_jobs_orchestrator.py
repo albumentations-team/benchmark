@@ -34,12 +34,33 @@ def test_micro_job_builds_pyperf_command_with_filters_and_slow_skip(tmp_path: Pa
 
     assert cmd[cmd.index("--scenario") + 1] == "image-9ch"
     assert cmd[cmd.index("--num-channels") + 1] == "9"
+    assert cmd[cmd.index("--clip-length") + 1] == "16"
     assert cmd[cmd.index("--transforms") + 1] == "HorizontalFlip,GaussianBlur"
     assert cmd[cmd.index("--slow-threshold-sec-per-item") + 1] == "0.2"
     assert cmd[cmd.index("--slow-preflight-items") + 1] == "5"
     assert "--disable-slow-skip" in cmd
     assert job.env_extra(verbose=True)["BENCHMARK_TRANSFORMS_FILTER"] == "HorizontalFlip,GaussianBlur"
     assert job.env_extra(verbose=True)["BENCHMARK_VERBOSE"] == "1"
+
+
+def test_video_micro_job_passes_clip_length_to_pyperf_runner(tmp_path: Path) -> None:
+    job = BenchmarkJob(
+        library="kornia",
+        scenario="video-16f",
+        mode="micro",
+        media="video",
+        data_dir=tmp_path / "videos",
+        output_file=tmp_path / "out.json",
+        num_items=10,
+        num_runs=1,
+        num_channels=3,
+        clip_length=8,
+        spec_file=tmp_path / "spec.py",
+    )
+
+    cmd = job.micro_command(tmp_path / ".venv" / "bin" / "python")
+
+    assert cmd[cmd.index("--clip-length") + 1] == "8"
 
 
 def test_execute_job_deletes_pyperf_sidecar_before_micro_run(tmp_path: Path) -> None:
@@ -123,6 +144,21 @@ def test_dali_job_json_roundtrip_preserves_paths(tmp_path: Path) -> None:
     )
     raw = json.loads(json.dumps(asdict(job), default=str))
     assert benchmark_job_from_json_dict(raw) == job
+
+
+def test_g2_instance_create_uses_gpu_maintenance_policy_without_accelerator_flag() -> None:
+    from benchmark.cloud.gcp import GCPRunner
+    from benchmark.cloud.instance import GCPInstanceConfig
+
+    runner = GCPRunner(GCPInstanceConfig(project="p", zone="z", machine_type="g2-standard-16"))
+
+    with patch("benchmark.cloud.gcp._run") as run:
+        runner.create_instance()
+
+    cmd = run.call_args.args[0]
+    assert "--maintenance-policy" in cmd
+    assert cmd[cmd.index("--maintenance-policy") + 1] == "TERMINATE"
+    assert "--accelerator" not in cmd
 
 
 def test_attached_gcp_run_deletes_instance_when_setup_fails(tmp_path: Path) -> None:

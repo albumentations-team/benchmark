@@ -31,7 +31,6 @@ PAPER_CORE_TRANSFORMS=(
   Resize
   RandomCrop224
   RandomResizedCrop
-  CenterCrop224
   HorizontalFlip
   VerticalFlip
   Pad

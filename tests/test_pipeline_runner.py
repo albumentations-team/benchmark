@@ -164,3 +164,21 @@ def test_to_tensor_keeps_collated_chw_image_batch_shape(tmp_path: Path) -> None:
     tensor = runner._to_tensor(np.zeros((2, 3, 4, 5), dtype=np.uint8))
 
     assert tuple(tensor.shape) == (2, 3, 4, 5)
+
+
+def test_video_clip_loader_keeps_torchvision_uint8_for_pipeline(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    torch = pytest.importorskip("torch")
+    from benchmark import pipeline_runner
+
+    class FakeDecodedClip:
+        frames = np.zeros((4, 5, 6, 3), dtype=np.uint8)
+
+    monkeypatch.setattr(pipeline_runner, "decode_video", lambda *_args, **_kwargs: FakeDecodedClip())
+
+    tensor = pipeline_runner._video_clip_for_library(tmp_path / "video.mp4", "torchvision", 4)
+
+    assert tuple(tensor.shape) == (4, 3, 5, 6)
+    assert tensor.dtype == torch.uint8

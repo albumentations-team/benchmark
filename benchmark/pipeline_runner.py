@@ -53,6 +53,8 @@ def _video_clip_for_library(path: Path, library: str, clip_length: int) -> Any:
         import torch
 
         tensor = torch.from_numpy(np.ascontiguousarray(clip)).permute(0, 3, 1, 2)
+        if library == "torchvision":
+            return tensor.contiguous()
         return tensor.float() / 255.0
     return clip
 

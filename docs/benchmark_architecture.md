@@ -13,6 +13,8 @@ features in these modules unless there is a strong reason to put logic directly 
   (`benchmark/dali_pipeline_worker.py`) using the DALI venv Python from `benchmark/envs.py`, so DALI is imported only after
   `requirements/dali-video.txt` is installed or refreshed.
 - `benchmark/envs.py` owns virtualenv creation, requirement lock refresh, dependency cache keys, and dependency installs.
+- `benchmark/cloud/stage_dataset.py` owns detached-cloud dataset tarball validation and extraction. It filters media files
+  by benchmark media type and ignores macOS archive junk such as `.DS_Store`, AppleDouble `._*`, and `__MACOSX`.
 - `benchmark/policy.py` owns shared media policy: default item counts, warmup limits, item labels, throughput units, and
   slow-transform preflight defaults.
 
@@ -22,7 +24,11 @@ features in these modules unless there is a strong reason to put logic directly 
   contract.
 - `benchmark/media/loaders.py` loads image/video samples for micro benchmarks. RGB and 9-channel image benchmarks share
   the same loader path; 9-channel samples are synthesized by wrapping the library image loader with
-  `make_multichannel_loader`.
+  `make_multichannel_loader`. Video micro samples are decoded as fixed-length clips using the scenario `clip_length`, so
+  `video-16f` preloads 16 frames per source video instead of whole videos.
+- `benchmark/transforms/image_recipe_specs.py` and `benchmark/transforms/video_recipe_specs.py` define DataLoader recipe
+  transform sets. Pipeline scenarios use dedicated `*_pipeline_impl.py` specs so crop, augmentation, normalization, and
+  tensor conversion stay in the library-owned recipe layer.
 - `benchmark/runner.py` is now the compatibility/simple-timer runner. Production CLI micro runs use
   `benchmark/pyperf_micro_runner.py`; production DataLoader runs use `benchmark/pipeline_runner.py`.
 
@@ -35,9 +41,10 @@ features in these modules unless there is a strong reason to put logic directly 
 - `benchmark/pipeline_runner.py` runs DataLoader-style recipes. It measures one of three scopes:
   `memory_dataloader_augment`, `decode_dataloader_augment`, or `decode_dataloader_augment_batch_copy`. Pipeline specs own
   recipe-level tensor conversion (`Normalize+ToTensor`) so the runner can use PyTorch default collation without
-  benchmark-side channel-layout guesses. Default collation stacks fixed-shape tensor recipe outputs in every DataLoader
-  scope; `decode_dataloader_augment_batch_copy` additionally materializes the collated tensor batch on CUDA/MPS when
-  requested.
+  benchmark-side channel-layout guesses. Video pipeline recipes mirror RGB recipes: crop or crop-transform, then the
+  measured transform, then `Normalize+ToTensor`/tensor-ready conversion. Default collation stacks fixed-shape tensor recipe
+  outputs in every DataLoader scope; `decode_dataloader_augment_batch_copy` additionally materializes the collated tensor
+  batch on CUDA/MPS when requested.
 - DALI video pipeline runs are represented as `BenchmarkJob(backend="dali_pipeline")` and dispatched by
   `benchmark/orchestrator.py` via `benchmark/dali_pipeline_worker.py`, not by CLI special cases.
 
@@ -70,4 +77,5 @@ Architecture-sensitive tests live in:
 - `tests/test_jobs_orchestrator.py`: job command construction, pyperf sidecar cleanup, DALI backend dispatch, GCP attached
   cleanup on failure.
 - `tests/test_pipeline_runner.py`: tiny DataLoader execution, device resolution, shared slow-skip defaults.
+- `tests/test_stage_dataset.py`: GCP dataset tarball planning and extraction for image/video media.
 - `tests/test_slow_threshold.py`: shared slow-threshold formatting and policy defaults.

@@ -43,8 +43,22 @@ gcloud compute machine-types list \
   --filter='name=(c4-standard-16 c4d-standard-16 g2-standard-16)'
 ```
 
+Check GPU quota:
+
+```bash
+gcloud compute project-info describe \
+  --project albumentations \
+  --format="flattened(quotas[].metric,quotas[].limit,quotas[].usage)" | rg 'GPUS|NVIDIA'
+```
+
 ## Common Gotchas
 
 - `c3-standard-16` does not exist; use `c3d-standard-16` or `c3-standard-22`.
+- G2/A2/A3/A4 GPU machine types require `--maintenance-policy TERMINATE`. They also need a CUDA-capable image; do not
+  treat `g2-standard-16` as a CPU VM just because `--gcp-gpu-type` is omitted.
+- `Quota 'GPUS_ALL_REGIONS' exceeded. Limit: 0.0 globally.` means the project has zero GPU quota anywhere. Changing zone
+  will not help; request global GPU quota and regional L4/G2 quota before retrying.
+- `No image files found in dataset tarball` for a video scenario means the VM received `--media image`; cloud command
+  construction must derive media from `--scenario video-*`, not from the parser's default media value.
 - Result directories contain both summary JSON and raw pyperf JSON; docs should load only `*_results.json`.
 - Do not assume VM disappearance means success.

@@ -391,6 +391,45 @@ wget https://www.crcv.ucf.edu/data/UCF101/UCF101.rar
 unrar x UCF101.rar -d /path/to/your/target/directory
 ```
 
+For cloud runs, package datasets as a single tarball and upload that object to GCS. This is much faster and more reliable
+than copying thousands of small files from your laptop to GCS and then from GCS to the VM.
+
+```bash
+# ImageNet validation directory -> tarball.
+COPYFILE_DISABLE=1 tar --no-xattrs \
+  --exclude="__MACOSX" \
+  --exclude="*/__MACOSX/*" \
+  --exclude=".DS_Store" \
+  --exclude="*/.DS_Store" \
+  --exclude="._*" \
+  --exclude="*/._*" \
+  -cf /tmp/imagenet-val.tar \
+  -C /path/to/imagenet val
+
+gcloud storage cp /tmp/imagenet-val.tar gs://my-bucket/datasets/imagenet/val.tar
+
+# UCF101 directory -> tarball.
+COPYFILE_DISABLE=1 tar --no-xattrs \
+  --exclude="__MACOSX" \
+  --exclude="*/__MACOSX/*" \
+  --exclude=".DS_Store" \
+  --exclude="*/.DS_Store" \
+  --exclude="._*" \
+  --exclude="*/._*" \
+  -cf /tmp/ucf101.tar \
+  -C /Users/vladimiriglovikov/data ucf101
+
+gcloud storage cp /tmp/ucf101.tar gs://imagenet_validation/ucf101/ucf101.tar
+gcloud storage objects describe gs://imagenet_validation/ucf101/ucf101.tar \
+  --format="yaml(size,crc32c,md5Hash,updated)"
+
+# Optional sanity check: this should print nothing.
+tar -tf /tmp/ucf101.tar | rg '(^__MACOSX/|/\.DS_Store$|^\.DS_Store$|/\._|^\._)'
+```
+
+The paper video cloud runs use `gs://imagenet_validation/ucf101/ucf101.tar`; the uploaded object was verified at
+`14136559616` bytes.
+
 ### Using Your Own Data
 
 We strongly recommend running the benchmarks on your own dataset that matches your use case:
@@ -448,6 +487,11 @@ Pipeline result filenames include the key sweep parameters, for example
 `albumentationsx_memory_dataloader_augment_n2000_r5_w8_b64_results.json` or
 `torchvision_decode_dataloader_augment_batch_copy_nall_r5_w8_b64_dev-mps_results.json`.
 
+Video DataLoader runs use dedicated recipe specs, not the transform-only video micro specs. For AlbumentationsX,
+torchvision, and Kornia, the recipe shape is `crop + transform + Normalize + ToTensor` so DataLoader collation receives
+fixed-shape tensor clips. This keeps video pipeline semantics aligned with RGB pipeline benchmarks while micro remains a
+preloaded transform-only profiler.
+
 Treat RGB micro results as an implementation profiler: preloaded decoded inputs, one process, one internal
 library thread, augmentation only. They are useful for checking algorithmic implementation quality and regressions,
 but they are intentionally artificial because they measure one CPU core instead of a production input pipeline.
@@ -486,7 +530,7 @@ python -m benchmark.cli run \
   item labels separately in micro and pipeline runners.
 - Command construction lives in `benchmark/jobs.py`, and backend dispatch lives in `benchmark/orchestrator.py`. The CLI
   should parse user intent and resolve scenarios, not grow backend-specific branches.
-- Cloud runs stage one compressed dataset object, such as `gs://.../val.tar`, onto the VM and unpack it locally. Do not upload or copy thousands of individual images for each run.
+- Cloud runs stage one dataset tarball, such as `gs://.../val.tar` or `gs://.../ucf101.tar`, onto the VM and unpack it locally. Do not upload or copy thousands of individual images/videos for each run. Tarballs created on macOS should use `COPYFILE_DISABLE=1`, `--no-xattrs`, and excludes for `.DS_Store`, AppleDouble `._*`, and `__MACOSX`; the VM-side extractor also ignores those entries.
 - Micro benchmarks preload the requested number of images or videos once per library into that library's native in-memory representation. Per-transform timing must not reread or decode media from disk.
 - Micro benchmarks measure only the named transform in each library's native layout, then force the returned object into contiguous memory before timing stops. Do not add `Normalize`, `ToTensor`, axis conversion, or DataLoader collation work to micro specs.
 - Pyperf micro runs isolate transform measurements in subprocesses, but those subprocesses reuse the per-library media cache and lazily construct only the transform being measured.
@@ -503,14 +547,14 @@ python -m benchmark.cli run \
 
 ### Google Cloud (detached)
 
-Run benchmarks on a **Compute Engine** VM that starts from your laptop, then keeps going after you disconnect. The default path is **detached**: the CLI uploads the repo and a job definition to **GCS**, creates a VM whose **startup script** downloads one dataset archive/object such as `gs://.../val.tar`, unpacks it to **local disk** (benchmarks do not read from a mounted bucket), runs `python -m benchmark.cli run` with the same flags you would use locally (including `--spec`, `--multichannel`, warmup options, etc.), uploads **results**, **vm.log**, **exit_code.txt**, and **run_meta.json** under a unique prefix, and **deletes the VM** when finished (unless you pass `--gcp-keep-instance`).
+Run benchmarks on a **Compute Engine** VM that starts from your laptop, then keeps going after you disconnect. The default path is **detached**: the CLI uploads the repo and a job definition to **GCS**, creates a VM whose **startup script** downloads one dataset tarball such as `gs://.../val.tar` or `gs://.../ucf101.tar`, unpacks media files to **local disk** (benchmarks do not read from a mounted bucket), runs `python -m benchmark.cli run` with the same flags you would use locally (including `--spec`, `--multichannel`, warmup options, etc.), uploads **results**, **vm.log**, **exit_code.txt**, and **run_meta.json** under a unique prefix, and **deletes the VM** when finished (unless you pass `--gcp-keep-instance`).
 
 **Prerequisites**
 
 - [Google Cloud SDK](https://cloud.google.com/sdk) (`gcloud`) authenticated for your project.
 - VM boot image must provide **Python 3.13+** (the package matches `requires-python` in `pytorch-latest-*` images only if that image already ships 3.13; otherwise use a custom image or install 3.13 in your startup flow—the bootstrap script fails fast with a clear error if `python3` is too old).
 - A GCS bucket (or two) with:
-  - A **dataset archive/object** your VM can read, e.g. `gs://my-bucket/datasets/imagenet/val.tar`.
+  - A **dataset tarball** your VM can read, e.g. `gs://my-bucket/datasets/imagenet/val.tar` or `gs://my-bucket/datasets/ucf101/ucf101.tar`.
   - A **results base URI** where each run is written, e.g. `gs://my-bucket/benchmark-runs`.
 - The default Compute Engine service account (or the one attached to the VM) needs **read** access to the dataset object and **read/write** to the results bucket. For the VM to **delete itself** after the run, that service account also needs permission to call **compute.instances.delete** on its own instance (e.g. `roles/compute.instanceAdmin.v1` on a dedicated benchmark project—tighten IAM for production).
 

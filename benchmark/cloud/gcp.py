@@ -20,7 +20,7 @@ Usage (detached):
     python -m benchmark.cli run \\
         --cloud gcp \\
         --gcp-project my-project \\
-        --gcp-gcs-data-uri gs://my-bucket/datasets/video-50 \\
+        --gcp-gcs-data-uri gs://my-bucket/datasets/ucf101.tar \\
         --gcp-gcs-results-uri gs://my-bucket/benchmark-runs \\
         --data-dir /ignored-locally \\
         --output ./ignored-locally \\
@@ -347,71 +347,17 @@ else
   echo "Venv cache disabled."
 fi
 
-STAGE_LIMIT=$(python3 << 'PY'
-import json
-
-j = json.load(open("job.json"))
-args = j["benchmark_cli_args"]
-gcs_data_uri: str = j["gcs_data_uri"]
-
-
-def value(flag: str) -> str:
-    try:
-        return str(args[args.index(flag) + 1])
-    except (ValueError, IndexError):
-        return ""
-
-
-mode = value("--mode")
-num_items = value("--num-items")
-is_tar = gcs_data_uri.lower().endswith((".tar", ".tar.gz", ".tgz"))
-if mode == "micro" and not is_tar:
-    raise SystemExit(
-        "For --mode micro on GCP, --gcp-gcs-data-uri must point to a tarball (e.g. gs://.../imagenet/val.tar). "
-        f"Got: {gcs_data_uri!r}"
-    )
-if mode == "micro":
-    print(num_items or "2000")
-else:
-    print("0")
-PY
-)
-TAR_PATH="$WORKDIR/imagenet-val.tar"
+python3 "$REPODIR/benchmark/cloud/stage_dataset.py" validate-source --job-json "$WORKDIR/job.json"
+TAR_PATH="$WORKDIR/dataset.tar"
 TAR_URI=$(python3 -c 'import json; print(json.load(open("job.json"))["gcs_data_uri"])')
 mkdir -p "$DATADIR"
 if [[ "$TAR_URI" == *.tar || "$TAR_URI" == *.tar.gz || "$TAR_URI" == *.tgz ]]; then
   echo "Staging dataset tarball: ${TAR_URI}"
   gcloud storage cp "$TAR_URI" "$TAR_PATH"
-  export BENCHMARK_TAR_PATH="$TAR_PATH"
-  export BENCHMARK_STAGING_DIR="$DATADIR"
-  export BENCHMARK_TAR_EXTRACT_LIMIT="$STAGE_LIMIT"
-  python3 << 'PY'
-import os
-import tarfile
-from pathlib import Path
-
-data_dir = Path(os.environ["BENCHMARK_STAGING_DIR"])
-limit_raw = os.environ.get("BENCHMARK_TAR_EXTRACT_LIMIT", "0")
-limit = int(limit_raw) if limit_raw.isdigit() else 0
-tar_path = Path(os.environ["BENCHMARK_TAR_PATH"])
-
-# ImageNet val tarball layout (standard): val/<name>.JPEG
-
-
-def is_image_member(name: str) -> bool:
-    lower = name.lower()
-    return lower.startswith("val/") and (lower.endswith(".jpeg") or lower.endswith(".jpg") or lower.endswith(".png"))
-
-
-with tarfile.open(tar_path, mode="r:*") as tf:
-    if limit == 0:
-        tf.extractall(path=data_dir, filter="data")
-    else:
-        members = [m for m in tf.getmembers() if m.isfile() and is_image_member(m.name)]
-        members.sort(key=lambda m: m.name)
-        members = members[:limit]
-        tf.extractall(path=data_dir, members=members, filter="data")
-PY
+  python3 "$REPODIR/benchmark/cloud/stage_dataset.py" extract \
+    --job-json "$WORKDIR/job.json" \
+    --tar-path "$TAR_PATH" \
+    --data-dir "$DATADIR"
   rm -f "$TAR_PATH"
 else
   echo "Staging dataset directory: ${TAR_URI}"
@@ -621,9 +567,10 @@ class GCPRunner:
             cmd += [
                 "--accelerator",
                 f"type={cfg.accelerator_type},count={cfg.accelerator_count}",
-                "--maintenance-policy",
-                "TERMINATE",
             ]
+
+        if cfg.requires_terminate_maintenance:
+            cmd += ["--maintenance-policy", "TERMINATE"]
 
         if cfg.preemptible:
             cmd.append("--preemptible")
