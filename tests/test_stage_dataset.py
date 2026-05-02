@@ -2,14 +2,12 @@ from __future__ import annotations
 
 import io
 import tarfile
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 
 from benchmark.cloud.stage_dataset import build_stage_plan, extract_dataset_tar
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from benchmark.config import load_run_config
 
 
 def _add_file(tf: tarfile.TarFile, name: str, payload: bytes = b"x") -> None:
@@ -87,3 +85,17 @@ def test_stage_plan_accepts_typed_run_config_payload() -> None:
     assert plan.media == "image"
     assert plan.mode == "micro"
     assert plan.limit == 123
+
+
+def test_stage_plan_uses_validated_run_config_when_available() -> None:
+    config = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml"))
+    job = {
+        "gcs_data_uri": "gs://bucket/imagenet/val.tar",
+        "run_config": config.model_dump(mode="json", exclude_none=True),
+    }
+
+    plan = build_stage_plan(job)
+
+    assert plan.media == "image"
+    assert plan.mode == "pipeline"
+    assert plan.limit == 0
