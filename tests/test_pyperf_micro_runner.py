@@ -38,6 +38,17 @@ def test_make_micro_output_contiguous_copies_numpy_views() -> None:
     assert contiguous.shape == output.shape
 
 
+def test_make_micro_output_contiguous_converts_pillow_images() -> None:
+    pil_image = pytest.importorskip("PIL.Image")
+    image = pil_image.new("RGB", (4, 3))
+
+    output = _make_micro_output_contiguous(image)
+
+    assert isinstance(output, np.ndarray)
+    assert output.flags.c_contiguous
+    assert output.shape == (3, 4, 3)
+
+
 def test_make_micro_output_contiguous_calls_tensor_contiguous() -> None:
     class TensorLike:
         def __init__(self) -> None:

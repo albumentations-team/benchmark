@@ -22,12 +22,12 @@ from benchmark.slow_threshold import is_slow_time_per_item, slow_threshold_info,
 from benchmark.specs import load_from_python_file
 from benchmark.term import tqdm_kwargs
 from benchmark.thread_policy import apply_thread_policy
-from benchmark.utils import materialize_transform_output
+from benchmark.utils import make_contiguous_transform_output
 
 
 def _make_micro_output_contiguous(output: Any) -> Any:
     """Materialize micro-benchmark outputs so views/lazy buffers are not counted as finished work."""
-    return materialize_transform_output(output)
+    return make_contiguous_transform_output(output)
 
 
 def _time_transform_loop(loops: int, transform: Any, media: list[Any], call_fn: Any) -> float:
