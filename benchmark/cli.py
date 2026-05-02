@@ -40,12 +40,12 @@ from benchmark.cloud.paths import VM_RESULTS, staged_data_dir_for_gcs_uri
 from benchmark.config import (
     BenchmarkRunConfig,
     apply_cli_overrides,
+    build_run_cli_argv_from_args,
     build_run_cli_argv_from_config,
     build_run_plan,
     install_run_config_env,
     load_run_config,
     remote_run_config_payload,
-    repo_relative_spec_path,
     resolve_config_transform_set,
     run_config_from_args,
     run_config_payload,
@@ -282,84 +282,6 @@ def _cmd_run_scenario(
         )
 
 
-# ---------------------------------------------------------------------------
-# GCP cloud helper
-# ---------------------------------------------------------------------------
-
-
-def build_gcp_benchmark_cli_argv(
-    args: argparse.Namespace,
-    *,
-    data_dir: str,
-    output: str,
-    repo_root: Path,
-) -> list[str]:
-    """Build argv for ``python -m benchmark.cli run`` on the VM (no cloud flags)."""
-    media = args.media
-    if getattr(args, "scenario", None):
-        from benchmark.scenarios import get_scenario
-
-        media = get_scenario(args.scenario).media
-
-    argv: list[str] = [
-        "--data-dir",
-        data_dir,
-        "--output",
-        output,
-        "--media",
-        media,
-        "--num-runs",
-        str(args.num_runs),
-        "--num-channels",
-        str(args.num_channels),
-    ]
-    if args.num_items is not None:
-        argv += ["--num-items", str(args.num_items)]
-    if args.libraries:
-        argv += ["--libraries", *args.libraries]
-    if args.transforms:
-        argv += ["--transforms", *args.transforms]
-    if getattr(args, "transform_set", None):
-        argv += ["--transform-set", args.transform_set]
-    if args.spec:
-        argv += ["--spec", repo_relative_spec_path(str(args.spec), repo_root)]
-    if getattr(args, "multichannel", False):
-        argv.append("--multichannel")
-    if args.verbose:
-        argv.append("--verbose")
-    if getattr(args, "scenario", None):
-        argv += ["--scenario", args.scenario]
-    if getattr(args, "mode", None):
-        argv += ["--mode", args.mode]
-    if getattr(args, "pipeline_scope", None):
-        argv += ["--pipeline-scope", args.pipeline_scope]
-    if getattr(args, "device", None):
-        argv += ["--device", args.device]
-    if getattr(args, "thread_policy", None):
-        argv += ["--thread-policy", args.thread_policy]
-    if getattr(args, "batch_size", None):
-        argv += ["--batch-size", str(args.batch_size)]
-    if getattr(args, "workers", None) is not None:
-        argv += ["--workers", str(args.workers)]
-    if getattr(args, "min_time", None):
-        argv += ["--min-time", str(args.min_time)]
-    if getattr(args, "min_batches", None):
-        argv += ["--min-batches", str(args.min_batches)]
-    if getattr(args, "clip_length", None):
-        argv += ["--clip-length", str(args.clip_length)]
-    if getattr(args, "decoders", None):
-        argv += ["--decoders", *args.decoders]
-    if not getattr(args, "refresh_requirements", True):
-        argv.append("--no-refresh-requirements")
-    if getattr(args, "slow_threshold_sec_per_item", None) is not None:
-        argv += ["--slow-threshold-sec-per-item", str(args.slow_threshold_sec_per_item)]
-    if getattr(args, "slow_preflight_items", None) is not None:
-        argv += ["--slow-preflight-items", str(args.slow_preflight_items)]
-    if getattr(args, "disable_slow_skip", False):
-        argv.append("--disable-slow-skip")
-    return argv
-
-
 def _default_gcp_venv_cache_uri(results_uri: str) -> str:
     base = results_uri.rstrip("/")
     parent = base.rsplit("/", 1)[0] if "/" in base.removeprefix("gs://") else base
@@ -445,7 +367,7 @@ def _cmd_run_gcp(
                     verbose=getattr(args, "verbose", False),
                 )
                 if run_config
-                else build_gcp_benchmark_cli_argv(
+                else build_run_cli_argv_from_args(
                     args,
                     data_dir=options.remote_data_dir,
                     output=remote_output,
@@ -495,7 +417,7 @@ def _cmd_run_gcp(
                 verbose=getattr(args, "verbose", False),
             )
             if run_config
-            else build_gcp_benchmark_cli_argv(
+            else build_run_cli_argv_from_args(
                 args,
                 data_dir=staged_data_dir,
                 output=VM_RESULTS,

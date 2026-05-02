@@ -18,11 +18,11 @@ from benchmark.cli import (
     _library_env_group,
     _requirements_cache_key,
     _requirements_for_env_group,
-    build_gcp_benchmark_cli_argv,
     build_parser,
 )
 from benchmark.config import (
     BenchmarkRunConfig,
+    build_run_cli_argv_from_args,
     build_run_cli_argv_from_config,
     load_run_config,
     resolve_config_transform_set,
@@ -287,7 +287,7 @@ class TestBuildGcpBenchmarkCliArgv:
             ],
         )
         repo_root = tmp_path
-        argv = build_gcp_benchmark_cli_argv(
+        argv = build_run_cli_argv_from_args(
             args,
             data_dir="/remote/data",
             output="/remote/out",
@@ -324,7 +324,7 @@ class TestBuildGcpBenchmarkCliArgv:
                 "16",
             ],
         )
-        argv = build_gcp_benchmark_cli_argv(
+        argv = build_run_cli_argv_from_args(
             args,
             data_dir="/remote/data",
             output="/remote/out",
@@ -342,7 +342,7 @@ class TestBuildGcpBenchmarkCliArgv:
         args = parser.parse_args(
             ["run", "--data-dir", "/ignored", "--output", "/ignored", "--no-refresh-requirements"],
         )
-        argv = build_gcp_benchmark_cli_argv(
+        argv = build_run_cli_argv_from_args(
             args,
             data_dir="/remote/data",
             output="/remote/out",
@@ -366,7 +366,7 @@ class TestBuildGcpBenchmarkCliArgv:
                 "--disable-slow-skip",
             ],
         )
-        argv = build_gcp_benchmark_cli_argv(
+        argv = build_run_cli_argv_from_args(
             args,
             data_dir="/remote/data",
             output="/remote/out",
@@ -380,7 +380,7 @@ class TestBuildGcpBenchmarkCliArgv:
         parser = build_parser()
         args = parser.parse_args(["run", "--data-dir", "/ignored", "--output", "/ignored", "--device", "cuda"])
 
-        argv = build_gcp_benchmark_cli_argv(
+        argv = build_run_cli_argv_from_args(
             args,
             data_dir="/remote/data",
             output="/remote/out",
@@ -397,7 +397,7 @@ class TestBuildGcpBenchmarkCliArgv:
             ["run", "--data-dir", "/d", "--output", "/o", "--spec", str(outside)],
         )
         with pytest.raises(ValueError, match="inside the repository"):
-            build_gcp_benchmark_cli_argv(
+            build_run_cli_argv_from_args(
                 args,
                 data_dir="/d",
                 output="/o",
@@ -413,7 +413,7 @@ class TestBuildGcpBenchmarkCliArgv:
         args = parser.parse_args(
             ["run", "--data-dir", "/d", "--output", "/o", "--spec", str(spec_path)],
         )
-        argv = build_gcp_benchmark_cli_argv(
+        argv = build_run_cli_argv_from_args(
             args,
             data_dir="/d",
             output="/o",
