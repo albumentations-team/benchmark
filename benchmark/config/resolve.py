@@ -39,6 +39,23 @@ def write_resolved_config(config: BenchmarkRunConfig, path: Path) -> None:
     path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
 
 
+def run_config_payload(config: BenchmarkRunConfig) -> dict[str, Any]:
+    return config.model_dump(mode="json", exclude_none=True)
+
+
+def remote_run_config_payload(
+    config: BenchmarkRunConfig,
+    *,
+    data_dir: str,
+    output_dir: str,
+) -> dict[str, Any]:
+    data = run_config_payload(config)
+    data["data"]["data_dir"] = data_dir
+    data["output"]["output_dir"] = output_dir
+    data["cloud"] = None
+    return run_config_payload(BenchmarkRunConfig.model_validate(data))
+
+
 def config_to_namespace(config: BenchmarkRunConfig, *, verbose: bool = False) -> argparse.Namespace:
     values = config.to_legacy_args()
     values.update(

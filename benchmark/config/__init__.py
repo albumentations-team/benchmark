@@ -11,7 +11,9 @@ from benchmark.config.resolve import (
     apply_cli_overrides,
     config_to_namespace,
     load_run_config,
+    remote_run_config_payload,
     run_config_from_args,
+    run_config_payload,
     write_resolved_config,
 )
 from benchmark.config.transform_sets import (
@@ -34,7 +36,9 @@ __all__ = [
     "load_run_config",
     "paper_transform_names",
     "read_markdown_text_block",
+    "remote_run_config_payload",
     "resolve_config_transform_set",
     "run_config_from_args",
+    "run_config_payload",
     "write_resolved_config",
 ]

@@ -43,8 +43,10 @@ from benchmark.config import (
     build_run_plan,
     config_to_namespace,
     load_run_config,
+    remote_run_config_payload,
     resolve_config_transform_set,
     run_config_from_args,
+    run_config_payload,
     write_resolved_config,
 )
 from benchmark.devices import ensure_supported_device
@@ -395,19 +397,6 @@ def _default_gcp_venv_cache_uri(results_uri: str) -> str:
     return f"{parent}/augmentation-cache"
 
 
-def _remote_run_config(
-    config: BenchmarkRunConfig,
-    *,
-    data_dir: str,
-    output: str,
-) -> dict[str, object]:
-    data = config.model_dump(mode="json", exclude_none=True)
-    data["data"]["data_dir"] = data_dir
-    data["output"]["output_dir"] = output
-    data["cloud"] = None
-    return BenchmarkRunConfig.model_validate(data).model_dump(mode="json", exclude_none=True)
-
-
 def _cmd_run_gcp(
     args: argparse.Namespace,
     repo_root: Path,
@@ -483,10 +472,10 @@ def _cmd_run_gcp(
         logger.error("%s", e)  # noqa: TRY400
         sys.exit(1)
     remote_config = (
-        _remote_run_config(
+        remote_run_config_payload(
             run_config,
             data_dir=staged_data_dir_for_gcs_uri(args.gcp_gcs_data_uri),
-            output=VM_RESULTS,
+            output_dir=VM_RESULTS,
         )
         if run_config
         else None
@@ -508,9 +497,7 @@ def _cmd_run_gcp(
         gcs_data_uri=args.gcp_gcs_data_uri,
         benchmark_cli_args=bench_argv,
         run_config=remote_config,
-        cloud_config=run_config.cloud.model_dump(mode="json", exclude_none=True)
-        if run_config and run_config.cloud
-        else None,
+        cloud_config=run_config_payload(run_config).get("cloud") if run_config and run_config.cloud else None,
         terminate_instance=not args.gcp_keep_instance,
         keep_instance_on_failure=args.gcp_keep_on_failure,
         venv_cache_uri=""

@@ -15,6 +15,7 @@ from benchmark.config import (
     apply_cli_overrides,
     config_to_namespace,
     load_run_config,
+    remote_run_config_payload,
     resolve_config_transform_set,
 )
 
@@ -124,3 +125,17 @@ def test_config_exposes_resolved_scenario_fields() -> None:
     assert config.resolved_mode() == "pipeline"
     assert config.resolved_media() == "image"
     assert config.resolved_libraries() == ["torchvision", "kornia"]
+
+
+def test_remote_run_config_payload_uses_vm_paths_and_strips_cloud() -> None:
+    config = load_run_config(Path("configs/paper/gcp_g2_rgb_gpu_smoke.yaml"))
+
+    payload = remote_run_config_payload(
+        config,
+        data_dir="/root/benchmark-data/val",
+        output_dir="/root/benchmark-work/results",
+    )
+
+    assert payload["data"]["data_dir"] == "/root/benchmark-data/val"
+    assert payload["output"]["output_dir"] == "/root/benchmark-work/results"
+    assert "cloud" not in payload
