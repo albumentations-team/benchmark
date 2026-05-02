@@ -82,6 +82,56 @@ def test_pipeline_slow_preflight_uses_shared_defaults(tmp_path: Path, monkeypatc
     assert max_preflight_secs == 60.0
 
 
+def test_materialize_batch_counts_tensor_batch_dimension(tmp_path: Path) -> None:
+    torch = pytest.importorskip("torch")
+    runner = PipelineBenchmarkRunner(
+        library="testlib",
+        data_dir=tmp_path,
+        output_file=tmp_path / "pipeline.json",
+        transforms=[],
+        call_fn=lambda _transform, item: item,
+        media="image",
+        scenario="image-rgb",
+        pipeline_scope="decode_dataloader_augment",
+    )
+
+    assert runner._materialize_batch(torch.zeros((2, 3, 4, 5))) == 2
+
+
+def test_pipeline_runner_rejects_container_recipe_outputs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("torch.utils.data")
+    output_file = tmp_path / "pipeline.json"
+    paths = [tmp_path / "a.jpg", tmp_path / "b.jpg"]
+    runner = PipelineBenchmarkRunner(
+        library="testlib",
+        data_dir=tmp_path,
+        output_file=output_file,
+        transforms=[{"name": "DictOutput", "transform": lambda item: {"image": item}}],
+        call_fn=lambda transform, item: transform(item),
+        media="image",
+        scenario="image-rgb",
+        num_items=2,
+        num_runs=1,
+        batch_size=2,
+        workers=0,
+        min_time=0.0,
+        min_batches=1,
+        pipeline_scope="memory_dataloader_augment",
+    )
+
+    monkeypatch.setattr(runner, "_paths", lambda: paths)
+    monkeypatch.setattr(runner, "_load_item", lambda _path: np.zeros((4, 4, 3), dtype=np.uint8))
+
+    payload = runner.run()
+
+    result = payload["results"]["DictOutput"]
+    assert result["supported"] is False
+    assert "Pipeline recipes must return one fixed-shape tensor or ndarray per sample" in result["reason"]
+
+
 def test_to_tensor_does_not_guess_image_layout(tmp_path: Path) -> None:
     pytest.importorskip("torch")
     runner = PipelineBenchmarkRunner(

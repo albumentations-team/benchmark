@@ -35,7 +35,9 @@ features in these modules unless there is a strong reason to put logic directly 
 - `benchmark/pipeline_runner.py` runs DataLoader-style recipes. It measures one of three scopes:
   `memory_dataloader_augment`, `decode_dataloader_augment`, or `decode_dataloader_augment_batch_copy`. Pipeline specs own
   recipe-level tensor conversion (`Normalize+ToTensor`) so the runner can use PyTorch default collation without
-  benchmark-side channel-layout guesses.
+  benchmark-side channel-layout guesses. Default collation stacks fixed-shape tensor recipe outputs in every DataLoader
+  scope; `decode_dataloader_augment_batch_copy` additionally materializes the collated tensor batch on CUDA/MPS when
+  requested.
 - DALI video pipeline runs are represented as `BenchmarkJob(backend="dali_pipeline")` and dispatched by
   `benchmark/orchestrator.py` via `benchmark/dali_pipeline_worker.py`, not by CLI special cases.
 

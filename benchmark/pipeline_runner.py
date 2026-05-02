@@ -118,6 +118,32 @@ def _shutdown_loader_iterator(iterator: Any) -> None:
         shutdown()
 
 
+def _is_tensor_batch(batch: Any) -> bool:
+    try:
+        import torch
+
+        if isinstance(batch, torch.Tensor):
+            return True
+    except ImportError:
+        pass
+    return isinstance(batch, np.ndarray)
+
+
+def _batch_size(batch: Any) -> int:
+    if not _is_tensor_batch(batch):
+        msg = (
+            "Pipeline recipes must return one fixed-shape tensor or ndarray per sample so PyTorch default collation "
+            f"produces a single batched tensor/array; got {type(batch).__name__}"
+        )
+        raise TypeError(msg)
+
+    shape = getattr(batch, "shape", ())
+    if len(shape) == 0:
+        msg = "Pipeline batch must have a leading batch dimension"
+        raise TypeError(msg)
+    return len(batch)
+
+
 class PipelineBenchmarkRunner:
     def __init__(
         self,
@@ -268,10 +294,11 @@ class PipelineBenchmarkRunner:
             return tensor.float() / 255.0
         return tensor.float() if not tensor.is_floating_point() else tensor.contiguous()
 
-    def _materialize_batch(self, batch: Any) -> None:
+    def _materialize_batch(self, batch: Any) -> int:
+        batch_size = _batch_size(batch)
         if self.pipeline_scope != "decode_dataloader_augment_batch_copy":
             materialize_transform_output(batch)
-            return
+            return batch_size
 
         stacked = self._to_tensor(batch)
         device = self._resolved_device()
@@ -280,6 +307,7 @@ class PipelineBenchmarkRunner:
         elif device == "mps":
             stacked = stacked.to("mps")
         materialize_transform_output(stacked)
+        return batch_size
 
     def _run_loader_once(self, loader: Any, *, desc: str) -> tuple[int, int]:
         processed = 0
@@ -289,8 +317,7 @@ class PipelineBenchmarkRunner:
             total_batches = len(loader) if hasattr(loader, "__len__") else None
             batch_iter = tqdm(iterator, total=total_batches, desc=desc, unit="batch", leave=False, **tqdm_kwargs())
             for batch in batch_iter:
-                self._materialize_batch(batch)
-                processed += len(batch)
+                processed += self._materialize_batch(batch)
                 batches += 1
         finally:
             _shutdown_loader_iterator(iterator)

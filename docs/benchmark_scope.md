@@ -71,7 +71,9 @@ CenterCrop224+Normalize+ToTensor
 `ToTensor` is implemented in the pipeline spec, not in the generic runner. AlbumentationsX pipeline recipes use
 `Normalize` followed by `ToTensorV2`; Pillow pipeline recipes use `torchvision.transforms.PILToTensor` before normalization;
 torchvision and Kornia already operate on tensors. The DataLoader runner should receive fixed-shape recipe outputs that
-PyTorch can default-collate, and should not guess or repair channel layout.
+PyTorch can default-collate into a single batched tensor, and should not guess or repair channel layout. The
+`decode_dataloader_augment_batch_copy` scope adds batch tensor materialization and optional CUDA/MPS transfer; default
+collation itself is part of every DataLoader scope.
 
 ## Slow Transform Guard
 
