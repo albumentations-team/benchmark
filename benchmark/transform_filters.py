@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from typing import Any
+
 KORNIA_GPU_IMAGE_EXCLUDED_NAMES = frozenset({"Shear"})
 KORNIA_GPU_IMAGE_EXCLUDED_RECIPES = frozenset({"RandomCrop224+Shear+Normalize+ToTensor"})
+TORCHVISION_GPU_IMAGE_EXCLUDED_NAMES = frozenset({"JpegCompression"})
+TORCHVISION_GPU_IMAGE_EXCLUDED_RECIPES = frozenset({"RandomCrop224+JpegCompression+Normalize+ToTensor"})
 
 
 def filter_transforms_for_library_device(
@@ -14,8 +18,29 @@ def filter_transforms_for_library_device(
     """Apply library/device-specific exclusions after global transform-set expansion."""
     if not transforms:
         return transforms
-    if media != "image" or library != "kornia" or device == "none":
+    if media != "image" or device == "none":
         return transforms
 
-    excluded = KORNIA_GPU_IMAGE_EXCLUDED_NAMES | KORNIA_GPU_IMAGE_EXCLUDED_RECIPES
+    if library == "kornia":
+        excluded = KORNIA_GPU_IMAGE_EXCLUDED_NAMES | KORNIA_GPU_IMAGE_EXCLUDED_RECIPES
+    elif library == "torchvision":
+        excluded = TORCHVISION_GPU_IMAGE_EXCLUDED_NAMES | TORCHVISION_GPU_IMAGE_EXCLUDED_RECIPES
+    else:
+        return transforms
     return tuple(transform for transform in transforms if transform not in excluded)
+
+
+def filter_transform_dicts_for_library_device(
+    transforms: list[dict[str, Any]],
+    *,
+    library: str,
+    media: str,
+    device: str,
+) -> list[dict[str, Any]]:
+    names = tuple(str(transform["name"]) for transform in transforms)
+    filtered_names = set(
+        filter_transforms_for_library_device(names, library=library, media=media, device=device),
+    )
+    if len(filtered_names) == len(names):
+        return transforms
+    return [transform for transform in transforms if str(transform["name"]) in filtered_names]

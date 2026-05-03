@@ -86,6 +86,15 @@ Default `--cloud gcp` path: uploads repo + typed `job.json` to GCS, creates a VM
   pipeline specs are separate from video micro specs and use `crop + transform + Normalize + ToTensor` recipe semantics for
   AlbumentationsX, torchvision, and Kornia. The pipeline runner should use default PyTorch collation and should not guess
   or repair channel layouts.
+- TorchVision and Kornia image GPU DataLoader recipes are split inside their pipeline specs: DataLoader workers run
+  library-native CPU crop/pad shape preparation before collation, then the main process copies the fixed-shape batch to
+  GPU. Kornia runs batched augmentation with `same_on_batch=False` plus normalization. TorchVision runs the measured
+  augmentation in a per-sample GPU loop, then normalizes the batch, because TorchVision v2 lacks a `same_on_batch=False`
+  equivalent for batched image transforms.
+- TorchVision `JpegCompression` uses `torchvision.transforms.v2.JPEG`, which requires `uint8` CPU input. Exclude it from
+  TorchVision GPU image rows; keep it in CPU TorchVision rows and other libraries that support it.
+- CUDA DataLoader runs record per-transform peak GPU memory in `results.<transform>.gpu_memory`. Pyperf micro runs do not
+  report peak memory because timing happens in pyperf worker processes.
 - Pyperf runs may use per-transform subprocesses, but those subprocesses must reuse the per-library media cache and must not decode images again.
 - Construct only the transform being measured in pyperf subprocesses. Avoid eager construction of all transforms because some libraries warn or do setup in constructors.
 - Use joined environments for compatible libraries (`torch_stack` for torchvision/Kornia/Pillow image runs, `torch_video` for torchvision/Kornia video runs).

@@ -147,7 +147,7 @@ def _run_scenario_library(
         else micro_output_file(output_dir, library, device=run_config.execution.device)
     )
     try:
-        ensure_supported_device(library, media, run_config.execution.device)
+        ensure_supported_device(library, media, run_config.execution.device, mode=mode)
     except ValueError as e:
         logger.error("%s", e)  # noqa: TRY400
         sys.exit(1)

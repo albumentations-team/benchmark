@@ -6,14 +6,21 @@ import os
 import time
 from contextlib import suppress
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 from warnings import warn
 
 import numpy as np
 from tqdm import tqdm
 
 from benchmark.decoders import decode_video
-from benchmark.devices import move_transform_to_device, resolve_device, synchronize_device
+from benchmark.devices import (
+    cuda_memory_allocated,
+    cuda_memory_stats,
+    move_transform_to_device,
+    reset_peak_memory_stats,
+    resolve_device,
+    synchronize_device,
+)
 from benchmark.policy import slow_skip_config
 from benchmark.results import build_metadata, summarize_runs, unsupported_result, write_results
 from benchmark.runner import BenchmarkRunner
@@ -21,6 +28,7 @@ from benchmark.slow_threshold import is_slow_time_per_item, slow_threshold_info,
 from benchmark.specs import load_from_python_file
 from benchmark.term import tqdm_kwargs
 from benchmark.thread_policy import ThreadPolicy, apply_thread_policy, worker_init_for_policy
+from benchmark.transform_filters import filter_transform_dicts_for_library_device
 from benchmark.utils import get_image_loader, make_multichannel_loader, materialize_transform_output
 
 logger = logging.getLogger(__name__)
@@ -253,9 +261,11 @@ class PipelineBenchmarkRunner:
             msg = "Pipeline benchmarks require torch DataLoader"
             raise RuntimeError(msg) from e
 
-        multiprocessing_kwargs = {"multiprocessing_context": "fork"} if self.workers > 0 and hasattr(os, "fork") else {}
+        multiprocessing_kwargs: dict[str, Any] = (
+            {"multiprocessing_context": "fork"} if self.workers > 0 and hasattr(os, "fork") else {}
+        )
         return DataLoader(
-            dataset,
+            cast("Any", dataset),
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.workers,
@@ -274,13 +284,20 @@ class PipelineBenchmarkRunner:
             self.media == "image" and self.library in {"torchvision", "kornia"} and self._resolved_device() is not None
         )
 
-    def _to_tensor(self, item: Any) -> Any:
+    def _split_gpu_image_transform(self, transform: Any) -> tuple[Any | None, Any]:
+        dataset_transform = getattr(transform, "cpu_transform", None)
+        batch_transform = getattr(transform, "gpu_transform", transform)
+        return dataset_transform, batch_transform
+
+    def _to_tensor(self, item: Any, *, scale_uint8: bool = True) -> Any:
         import torch
 
         tensor = item if isinstance(item, torch.Tensor) else torch.from_numpy(np.ascontiguousarray(np.asarray(item)))
-        if tensor.dtype == torch.uint8:
+        if scale_uint8 and tensor.dtype == torch.uint8:
             return tensor.float() / 255.0
-        return tensor.float() if not tensor.is_floating_point() else tensor.contiguous()
+        if scale_uint8:
+            return tensor.float() if not tensor.is_floating_point() else tensor.contiguous()
+        return tensor.contiguous()
 
     def _materialize_batch(self, batch: Any) -> int:
         batch_size = _batch_size(batch)
@@ -299,8 +316,8 @@ class PipelineBenchmarkRunner:
         materialize_transform_output(stacked)
         return batch_size
 
-    def _move_batch_to_resolved_device(self, batch: Any) -> Any:
-        stacked = self._to_tensor(batch)
+    def _move_batch_to_resolved_device(self, batch: Any, *, scale_uint8: bool = True) -> Any:
+        stacked = self._to_tensor(batch, scale_uint8=scale_uint8)
         device = self._resolved_device()
         if device == "cuda":
             with suppress(RuntimeError):
@@ -312,7 +329,7 @@ class PipelineBenchmarkRunner:
 
     def _materialize_gpu_image_batch(self, batch: Any, transform: Any) -> int:
         batch_size = _batch_size(batch)
-        device_batch = self._move_batch_to_resolved_device(batch)
+        device_batch = self._move_batch_to_resolved_device(batch, scale_uint8=False)
         device_transform = move_transform_to_device(transform, self._last_device)
         output = device_transform(device_batch)
         materialize_transform_output(output)
@@ -379,8 +396,13 @@ class PipelineBenchmarkRunner:
 
         start = time.perf_counter()
         if self._uses_gpu_image_batch_transform():
-            loader = self._loader(paths[: len(items)], None, items if preloaded is not None else None)
-            processed, _ = self._run_loader_once(loader, desc=f"{transform_name} GPU preflight", transform=transform)
+            dataset_transform, batch_transform = self._split_gpu_image_transform(transform)
+            loader = self._loader(paths[: len(items)], dataset_transform, items if preloaded is not None else None)
+            processed, _ = self._run_loader_once(
+                loader,
+                desc=f"{transform_name} GPU preflight",
+                transform=batch_transform,
+            )
             item_count = processed
         else:
             for item in items:
@@ -451,10 +473,14 @@ class PipelineBenchmarkRunner:
         transform = transform_dict["transform"]
         throughputs: list[float] = []
         times: list[float] = []
+        gpu_memory_runs: list[dict[str, int | None]] = []
         preloaded = self._preload_items(paths)
         gpu_batch_transform = self._uses_gpu_image_batch_transform()
-        dataset_transform = None if gpu_batch_transform else transform
-        batch_transform = transform if gpu_batch_transform else None
+        if gpu_batch_transform:
+            dataset_transform, batch_transform = self._split_gpu_image_transform(transform)
+        else:
+            dataset_transform = transform
+            batch_transform = None
         slow_result = self._preflight_slow_transform(
             transform_name=str(transform_dict["name"]),
             transform=transform,
@@ -480,7 +506,10 @@ class PipelineBenchmarkRunner:
             processed = 0
             batches = 0
             loader = self._loader(paths, dataset_transform, preloaded)
-            _torch_synchronize(self._resolved_device())
+            device = self._resolved_device()
+            _torch_synchronize(device)
+            memory_before = cuda_memory_allocated(device)
+            reset_peak_memory_stats(device)
             start = time.perf_counter()
             try:
                 while True:
@@ -495,7 +524,7 @@ class PipelineBenchmarkRunner:
                     elapsed_so_far = time.perf_counter() - start
                     if elapsed_so_far >= self.min_time and batches >= self.min_batches:
                         break
-                _torch_synchronize(self._resolved_device())
+                _torch_synchronize(device)
             except Exception as e:
                 return unsupported_result(f"Pipeline run failed: {type(e).__name__}: {e}")
             finally:
@@ -503,8 +532,31 @@ class PipelineBenchmarkRunner:
             elapsed = time.perf_counter() - start
             times.append(elapsed)
             throughputs.append(processed / elapsed)
+            if device == "cuda":
+                memory_stats = cuda_memory_stats(device)
+                memory_stats["gpu_memory_allocated_before_bytes"] = memory_before
+                gpu_memory_runs.append(memory_stats)
 
-        return summarize_runs(throughputs, times)
+        result = summarize_runs(throughputs, times)
+        if gpu_memory_runs:
+            peak_allocated_values = [
+                value
+                for value in (run["gpu_peak_memory_allocated_bytes"] for run in gpu_memory_runs)
+                if value is not None
+            ]
+            peak_reserved_values = [
+                value
+                for value in (run["gpu_peak_memory_reserved_bytes"] for run in gpu_memory_runs)
+                if value is not None
+            ]
+            result["gpu_memory"] = {
+                "device": self._last_device or "none",
+                "measured": bool(peak_allocated_values),
+                "runs": gpu_memory_runs,
+                "peak_allocated_bytes": max(peak_allocated_values) if peak_allocated_values else None,
+                "peak_reserved_bytes": max(peak_reserved_values) if peak_reserved_values else None,
+            }
+        return result
 
     def run(self) -> dict[str, Any]:
         apply_thread_policy(self.thread_policy)
@@ -559,6 +611,7 @@ class PipelineBenchmarkRunner:
                     "device_option": self.device,
                     "transform_on_device": transform_on_device,
                     "includes_host_to_device_transfer": includes_gpu_transfer,
+                    "gpu_memory_peak_measured": self._last_device == "cuda",
                     "thread_policy": self.thread_policy,
                     "batch_collate": True,
                     "preload_time": self._last_preload_time,
@@ -621,6 +674,12 @@ def main() -> None:
     if filter_env:
         filter_names = [name.strip() for name in filter_env.split(",") if name.strip()]
         transforms = BenchmarkRunner.filter_transforms(transforms, filter_names)
+    transforms = filter_transform_dicts_for_library_device(
+        transforms,
+        library=library,
+        media=args.media,
+        device=args.device,
+    )
 
     runner = PipelineBenchmarkRunner(
         library=library,

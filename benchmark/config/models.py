@@ -115,7 +115,7 @@ class BenchmarkRunConfig(StrictModel):
 
         if self.selection.spec is None:
             for library in libraries:
-                ensure_supported_device(library, media, self.execution.device)
+                ensure_supported_device(library, media, self.execution.device, mode=mode)
 
         if self.cloud and self.cloud.enabled:
             self._validate_cloud()

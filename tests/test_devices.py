@@ -8,6 +8,8 @@ from benchmark.devices import ensure_supported_device
 def test_image_gpu_device_is_limited_to_tensor_libraries() -> None:
     ensure_supported_device("torchvision", "image", "cuda")
     ensure_supported_device("kornia", "image", "auto")
+    ensure_supported_device("torchvision", "image", "cuda", mode="pipeline")
+    ensure_supported_device("kornia", "image", "cuda", mode="pipeline")
 
     with pytest.raises(ValueError, match="albumentationsx image benchmarks do not support --device cuda"):
         ensure_supported_device("albumentationsx", "image", "cuda")

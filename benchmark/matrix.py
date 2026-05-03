@@ -171,7 +171,7 @@ def _devices_for(scenario_name: ScenarioName, mode: BenchmarkMode, library: str)
         return ("none", "cuda", "mps", "auto")
     if mode != "pipeline":
         return ("none",)
-    if scenario_name == "video-16f" or library in {"torchvision", "kornia"}:
+    if scenario_name == "video-16f" or (scenario_name.startswith("image-") and library in {"torchvision", "kornia"}):
         return ("none", "cuda", "mps", "auto")
     return ("none",)
 

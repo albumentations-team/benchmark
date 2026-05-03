@@ -52,6 +52,7 @@ def test_pipeline_device_policy_includes_gpu_and_mps_where_applicable() -> None:
     assert entries[("image-9ch", "micro", "torchvision")].devices == ("none", "cuda", "mps", "auto")
     assert entries[("image-rgb", "micro", "albumentationsx")].devices == ("none",)
     assert entries[("image-rgb", "micro", "pillow")].devices == ("none",)
+    assert entries[("image-rgb", "pipeline", "torchvision")].devices == ("none", "cuda", "mps", "auto")
     assert entries[("image-rgb", "pipeline", "kornia")].devices == ("none", "cuda", "mps", "auto")
     assert entries[("image-rgb", "pipeline", "pillow")].devices == ("none",)
     assert entries[("video-16f", "pipeline", "dali")].devices == ("cuda", "auto")

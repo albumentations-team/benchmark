@@ -148,7 +148,9 @@ Run these as the main paper tables:
   dedicated recipe specs with `crop + transform + Normalize + ToTensor` semantics, matching RGB pipeline structure.
 - GPU image sanity benchmarks: `image-rgb` and `image-9ch`, modes `micro` and `pipeline`, libraries
   `torchvision kornia`, `--device cuda` on `g2-standard-16`. Micro rows are device-resident transform-only measurements;
-  DataLoader rows include CPU load/decode, batch collation, host-to-device copy, GPU recipe execution, and synchronization.
+  DataLoader rows include CPU load/decode, library-native CPU crop/pad shape preparation, batch collation, host-to-device
+  copy, GPU augmentation plus normalization, and synchronization. Kornia uses batched GPU augmentation with
+  `same_on_batch=False`; TorchVision uses a per-sample GPU loop to preserve per-image random parameters.
 
 Recommended DataLoader settings for final paper runs:
 
@@ -179,14 +181,23 @@ Machine: `g2-standard-16` with an L4 GPU, or equivalent.
 
 Run these for video/GPU tables:
 
-- GPU image micro and DataLoader sanity checks for `torchvision` and `kornia` on RGB and 9-channel images. These rows
-  answer whether moving image augmentation to the GPU helps after accounting for transfer and batch-level execution.
+- GPU image micro and DataLoader sanity checks for `torchvision` and `kornia` on RGB and 9-channel images. DataLoader
+  workers use the same library on CPU for crop/pad shape preparation, then the fixed-shape batch is copied to GPU.
+  Kornia applies the measured augmentation with `same_on_batch=False` plus normalization. TorchVision applies the measured
+  augmentation in a per-sample GPU loop, then normalizes the batch, because TorchVision v2 does not expose a
+  `same_on_batch=False` equivalent for batched image transforms.
+  TorchVision `JpegCompression` is excluded from TorchVision GPU image rows because `torchvision.transforms.v2.JPEG`
+  requires `uint8` CPU input. Keep it in CPU TorchVision rows and in other libraries that support it.
+  CUDA DataLoader rows also record per-transform peak GPU memory during timed runs. Use these fields when discussing the
+  accelerator-memory cost of GPU augmentations; pyperf micro rows remain transform-time measurements and do not report
+  peak memory because they execute inside pyperf worker processes.
   The four smoke configs are `configs/paper/gcp_g2_rgb_micro_gpu_smoke.yaml`,
   `configs/paper/gcp_g2_9ch_micro_gpu_smoke.yaml`, `configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml`, and
   `configs/paper/gcp_g2_9ch_dataloader_gpu_smoke.yaml`.
 - Kornia image GPU rows exclude `Shear` in both micro and DataLoader modes because the current Kornia CUDA shear path can
-  fail while moving the transform's parameter generator to GPU. This is a library/device limitation, not a global paper
-  transform-set removal: `Shear` remains in RGB/9-channel CPU rows and in other libraries that support it.
+  fail while moving the transform's parameter generator to GPU. TorchVision image GPU rows exclude `JpegCompression`
+  because TorchVision's JPEG op is CPU-only. These are library/device limitations, not global paper transform-set
+  removals: the transforms remain in CPU rows and in other libraries that support them.
 - GPU video micro benchmarks for GPU-capable libraries, especially `torchvision` and `kornia`. Micro video preload uses
   fixed-length clips from `--clip-length` (16 frames for `video-16f`), not full source videos.
 - GPU video DataLoader/pipeline benchmarks for GPU-capable paths. These use dedicated video pipeline specs rather than
@@ -200,7 +211,8 @@ Run these for video/GPU tables:
 - DALI video pipeline benchmarks when DALI is available on the target image.
 
 CPU-only image rows should not be rerun on GPU machines for hardware symmetry. GPU image rows are a separate
-TorchVision/Kornia sanity section and must be labeled with device, machine class, and whether transfer is included.
+TorchVision/Kornia sanity section and must be labeled with device, machine class, whether transfer is included, and
+whether TorchVision used the per-sample GPU loop.
 
 ### Validation
 

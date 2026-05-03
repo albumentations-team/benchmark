@@ -118,6 +118,18 @@ parameter generator can fail with mixed CPU/CUDA tensors when moved to GPU. Keep
 transform sets for AlbumentationsX, Pillow, torchvision where supported, and Kornia CPU rows; mention this as a benchmark
 methodology limitation.
 
+TorchVision image GPU DataLoader rows use a per-sample GPU loop for the measured transform, then batch normalization,
+because TorchVision v2 does not expose a `same_on_batch=False` equivalent for per-image random parameters in batched image
+transforms. Label this explicitly in paper tables.
+
+TorchVision `JpegCompression` uses `torchvision.transforms.v2.JPEG`, which requires `uint8` CPU input. Exclude it from
+TorchVision GPU image rows; keep it in CPU TorchVision rows and other libraries that support it. Mention this
+JPEG-compression device constraint when interpreting GPU tables.
+
+CUDA DataLoader rows record per-transform peak GPU memory during timed runs. Use `gpu_memory.peak_allocated_bytes` and
+`gpu_memory.peak_reserved_bytes` as paper-facing cost columns for GPU augmentation. Pyperf micro rows do not report peak
+memory because pyperf executes timed loops in worker processes.
+
 Do not rerun CPU-only image rows on GPU machines for hardware symmetry. Label hardware per row instead.
 
 ## Execution Order

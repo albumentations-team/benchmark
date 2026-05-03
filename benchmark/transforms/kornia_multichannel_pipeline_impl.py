@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import kornia.augmentation as Kaug
 from torch import nn
@@ -22,6 +22,23 @@ def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
     return transform(image.unsqueeze(0)).squeeze(0)
 
 
+def _force_per_image_randomness(transform: nn.Module) -> nn.Module:
+    for module in transform.modules():
+        if hasattr(module, "same_on_batch"):
+            cast("Any", module).same_on_batch = False
+    return transform
+
+
+class _SplitRecipe(nn.Module):
+    def __init__(self, cpu_transform: nn.Module, gpu_transform: nn.Module) -> None:
+        super().__init__()
+        self.cpu_transform = cpu_transform
+        self.gpu_transform = gpu_transform
+
+    def forward(self, image: Any) -> Any:
+        return self.gpu_transform(self.cpu_transform(image))
+
+
 def _normalize() -> Kaug.Normalize:
     mean, std = repeated_stats(NUM_CHANNELS)
     return Kaug.Normalize(mean=mean, std=std, p=1)
@@ -33,7 +50,9 @@ def _random_crop() -> Kaug.RandomCrop:
 
 
 def _recipe(name: str, transforms: list[nn.Module]) -> dict[str, Any]:
-    return {"name": name, "transform": nn.Sequential(*transforms, _normalize())}
+    cpu_transform = transforms[0]
+    gpu_transform = _force_per_image_randomness(nn.Sequential(*transforms[1:], _normalize()))
+    return {"name": name, "transform": _SplitRecipe(cpu_transform, gpu_transform)}
 
 
 TRANSFORMS: list[dict[str, Any]] = []

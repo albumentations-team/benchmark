@@ -175,6 +175,93 @@ def test_kornia_gpu_image_pipeline_excludes_shear_recipe(tmp_path: Path) -> None
     assert job.env_extra()["BENCHMARK_TRANSFORMS_FILTER"] == "RandomCrop224+Resize+Normalize+ToTensor"
 
 
+def test_torchvision_gpu_image_micro_excludes_jpeg_compression(tmp_path: Path) -> None:
+    config = BenchmarkRunConfig.model_validate(
+        {
+            "selection": {
+                "scenario": "image-rgb",
+                "mode": "micro",
+                "libraries": ["torchvision"],
+                "transforms": ["Resize", "JpegCompression", "HorizontalFlip"],
+            },
+            "data": {"data_dir": "/data"},
+            "output": {"output_dir": "/out"},
+            "execution": {"device": "cuda"},
+        },
+    )
+
+    job = BenchmarkJob.from_run_config(
+        library="torchvision",
+        config=config,
+        data_dir=tmp_path / "data",
+        output_file=tmp_path / "out.json",
+        num_channels=3,
+        clip_length=16,
+        spec_file=tmp_path / "spec.py",
+    )
+
+    assert job.transforms_filter == ("Resize", "HorizontalFlip")
+
+
+def test_torchvision_gpu_image_pipeline_excludes_jpeg_compression_recipe(tmp_path: Path) -> None:
+    config = BenchmarkRunConfig.model_validate(
+        {
+            "selection": {
+                "scenario": "image-rgb",
+                "mode": "pipeline",
+                "libraries": ["torchvision"],
+                "transforms": [
+                    "RandomCrop224+Resize+Normalize+ToTensor",
+                    "RandomCrop224+JpegCompression+Normalize+ToTensor",
+                ],
+            },
+            "data": {"data_dir": "/data"},
+            "output": {"output_dir": "/out"},
+            "execution": {"device": "cuda"},
+        },
+    )
+
+    job = BenchmarkJob.from_run_config(
+        library="torchvision",
+        config=config,
+        data_dir=tmp_path / "data",
+        output_file=tmp_path / "out.json",
+        num_channels=3,
+        clip_length=16,
+        spec_file=tmp_path / "spec.py",
+    )
+
+    assert job.transforms_filter == ("RandomCrop224+Resize+Normalize+ToTensor",)
+
+
+def test_torchvision_cpu_image_keeps_jpeg_compression(tmp_path: Path) -> None:
+    config = BenchmarkRunConfig.model_validate(
+        {
+            "selection": {
+                "scenario": "image-rgb",
+                "mode": "micro",
+                "libraries": ["torchvision"],
+                "transforms": ["Resize", "JpegCompression"],
+            },
+            "data": {"data_dir": "/data"},
+            "output": {"output_dir": "/out"},
+            "execution": {"device": "none"},
+        },
+    )
+
+    job = BenchmarkJob.from_run_config(
+        library="torchvision",
+        config=config,
+        data_dir=tmp_path / "data",
+        output_file=tmp_path / "out.json",
+        num_channels=3,
+        clip_length=16,
+        spec_file=tmp_path / "spec.py",
+    )
+
+    assert job.transforms_filter == ("Resize", "JpegCompression")
+
+
 def test_kornia_gpu_9ch_image_excludes_shear(tmp_path: Path) -> None:
     config = BenchmarkRunConfig.model_validate(
         {

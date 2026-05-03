@@ -29,6 +29,7 @@ from benchmark.slow_threshold import is_slow_time_per_item, slow_threshold_info,
 from benchmark.specs import load_from_python_file
 from benchmark.term import tqdm_kwargs
 from benchmark.thread_policy import apply_thread_policy
+from benchmark.transform_filters import filter_transform_dicts_for_library_device
 from benchmark.utils import make_contiguous_transform_output
 
 
@@ -352,6 +353,7 @@ def _write_device_unavailable_result(
                 "device_option": args.device,
                 "transform_on_device": False,
                 "includes_host_to_device_transfer": False,
+                "gpu_memory_peak_measured": False,
             },
             timing_backend="pyperf",
             measurement_scope="augmentation_only",
@@ -482,6 +484,8 @@ def _run_filtered_transforms(
                 "device_option": args.device,
                 "transform_on_device": args.resolved_device is not None,
                 "includes_host_to_device_transfer": False,
+                "gpu_memory_peak_measured": False,
+                "gpu_memory_peak_measurement": "not available for pyperf worker-process timing",
             },
             timing_backend="pyperf",
             measurement_scope="augmentation_only",
@@ -515,6 +519,12 @@ def main() -> None:
     library, call_fn, transforms = load_from_python_file(args.specs_file)
     filter_names = [name.strip() for name in args.transforms.split(",") if name.strip()]
     transforms = BenchmarkRunner.filter_transforms(transforms, filter_names or None)
+    transforms = filter_transform_dicts_for_library_device(
+        transforms,
+        library=library,
+        media=args.media,
+        device=args.device,
+    )
 
     bench_args = runner.args
     if bench_args is None:

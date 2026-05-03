@@ -36,10 +36,12 @@ def resolve_device(device: str) -> str | None:
     raise ValueError(f"Unknown device option {device!r}")
 
 
-def ensure_supported_device(library: str, media: str, device: str) -> None:
+def ensure_supported_device(library: str, media: str, device: str, *, mode: str | None = None) -> None:
     if device == "none":
         return
     if media == "video":
+        return
+    if media == "image" and mode == "pipeline" and library in {"torchvision", "kornia"}:
         return
     if media == "image" and library in {"torchvision", "kornia"}:
         return
@@ -73,3 +75,51 @@ def synchronize_device(device: str | None = None) -> None:
         torch.cuda.synchronize()
     if device in {None, "mps"} and hasattr(torch, "mps") and torch.backends.mps.is_available():
         torch.mps.synchronize()
+
+
+def reset_peak_memory_stats(device: str | None) -> None:
+    if device != "cuda":
+        return
+    try:
+        import torch
+    except ImportError:
+        return
+    if not torch.cuda.is_available():
+        return
+    torch.cuda.synchronize()
+    torch.cuda.reset_peak_memory_stats()
+
+
+def cuda_memory_stats(device: str | None) -> dict[str, int | None]:
+    stats: dict[str, int | None] = {
+        "gpu_memory_allocated_before_bytes": None,
+        "gpu_memory_allocated_after_bytes": None,
+        "gpu_peak_memory_allocated_bytes": None,
+        "gpu_peak_memory_reserved_bytes": None,
+    }
+    if device != "cuda":
+        return stats
+    try:
+        import torch
+    except ImportError:
+        return stats
+    if not torch.cuda.is_available():
+        return stats
+    torch.cuda.synchronize()
+    stats["gpu_memory_allocated_after_bytes"] = int(torch.cuda.memory_allocated())
+    stats["gpu_peak_memory_allocated_bytes"] = int(torch.cuda.max_memory_allocated())
+    stats["gpu_peak_memory_reserved_bytes"] = int(torch.cuda.max_memory_reserved())
+    return stats
+
+
+def cuda_memory_allocated(device: str | None) -> int | None:
+    if device != "cuda":
+        return None
+    try:
+        import torch
+    except ImportError:
+        return None
+    if not torch.cuda.is_available():
+        return None
+    torch.cuda.synchronize()
+    return int(torch.cuda.memory_allocated())

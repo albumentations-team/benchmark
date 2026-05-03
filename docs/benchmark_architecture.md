@@ -67,9 +67,15 @@ features in these modules unless there is a strong reason to put logic directly 
   benchmark-side channel-layout guesses. Video pipeline recipes mirror RGB recipes: crop or crop-transform, then the
   measured transform, then `Normalize+ToTensor`/tensor-ready conversion. Default collation stacks fixed-shape tensor recipe
   outputs in every DataLoader scope; `decode_dataloader_augment_batch_copy` additionally materializes the collated tensor
-  batch on CUDA/MPS when requested. For image `torchvision` and `kornia` with `--device`, DataLoader workers still load
-  CPU samples, then the runner copies the collated batch to the selected device and applies the recipe once at batch
-  level.
+  batch on CUDA/MPS when requested. TorchVision and Kornia image GPU pipeline specs expose split recipes: a CPU crop/pad
+  preparation transform used by DataLoader workers before default collation, and a GPU transform after host-to-device
+  copy. Kornia applies the measured augmentation batched with per-image random parameters plus normalization; TorchVision
+  applies the measured augmentation in a per-sample GPU loop to preserve per-image randomness, then normalizes the batch.
+  TorchVision `JpegCompression` is excluded from TorchVision GPU image rows because `torchvision.transforms.v2.JPEG`
+  requires `uint8` CPU input. It remains in CPU TorchVision rows and in other libraries that support JPEG compression.
+  CUDA DataLoader rows reset CUDA peak memory stats immediately before each timed run and store peak allocated/reserved
+  bytes under each transform result. Pyperf micro rows do not expose peak memory because timing happens in pyperf worker
+  processes.
 - DALI video pipeline runs are represented as `BenchmarkJob(backend="dali_pipeline")` and dispatched by
   `benchmark/orchestrator.py` via `benchmark/dali_pipeline_worker.py`, not by CLI special cases.
 

@@ -6,7 +6,7 @@ import argparse
 import json
 import pickle
 import time
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Self, cast
 
 import numpy as np
 import pytest
@@ -227,7 +227,7 @@ def test_preflight_exception_records_unsupported_result(tmp_path: Path) -> None:
         device="none",
     )
     _run_filtered_transforms(
-        runner=_FakePyperfRunner(),
+        runner=cast("Any", _FakePyperfRunner()),
         args=args,
         library="torchvision",
         call_fn=broken_call,
@@ -267,7 +267,7 @@ def test_cuda_unavailable_records_unsupported_result(
     monkeypatch.setattr("benchmark.pyperf_micro_runner.resolve_device", unavailable)
 
     _run_filtered_transforms(
-        runner=_FakePyperfRunner(),
+        runner=cast("Any", _FakePyperfRunner()),
         args=args,
         library="torchvision",
         call_fn=lambda _transform, item: item,
@@ -277,3 +277,57 @@ def test_cuda_unavailable_records_unsupported_result(
     output = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
     assert output["results"]["Resize"]["supported"] is False
     assert "CUDA is not available" in output["results"]["Resize"]["reason"]
+
+
+def test_pyperf_main_filters_torchvision_gpu_jpeg(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from benchmark import pyperf_micro_runner
+
+    spec_file = tmp_path / "spec.py"
+    spec_file.write_text(
+        """
+LIBRARY = 'torchvision'
+def __call__(transform, image):
+    return transform(image)
+TRANSFORMS = [
+    {'name': 'Resize', 'transform': object()},
+    {'name': 'JpegCompression', 'transform': object()},
+]
+""",
+        encoding="utf-8",
+    )
+    captured: dict[str, Any] = {}
+
+    class FakeRunner:
+        args = type("Args", (), {"worker": False, "processes": 1, "values": 1, "warmups": 1, "min_time": 0.001})()
+
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            return None
+
+        def parse_args(self) -> object:
+            return argparse.Namespace(
+                specs_file=spec_file,
+                data_dir=tmp_path,
+                json_output=tmp_path / "out.json",
+                media="image",
+                scenario="image-rgb",
+                num_channels=3,
+                clip_length=16,
+                device="cuda",
+                transforms="",
+                media_cache=tmp_path / "media.pkl",
+                num_items=1,
+                slow_threshold_sec_per_item=None,
+                slow_preflight_items=None,
+                disable_slow_skip=False,
+            )
+
+    def fake_run_filtered_transforms(**kwargs: Any) -> None:
+        captured.update(kwargs)
+
+    pyperf_module = pytest.importorskip("pyperf")
+    monkeypatch.setattr(pyperf_module, "Runner", FakeRunner)
+    monkeypatch.setattr(pyperf_micro_runner, "_run_filtered_transforms", fake_run_filtered_transforms)
+
+    pyperf_micro_runner.main()
+
+    assert [transform["name"] for transform in captured["transforms"]] == ["Resize"]

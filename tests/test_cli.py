@@ -296,6 +296,7 @@ class TestBuildAttachedBenchmarkCliArgv:
         assert argv[argv.index("--batch-size") + 1] == "8"
         assert argv[argv.index("--workers") + 1] == "3"
         assert "torchvision" in argv
+        assert "kornia" in argv
         assert "HorizontalFlip" in argv
         assert "--verbose" in argv
 

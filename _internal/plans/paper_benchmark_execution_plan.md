@@ -107,33 +107,55 @@ python -m benchmark.cli run --config configs/paper/gcp_c4_9ch_micro_cpu.yaml
 python -m benchmark.cli run --config configs/paper/gcp_c4_9ch_dataloader_cpu.yaml
 ```
 
-The following four GPU image smoke runs are **not done**. Run them before interpreting GPU image rows.
+The following GPU image smoke runs are still being completed. Run them before interpreting GPU image rows.
 If `us-central1-b` is out of L4 capacity, retry the same config with `--gcp-zone us-central1-a` or
 `--gcp-zone us-central1-c`, matching the zones suggested by GCP.
 Kornia image GPU jobs intentionally exclude `Shear` in both micro and DataLoader modes because Kornia's current CUDA
 shear parameter generator can fail with mixed CPU/CUDA tensors when the transform is moved to GPU. Keep `Shear` in the
 overall RGB/9-channel paper transform sets for AlbumentationsX, Pillow, torchvision where supported, and Kornia CPU rows;
 call out this Kornia GPU limitation in the paper methodology.
+GPU image DataLoader smoke configs include TorchVision and Kornia. Both use library-native CPU crop/pad shape preparation
+before collation. Kornia then applies GPU augmentation batched with `same_on_batch=False`; TorchVision applies the measured
+augmentation in a per-sample GPU loop, then normalizes the batch, because TorchVision v2 does not expose a
+`same_on_batch=False` equivalent for batched image transforms.
+TorchVision `JpegCompression` is excluded from TorchVision GPU image rows because `torchvision.transforms.v2.JPEG`
+requires `uint8` CPU input. Keep it in CPU TorchVision rows and in other libraries that support it; call out this
+JPEG-compression augmentation constraint in the paper methodology.
+CUDA DataLoader rows record per-transform peak GPU memory during timed runs (`gpu_memory.peak_allocated_bytes` and
+`gpu_memory.peak_reserved_bytes`). Use this as a paper-facing cost column for GPU augmentation; pyperf micro rows do not
+report peak memory because pyperf executes timed loops in worker processes.
 
-- [ ] GPU RGB image micro smoke on `g2-standard-16` for tensor-native libraries.
+- [x] GPU RGB image micro smoke on `g2-standard-16` for tensor-native libraries. TorchVision completed in the earlier
+  mixed run; Kornia completed in the follow-up Kornia-only rerun after filtering Kornia GPU `Shear`.
+  Kornia rerun prefix: `gs://imagenet_validation/augmentation-results/e9b939dc478d411d9dc2fa1b914dc699`.
 
 ```bash
 python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_micro_gpu_smoke.yaml
+python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_micro_gpu_smoke.yaml --libraries kornia --gcp-zone us-central1-a
 ```
 
-- [ ] GPU 9-channel image micro smoke on `g2-standard-16` for tensor-native libraries.
+- [x] GPU 9-channel image micro smoke on `g2-standard-16` for tensor-native libraries. Completed for TorchVision and
+  Kornia with CUDA results uploaded.
+  Run prefix: `gs://imagenet_validation/augmentation-results/00471889465b4e3087c960ba6adde8e4`.
 
 ```bash
 python -m benchmark.cli run --config configs/paper/gcp_g2_9ch_micro_gpu_smoke.yaml
 ```
 
-- [ ] GPU RGB image DataLoader smoke on `g2-standard-16` for tensor-native libraries.
+- [x] GPU RGB image DataLoader smoke on `g2-standard-16` for tensor-native libraries. Fresh fetched validation passed
+  after excluding TorchVision `JpegCompression` on GPU: TorchVision has 25/25 supported rows, Kornia has 48/50 supported
+  rows plus 2 expected library/device failures, and all non-preflight measured rows include CUDA memory fields.
+  Run prefix: `gs://imagenet_validation/augmentation-results/8d015c32ddc8482f8b8187bc2f29825c`.
 
 ```bash
 python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml
 ```
 
-- [ ] GPU 9-channel image DataLoader smoke on `g2-standard-16` for tensor-native libraries.
+- [x] GPU 9-channel image DataLoader smoke on `g2-standard-16` for tensor-native libraries. Fresh fetched validation
+  passed after excluding TorchVision `JpegCompression` on GPU: TorchVision has 21/21 supported rows and CUDA memory fields;
+  Kornia has 37/39 supported rows plus 2 expected library/device failures, with CUDA memory fields for measured rows.
+  Kornia prefix: `gs://imagenet_validation/augmentation-results/c2668476216a441cb6dc747146129d31`.
+  TorchVision prefix: `gs://imagenet_validation/augmentation-results/8b54138ef610416cb7c21f2ffcad4262`.
 
 ```bash
 python -m benchmark.cli run --config configs/paper/gcp_g2_9ch_dataloader_gpu_smoke.yaml
