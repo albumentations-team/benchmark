@@ -52,7 +52,9 @@ The image benchmarks compare the performance of various libraries on standard im
 - **Micro / profiler benchmarks** preload decoded images and time augmentation only. These runs use one internal CPU thread for every library to measure single-stream transform cost. For tensor-native image libraries (`torchvision`, `kornia`), `--device cuda|mps|auto` preloads tensors on the selected device and times device-resident augmentation.
 - **DataLoader benchmarks** use recipe-level training pipelines. `memory_dataloader_augment` preloads decoded samples and isolates worker/augmentation scaling; `decode_dataloader_augment` adds disk read/decode; `decode_dataloader_augment_batch_copy` additionally materializes the collated batch tensor and copies it to CUDA/MPS when requested. CPU image pipelines apply the full recipe inside the dataset path before collation. TorchVision and Kornia image GPU DataLoader rows split the recipe: workers use the same library on CPU for crop/pad shape preparation, then the collated batch is copied to GPU. Kornia runs the measured augmentation batched with `same_on_batch=False` plus normalization; TorchVision runs only the measured augmentation in a per-sample GPU loop to preserve per-image randomness, then applies normalization once to the whole batch. Pipeline recipes include `Normalize+ToTensor` in the library spec: AlbumentationsX uses `ToTensorV2`, Pillow uses `torchvision.transforms.PILToTensor` before normalization, and torchvision/Kornia already operate on tensors. All pipeline recipes return fixed-shape tensor outputs that PyTorch default collation can stack. These runs record worker counts, thread policy, device target, and whether decode/collate/device transfer were included.
 
-For paper-quality RGB image results, use `2,000` ImageNet validation images for micro benchmarks and the full `50,000` ImageNet validation set for pipeline benchmarks.
+For the deadline-first paper pass, use `2,000` ImageNet validation images for micro benchmarks and `10,000` images for
+DataLoader/pipeline benchmarks. Run one measurement per row first, validate coverage, then top up important rows with
+additional repeats.
 
 <!-- IMAGE_BENCHMARK_TABLE_START -->
 
@@ -450,8 +452,8 @@ Named transform sets such as `paper` are expanded to concrete transform names, a
 
 ```bash
 python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml
-python -m benchmark.cli plan --config configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml
-python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml --gcp-dry-run
+python -m benchmark.cli plan --config configs/paper/prod_g2_rgb_dataloader_gpu.yaml
+python -m benchmark.cli run --config configs/paper/prod_g2_rgb_dataloader_gpu.yaml --gcp-dry-run
 python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml --num-items 25
 ```
 
@@ -466,17 +468,21 @@ The CLI creates joined virtual environments for compatible libraries, for exampl
 
 For paper runs, pass `--transform-set paper` to use only transforms present in at least two selected libraries. The fixed sets live under `docs/paper_transform_sets/`.
 
-For RGB image paper runs, prefer the checked-in configs:
+For production paper image runs, prefer the checked-in `prod_*` configs. The first paper pass uses one run per row so
+the full table can be covered quickly; top-up repeats can be merged later after coverage is validated.
 
 ```bash
-python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml
-python -m benchmark.cli run --config configs/examples/local_rgb_dataloader_cpu.yaml
-python -m benchmark.cli run --config configs/paper/gcp_c4_rgb_micro_cpu.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_micro_gpu_smoke.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/gcp_g2_9ch_micro_gpu_smoke.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/gcp_g2_9ch_dataloader_gpu_smoke.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/prod_c4_rgb_micro_cpu.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/prod_c4_rgb_dataloader_cpu.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/prod_c4_9ch_micro_cpu.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/prod_c4_9ch_dataloader_cpu.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/prod_g2_rgb_micro_gpu.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/prod_g2_rgb_dataloader_gpu.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/prod_g2_9ch_micro_gpu.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/prod_g2_9ch_dataloader_gpu.yaml --gcp-dry-run
 ```
+
+Smoke configs remain under `configs/paper/gcp_*_smoke.yaml` for path checks and fast reruns.
 
 Pipeline result filenames include the key sweep parameters, for example
 `albumentationsx_memory_dataloader_augment_n2000_r5_w8_b64_results.json` or
@@ -565,9 +571,9 @@ Detached runs carry a typed `run_config` in `job.json`; the VM writes that confi
 `--resolved-config`. Point the real dataset at GCS in the YAML config:
 
 ```bash
-python -m benchmark.cli plan --config configs/paper/gcp_c4_rgb_micro_cpu.yaml
-python -m benchmark.cli run --config configs/paper/gcp_c4_rgb_micro_cpu.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/gcp_c4_rgb_micro_cpu.yaml
+python -m benchmark.cli plan --config configs/paper/prod_c4_rgb_micro_cpu.yaml
+python -m benchmark.cli run --config configs/paper/prod_c4_rgb_micro_cpu.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/prod_c4_rgb_micro_cpu.yaml
 ```
 
 After submission, open `./gcp_runs/gcp_last_run.json` for `run_prefix`, `instance_name`, and a suggested `gcloud storage cp` command to pull `results/` when the run finishes.
@@ -575,13 +581,13 @@ After submission, open `./gcp_runs/gcp_last_run.json` for `run_prefix`, `instanc
 **Dry run (no upload, no VM)**
 
 ```bash
-python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/prod_g2_rgb_dataloader_gpu.yaml --gcp-dry-run
 ```
 
 If a GPU zone is stocked out, keep the config fixed and override only the zone that GCP suggests:
 
 ```bash
-python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_micro_gpu_smoke.yaml --gcp-zone us-central1-a
+python -m benchmark.cli run --config configs/paper/prod_g2_rgb_micro_gpu.yaml --gcp-zone us-central1-a
 ```
 
 **Attached / SSH mode (debug)**
@@ -718,7 +724,9 @@ The benchmark methodology is designed to ensure fair and reproducible comparison
 
 1. **Measurement scope**: Micro benchmarks measure primitive augmentation-only cost from preloaded data. GPU image micro rows are device-resident and exclude host-to-device transfer. DataLoader benchmarks split memory-only worker scaling, disk/decode pipelines, and optional tensor batch/device-copy pipelines; GPU image DataLoader rows include CPU crop/pad shape preparation, batch copy, and GPU augmentation plus normalization. TorchVision GPU image DataLoader rows also include a per-sample GPU loop to preserve correct random augmentation semantics.
 2. **Threading policy**: Micro benchmarks force one internal thread through runner-level policy. Pipeline benchmarks use explicit thread policies and record both dataloader workers and library thread settings.
-3. **Dataset size**: RGB micro and in-memory DataLoader paper runs can use `2,000` decoded ImageNet validation images. RGB disk pipeline paper runs use the full `50,000`-image ImageNet validation set.
+3. **Dataset size**: Deadline-first paper image configs use `2,000` ImageNet validation images for micro rows and
+   `10,000` images for DataLoader rows. Full `50,000`-image ImageNet sweeps are optional top-ups once the one-run table
+   is complete and validated.
 4. **Slow-transform guard**: Micro and DataLoader pipeline runs preflight transforms and early-stop impractically slow operations (`<=20 img/s` for images) instead of letting one unusable transform dominate runtime.
 5. **Visual progress**: Long-running loops use tqdm with descriptive labels for library loops, media loading, micro transforms, pyperf subprocess transforms, and DataLoader pipeline transforms.
 6. **Warmup and statistics**: Runs report robust summary statistics, coefficient of variation, confidence intervals, and unstable-result flags.

@@ -27,8 +27,11 @@ Use `_internal/plans/paper_benchmark_execution_plan.md` as the source of truth.
 - CPU rows run on CPU-only machines, usually `c4-standard-16`.
 - GPU rows run only for GPU libraries/paths, usually `g2-standard-16` with L4.
 - Do not run CPU-only rows on GPU VMs for hardware symmetry; label hardware per row instead.
-- Respect the current 64-vCPU quota by running at most four 16-vCPU CPU machines at once. The current GPU quota is one
-  GPU, so run at most one `g2-standard-16` GPU benchmark VM at a time and remember it also consumes 16 vCPUs.
+- Respect the current 128-vCPU all-regions quota, 96-vCPU C4-family quota in `us-central1`, and 1-GPU quota. In
+  practice, run up to six `c4-standard-16` CPU jobs if no GPU job is active, or up to five C4 jobs plus one
+  `g2-standard-16` GPU job. Keep only one G2 job active because L4 quota remains one GPU.
+- Respect the current 500 GB Hyperdisk Balanced quota in `us-central1`. Production C4 configs use 100 GB boot disks; a
+  200 GB C4 boot disk can block the third parallel C4 VM with `HDB_TOTAL_GB` quota errors.
 - Treat RGB micro as a profiler, not the main user-facing training throughput table.
 - Keep micro specs native: no `Normalize`, `ToTensor`, axis conversion, or DataLoader collation work in micro rows.
 - DataLoader pipeline rows use recipe specs with `Normalize+ToTensor`; the conversion belongs in `*_pipeline_impl.py`,
@@ -40,15 +43,16 @@ Use `_internal/plans/paper_benchmark_execution_plan.md` as the source of truth.
 - Before cloud runs, reduced local production-path runs should show visible tqdm progress for library loops, media loading, micro transforms, and pipeline transforms. Missing or anonymous progress bars are a benchmark UX bug because long paper sweeps must be diagnosable while running.
 - Do not run every transform from `benchmark/transforms/specs.py` for the paper. Use only transforms that exist in at least two selected libraries. The paper transform sets live in `docs/paper_transform_sets/rgb.md`, `docs/paper_transform_sets/9ch.md`, and `docs/paper_transform_sets/video.md`.
 - Use `--transform-set paper` for paper micro/pipeline runs unless explicitly testing a smaller transform subset with `--transforms`.
-- Prefer the checked-in examples over raw commands for current smoke runs:
-  - `configs/paper/gcp_c4_rgb_micro_cpu.yaml`
-  - `configs/paper/gcp_c4_rgb_dataloader_cpu.yaml`
-  - `configs/paper/gcp_c4_9ch_micro_cpu.yaml`
-  - `configs/paper/gcp_c4_9ch_dataloader_cpu.yaml`
-  - `configs/paper/gcp_g2_rgb_micro_gpu_smoke.yaml`
-  - `configs/paper/gcp_g2_9ch_micro_gpu_smoke.yaml`
-  - `configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml`
-  - `configs/paper/gcp_g2_9ch_dataloader_gpu_smoke.yaml`
+- Prefer the checked-in production configs over raw commands for current paper runs:
+  - `configs/paper/prod_c4_rgb_micro_cpu.yaml`
+  - `configs/paper/prod_c4_rgb_dataloader_cpu.yaml`
+  - `configs/paper/prod_c4_9ch_micro_cpu.yaml`
+  - `configs/paper/prod_c4_9ch_dataloader_cpu.yaml`
+  - `configs/paper/prod_g2_rgb_micro_gpu.yaml`
+  - `configs/paper/prod_g2_rgb_dataloader_gpu.yaml`
+  - `configs/paper/prod_g2_9ch_micro_gpu.yaml`
+  - `configs/paper/prod_g2_9ch_dataloader_gpu.yaml`
+  Keep `gcp_*_smoke.yaml` configs for fast path checks and reruns only.
   - `configs/paper/gcp_g2_video_smoke.yaml`
 - Use `gs://imagenet_validation/ucf101/ucf101.tar` for paper video cloud runs; uploaded object size is `14136559616` bytes.
 - Cloud paper runs should use one dataset tarball per dataset (`val.tar`, `ucf101.tar`) rather than GCS directories full of individual media files. Create tarballs on macOS with `COPYFILE_DISABLE=1`, `tar --no-xattrs`, and excludes for `.DS_Store`, AppleDouble `._*`, and `__MACOSX`; detached GCP staging filters those entries again while extracting.
@@ -81,24 +85,29 @@ Core remaining:
 
 Main CPU suite on `c4-standard-16` or equivalent modern Intel CPU:
 
-- RGB micro: start from `configs/paper/gcp_c4_rgb_micro_cpu.yaml`.
-- 9ch micro: start from `configs/examples/local_9ch_micro_cpu.yaml` or the GCP 9ch config with CPU device/settings.
-- RGB DataLoader memory: use an RGB pipeline config with `execution.pipeline_scope: memory_dataloader_augment`.
-- RGB DataLoader decode: use an RGB pipeline config with `execution.pipeline_scope: decode_dataloader_augment`.
-- 9ch DataLoader memory: use a 9ch pipeline config with `execution.pipeline_scope: memory_dataloader_augment`.
-- 9ch DataLoader decode: use a 9ch pipeline config with `execution.pipeline_scope: decode_dataloader_augment`.
+- RGB micro: start from `configs/paper/prod_c4_rgb_micro_cpu.yaml`.
+- 9ch micro: start from `configs/paper/prod_c4_9ch_micro_cpu.yaml`.
+- RGB DataLoader memory: start from `configs/paper/prod_c4_rgb_dataloader_cpu.yaml`.
+- 9ch DataLoader memory: start from `configs/paper/prod_c4_9ch_dataloader_cpu.yaml`.
 - Video rows: transforms from `docs/paper_transform_sets/video.md`; run CPU/GPU subsets according to the machine plan.
 
-Recommended final DataLoader config fields:
+Deadline-first DataLoader config fields:
 
 ```yaml
 execution:
-  batch_size: 256
+  batch_size: 256  # RGB; use 128 for 9-channel
   workers: 8
-  num_runs: 3
+  num_runs: 1
   min_time: 0
-  thread_policy: pipeline-single-worker
+  thread_policy: pipeline-default
 ```
+
+Use `batch_size: 128` for all 9-channel DataLoader libraries. The first 9-channel CPU DataLoader attempt at
+`batch_size: 256` OOM-killed Kornia, so partial `b256` 9-channel rows are exploratory and should not be mixed into the
+main table.
+
+After the full one-run matrix is covered and validated, add two more runs for important rows and aggregate them into
+3-run statistics. Use 5 total runs only for high-variance or close-call conclusions.
 
 AMD sanity on `c4d-standard-16` or equivalent:
 
@@ -107,7 +116,8 @@ AMD sanity on `c4d-standard-16` or equivalent:
 
 GPU/video suite on `g2-standard-16` with L4 or equivalent:
 
-- GPU image micro and DataLoader smoke rows for `torchvision` and `kornia` on RGB and 9-channel images.
+- GPU image micro and DataLoader production rows for `torchvision` and `kornia` on RGB and 9-channel images, starting
+  from the `prod_g2_*` configs.
 - Video micro on the G2 machine for `albumentationsx`, `torchvision`, and `kornia`, labeled by execution device:
   host CPU for AlbumentationsX, L4 GPU for torchvision/Kornia.
 - GPU video pipeline/DataLoader for GPU-capable paths.
@@ -135,11 +145,10 @@ Do not rerun CPU-only image rows on GPU machines for hardware symmetry. Label ha
 ## Execution Order
 
 1. Inventory existing results and avoid rerunning completed `n2`/`n2d` baselines.
-2. Run each scenario through the production path with tiny `--num-items`, `--num-runs 1`, and short or zero `min_time`.
-3. Run RGB micro on `c4-standard-16` and `c4d-standard-16`.
-4. Run CPU suite on `c4-standard-16`: 9ch micro, RGB DataLoader, 9ch DataLoader, Albumentations video CPU micro.
-5. Run GPU suite on `g2-standard-16`: torchvision/Kornia GPU image smoke, AlbumentationsX/torchvision/Kornia video micro,
-   and GPU video DataLoader.
+2. Run production Wave 1 RGB: CPU micro plus GPU micro, then CPU DataLoader plus GPU DataLoader.
+3. Run production Wave 2 9-channel: CPU micro plus GPU micro, then CPU DataLoader plus GPU DataLoader.
+4. Pull and validate artifacts after each run before starting top-up repeats.
+5. Run video production sizing only after image tables are secured, unless video becomes central to the paper claim.
 6. Pull and validate artifacts before generating plots/tables.
 
 ## Validation

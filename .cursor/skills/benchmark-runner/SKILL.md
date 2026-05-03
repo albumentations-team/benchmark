@@ -16,7 +16,7 @@ commands are stale for this repo; start from YAML and use CLI flags only as over
 ```bash
 python -m benchmark.cli plan --config configs/examples/local_rgb_micro_cpu.yaml
 python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml
-python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/paper/prod_g2_rgb_dataloader_gpu.yaml --gcp-dry-run
 ```
 
 `benchmark/parser.py` owns parser construction and provided-flag tracking. `benchmark/config/models.py` defines
@@ -103,7 +103,9 @@ Default `--cloud gcp` path: uploads repo + typed `job.json` to GCS, creates a VM
 - Pipeline result filenames include key sweep parameters: `library_scope_n{num_items|all}_r{num_runs}_w{workers}_b{batch_size}[_dev-{device}]_results.json`.
 - Preflight slow transforms in both micro and pipeline modes, then record an early-stop payload instead of spending the full benchmark budget on transforms that exceed the slow threshold. Defaults: images skip at `>=0.05 sec/image` (`<=20 img/s`), videos skip at `>=2.0 sec/video`.
 - Keep the slow-transform guard enabled for paper/DataLoader sweeps. It prevents the benchmark from appearing stuck on transforms that are too slow for practical training use. Use `--disable-slow-skip` only when the user explicitly asks to measure slow transforms exhaustively.
-- Preserve single-thread internal execution for micro benchmarks; pipeline benchmarks can use production-style workers/threading and must record those settings.
+- Preserve single-thread internal execution for micro benchmarks. Main paper pipeline benchmarks should use
+  production-style workers/threading (`thread_policy: pipeline-default`) and must record those settings; reserve
+  `pipeline-single-worker` for controlled appendix/debug rows.
 - Watch for lazy or partially lazy outputs. Micro timing must force each library to finish its own transform work and return
   contiguous outputs: NumPy arrays use `np.ascontiguousarray`, tensor-like outputs use `.contiguous()`, and Pillow
   `Image.Image` outputs are converted to contiguous NumPy arrays. Do not add checksums or unrelated validation inside the
@@ -137,7 +139,7 @@ When changing benchmark orchestration, update the architecture docs and tests:
 | Parameter | Default | Purpose |
 |-----------|---------|---------|
 | `-n` | 2000 | Number of images/videos |
-| `-r` | 5 | Number of benchmark runs |
+| `-r` | 1 first paper pass, 3+ top-up | Number of benchmark runs |
 | `--max-warmup` | 1000 | Maximum warmup iterations |
 | `--warmup-window` | 5 (images), 20 (videos) | Variance window size |
 | `--warmup-threshold` | 0.05 | Stability threshold |

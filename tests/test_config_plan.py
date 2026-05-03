@@ -32,6 +32,24 @@ def test_plan_lists_gpu_pipeline_device_outputs_and_cloud() -> None:
     assert plan.cloud["execution_output_dir"] == "/root/benchmark-work/results"
 
 
+def test_plan_lists_production_gpu_pipeline_outputs() -> None:
+    config = load_run_config(Path("configs/paper/prod_g2_rgb_dataloader_gpu.yaml"))
+
+    plan = build_run_plan(config, Path.cwd())
+
+    assert [job.library for job in plan.jobs] == ["torchvision", "kornia"]
+    assert all(job.device == "cuda" for job in plan.jobs)
+    assert all("_n10000_r1_w8_b256_dev-cuda_results.json" in job.output_file for job in plan.jobs)
+    assert (
+        "/root/benchmark-work/results/image-rgb/pipeline/"
+        "torchvision_decode_dataloader_augment_n10000_r1_w8_b256_dev-cuda_results.json"
+    ) in plan.expected_outputs
+    assert (
+        "/root/benchmark-work/results/image-rgb/pipeline/"
+        "kornia_decode_dataloader_augment_n10000_r1_w8_b256_dev-cuda_results.json"
+    ) in plan.expected_outputs
+
+
 def test_plan_lists_decode_sidecar_and_combined_outputs() -> None:
     data = load_run_config(Path("configs/paper/gcp_g2_video_smoke.yaml")).model_dump()
     data["selection"] = {"scenario": "video-decode-16f", "mode": "decode", "decoders": ["opencv", "pyav"]}

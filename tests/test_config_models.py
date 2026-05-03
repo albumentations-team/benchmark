@@ -36,6 +36,117 @@ def test_all_checked_in_configs_validate() -> None:
         load_run_config(path)
 
 
+def test_paper_production_configs_use_deadline_sizing() -> None:
+    expected = {
+        "prod_c4_rgb_micro_cpu.yaml": {
+            "scenario": "image-rgb",
+            "mode": "micro",
+            "libraries": ["albumentationsx", "torchvision", "kornia", "pillow"],
+            "num_items": 2000,
+            "device": "none",
+            "machine_type": "c4-standard-16",
+            "disk_size_gb": 100,
+        },
+        "prod_c4_rgb_dataloader_cpu.yaml": {
+            "scenario": "image-rgb",
+            "mode": "pipeline",
+            "libraries": ["albumentationsx", "torchvision", "kornia", "pillow"],
+            "num_items": 10000,
+            "device": "none",
+            "machine_type": "c4-standard-16",
+            "pipeline_scope": "memory_dataloader_augment",
+            "disk_size_gb": 100,
+        },
+        "prod_c4_9ch_micro_cpu.yaml": {
+            "scenario": "image-9ch",
+            "mode": "micro",
+            "libraries": ["albumentationsx", "torchvision", "kornia"],
+            "num_items": 2000,
+            "device": "none",
+            "machine_type": "c4-standard-16",
+            "num_channels": 9,
+            "disk_size_gb": 100,
+        },
+        "prod_c4_9ch_dataloader_cpu.yaml": {
+            "scenario": "image-9ch",
+            "mode": "pipeline",
+            "libraries": ["albumentationsx", "torchvision", "kornia"],
+            "num_items": 10000,
+            "device": "none",
+            "machine_type": "c4-standard-16",
+            "num_channels": 9,
+            "pipeline_scope": "memory_dataloader_augment",
+            "disk_size_gb": 100,
+            "batch_size": 128,
+        },
+        "prod_g2_rgb_micro_gpu.yaml": {
+            "scenario": "image-rgb",
+            "mode": "micro",
+            "libraries": ["torchvision", "kornia"],
+            "num_items": 2000,
+            "device": "cuda",
+            "machine_type": "g2-standard-16",
+            "disk_size_gb": 200,
+        },
+        "prod_g2_rgb_dataloader_gpu.yaml": {
+            "scenario": "image-rgb",
+            "mode": "pipeline",
+            "libraries": ["torchvision", "kornia"],
+            "num_items": 10000,
+            "device": "cuda",
+            "machine_type": "g2-standard-16",
+            "pipeline_scope": "decode_dataloader_augment",
+            "disk_size_gb": 200,
+        },
+        "prod_g2_9ch_micro_gpu.yaml": {
+            "scenario": "image-9ch",
+            "mode": "micro",
+            "libraries": ["torchvision", "kornia"],
+            "num_items": 2000,
+            "device": "cuda",
+            "machine_type": "g2-standard-16",
+            "num_channels": 9,
+            "disk_size_gb": 200,
+        },
+        "prod_g2_9ch_dataloader_gpu.yaml": {
+            "scenario": "image-9ch",
+            "mode": "pipeline",
+            "libraries": ["torchvision", "kornia"],
+            "num_items": 10000,
+            "device": "cuda",
+            "machine_type": "g2-standard-16",
+            "num_channels": 9,
+            "pipeline_scope": "decode_dataloader_augment",
+            "disk_size_gb": 200,
+            "batch_size": 128,
+        },
+    }
+
+    for filename, spec in expected.items():
+        config = load_run_config(Path("configs/paper") / filename)
+
+        assert config.selection.scenario == spec["scenario"]
+        assert config.selection.mode == spec["mode"]
+        assert config.selection.libraries == spec["libraries"]
+        assert config.selection.transform_set == "paper"
+        assert config.data.gcs_uri == "gs://imagenet_validation/imagenet/val.tar"
+        assert config.data.num_items == spec["num_items"]
+        assert config.data.num_channels == spec.get("num_channels", 3)
+        assert config.execution.num_runs == 1
+        assert config.execution.device == spec["device"]
+        assert config.cloud is not None
+        assert config.cloud.zone == "us-central1-a"
+        assert config.cloud.machine_type == spec["machine_type"]
+        assert config.cloud.disk_size_gb == spec["disk_size_gb"]
+
+        if spec["mode"] == "pipeline":
+            assert config.execution.pipeline_scope == spec["pipeline_scope"]
+            assert config.execution.batch_size == spec.get("batch_size", 256)
+            assert config.execution.workers == 8
+            assert config.execution.min_time == 0
+            assert config.execution.thread_policy == "pipeline-default"
+
+
 def test_rejects_image_cuda_for_albumentations() -> None:
     with pytest.raises(ValidationError, match="albumentationsx image benchmarks do not support --device cuda"):
         BenchmarkRunConfig(

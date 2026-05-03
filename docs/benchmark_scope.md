@@ -127,10 +127,13 @@ Do not add anonymous tqdm bars. Every tqdm must have a useful `desc` and a unit 
 
 The paper does not need the full benchmark matrix on every CPU vendor. Run the complete CPU suite once on a modern Intel VM, run a small AMD sanity check, and run video GPU benchmarks separately.
 
-**GCP quota:** Current project quota is **64 vCPUs** (`CPUS_ALL_REGIONS`) and **1 GPU**
-(`GPUS_ALL_REGIONS`). That allows up to four concurrent `c4-standard-16` CPU benchmark VMs if no other
-vCPU-consuming jobs are running. A `g2-standard-16` GPU run also consumes 16 vCPUs, so leave room for it when mixing
-CPU and GPU jobs.
+**GCP quota:** Current project quota is **128 vCPUs** (`CPUS_ALL_REGIONS`), **96 C4-family vCPUs** in `us-central1`
+(`CPUS_PER_VM_FAMILY`, `vm_family=C4`), and **1 GPU** (`GPUS_ALL_REGIONS`). That allows up to six concurrent
+`c4-standard-16` CPU benchmark VMs from the C4-family quota, or five C4 jobs plus one `g2-standard-16` GPU job from the
+all-CPU quota. Keep only one G2 job active because L4 quota remains one GPU.
+The regional Hyperdisk Balanced quota is currently **500 GB** (`HDB_TOTAL_GB`), so production C4 configs use **100 GB**
+boot disks. A 200 GB disk limits parallel C4 launch capacity to two active VMs before the third creation can fail on disk
+quota.
 
 ### Main CPU Suite
 
@@ -155,14 +158,22 @@ Run these as the main paper tables:
 Recommended DataLoader settings for final paper runs:
 
 ```text
---batch-size 256
+--num-items 10000
+--batch-size 256  # RGB
+--batch-size 128  # 9-channel
 --workers 8
---num-runs 3
+--num-runs 1
 --min-time 0
---thread-policy pipeline-single-worker
+--thread-policy pipeline-default
 ```
 
-Use the full ImageNet validation set for final DataLoader runs. For cheaper iteration, keep the same production path and reduce only explicit sizing flags, for example `--num-items 1000 --batch-size 64 --workers 8 --num-runs 1 --min-time 0`.
+Use `10,000` ImageNet validation images for the deadline-first DataLoader table. Keep the same production path and
+reduce only explicit sizing flags for cheaper iteration, for example
+`--num-items 1000 --batch-size 64 --workers 8 --num-runs 1 --min-time 0`. After one complete coverage pass, add repeat
+runs for important rows and aggregate them; do not block first coverage on 3- or 5-run sweeps.
+The main 9-channel DataLoader table uses `batch_size=128` for all libraries because the first `batch_size=256` CPU run
+OOM-killed Kornia. Keep 9-channel batch size uniform across libraries; do not mix the partial `b256` rows into the main
+table.
 
 ### AMD Sanity Check
 
@@ -191,9 +202,10 @@ Run these for video/GPU tables:
   CUDA DataLoader rows also record per-transform peak GPU memory during timed runs. Use these fields when discussing the
   accelerator-memory cost of GPU augmentations; pyperf micro rows remain transform-time measurements and do not report
   peak memory because they execute inside pyperf worker processes.
-  The four smoke configs are `configs/paper/gcp_g2_rgb_micro_gpu_smoke.yaml`,
-  `configs/paper/gcp_g2_9ch_micro_gpu_smoke.yaml`, `configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml`, and
-  `configs/paper/gcp_g2_9ch_dataloader_gpu_smoke.yaml`.
+  Production GPU image configs are `configs/paper/prod_g2_rgb_micro_gpu.yaml`,
+  `configs/paper/prod_g2_9ch_micro_gpu.yaml`, `configs/paper/prod_g2_rgb_dataloader_gpu.yaml`, and
+  `configs/paper/prod_g2_9ch_dataloader_gpu.yaml`. The corresponding `gcp_*_smoke.yaml` configs remain for fast path
+  checks and reruns.
 - Kornia image GPU rows exclude `Shear` in both micro and DataLoader modes because the current Kornia CUDA shear path can
   fail while moving the transform's parameter generator to GPU. TorchVision image GPU rows exclude `JpegCompression`
   because TorchVision's JPEG op is CPU-only. These are library/device limitations, not global paper transform-set

@@ -9,15 +9,23 @@ compute on tighter paper error bars.
 - Local RGB data: set `RGB_DATA_DIR=/path/to/imagenet/val`
 - 9-channel runs use the same RGB data source; the loader stacks 3 RGB copies into 9 channels in memory.
 - GCP project: `albumentations`
-- GCP zone: `us-central1-b`
+- GCP zone: `us-central1-a` for the current paper commands; override only when GCP reports capacity elsewhere.
 - GCP CPU machine: `c4-standard-16`
-- Current GCP quota: `CPUS_ALL_REGIONS = 64`, `GPUS_ALL_REGIONS = 1`
+- Current GCP quota: `CPUS_ALL_REGIONS = 128`, `CPUS_PER_VM_FAMILY/C4/us-central1 = 96`, `GPUS_ALL_REGIONS = 1`.
+  That supports up to six `c4-standard-16` CPU jobs from the C4-family quota, or five C4 jobs plus one
+  `g2-standard-16` GPU job from the all-CPU quota. Keep only one G2 job active because L4 quota remains one GPU.
+- Current Hyperdisk Balanced quota: `HDB_TOTAL_GB/us-central1 = 500`. Production C4 configs use `disk_size_gb: 100`
+  so several C4 jobs can launch in parallel. Avoid `200GB` C4 boot disks unless Hyperdisk quota is increased.
 - GCP ImageNet tarball: `gs://imagenet_validation/imagenet/val.tar`
 - Local UCF101 data: `/Users/vladimiriglovikov/data/ucf101`
 - GCP UCF101 tarball: `gs://imagenet_validation/ucf101/ucf101.tar` (uploaded; size `14136559616` bytes)
 - GCP results prefix: `gs://imagenet_validation/augmentation-results`
-- Micro sizing: `data.num_items: 1000`, `execution.num_runs: 1`
-- DataLoader sizing: `data.num_items: 10000`, `execution.num_runs: 1`
+- Production micro sizing: `data.num_items: 2000`, `execution.num_runs: 1`
+- Production RGB DataLoader sizing: `data.num_items: 10000`, `execution.num_runs: 1`, `execution.batch_size: 256`,
+  `execution.workers: 8`, `execution.thread_policy: pipeline-default`
+- Production 9-channel DataLoader sizing: `data.num_items: 10000`, `execution.num_runs: 1`, `execution.batch_size: 128`,
+  `execution.workers: 8`, `execution.thread_policy: pipeline-default`. The first CPU 9ch DataLoader attempt at
+  `batch_size: 256` OOM-killed Kornia, so `128` is the uniform main-table setting for all 9-channel libraries.
 - DataLoader scope for paper CPU checks: `memory_dataloader_augment`
 - GPU image smoke sizing: `data.num_items: 100`, `execution.num_runs: 1`
 
@@ -107,7 +115,7 @@ python -m benchmark.cli run --config configs/paper/gcp_c4_9ch_micro_cpu.yaml
 python -m benchmark.cli run --config configs/paper/gcp_c4_9ch_dataloader_cpu.yaml
 ```
 
-The following GPU image smoke runs are still being completed. Run them before interpreting GPU image rows.
+The GPU image smoke runs below are complete and validate the paths used by the production `prod_g2_*` configs.
 If `us-central1-b` is out of L4 capacity, retry the same config with `--gcp-zone us-central1-a` or
 `--gcp-zone us-central1-c`, matching the zones suggested by GCP.
 Kornia image GPU jobs intentionally exclude `Shear` in both micro and DataLoader modes because Kornia's current CUDA
@@ -196,6 +204,71 @@ for quota in json.loads(raw).get("quotas", []):
 PY
 ```
 
+## TODO: Production First Paper Pass
+
+Use the smoke-tested paths, but launch production configs instead of reusing smoke configs. With the approved CPU quota,
+run several C4 jobs in parallel and at most one G2 job. Use one run per row for the first complete table; add repeat runs
+only after coverage validation.
+
+### Wave 1: RGB
+
+- [ ] CPU RGB micro, `2000` images.
+
+```bash
+python -m benchmark.cli run --config configs/paper/prod_c4_rgb_micro_cpu.yaml --gcp-zone us-central1-a
+```
+
+- [ ] GPU RGB micro, `2000` images.
+
+```bash
+python -m benchmark.cli run --config configs/paper/prod_g2_rgb_micro_gpu.yaml --gcp-zone us-central1-a
+```
+
+- [ ] CPU RGB DataLoader, `10000` images, `batch_size=256`, `workers=8`, `pipeline-default`.
+
+```bash
+python -m benchmark.cli run --config configs/paper/prod_c4_rgb_dataloader_cpu.yaml --gcp-zone us-central1-a
+```
+
+- [ ] GPU RGB DataLoader, `10000` images, `batch_size=256`, `workers=8`, `pipeline-default`.
+
+```bash
+python -m benchmark.cli run --config configs/paper/prod_g2_rgb_dataloader_gpu.yaml --gcp-zone us-central1-a
+```
+
+### Wave 2: 9-Channel
+
+- [ ] CPU 9-channel micro, `2000` RGB source images stacked to 9 channels.
+
+```bash
+python -m benchmark.cli run --config configs/paper/prod_c4_9ch_micro_cpu.yaml --gcp-zone us-central1-a
+```
+
+- [ ] GPU 9-channel micro, `2000` RGB source images stacked to 9 channels.
+
+```bash
+python -m benchmark.cli run --config configs/paper/prod_g2_9ch_micro_gpu.yaml --gcp-zone us-central1-a
+```
+
+- [ ] CPU 9-channel DataLoader, `10000` RGB source images stacked to 9 channels, `batch_size=128`, `workers=8`,
+  `pipeline-default`.
+
+```bash
+python -m benchmark.cli run --config configs/paper/prod_c4_9ch_dataloader_cpu.yaml --gcp-zone us-central1-a
+```
+
+- [ ] GPU 9-channel DataLoader, `10000` RGB source images stacked to 9 channels, `batch_size=128`, `workers=8`,
+  `pipeline-default`.
+
+```bash
+python -m benchmark.cli run --config configs/paper/prod_g2_9ch_dataloader_gpu.yaml --gcp-zone us-central1-a
+```
+
+### Wave 3: Video
+
+Run video production sizing only after RGB and 9-channel image tables are secured. Keep the existing video smoke configs
+for path validation until video becomes central to the paper claim.
+
 ```bash
 python -m benchmark.cli run --config configs/paper/gcp_g2_video_smoke.yaml
 ```
@@ -213,9 +286,9 @@ python -m tools.check_paper_coverage --profile ram-reduced gcp_runs output
 
 ## Final Paper Reruns Later
 
-After the reduced production-path pass is clean, rerun the rows that feed paper
-claims with larger/repeated measurements, usually `--num-runs 3` or `5`, and
-only broaden further where variance or close comparisons require it.
+After the one-run production pass is clean, implement `benchmark aggregate`, then top up important rows with two more
+runs and report 3-run statistics. Only broaden to five total measurements for high-variance rows or close-call
+conclusions.
 
 Paper note: Kornia video pipeline excludes transforms that are unstable in the current CUDA recipe path. Smoke runs showed
 device mismatches, integer-bound failures, and CUDA device-side assertions for several Kornia video recipes. Treat those as
