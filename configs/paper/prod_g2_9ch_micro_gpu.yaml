@@ -7,7 +7,7 @@ selection:
 data:
   data_dir: /tmp/unused
   gcs_uri: gs://imagenet_validation/imagenet/val.tar
-  num_items: 2000
+  num_items: 1000
   num_channels: 9
 output:
   output_dir: gcp_runs/prod-g2-standard-16-9ch-micro-gpu

@@ -15,6 +15,7 @@ MEDIA_SUFFIXES = {
     "video": (".mp4", ".avi", ".mov"),
 }
 MACOS_JUNK_NAMES = {".ds_store", "__macosx"}
+MICRO_STAGE_OVERFETCH_FACTOR = 2
 
 
 @dataclass(frozen=True)
@@ -60,7 +61,13 @@ def build_stage_plan(job: dict[str, Any]) -> DatasetStagePlan:
         )
         raise SystemExit(msg)
 
-    limit = int(num_items) if mode == "micro" and num_items else default_micro_limit(media) if mode == "micro" else 0
+    if mode == "micro" and num_items:
+        requested_items = int(num_items)
+    elif mode == "micro":
+        requested_items = default_micro_limit(media)
+    else:
+        requested_items = 0
+    limit = requested_items * MICRO_STAGE_OVERFETCH_FACTOR if mode == "micro" and requested_items else 0
     return DatasetStagePlan(media=media, mode=mode, limit=limit, is_archive=is_archive)
 
 

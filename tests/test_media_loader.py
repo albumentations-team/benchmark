@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+from PIL import Image
 
 from benchmark.media.loaders import BenchmarkMediaLoader
 
@@ -63,3 +64,22 @@ def test_torchvision_video_micro_loader_keeps_uint8_clips(tmp_path: Path, monkey
 
     assert tuple(clip.shape) == (4, 3, 5, 6)
     assert str(clip.dtype).endswith("uint8")
+
+
+def test_image_loader_scans_past_invalid_files_to_requested_count(tmp_path: Path) -> None:
+    Image.fromarray(np.zeros((4, 4), dtype=np.uint8)).save(tmp_path / "gray.png")
+    (tmp_path / "broken.jpg").write_bytes(b"not an image")
+    for idx in range(2):
+        Image.fromarray(np.full((4, 4, 3), idx, dtype=np.uint8)).save(tmp_path / f"valid_{idx}.png")
+
+    loader = BenchmarkMediaLoader(
+        library="albumentationsx",
+        data_dir=tmp_path,
+        media="image",
+        num_items=2,
+    )
+
+    images = loader.load()
+
+    assert len(images) == 2
+    assert all(image.shape == (4, 4, 3) for image in images)

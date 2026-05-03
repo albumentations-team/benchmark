@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from importlib import import_module
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 from tqdm import tqdm
@@ -15,6 +16,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+IMAGE_SUFFIXES = {".bmp", ".jpeg", ".jpg", ".png", ".tif", ".tiff", ".webp"}
 
 
 @dataclass
@@ -36,9 +39,12 @@ class BenchmarkMediaLoader:
         if self.num_channels != 3:
             loader = make_multichannel_loader(loader, self.num_channels)
 
-        image_paths = sorted(self.data_dir.rglob("*.*"))
+        image_paths = sorted(path for path in self.data_dir.rglob("*") if _is_candidate_image(path))
         logger.info("Found %d image paths in %s (searching recursively)", len(image_paths), self.data_dir)
         images: list[Any] = []
+        invalid_files = 0
+        non_rgb_files = 0
+        load_errors = 0
 
         with tqdm(
             image_paths,
@@ -52,14 +58,17 @@ class BenchmarkMediaLoader:
 
                     img_check = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
                     if img_check is None:
+                        invalid_files += 1
                         continue
                     if img_check.ndim < 3 or img_check.shape[2] < 3:
+                        non_rgb_files += 1
                         continue
 
                     images.append(loader(path))
                     if len(images) >= self.num_items:
                         break
-                except Exception:  # noqa: S112
+                except Exception:
+                    load_errors += 1
                     continue
 
                 pbar.set_postfix({"loaded": len(images)})
@@ -68,9 +77,20 @@ class BenchmarkMediaLoader:
             raise ValueError("No valid RGB images found in the directory (only RGB images are used for benchmarking)")
 
         if len(images) < self.num_items:
-            logger.warning("Only found %d valid RGB images, requested %d", len(images), self.num_items)
+            logger.warning(
+                "Only found %d valid RGB images after scanning %d candidate files, requested %d",
+                len(images),
+                len(image_paths),
+                self.num_items,
+            )
 
-        logger.info("Loaded %d images for benchmarking", len(images))
+        logger.info(
+            "Loaded %d images for benchmarking (invalid=%d, non_rgb=%d, load_errors=%d)",
+            len(images),
+            invalid_files,
+            non_rgb_files,
+            load_errors,
+        )
         return images
 
     def _load_videos(self) -> list[Any]:
@@ -142,3 +162,7 @@ class BenchmarkMediaLoader:
         except Exception:
             return get_video_loader(self.library)(path)
         return clip
+
+
+def _is_candidate_image(path: Path) -> bool:
+    return path.is_file() and path.suffix.lower() in IMAGE_SUFFIXES

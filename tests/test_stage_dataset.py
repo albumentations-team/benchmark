@@ -62,7 +62,7 @@ def test_micro_gcp_requires_tar_source() -> None:
         build_stage_plan(job)
 
 
-def test_video_micro_plan_uses_video_default_limit() -> None:
+def test_video_micro_plan_overfetches_video_default_limit() -> None:
     job = {
         "gcs_data_uri": "gs://bucket/ucf101.tar",
         "run_config": {"selection": {"scenario": "video-16f", "mode": "micro"}, "data": {}},
@@ -71,7 +71,7 @@ def test_video_micro_plan_uses_video_default_limit() -> None:
     plan = build_stage_plan(job)
 
     assert plan.media == "video"
-    assert plan.limit == 50
+    assert plan.limit == 100
 
 
 def test_stage_plan_requires_typed_run_config() -> None:
@@ -81,7 +81,7 @@ def test_stage_plan_requires_typed_run_config() -> None:
         build_stage_plan(job)
 
 
-def test_stage_plan_accepts_typed_run_config_payload() -> None:
+def test_stage_plan_accepts_typed_run_config_payload_and_overfetches_micro() -> None:
     job = {
         "gcs_data_uri": "gs://bucket/imagenet-val.tar",
         "run_config": {
@@ -94,10 +94,10 @@ def test_stage_plan_accepts_typed_run_config_payload() -> None:
 
     assert plan.media == "image"
     assert plan.mode == "micro"
-    assert plan.limit == 123
+    assert plan.limit == 246
 
 
-def test_stage_plan_uses_stdlib_partial_run_config() -> None:
+def test_stage_plan_uses_stdlib_partial_run_config_and_overfetches_micro() -> None:
     job = {
         "gcs_data_uri": "gs://bucket/imagenet-val.tar",
         "run_config": {
@@ -110,7 +110,7 @@ def test_stage_plan_uses_stdlib_partial_run_config() -> None:
 
     assert plan.media == "image"
     assert plan.mode == "micro"
-    assert plan.limit == 321
+    assert plan.limit == 642
 
 
 def test_stage_plan_reads_pipeline_fields_from_run_config_payload() -> None:

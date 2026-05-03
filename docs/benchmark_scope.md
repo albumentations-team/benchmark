@@ -194,6 +194,8 @@ Run these for video/GPU tables:
 
 - GPU image micro and DataLoader sanity checks for `torchvision` and `kornia` on RGB and 9-channel images. DataLoader
   workers use the same library on CPU for crop/pad shape preparation, then the fixed-shape batch is copied to GPU.
+  RGB GPU micro uses 2,000 device-resident images. 9-channel GPU micro uses 1,000 device-resident images because the
+  2,000-sample Kornia preload OOMs on an L4; label this row as memory-limited and do not compare it as a same-`n` row.
   Kornia applies the measured augmentation with `same_on_batch=False` plus normalization. TorchVision applies the measured
   augmentation in a per-sample GPU loop, then normalizes the batch, because TorchVision v2 does not expose a
   `same_on_batch=False` equivalent for batched image transforms.
@@ -210,6 +212,9 @@ Run these for video/GPU tables:
   fail while moving the transform's parameter generator to GPU. TorchVision image GPU rows exclude `JpegCompression`
   because TorchVision's JPEG op is CPU-only. These are library/device limitations, not global paper transform-set
   removals: the transforms remain in CPU rows and in other libraries that support them.
+- Kornia RGB GPU DataLoader can fail `GaussianIllumination` with a mixed CPU/CUDA tensor error in the current L4 run.
+  Treat this as an unsupported Kornia GPU recipe result and keep it as methodology evidence for GPU augmentation
+  benchmarking complexity.
 - GPU video micro benchmarks for GPU-capable libraries, especially `torchvision` and `kornia`. Micro video preload uses
   fixed-length clips from `--clip-length` (16 frames for `video-16f`), not full source videos.
 - GPU video DataLoader/pipeline benchmarks for GPU-capable paths. These use dedicated video pipeline specs rather than

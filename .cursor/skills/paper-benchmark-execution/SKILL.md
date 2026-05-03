@@ -118,6 +118,8 @@ GPU/video suite on `g2-standard-16` with L4 or equivalent:
 
 - GPU image micro and DataLoader production rows for `torchvision` and `kornia` on RGB and 9-channel images, starting
   from the `prod_g2_*` configs.
+  9-channel GPU micro uses `num_items: 1000` because `num_items: 2000` OOMs during Kornia device-resident preload on L4.
+  Keep this labeled as a memory-limited GPU micro row.
 - Video micro on the G2 machine for `albumentationsx`, `torchvision`, and `kornia`, labeled by execution device:
   host CPU for AlbumentationsX, L4 GPU for torchvision/Kornia.
 - GPU video pipeline/DataLoader for GPU-capable paths.
@@ -135,6 +137,9 @@ transforms. Label this explicitly in paper tables.
 TorchVision `JpegCompression` uses `torchvision.transforms.v2.JPEG`, which requires `uint8` CPU input. Exclude it from
 TorchVision GPU image rows; keep it in CPU TorchVision rows and other libraries that support it. Mention this
 JPEG-compression device constraint when interpreting GPU tables.
+
+Kornia RGB GPU DataLoader can record `GaussianIllumination` as unsupported because the current recipe path can fail with
+mixed CPU/CUDA tensors. Keep it as a Kornia GPU methodology limitation, not a global transform-set removal.
 
 CUDA DataLoader rows record per-transform peak GPU memory during timed runs. Use `gpu_memory.peak_allocated_bytes` and
 `gpu_memory.peak_reserved_bytes` as paper-facing cost columns for GPU augmentation. Pyperf micro rows do not report peak

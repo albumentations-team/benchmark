@@ -21,6 +21,9 @@ compute on tighter paper error bars.
 - GCP UCF101 tarball: `gs://imagenet_validation/ucf101/ucf101.tar` (uploaded; size `14136559616` bytes)
 - GCP results prefix: `gs://imagenet_validation/augmentation-results`
 - Production micro sizing: `data.num_items: 2000`, `execution.num_runs: 1`
+- Production GPU 9-channel micro sizing: `data.num_items: 1000`, `execution.num_runs: 1`, because L4 cannot preload
+  2000 device-resident 9-channel samples for Kornia without OOM. Label this row separately as a GPU memory-limited
+  device-resident micro measurement.
 - Production RGB DataLoader sizing: `data.num_items: 10000`, `execution.num_runs: 1`, `execution.batch_size: 256`,
   `execution.workers: 8`, `execution.thread_policy: pipeline-default`
 - Production 9-channel DataLoader sizing: `data.num_items: 10000`, `execution.num_runs: 1`, `execution.batch_size: 128`,
@@ -129,6 +132,8 @@ augmentation in a per-sample GPU loop, then normalizes the batch, because TorchV
 TorchVision `JpegCompression` is excluded from TorchVision GPU image rows because `torchvision.transforms.v2.JPEG`
 requires `uint8` CPU input. Keep it in CPU TorchVision rows and in other libraries that support it; call out this
 JPEG-compression augmentation constraint in the paper methodology.
+Kornia RGB GPU DataLoader can fail `GaussianIllumination` with mixed CPU/CUDA tensors. Treat that row as an unsupported
+Kornia GPU recipe result and mention it in the methodology as another benchmark complexity point.
 CUDA DataLoader rows record per-transform peak GPU memory during timed runs (`gpu_memory.peak_allocated_bytes` and
 `gpu_memory.peak_reserved_bytes`). Use this as a paper-facing cost column for GPU augmentation; pyperf micro rows do not
 report peak memory because pyperf executes timed loops in worker processes.
@@ -244,7 +249,8 @@ python -m benchmark.cli run --config configs/paper/prod_g2_rgb_dataloader_gpu.ya
 python -m benchmark.cli run --config configs/paper/prod_c4_9ch_micro_cpu.yaml --gcp-zone us-central1-a
 ```
 
-- [ ] GPU 9-channel micro, `2000` RGB source images stacked to 9 channels.
+- [ ] GPU 9-channel micro, `1000` RGB source images stacked to 9 channels. The 2000-sample attempt OOMed while
+  preloading Kornia tensors to CUDA on L4.
 
 ```bash
 python -m benchmark.cli run --config configs/paper/prod_g2_9ch_micro_gpu.yaml --gcp-zone us-central1-a

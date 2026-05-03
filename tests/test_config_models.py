@@ -102,7 +102,7 @@ def test_paper_production_configs_use_deadline_sizing() -> None:
             "scenario": "image-9ch",
             "mode": "micro",
             "libraries": ["torchvision", "kornia"],
-            "num_items": 2000,
+            "num_items": 1000,
             "device": "cuda",
             "machine_type": "g2-standard-16",
             "num_channels": 9,
