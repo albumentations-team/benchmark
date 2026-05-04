@@ -113,8 +113,8 @@ Default `--cloud gcp` path: uploads repo + typed `job.json` to GCS, creates a VM
 - Only benchmark transforms a library supports directly. Do not build large benchmark-side helper implementations to imitate another library's API. For Pillow, keep direct `Image` / `ImageOps` / `ImageFilter` operations and skip Albumentations-style composites such as random crops, `PadIfNeeded`, `SafeRotate`, `ShiftScaleRotate`, `LongestMaxSize`, and `SmallestMaxSize`.
 - Kornia excludes `benchmark/transforms/kornia_unstable.py` **only** from video DataLoader/pipeline recipes. Kornia image
   GPU jobs also exclude `Shear` in micro and DataLoader modes because the current CUDA shear path can fail while moving
-  the parameter generator to GPU. Keep `Shear` in the paper transform sets for AlbumentationsX, Pillow, torchvision where
-  supported, and Kornia CPU rows.
+  the parameter generator to GPU. Kornia 9-channel image GPU jobs also exclude `MedianBlur` because the L4 9-channel GPU
+  micro row OOMed on Kornia's large temporary allocation. Keep `MedianBlur` in RGB GPU, CPU, and other-library rows.
 - Paper runs do not use every transform from `benchmark/transforms/specs.py`. Use `--transform-set paper` for the curated
   lists in `docs/paper_transform_sets/*.md`; within each scenario's library set, keep transforms with at least two
   implementations. Video DataLoader/pipeline support is additionally filtered by dedicated video recipe specs.

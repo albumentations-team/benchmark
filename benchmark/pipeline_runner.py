@@ -676,6 +676,7 @@ def main() -> None:
         transforms = BenchmarkRunner.filter_transforms(transforms, filter_names)
     transforms = filter_transform_dicts_for_library_device(
         transforms,
+        scenario=args.scenario,
         library=library,
         media=args.media,
         device=args.device,

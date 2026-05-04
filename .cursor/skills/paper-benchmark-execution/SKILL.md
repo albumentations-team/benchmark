@@ -95,16 +95,16 @@ Deadline-first DataLoader config fields:
 
 ```yaml
 execution:
-  batch_size: 256  # RGB; use 128 for 9-channel
+  batch_size: 256  # RGB; use 64 for the current 9-channel candidate
   workers: 8
   num_runs: 1
   min_time: 0
   thread_policy: pipeline-default
 ```
 
-Use `batch_size: 128` for all 9-channel DataLoader libraries. The first 9-channel CPU DataLoader attempt at
-`batch_size: 256` OOM-killed Kornia, so partial `b256` 9-channel rows are exploratory and should not be mixed into the
-main table.
+Use `batch_size: 64` for all 9-channel DataLoader libraries in the current main-table candidate. The first 9-channel CPU
+DataLoader attempts at `batch_size: 256` and `batch_size: 128` OOM-killed Kornia, so partial `b256` and `b128`
+9-channel rows are exploratory and should not be mixed into the main table.
 
 After the full one-run matrix is covered and validated, add two more runs for important rows and aggregate them into
 3-run statistics. Use 5 total runs only for high-variance or close-call conclusions.
@@ -129,6 +129,10 @@ Kornia image GPU rows intentionally exclude `Shear` in micro and DataLoader mode
 parameter generator can fail with mixed CPU/CUDA tensors when moved to GPU. Keep `Shear` in the global RGB/9-channel paper
 transform sets for AlbumentationsX, Pillow, torchvision where supported, and Kornia CPU rows; mention this as a benchmark
 methodology limitation.
+
+Kornia 9-channel image GPU rows also exclude `MedianBlur`. The L4 9-channel GPU micro run OOMed on Kornia's median-blur
+temporary allocation after device-resident preload. Keep `MedianBlur` in RGB GPU, CPU, and other-library rows; mention
+this as a Kornia 9-channel GPU memory limitation.
 
 TorchVision image GPU DataLoader rows use a per-sample GPU loop for the measured transform, then batch normalization,
 because TorchVision v2 does not expose a `same_on_batch=False` equivalent for per-image random parameters in batched image

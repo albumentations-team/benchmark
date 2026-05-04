@@ -1,13 +1,14 @@
 # Paper Benchmark Execution Plan
 
-Goal: run the same production benchmark paths first with small inputs locally,
-then repeat them on GCP. These runs are for end-to-end coverage before spending
-compute on tighter paper error bars.
+Goal: finish a focused RGB image augmentation paper first. RGB, 9-channel, and video serve different audiences and have
+different bottlenecks, so the deadline paper should use RGB as the main story and defer 9-channel/video to separate
+papers or optional appendix evidence.
 
 ## Constants
 
 - Local RGB data: set `RGB_DATA_DIR=/path/to/imagenet/val`
-- 9-channel runs use the same RGB data source; the loader stacks 3 RGB copies into 9 channels in memory.
+- 9-channel runs use the same RGB data source; the loader stacks 3 RGB copies into 9 channels in memory. These are
+  deferred from the main RGB paper.
 - GCP project: `albumentations`
 - GCP zone: `us-central1-a` for the current paper commands; override only when GCP reports capacity elsewhere.
 - GCP CPU machine: `c4-standard-16`
@@ -21,14 +22,8 @@ compute on tighter paper error bars.
 - GCP UCF101 tarball: `gs://imagenet_validation/ucf101/ucf101.tar` (uploaded; size `14136559616` bytes)
 - GCP results prefix: `gs://imagenet_validation/augmentation-results`
 - Production micro sizing: `data.num_items: 2000`, `execution.num_runs: 1`
-- Production GPU 9-channel micro sizing: `data.num_items: 1000`, `execution.num_runs: 1`, because L4 cannot preload
-  2000 device-resident 9-channel samples for Kornia without OOM. Label this row separately as a GPU memory-limited
-  device-resident micro measurement.
 - Production RGB DataLoader sizing: `data.num_items: 10000`, `execution.num_runs: 1`, `execution.batch_size: 256`,
   `execution.workers: 8`, `execution.thread_policy: pipeline-default`
-- Production 9-channel DataLoader sizing: `data.num_items: 10000`, `execution.num_runs: 1`, `execution.batch_size: 128`,
-  `execution.workers: 8`, `execution.thread_policy: pipeline-default`. The first CPU 9ch DataLoader attempt at
-  `batch_size: 256` OOM-killed Kornia, so `128` is the uniform main-table setting for all 9-channel libraries.
 - DataLoader scope for paper CPU checks: `memory_dataloader_augment`
 - GPU image smoke sizing: `data.num_items: 100`, `execution.num_runs: 1`
 
@@ -125,6 +120,9 @@ Kornia image GPU jobs intentionally exclude `Shear` in both micro and DataLoader
 shear parameter generator can fail with mixed CPU/CUDA tensors when the transform is moved to GPU. Keep `Shear` in the
 overall RGB/9-channel paper transform sets for AlbumentationsX, Pillow, torchvision where supported, and Kornia CPU rows;
 call out this Kornia GPU limitation in the paper methodology.
+Kornia 9-channel image GPU jobs also exclude `MedianBlur`. The L4 9-channel GPU micro run OOMed when Kornia's
+median-blur implementation requested a multi-GB temporary allocation after device-resident preload. Keep `MedianBlur` in
+RGB GPU, CPU, and other-library rows; call out this Kornia 9-channel GPU memory limitation in the paper methodology.
 GPU image DataLoader smoke configs include TorchVision and Kornia. Both use library-native CPU crop/pad shape preparation
 before collation. Kornia then applies GPU augmentation batched with `same_on_batch=False`; TorchVision applies the measured
 augmentation in a per-sample GPU loop, then normalizes the batch, because TorchVision v2 does not expose a
@@ -209,71 +207,131 @@ for quota in json.loads(raw).get("quotas", []):
 PY
 ```
 
-## TODO: Production First Paper Pass
+## TODO: Production RGB Paper Pass
 
-Use the smoke-tested paths, but launch production configs instead of reusing smoke configs. With the approved CPU quota,
-run several C4 jobs in parallel and at most one G2 job. Use one run per row for the first complete table; add repeat runs
-only after coverage validation.
+Use the smoke-tested RGB paths, but launch production configs instead of reusing smoke configs. With the approved CPU
+quota, run several C4 jobs in parallel and at most one G2 job. Use RGB as the main paper scope; 9-channel and video are
+deferred because they target different audiences and would dilute the deadline story.
 
 ### Wave 1: RGB
 
-- [ ] CPU RGB micro, `2000` images.
+- [ ] CPU RGB micro, `2000` images. First production attempt completed, but used only `1961` valid RGB images before
+  the loader overfetch fix, so do not use it as the final paper row. Rerun as a replacement with `--num-runs 3` if time
+  permits.
+
+  Completed-but-replace prefix:
+  `gs://imagenet_validation/augmentation-results/515d7002723944f9ab3d8a852e050ad2`.
 
 ```bash
 python -m benchmark.cli run --config configs/paper/prod_c4_rgb_micro_cpu.yaml --gcp-zone us-central1-a
+
+python -m benchmark.cli run \
+  --config configs/paper/prod_c4_rgb_micro_cpu.yaml \
+  --num-runs 3 \
+  --output gcp_runs/prod-c4-standard-16-rgb-micro-cpu-r3 \
+  --gcp-zone us-central1-a
 ```
 
-- [ ] GPU RGB micro, `2000` images.
+- [ ] GPU RGB micro, `2000` images. First production attempt completed, but used only `1961` valid RGB images before
+  the loader overfetch fix, so do not use it as the final paper row. Rerun as a replacement with `--num-runs 3` on the
+  single available G2 slot.
+
+  Completed-but-replace prefix:
+  `gs://imagenet_validation/augmentation-results/bafb3a99ac1f41c794d53995a80d54ed`.
 
 ```bash
 python -m benchmark.cli run --config configs/paper/prod_g2_rgb_micro_gpu.yaml --gcp-zone us-central1-a
+
+python -m benchmark.cli run \
+  --config configs/paper/prod_g2_rgb_micro_gpu.yaml \
+  --num-runs 3 \
+  --output gcp_runs/prod-g2-standard-16-rgb-micro-gpu-r3 \
+  --gcp-zone us-central1-a
 ```
 
-- [ ] CPU RGB DataLoader, `10000` images, `batch_size=256`, `workers=8`, `pipeline-default`.
+- [x] CPU RGB DataLoader, `10000` images, `batch_size=256`, `workers=8`, `pipeline-default`.
+
+  Validated prefix: `gs://imagenet_validation/augmentation-results/f56ba6d85367436eb427b8f319e8c12c`.
+  Local artifacts: `gcp_runs/prod-c4-standard-16-rgb-dataloader-cpu/`.
 
 ```bash
 python -m benchmark.cli run --config configs/paper/prod_c4_rgb_dataloader_cpu.yaml --gcp-zone us-central1-a
 ```
 
-- [ ] GPU RGB DataLoader, `10000` images, `batch_size=256`, `workers=8`, `pipeline-default`.
+- [x] GPU RGB DataLoader, `10000` images, `batch_size=256`, `workers=8`, `pipeline-default`.
+
+  Validated prefix: `gs://imagenet_validation/augmentation-results/bc22c7443d284404b694e88a8280bcaf`.
+  Local artifacts: `gcp_runs/prod-g2-standard-16-rgb-dataloader-gpu/`.
+  TorchVision completed cleanly after excluding GPU `JpegCompression`. Kornia has expected unsupported rows for
+  `Affine` and `GaussianIllumination`; measured GPU rows include peak memory fields.
 
 ```bash
 python -m benchmark.cli run --config configs/paper/prod_g2_rgb_dataloader_gpu.yaml --gcp-zone us-central1-a
 ```
 
-### Wave 2: 9-Channel
+### RGB DALI Decision
 
-- [ ] CPU 9-channel micro, `2000` RGB source images stacked to 9 channels.
+- [ ] Decide whether to add an RGB DALI baseline. The current repo has DALI support for video pipeline jobs only
+  (`benchmark/dali_pipeline_worker.py` and `benchmark/adapters/dali_video.py`); there is no RGB DALI image pipeline row
+  yet. If the paper claims GPU augmentation broadly, either implement a small RGB DALI baseline or explicitly state that
+  DALI is out of scope because this paper compares Python library augmentation APIs and tensor GPU paths.
+
+### Deferred: 9-Channel
+
+9-channel is now deferred to a separate multichannel-focused paper or appendix. Do not spend deadline compute on new
+9-channel rows unless the RGB tables are complete. Any active 9-channel VM should be killed.
+
+- [ ] CPU 9-channel micro, `2000` RGB source images stacked to 9 channels. Deferred.
 
 ```bash
 python -m benchmark.cli run --config configs/paper/prod_c4_9ch_micro_cpu.yaml --gcp-zone us-central1-a
 ```
 
-- [ ] GPU 9-channel micro, `1000` RGB source images stacked to 9 channels. The 2000-sample attempt OOMed while
+- [x] GPU 9-channel micro, `1000` RGB source images stacked to 9 channels. The 2000-sample attempt OOMed while
   preloading Kornia tensors to CUDA on L4.
+
+  Validated prefix: `gs://imagenet_validation/augmentation-results/67df2923c39c4c49bd55a79d6d044b7e`.
+  Local artifacts: `gcp_runs/prod-g2-standard-16-9ch-micro-gpu/`.
+  The run completed with `DONE`; Kornia `MedianBlur` OOM was captured as an unsupported transform in that run and did not
+  invalidate subsequent transform rows. Current code excludes Kornia `MedianBlur` for 9-channel GPU rows.
 
 ```bash
 python -m benchmark.cli run --config configs/paper/prod_g2_9ch_micro_gpu.yaml --gcp-zone us-central1-a
 ```
 
-- [ ] CPU 9-channel DataLoader, `10000` RGB source images stacked to 9 channels, `batch_size=128`, `workers=8`,
-  `pipeline-default`.
+- [ ] CPU 9-channel DataLoader. Deferred. Attempts at `batch_size=256` and `batch_size=128` OOM-killed Kornia on
+  `c4-standard-16`; a `batch_size=64` rerun was started and then intentionally killed after narrowing the paper to RGB.
 
 ```bash
-python -m benchmark.cli run --config configs/paper/prod_c4_9ch_dataloader_cpu.yaml --gcp-zone us-central1-a
+python -m benchmark.cli run \
+  --config configs/paper/prod_c4_9ch_dataloader_cpu.yaml \
+  --batch-size 64 \
+  --output gcp_runs/prod-c4-standard-16-9ch-dataloader-cpu-b64 \
+  --gcp-zone us-central1-a
 ```
 
-- [ ] GPU 9-channel DataLoader, `10000` RGB source images stacked to 9 channels, `batch_size=128`, `workers=8`,
+- [x] GPU 9-channel DataLoader, `10000` RGB source images stacked to 9 channels, `batch_size=64`, `workers=8`,
   `pipeline-default`.
 
+  Validated prefix: `gs://imagenet_validation/augmentation-results/2cac287f1ec5452e9ce459e0eefc2aef`.
+  Local artifacts: `gcp_runs/prod-g2-standard-16-9ch-dataloader-gpu-b64/`.
+  Exit code was `0`, `DONE` was present, and the VM log had no OOM/SIGKILL/FAILED markers. TorchVision completed
+  21/21 supported rows with GPU memory fields. Kornia completed 38 rows with expected unsupported `Affine` and
+  `GaussianIllumination`; many Kornia rows were early-stopped by slow preflight and should be reported as unstable/slow
+  rather than job failures.
+
 ```bash
-python -m benchmark.cli run --config configs/paper/prod_g2_9ch_dataloader_gpu.yaml --gcp-zone us-central1-a
+python -m benchmark.cli run \
+  --config configs/paper/prod_g2_9ch_dataloader_gpu.yaml \
+  --batch-size 64 \
+  --output gcp_runs/prod-g2-standard-16-9ch-dataloader-gpu-b64 \
+  --gcp-zone us-central1-a
 ```
 
-### Wave 3: Video
+### Deferred: Video
 
-Run video production sizing only after RGB and 9-channel image tables are secured. Keep the existing video smoke configs
-for path validation until video becomes central to the paper claim.
+Video is now deferred to a separate video-focused paper. Keep the existing video smoke configs and successful smoke
+prefixes as path validation only.
 
 ```bash
 python -m benchmark.cli run --config configs/paper/gcp_g2_video_smoke.yaml

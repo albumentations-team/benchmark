@@ -533,6 +533,9 @@ python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml -
 - Kornia image GPU rows exclude `Shear` in micro and DataLoader modes because Kornia's current CUDA shear parameter
   generator can fail with mixed CPU/CUDA tensors when moved to GPU. Keep `Shear` in the paper transform sets: it still
   runs for AlbumentationsX, Pillow, torchvision where supported, and Kornia CPU rows.
+- Kornia 9-channel image GPU rows also exclude `MedianBlur`. On the L4 9-channel GPU micro run, Kornia's median-blur
+  path requested a multi-GB temporary allocation after device-resident preload and OOMed. Keep `MedianBlur` in RGB GPU,
+  CPU, and other-library rows; treat the exclusion as a Kornia 9-channel GPU memory limitation.
 - Kornia RGB GPU DataLoader may record `GaussianIllumination` as unsupported because the current recipe path can hit a
   mixed CPU/CUDA tensor error. Keep this as a library/device limitation in the methodology rather than removing
   `GaussianIllumination` globally from CPU or other-library rows.

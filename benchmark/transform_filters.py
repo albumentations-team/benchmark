@@ -4,6 +4,12 @@ from typing import Any
 
 KORNIA_GPU_IMAGE_EXCLUDED_NAMES = frozenset({"Shear"})
 KORNIA_GPU_IMAGE_EXCLUDED_RECIPES = frozenset({"RandomCrop224+Shear+Normalize+ToTensor"})
+KORNIA_GPU_9CH_IMAGE_EXCLUDED_NAMES = frozenset({"MedianBlur"})
+KORNIA_GPU_9CH_IMAGE_EXCLUDED_RECIPES = frozenset(
+    {
+        "RandomCrop224+MedianBlur+Normalize+ToTensor",
+    },
+)
 TORCHVISION_GPU_IMAGE_EXCLUDED_NAMES = frozenset({"JpegCompression"})
 TORCHVISION_GPU_IMAGE_EXCLUDED_RECIPES = frozenset({"RandomCrop224+JpegCompression+Normalize+ToTensor"})
 
@@ -11,6 +17,7 @@ TORCHVISION_GPU_IMAGE_EXCLUDED_RECIPES = frozenset({"RandomCrop224+JpegCompressi
 def filter_transforms_for_library_device(
     transforms: tuple[str, ...],
     *,
+    scenario: str | None = None,
     library: str,
     media: str,
     device: str,
@@ -23,6 +30,8 @@ def filter_transforms_for_library_device(
 
     if library == "kornia":
         excluded = KORNIA_GPU_IMAGE_EXCLUDED_NAMES | KORNIA_GPU_IMAGE_EXCLUDED_RECIPES
+        if scenario == "image-9ch":
+            excluded = excluded | KORNIA_GPU_9CH_IMAGE_EXCLUDED_NAMES | KORNIA_GPU_9CH_IMAGE_EXCLUDED_RECIPES
     elif library == "torchvision":
         excluded = TORCHVISION_GPU_IMAGE_EXCLUDED_NAMES | TORCHVISION_GPU_IMAGE_EXCLUDED_RECIPES
     else:
@@ -33,13 +42,14 @@ def filter_transforms_for_library_device(
 def filter_transform_dicts_for_library_device(
     transforms: list[dict[str, Any]],
     *,
+    scenario: str | None = None,
     library: str,
     media: str,
     device: str,
 ) -> list[dict[str, Any]]:
     names = tuple(str(transform["name"]) for transform in transforms)
     filtered_names = set(
-        filter_transforms_for_library_device(names, library=library, media=media, device=device),
+        filter_transforms_for_library_device(names, scenario=scenario, library=library, media=media, device=device),
     )
     if len(filtered_names) == len(names):
         return transforms

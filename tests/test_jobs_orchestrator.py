@@ -85,14 +85,14 @@ def test_job_can_be_built_from_run_config(tmp_path: Path) -> None:
     assert job.device == "cuda"
 
 
-def test_kornia_gpu_image_micro_excludes_shear(tmp_path: Path) -> None:
+def test_kornia_gpu_rgb_image_micro_excludes_shear_but_keeps_median_blur(tmp_path: Path) -> None:
     config = BenchmarkRunConfig.model_validate(
         {
             "selection": {
                 "scenario": "image-rgb",
                 "mode": "micro",
                 "libraries": ["kornia"],
-                "transforms": ["Resize", "Shear", "HorizontalFlip"],
+                "transforms": ["Resize", "MedianBlur", "Shear", "HorizontalFlip"],
             },
             "data": {"data_dir": "/data"},
             "output": {"output_dir": "/out"},
@@ -110,9 +110,9 @@ def test_kornia_gpu_image_micro_excludes_shear(tmp_path: Path) -> None:
         spec_file=tmp_path / "spec.py",
     )
 
-    assert job.transforms_filter == ("Resize", "HorizontalFlip")
+    assert job.transforms_filter == ("Resize", "MedianBlur", "HorizontalFlip")
     cmd = job.micro_command(tmp_path / ".venv" / "bin" / "python")
-    assert cmd[cmd.index("--transforms") + 1] == "Resize,HorizontalFlip"
+    assert cmd[cmd.index("--transforms") + 1] == "Resize,MedianBlur,HorizontalFlip"
 
 
 def test_kornia_cpu_image_keeps_shear(tmp_path: Path) -> None:
@@ -143,7 +143,7 @@ def test_kornia_cpu_image_keeps_shear(tmp_path: Path) -> None:
     assert job.transforms_filter == ("Resize", "Shear")
 
 
-def test_kornia_gpu_image_pipeline_excludes_shear_recipe(tmp_path: Path) -> None:
+def test_kornia_gpu_rgb_image_pipeline_excludes_shear_but_keeps_median_blur_recipe(tmp_path: Path) -> None:
     config = BenchmarkRunConfig.model_validate(
         {
             "selection": {
@@ -152,6 +152,7 @@ def test_kornia_gpu_image_pipeline_excludes_shear_recipe(tmp_path: Path) -> None
                 "libraries": ["kornia"],
                 "transforms": [
                     "RandomCrop224+Resize+Normalize+ToTensor",
+                    "RandomCrop224+MedianBlur+Normalize+ToTensor",
                     "RandomCrop224+Shear+Normalize+ToTensor",
                 ],
             },
@@ -171,8 +172,14 @@ def test_kornia_gpu_image_pipeline_excludes_shear_recipe(tmp_path: Path) -> None
         spec_file=tmp_path / "spec.py",
     )
 
-    assert job.transforms_filter == ("RandomCrop224+Resize+Normalize+ToTensor",)
-    assert job.env_extra()["BENCHMARK_TRANSFORMS_FILTER"] == "RandomCrop224+Resize+Normalize+ToTensor"
+    assert job.transforms_filter == (
+        "RandomCrop224+Resize+Normalize+ToTensor",
+        "RandomCrop224+MedianBlur+Normalize+ToTensor",
+    )
+    assert (
+        job.env_extra()["BENCHMARK_TRANSFORMS_FILTER"]
+        == "RandomCrop224+Resize+Normalize+ToTensor,RandomCrop224+MedianBlur+Normalize+ToTensor"
+    )
 
 
 def test_torchvision_gpu_image_micro_excludes_jpeg_compression(tmp_path: Path) -> None:
@@ -262,14 +269,14 @@ def test_torchvision_cpu_image_keeps_jpeg_compression(tmp_path: Path) -> None:
     assert job.transforms_filter == ("Resize", "JpegCompression")
 
 
-def test_kornia_gpu_9ch_image_excludes_shear(tmp_path: Path) -> None:
+def test_kornia_gpu_9ch_image_excludes_known_gpu_limitations(tmp_path: Path) -> None:
     config = BenchmarkRunConfig.model_validate(
         {
             "selection": {
                 "scenario": "image-9ch",
                 "mode": "micro",
                 "libraries": ["kornia"],
-                "transforms": ["Resize", "Shear", "HorizontalFlip"],
+                "transforms": ["Resize", "MedianBlur", "Shear", "HorizontalFlip"],
             },
             "data": {"data_dir": "/data"},
             "output": {"output_dir": "/out"},
@@ -288,6 +295,66 @@ def test_kornia_gpu_9ch_image_excludes_shear(tmp_path: Path) -> None:
     )
 
     assert job.transforms_filter == ("Resize", "HorizontalFlip")
+
+
+def test_kornia_gpu_9ch_image_pipeline_excludes_median_blur_and_shear_recipes(tmp_path: Path) -> None:
+    config = BenchmarkRunConfig.model_validate(
+        {
+            "selection": {
+                "scenario": "image-9ch",
+                "mode": "pipeline",
+                "libraries": ["kornia"],
+                "transforms": [
+                    "RandomCrop224+Resize+Normalize+ToTensor",
+                    "RandomCrop224+MedianBlur+Normalize+ToTensor",
+                    "RandomCrop224+Shear+Normalize+ToTensor",
+                ],
+            },
+            "data": {"data_dir": "/data"},
+            "output": {"output_dir": "/out"},
+            "execution": {"device": "cuda"},
+        },
+    )
+
+    job = BenchmarkJob.from_run_config(
+        library="kornia",
+        config=config,
+        data_dir=tmp_path / "data",
+        output_file=tmp_path / "out.json",
+        num_channels=9,
+        clip_length=16,
+        spec_file=tmp_path / "spec.py",
+    )
+
+    assert job.transforms_filter == ("RandomCrop224+Resize+Normalize+ToTensor",)
+
+
+def test_kornia_cpu_9ch_image_keeps_median_blur(tmp_path: Path) -> None:
+    config = BenchmarkRunConfig.model_validate(
+        {
+            "selection": {
+                "scenario": "image-9ch",
+                "mode": "micro",
+                "libraries": ["kornia"],
+                "transforms": ["Resize", "MedianBlur"],
+            },
+            "data": {"data_dir": "/data"},
+            "output": {"output_dir": "/out"},
+            "execution": {"device": "none"},
+        },
+    )
+
+    job = BenchmarkJob.from_run_config(
+        library="kornia",
+        config=config,
+        data_dir=tmp_path / "data",
+        output_file=tmp_path / "out.json",
+        num_channels=9,
+        clip_length=16,
+        spec_file=tmp_path / "spec.py",
+    )
+
+    assert job.transforms_filter == ("Resize", "MedianBlur")
 
 
 def test_job_from_run_config_rejects_decode_mode(tmp_path: Path) -> None:
