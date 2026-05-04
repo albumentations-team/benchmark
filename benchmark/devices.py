@@ -41,7 +41,7 @@ def ensure_supported_device(library: str, media: str, device: str, *, mode: str 
         return
     if media == "video":
         return
-    if media == "image" and mode == "pipeline" and library in {"torchvision", "kornia"}:
+    if media == "image" and mode == "pipeline" and library in {"torchvision", "kornia", "dali"}:
         return
     if media == "image" and library in {"torchvision", "kornia"}:
         return

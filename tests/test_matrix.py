@@ -25,6 +25,7 @@ def test_matrix_covers_rgb_9ch_video_and_dali_pipeline() -> None:
     keys = {(entry.scenario, entry.mode, entry.library, entry.backend) for entry in entries}
 
     assert ("image-rgb", "micro", "albumentationsx", "pyperf") in keys
+    assert ("image-rgb", "pipeline", "dali", "dali_pipeline") in keys
     assert ("image-9ch", "pipeline", "kornia", "pipeline") in keys
     assert ("video-16f", "micro", "torchvision", "pyperf") in keys
     assert ("video-16f", "pipeline", "dali", "dali_pipeline") in keys
@@ -54,5 +55,6 @@ def test_pipeline_device_policy_includes_gpu_and_mps_where_applicable() -> None:
     assert entries[("image-rgb", "micro", "pillow")].devices == ("none",)
     assert entries[("image-rgb", "pipeline", "torchvision")].devices == ("none", "cuda", "mps", "auto")
     assert entries[("image-rgb", "pipeline", "kornia")].devices == ("none", "cuda", "mps", "auto")
+    assert entries[("image-rgb", "pipeline", "dali")].devices == ("cuda", "auto")
     assert entries[("image-rgb", "pipeline", "pillow")].devices == ("none",)
     assert entries[("video-16f", "pipeline", "dali")].devices == ("cuda", "auto")

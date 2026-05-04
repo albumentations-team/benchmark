@@ -452,10 +452,26 @@ class PipelineBenchmarkRunner:
 
     def _run_transform(self, transform_dict: dict[str, Any], paths: list[Path]) -> dict[str, Any]:
         if self.library == "dali":
-            from benchmark.adapters.dali_video import run_dali_video_transform
             from benchmark.decoders import DecoderUnavailableError
 
+            self._last_device = "cuda" if self.device in {"cuda", "auto"} else None
             try:
+                if self.media == "image":
+                    from benchmark.adapters.dali_image import run_dali_image_transform
+
+                    return run_dali_image_transform(
+                        transform_name=str(transform_dict["name"]),
+                        spec=dict(transform_dict["transform"] or {}),
+                        paths=paths,
+                        batch_size=self.batch_size,
+                        num_runs=self.num_runs,
+                        workers=self.workers,
+                        min_time=self.min_time,
+                        min_batches=self.min_batches,
+                    )
+
+                from benchmark.adapters.dali_video import run_dali_video_transform
+
                 return run_dali_video_transform(
                     transform_name=str(transform_dict["name"]),
                     params=dict(transform_dict["transform"] or {}),
@@ -588,7 +604,9 @@ class PipelineBenchmarkRunner:
             self.pipeline_scope == "decode_dataloader_augment_batch_copy" and self._last_device is not None
         ) or (self.media == "image" and self.library in {"torchvision", "kornia"} and self._last_device is not None)
         transform_on_device = (
-            self.media == "image" and self.library in {"torchvision", "kornia"} and self._last_device is not None
+            self.media == "image"
+            and self.library in {"torchvision", "kornia", "dali"}
+            and self._last_device is not None
         )
         payload = {
             "metadata": build_metadata(

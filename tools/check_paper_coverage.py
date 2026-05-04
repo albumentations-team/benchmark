@@ -38,6 +38,7 @@ CORE_REQUIREMENTS: tuple[CoverageRequirement, ...] = (
         scenario="image-rgb",
         mode="pipeline",
         libraries=("albumentationsx", "torchvision", "kornia", "pillow"),
+        optional_libraries=("dali",),
         pipeline_scopes=("memory_dataloader_augment", "decode_dataloader_augment"),
     ),
     CoverageRequirement(

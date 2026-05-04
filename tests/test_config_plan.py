@@ -50,6 +50,22 @@ def test_plan_lists_production_gpu_pipeline_outputs() -> None:
     ) in plan.expected_outputs
 
 
+def test_plan_lists_dali_rgb_pipeline_job() -> None:
+    config = load_run_config(Path("configs/paper/prod_g2_rgb_dataloader_dali.yaml"))
+
+    plan = build_run_plan(config, Path.cwd())
+
+    assert [job.library for job in plan.jobs] == ["dali"]
+    assert plan.jobs[0].backend == "dali_pipeline"
+    assert plan.jobs[0].media == "image"
+    assert plan.jobs[0].spec_file is None
+    assert plan.jobs[0].device == "cuda"
+    assert (
+        "/root/benchmark-work/results/image-rgb/pipeline/"
+        "dali_decode_dataloader_augment_n10000_r1_w8_b256_dev-cuda_results.json"
+    ) in plan.expected_outputs
+
+
 def test_plan_lists_decode_sidecar_and_combined_outputs() -> None:
     data = load_run_config(Path("configs/paper/gcp_g2_video_smoke.yaml")).model_dump()
     data["selection"] = {"scenario": "video-decode-16f", "mode": "decode", "decoders": ["opencv", "pyav"]}

@@ -22,7 +22,8 @@ features in these modules unless there is a strong reason to put logic directly 
 - `benchmark/jobs.py` defines immutable `BenchmarkJob` objects and builds subprocess commands for micro and pipeline jobs.
 - `benchmark/orchestrator.py` executes jobs and owns backend dispatch. The `dali_pipeline` backend runs in a subprocess
   (`benchmark/dali_pipeline_worker.py`) using the DALI venv Python from `benchmark/envs.py`, so DALI is imported only after
-  `requirements/dali-video.txt` is installed or refreshed.
+  `requirements/dali-video.txt` is installed or refreshed. That backend is used for DALI video pipelines and RGB image
+  GPU DataLoader-style pipelines.
 - `benchmark/envs.py` owns virtualenv creation, requirement lock refresh, dependency cache keys, and dependency installs.
 - `benchmark/output_naming.py` owns result filename rules shared by execution and dry-run plans, including device suffixes.
 - `benchmark/cloud/paths.py` owns detached-VM path constants and GCS-to-staged-data path inference shared by plans and
@@ -76,8 +77,10 @@ features in these modules unless there is a strong reason to put logic directly 
   CUDA DataLoader rows reset CUDA peak memory stats immediately before each timed run and store peak allocated/reserved
   bytes under each transform result. Pyperf micro rows do not expose peak memory because timing happens in pyperf worker
   processes.
-- DALI video pipeline runs are represented as `BenchmarkJob(backend="dali_pipeline")` and dispatched by
-  `benchmark/orchestrator.py` via `benchmark/dali_pipeline_worker.py`, not by CLI special cases.
+- DALI pipeline runs are represented as `BenchmarkJob(backend="dali_pipeline")` and dispatched by
+  `benchmark/orchestrator.py` via `benchmark/dali_pipeline_worker.py`, not by CLI special cases. DALI image runs use
+  `fn.readers.file` plus mixed image decode and benchmark only the DALI-supported RGB recipe subset; unsupported recipes
+  are reported as unsupported results.
 
 ## Scenario Flow
 

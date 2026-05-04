@@ -40,7 +40,7 @@ SCENARIOS: dict[str, Scenario] = {
         default_mode="micro",
         num_channels=3,
         micro_libraries=("albumentationsx", "torchvision", "kornia", "pillow"),
-        pipeline_libraries=("albumentationsx", "torchvision", "kornia", "pillow"),
+        pipeline_libraries=("albumentationsx", "torchvision", "kornia", "pillow", "dali"),
     ),
     "image-9ch": Scenario(
         name="image-9ch",

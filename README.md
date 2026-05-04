@@ -714,7 +714,7 @@ The implementation is split between a control plane and timing engines:
 - `benchmark/matrix.py`: declarative scenario/library/mode matrix.
 - `benchmark/policy.py`: shared media defaults and slow-transform policy.
 - `benchmark/jobs.py`: immutable `BenchmarkJob` plus subprocess command construction.
-- `benchmark/orchestrator.py`: backend dispatch, including DALI video pipeline jobs.
+- `benchmark/orchestrator.py`: backend dispatch, including DALI image/video pipeline jobs.
 - `benchmark/envs.py`: virtualenvs, requirement refresh, and dependency cache keys.
 - `benchmark/specs/load.py`: transform spec loading and validation.
 - `benchmark/media/loaders.py`: RGB, 9-channel, and video media loading for micro benchmarks.

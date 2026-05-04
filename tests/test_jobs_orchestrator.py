@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
+from benchmark.adapters.dali_image import run_dali_image_transform
 from benchmark.config import load_run_config
 from benchmark.config.models import BenchmarkRunConfig
 from benchmark.dali_pipeline_worker import benchmark_job_from_json_dict
@@ -439,6 +440,35 @@ def test_execute_job_runs_dali_via_subprocess_after_venv(tmp_path: Path) -> None
     assert Path(cmd[4]).suffix == ".json"
 
 
+def test_execute_image_dali_job_uses_image_venv(tmp_path: Path) -> None:
+    job = BenchmarkJob(
+        library="dali",
+        scenario="image-rgb",
+        mode="pipeline",
+        media="image",
+        data_dir=tmp_path / "images",
+        output_file=tmp_path / "dali.json",
+        num_items=2,
+        num_runs=1,
+        num_channels=3,
+        pipeline_scope="decode_dataloader_augment",
+        device="cuda",
+        backend="dali_pipeline",
+    )
+
+    fake_python = tmp_path / "fake-venv" / "bin" / "python"
+    fake_python.parent.mkdir(parents=True)
+
+    with (
+        patch("benchmark.envs.ensure_venv", return_value=fake_python) as ensure,
+        patch("benchmark.orchestrator.subprocess.run") as run,
+    ):
+        execute_job(job, repo_root=tmp_path)
+
+    ensure.assert_called_once_with("dali", "image", tmp_path, refresh_requirements=True)
+    run.assert_called_once()
+
+
 def test_dali_job_json_roundtrip_preserves_paths(tmp_path: Path) -> None:
     job = BenchmarkJob(
         library="dali",
@@ -457,6 +487,41 @@ def test_dali_job_json_roundtrip_preserves_paths(tmp_path: Path) -> None:
     )
     raw = json.loads(json.dumps(asdict(job), default=str))
     assert benchmark_job_from_json_dict(raw) == job
+
+
+def test_dali_image_job_json_roundtrip_preserves_paths(tmp_path: Path) -> None:
+    job = BenchmarkJob(
+        library="dali",
+        scenario="image-rgb",
+        mode="pipeline",
+        media="image",
+        data_dir=tmp_path / "images",
+        output_file=tmp_path / "out.json",
+        num_items=10,
+        num_runs=1,
+        num_channels=3,
+        spec_file=None,
+        transforms_filter=("RandomCrop224+Resize+Normalize+ToTensor",),
+        pipeline_scope="decode_dataloader_augment",
+        device="cuda",
+        backend="dali_pipeline",
+    )
+    raw = json.loads(json.dumps(asdict(job), default=str))
+    assert benchmark_job_from_json_dict(raw) == job
+
+
+def test_dali_image_unsupported_transform_returns_unsupported_result(tmp_path: Path) -> None:
+    result = run_dali_image_transform(
+        transform_name="RandomCrop224+Perspective+Normalize+ToTensor",
+        spec={"name": "Perspective", "params": {}},
+        paths=[tmp_path / "image.jpg"],
+        batch_size=1,
+        num_runs=1,
+        workers=1,
+    )
+
+    assert result["supported"] is False
+    assert "Perspective" in result["reason"]
 
 
 def test_g2_instance_create_uses_gpu_maintenance_policy_without_accelerator_flag() -> None:

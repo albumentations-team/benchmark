@@ -227,11 +227,13 @@ Run these for video/GPU tables:
   stability issues in that recipe path only. Kornia image GPU rows additionally exclude `Shear`; Kornia 9-channel image
   GPU rows additionally exclude `MedianBlur`. Kornia image CPU rows, 9-channel CPU rows, RGB GPU rows for `MedianBlur`,
   and video micro keep the global paper transform sets.
-- DALI video pipeline benchmarks when DALI is available on the target image.
+- DALI pipeline benchmarks when DALI is available on the target image. Current DALI coverage is video pipeline plus RGB
+  image GPU DataLoader-style pipeline; DALI image rows use the DALI-supported subset and report unsupported recipes
+  explicitly.
 
 CPU-only image rows should not be rerun on GPU machines for hardware symmetry. GPU image rows are a separate
-TorchVision/Kornia sanity section and must be labeled with device, machine class, whether transfer is included, and
-whether TorchVision used the per-sample GPU loop.
+TorchVision/Kornia/DALI sanity section and must be labeled with device, machine class, whether transfer is included, and
+whether TorchVision used the per-sample GPU loop or DALI used its own graph executor.
 
 ### Validation
 
