@@ -34,6 +34,35 @@ class _RandomJigsawWithPad(torch.nn.Module):
         return self.jigsaw(image)[..., :height, :width]
 
 
+class _FixedAffine(torch.nn.Module):
+    def __init__(
+        self,
+        *,
+        angle_degrees: float,
+        translation: tuple[float, float],
+        scale_factor: float,
+        shear: tuple[float, float],
+    ) -> None:
+        super().__init__()
+        self.register_buffer("angle", torch.tensor([angle_degrees], dtype=torch.float32))
+        self.register_buffer("translation", torch.tensor([translation], dtype=torch.float32))
+        self.register_buffer("scale_factor", torch.tensor([[scale_factor, scale_factor]], dtype=torch.float32))
+        self.register_buffer("shear", torch.tensor([shear], dtype=torch.float32))
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        batch_size = int(image.shape[0])
+        transform = kornia.geometry.transform.Affine(
+            angle=self.angle.expand(batch_size),
+            translation=self.translation.expand(batch_size, -1),
+            scale_factor=self.scale_factor.expand(batch_size, -1),
+            shear=self.shear.expand(batch_size, -1),
+            mode="bilinear",
+            padding_mode="zeros",
+            align_corners=True,
+        )
+        return transform(image)
+
+
 # Required: Define how to apply transforms to images
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
     """Apply kornia transform to a single image
@@ -245,14 +274,11 @@ def create_transform(spec: TransformSpec) -> Any | None:
         scale_factor = float(params["scale"])
         shear_value = float(params["shear"]) if isinstance(params["shear"], int | float) else 0.0
 
-        return kornia.geometry.transform.Affine(
-            angle=torch.tensor([angle_degrees]),
-            translation=torch.tensor([[tx, ty]]),
-            scale_factor=torch.tensor([[scale_factor, scale_factor]]),
-            shear=torch.tensor([[shear_value, shear_value]]),
-            mode="bilinear",
-            padding_mode="zeros",
-            align_corners=True,
+        return _FixedAffine(
+            angle_degrees=angle_degrees,
+            translation=(tx, ty),
+            scale_factor=scale_factor,
+            shear=(shear_value, shear_value),
         )
     if spec.name == "RandomCrop224":
         return Kaug.RandomCrop(
