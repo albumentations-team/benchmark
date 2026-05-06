@@ -46,21 +46,42 @@ def load_result_file(path: Path) -> tuple[str, str, dict[str, Any], dict[str, An
     with path.open() as f:
         data = json.load(f)
 
+    metadata = data.get("metadata", {})
+    if not isinstance(metadata, dict):
+        metadata = {}
+    results = data.get("results", {})
+    if not isinstance(results, dict):
+        results = {}
+
     stem = path.stem
     if "_video_results" in stem:
-        library = stem.replace("_video_results", "")
-        media = "video"
+        parsed_library = stem.replace("_video_results", "")
+        parsed_media = "video"
     elif "_micro_results" in stem:
-        library = stem.replace("_micro_results", "")
-        media = "image"
+        parsed_library = stem.replace("_micro_results", "")
+        parsed_media = "image"
     elif "_pipeline_results" in stem:
-        library = stem.replace("_pipeline_results", "")
-        media = "image"
+        parsed_library = stem.replace("_pipeline_results", "")
+        parsed_media = "image"
     else:
-        library = stem.replace("_results", "")
-        media = "image"
+        parsed_library = stem.replace("_results", "")
+        parsed_media = "image"
 
-    return library, media, data.get("metadata", {}), data.get("results", {})
+    metadata_library = metadata.get("library")
+    library = metadata_library if isinstance(metadata_library, str) and metadata_library else parsed_library
+
+    run_config = metadata.get("run_config", {})
+    selection = run_config.get("selection", {}) if isinstance(run_config, dict) else {}
+    metadata_media = metadata.get("media") or (selection.get("media") if isinstance(selection, dict) else None)
+    scenario = metadata.get("scenario") or (selection.get("scenario") if isinstance(selection, dict) else None)
+    if metadata_media in {"image", "video"}:
+        media = metadata_media
+    elif isinstance(scenario, str) and scenario.startswith("video"):
+        media = "video"
+    else:
+        media = parsed_media
+
+    return library, media, metadata, results
 
 
 def load_results_dir(directory: Path) -> dict[str, dict[str, Any]]:
@@ -157,6 +178,7 @@ def format_comparison_table(
     libraries_filter: list[str] | None = None,
     transforms_filter: list[str] | None = None,
     *,
+    name_header: str = "Transform",
     speedup_header: str = "Speedup (albx / fastest, +/-1sd)",
     speedup_ref_library: str = "albumentationsx",
 ) -> str:
@@ -186,7 +208,7 @@ def format_comparison_table(
         lib_label = _markdown_table_library_label(entry["library"])
         return f"{lib_label}{suffix} {version} [{unit}]"
 
-    headers = ["Transform", *[col_header(k) for k in lib_keys], speedup_header]
+    headers = [name_header, *[col_header(k) for k in lib_keys], speedup_header]
 
     rows: list[list[str]] = []
     for transform in sorted_transforms:

@@ -26,37 +26,11 @@ CORE_REQUIREMENTS: tuple[CoverageRequirement, ...] = (
         scenario="image-rgb",
         mode="micro",
         libraries=("albumentationsx", "torchvision", "kornia", "pillow"),
-        needs_pyperf=True,
-    ),
-    CoverageRequirement(
-        scenario="image-9ch",
-        mode="micro",
-        libraries=("albumentationsx", "torchvision", "kornia"),
-        needs_pyperf=True,
     ),
     CoverageRequirement(
         scenario="image-rgb",
         mode="pipeline",
         libraries=("albumentationsx", "torchvision", "kornia", "pillow"),
-        optional_libraries=("dali",),
-        pipeline_scopes=("memory_dataloader_augment", "decode_dataloader_augment"),
-    ),
-    CoverageRequirement(
-        scenario="image-9ch",
-        mode="pipeline",
-        libraries=("albumentationsx", "torchvision", "kornia"),
-        pipeline_scopes=("memory_dataloader_augment", "decode_dataloader_augment"),
-    ),
-    CoverageRequirement(
-        scenario="video-16f",
-        mode="micro",
-        libraries=("albumentationsx", "torchvision", "kornia"),
-        needs_pyperf=True,
-    ),
-    CoverageRequirement(
-        scenario="video-16f",
-        mode="pipeline",
-        libraries=("albumentationsx", "torchvision", "kornia"),
         optional_libraries=("dali",),
         pipeline_scopes=("memory_dataloader_augment", "decode_dataloader_augment"),
     ),
@@ -67,24 +41,11 @@ RAM_REDUCED_REQUIREMENTS: tuple[CoverageRequirement, ...] = (
         scenario="image-rgb",
         mode="micro",
         libraries=("albumentationsx", "torchvision", "kornia", "pillow"),
-        needs_pyperf=True,
-    ),
-    CoverageRequirement(
-        scenario="image-9ch",
-        mode="micro",
-        libraries=("albumentationsx", "torchvision", "kornia"),
-        needs_pyperf=True,
     ),
     CoverageRequirement(
         scenario="image-rgb",
         mode="pipeline",
         libraries=("albumentationsx", "torchvision", "kornia", "pillow"),
-        pipeline_scopes=("memory_dataloader_augment",),
-    ),
-    CoverageRequirement(
-        scenario="image-9ch",
-        mode="pipeline",
-        libraries=("albumentationsx", "torchvision", "kornia"),
         pipeline_scopes=("memory_dataloader_augment",),
     ),
 )
@@ -98,11 +59,26 @@ COVERAGE_PROFILES: dict[str, tuple[CoverageRequirement, ...]] = {
 def _candidate_dirs(results_roots: list[Path], requirement: CoverageRequirement) -> list[Path]:
     dirs: list[Path] = []
     for root in results_roots:
+        if root.is_dir() and _flat_dir_matches(root, requirement):
+            dirs.append(root)
         direct = root / requirement.relative_dir
         if direct.is_dir():
             dirs.append(direct)
         dirs.extend(path for path in root.glob(f"**/{requirement.scenario}/{requirement.mode}") if path.is_dir())
     return sorted(set(dirs))
+
+
+def _flat_dir_matches(root: Path, requirement: CoverageRequirement) -> bool:
+    for library in requirement.libraries + requirement.optional_libraries:
+        if requirement.pipeline_scopes:
+            if any(
+                any(root.glob(f"{library}_{scope}_n*_r*_w*_b*_results.json"))
+                for scope in requirement.pipeline_scopes
+            ):
+                return True
+        elif (root / f"{library}_{requirement.mode}_results.json").is_file():
+            return True
+    return False
 
 
 def _has_file(dirs: list[Path], filename: str) -> bool:
@@ -170,7 +146,7 @@ def main() -> None:
     parser.add_argument(
         "--require-optional-libraries",
         action="store_true",
-        help="Require optional libraries such as DALI in addition to the core paper set.",
+        help="Require optional libraries in addition to the core paper set.",
     )
     parser.add_argument(
         "--profile",

@@ -23,11 +23,23 @@ old video
 
 <!-- VIDEO_BENCHMARK_TABLE_END -->
 
+<!-- DATALOADER_BENCHMARK_TABLE_START -->
+
+old dataloader
+
+<!-- DATALOADER_BENCHMARK_TABLE_END -->
+
 <!-- IMAGE_SPEEDUP_SUMMARY_START -->
 
 old image summary
 
 <!-- IMAGE_SPEEDUP_SUMMARY_END -->
+
+<!-- DATALOADER_SPEEDUP_SUMMARY_START -->
+
+old dataloader summary
+
+<!-- DATALOADER_SPEEDUP_SUMMARY_END -->
 """
 
 
@@ -48,6 +60,28 @@ def test_patch_readme_can_update_rgb_without_touching_video(tmp_path: Path) -> N
     assert "new rgb table" in content
     assert "new rgb summary" in content
     assert "old video" in content
+    assert "old dataloader" in content
+
+
+def test_patch_readme_can_update_dataloader_table(tmp_path: Path) -> None:
+    readme = tmp_path / "README.md"
+    readme.write_text(_readme_with_markers())
+
+    changed = patch_readme(
+        readme,
+        image_table=None,
+        video_table=None,
+        image_summary=None,
+        video_summary=None,
+        dataloader_table="new dataloader table",
+        dataloader_summary="new dataloader summary",
+    )
+
+    content = readme.read_text()
+    assert changed
+    assert "new dataloader table" in content
+    assert "new dataloader summary" in content
+    assert "old image" in content
 
 
 def test_patch_readme_reports_no_change_when_no_sections_requested(tmp_path: Path) -> None:

@@ -1,6 +1,7 @@
-# Video Paper Transform Set
+# Video Additional Transform Set
 
-Video micro benchmarks use three libraries:
+Video micro benchmarks use three libraries. This set is retained for additional website/material runs; it is not part of
+the current RGB paper artifact.
 
 - `albumentationsx`
 - `torchvision`

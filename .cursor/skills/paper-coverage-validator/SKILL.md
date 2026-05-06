@@ -1,6 +1,6 @@
 ---
 name: paper-coverage-validator
-description: Validates whether benchmark artifacts cover the paper's required RGB, multichannel, DataLoader, and video sections. Use when checking missing runs, deciding what to run next, validating gcp_runs/output folders, or preparing paper tables.
+description: Validates whether benchmark artifacts cover the paper's required RGB micro and RGB DataLoader sections. Use when checking missing RGB runs, deciding what to run next, validating gcp_runs/output folders, or preparing paper tables.
 ---
 
 # Paper Coverage Validator
@@ -25,25 +25,22 @@ Require optional libraries such as DALI:
 python -m tools.check_paper_coverage gcp_runs output --require-optional-libraries
 ```
 
-## Required Core Sections
+## Required Paper Core Sections
 
 - `image-rgb/micro`: AlbumentationsX, torchvision, Kornia, Pillow; summary + pyperf.
-- `image-9ch/micro`: AlbumentationsX, torchvision, Kornia; summary + pyperf.
 - `image-rgb/pipeline`: AlbumentationsX, torchvision, Kornia, Pillow.
-- `image-9ch/pipeline`: AlbumentationsX, torchvision, Kornia.
-- `video-16f/micro`: AlbumentationsX, torchvision, Kornia; summary + pyperf.
-- `video-16f/pipeline`: AlbumentationsX, torchvision, Kornia; DALI optional unless explicitly required.
+
+9-channel and video benchmarks are still supported by the codebase, docs, and transform sets, but they are not required
+for the current RGB paper artifact.
 
 ## RAM-Reduced Profile
 
 `--profile ram-reduced` intentionally checks only:
 
 - RGB micro.
-- 9-channel micro.
 - RGB `memory_dataloader_augment`.
-- 9-channel `memory_dataloader_augment`.
 
-It does not require decode DataLoader runs or video runs.
+It does not require decode DataLoader, 9-channel, or video runs.
 
 ## What To Do With Failures
 

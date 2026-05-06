@@ -68,6 +68,36 @@ def test_publish_results_copies_summary_jsons_and_manifest(tmp_path: Path) -> No
     assert manifest["entries"][0]["system_info"]["python_executable"] == "<external-path>"
 
 
+def test_publish_results_manifest_uses_metadata_library_for_pipeline_names(tmp_path: Path) -> None:
+    source = tmp_path / "output" / "image-rgb" / "pipeline"
+    source.mkdir(parents=True)
+    result = {
+        "metadata": {
+            "library": "albumentationsx",
+            "library_versions": {"albumentationsx": "2.2.6"},
+            "benchmark_params": {"pipeline_scope": "memory_dataloader_augment"},
+        },
+        "results": {"RandomCrop224+Normalize+ToTensor": {"supported": True, "median_throughput": 123.0}},
+    }
+    (source / "albumentationsx_memory_dataloader_augment_n10000_r2_w8_b256_results.json").write_text(
+        json.dumps(result),
+        encoding="utf-8",
+    )
+
+    destination = tmp_path / "results" / "published" / "paper-rgb-dataloader"
+    publish_results(
+        source_dir=source,
+        destination_dir=destination,
+        purpose="paper-rgb-dataloader",
+        machine="test-machine",
+    )
+
+    manifest = json.loads((destination / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["libraries"] == ["albumentationsx"]
+    assert manifest["library_versions"] == {"albumentationsx": "2.2.6"}
+    assert manifest["entries"][0]["library"] == "albumentationsx"
+
+
 def test_publish_results_rejects_file_destination(tmp_path: Path) -> None:
     source = tmp_path / "output"
     source.mkdir()

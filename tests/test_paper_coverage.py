@@ -27,7 +27,7 @@ def test_missing_artifacts_reports_empty_tree(tmp_path: Path) -> None:
     missing = missing_artifacts([tmp_path])
 
     assert "image-rgb/micro: missing result directory" in missing
-    assert "video-16f/pipeline: missing result directory" in missing
+    assert "image-rgb/pipeline: missing result directory" in missing
 
 
 def test_complete_core_artifacts_pass(tmp_path: Path) -> None:
@@ -53,7 +53,7 @@ def test_nested_run_directories_are_scanned(tmp_path: Path) -> None:
     assert missing_artifacts([tmp_path]) == []
 
 
-def test_optional_dali_is_not_required_by_default(tmp_path: Path) -> None:
+def test_optional_libraries_are_not_required_by_default(tmp_path: Path) -> None:
     for requirement in CORE_REQUIREMENTS:
         for library in requirement.libraries:
             for filename in _sample_summary_files(requirement, library):
@@ -63,11 +63,10 @@ def test_optional_dali_is_not_required_by_default(tmp_path: Path) -> None:
 
     assert missing_artifacts([tmp_path], require_optional_libraries=True) == [
         "image-rgb/pipeline: missing dali_decode_dataloader_augment_n*_r*_w*_b*_results.json",
-        "video-16f/pipeline: missing dali_decode_dataloader_augment_n*_r*_w*_b*_results.json",
     ]
 
 
-def test_ram_reduced_profile_does_not_require_decode_or_video(tmp_path: Path) -> None:
+def test_ram_reduced_profile_does_not_require_decode(tmp_path: Path) -> None:
     for requirement in RAM_REDUCED_REQUIREMENTS:
         for library in requirement.libraries:
             for filename in _sample_summary_files(requirement, library):
