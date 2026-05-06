@@ -149,10 +149,18 @@ class BenchmarkMediaLoader:
     def _load_video_clip(self, path: Path) -> Any:
         if self.library in {"torchvision", "kornia"}:
             import numpy as np
-            import torch
 
             clip = decode_video("opencv", path, self.clip_length).frames
-            tensor = torch.from_numpy(np.ascontiguousarray(clip)).permute(0, 3, 1, 2)
+            clip = np.ascontiguousarray(clip)
+            try:
+                import torch
+            except ImportError:
+                tensor = np.ascontiguousarray(clip.transpose(0, 3, 1, 2))
+                if self.library == "torchvision":
+                    return tensor
+                return np.ascontiguousarray((tensor.astype(np.float32) / 255.0).astype(np.float16))
+
+            tensor = torch.from_numpy(clip).permute(0, 3, 1, 2)
             if self.library == "torchvision":
                 return tensor.contiguous()
             return (tensor.float() / 255.0).half()
