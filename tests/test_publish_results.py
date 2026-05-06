@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 
-from tools.publish_results import publish_results
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from tools.publish_results import _library_name, publish_results
 
 
 def _write_result(path: Path, library: str) -> None:
@@ -96,6 +93,22 @@ def test_publish_results_manifest_uses_metadata_library_for_pipeline_names(tmp_p
     assert manifest["libraries"] == ["albumentationsx"]
     assert manifest["library_versions"] == {"albumentationsx": "2.2.6"}
     assert manifest["entries"][0]["library"] == "albumentationsx"
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        None,
+        "not-a-dict",
+        {},
+        {"library": ""},
+    ],
+)
+def test_library_name_falls_back_to_filename_when_metadata_missing_or_invalid(metadata: object) -> None:
+    payload = {} if metadata is None else {"metadata": metadata}
+    path = Path("albumentationsx_memory_dataloader_augment_n10000_r2_w8_b256_results.json")
+
+    assert _library_name(path, payload) == "albumentationsx"
 
 
 def test_publish_results_rejects_file_destination(tmp_path: Path) -> None:

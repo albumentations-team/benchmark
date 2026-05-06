@@ -104,6 +104,17 @@ class TestLoadResultFile:
         _, _, _metadata, results = load_result_file(path)
         assert results == {}
 
+    def test_malformed_metadata_and_results_return_empty_dicts(self, tmp_path: Path) -> None:
+        path = tmp_path / "kornia_results.json"
+        path.write_text(json.dumps({"metadata": [], "results": "not-a-dict"}))
+
+        library, media, metadata, results = load_result_file(path)
+
+        assert library == "kornia"
+        assert media == "image"
+        assert metadata == {}
+        assert results == {}
+
 
 class TestLoadResultsDir:
     def test_empty_directory_returns_empty_dict(self, tmp_path: Path) -> None:

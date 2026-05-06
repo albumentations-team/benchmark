@@ -53,6 +53,15 @@ def test_nested_run_directories_are_scanned(tmp_path: Path) -> None:
     assert missing_artifacts([tmp_path]) == []
 
 
+def test_flat_results_root_directory_is_considered_candidate(tmp_path: Path) -> None:
+    for requirement in CORE_REQUIREMENTS:
+        for library in requirement.libraries:
+            for filename in _sample_summary_files(requirement, library):
+                _touch(tmp_path / filename)
+
+    assert missing_artifacts([tmp_path]) == []
+
+
 def test_optional_libraries_are_not_required_by_default(tmp_path: Path) -> None:
     for requirement in CORE_REQUIREMENTS:
         for library in requirement.libraries:

@@ -10,9 +10,24 @@
 
 set -e
 
-# Default to the current tracked RGB paper-focused CPU snapshots.
-IMAGE_RESULTS="${IMAGE_RESULTS:-results/published/paper-rgb-micro-c4-standard-16-2026-05-04}"
-DATALOADER_RESULTS="${DATALOADER_RESULTS:-results/published/paper-rgb-dataloader-memory-c4-standard-16-2026-05-04}"
+PUBLISHED_RESULTS_ROOT="${PAPER_RGB_RESULTS_ROOT:-results/published}"
+latest_results_dir() {
+  local pattern="$1"
+  local latest
+  latest="$(find "$PUBLISHED_RESULTS_ROOT" -maxdepth 1 -type d -name "$pattern" 2>/dev/null | sort | tail -n 1)"
+  printf '%s' "$latest"
+}
+
+IMAGE_RESULTS_EXPLICIT=false
+DATALOADER_RESULTS_EXPLICIT=false
+if [[ -n "${IMAGE_RESULTS:-}" ]]; then
+  IMAGE_RESULTS_EXPLICIT=true
+fi
+if [[ -n "${DATALOADER_RESULTS:-}" ]]; then
+  DATALOADER_RESULTS_EXPLICIT=true
+fi
+IMAGE_RESULTS="${IMAGE_RESULTS:-}"
+DATALOADER_RESULTS="${DATALOADER_RESULTS:-}"
 MULTICHANNEL_RESULTS="${MULTICHANNEL_RESULTS:-}"
 VIDEO_RESULTS="${VIDEO_RESULTS:-}"
 
@@ -20,10 +35,16 @@ while [[ $# -gt 0 ]]; do
   case $1 in
   --image-results)
     IMAGE_RESULTS="$2"
+    IMAGE_RESULTS_EXPLICIT=true
     shift 2
     ;;
   --dataloader-results)
     DATALOADER_RESULTS="$2"
+    DATALOADER_RESULTS_EXPLICIT=true
+    shift 2
+    ;;
+  --published-results-root)
+    PUBLISHED_RESULTS_ROOT="$2"
     shift 2
     ;;
   --multichannel-results)
@@ -40,6 +61,14 @@ while [[ $# -gt 0 ]]; do
     ;;
   esac
 done
+
+# Default to the latest tracked RGB paper-focused CPU snapshots.
+if [[ "$IMAGE_RESULTS_EXPLICIT" == false ]]; then
+  IMAGE_RESULTS="$(latest_results_dir 'paper-rgb-micro-*')"
+fi
+if [[ "$DATALOADER_RESULTS_EXPLICIT" == false ]]; then
+  DATALOADER_RESULTS="$(latest_results_dir 'paper-rgb-dataloader-*')"
+fi
 
 echo "Updating docs from image results: $IMAGE_RESULTS"
 echo "Updating docs from DataLoader results: $DATALOADER_RESULTS"
@@ -74,9 +103,14 @@ fi
 # Patch README with full benchmark tables
 echo "Updating README..."
 UPDATE_README_ARGS=(
-  --image-results "$IMAGE_RESULTS"
-  --dataloader-results "$DATALOADER_RESULTS"
+  --published-results-root "$PUBLISHED_RESULTS_ROOT"
 )
+if [[ -n "$IMAGE_RESULTS" ]]; then
+  UPDATE_README_ARGS+=(--image-results "$IMAGE_RESULTS")
+fi
+if [[ -n "$DATALOADER_RESULTS" ]]; then
+  UPDATE_README_ARGS+=(--dataloader-results "$DATALOADER_RESULTS")
+fi
 python -m tools.update_readme "${UPDATE_README_ARGS[@]}"
 
 echo "Done. Check README.md"

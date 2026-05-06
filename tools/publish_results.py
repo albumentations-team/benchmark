@@ -115,11 +115,19 @@ def _library_name(path: Path, payload: dict[str, Any]) -> str:
         library = metadata.get("library")
         if isinstance(library, str) and library:
             return library
-    return (
+    name = (
         path.name.removesuffix("_micro_results.json")
         .removesuffix("_pipeline_results.json")
         .removesuffix("_results.json")
     )
+    for scope in (
+        "_decode_dataloader_augment_batch_copy",
+        "_memory_dataloader_augment",
+        "_decode_dataloader_augment",
+    ):
+        if scope in name:
+            return name.split(scope, maxsplit=1)[0]
+    return name
 
 
 def _manifest(

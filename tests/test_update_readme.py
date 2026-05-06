@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from tools.update_readme import patch_readme
+from tools.update_readme import latest_results_dir, patch_readme
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -82,6 +82,40 @@ def test_patch_readme_can_update_dataloader_table(tmp_path: Path) -> None:
     assert "new dataloader table" in content
     assert "new dataloader summary" in content
     assert "old image" in content
+
+
+def test_patch_readme_can_update_image_and_dataloader_sections(tmp_path: Path) -> None:
+    readme = tmp_path / "README.md"
+    readme.write_text(_readme_with_markers())
+
+    changed = patch_readme(
+        readme,
+        image_table="combined image table",
+        video_table=None,
+        image_summary="combined image summary",
+        video_summary=None,
+        dataloader_table="combined dataloader table",
+        dataloader_summary="combined dataloader summary",
+    )
+
+    content = readme.read_text()
+    assert changed
+    assert "combined image table" in content
+    assert "combined image summary" in content
+    assert "combined dataloader table" in content
+    assert "combined dataloader summary" in content
+    assert "old video" in content
+
+
+def test_latest_results_dir_uses_latest_matching_snapshot(tmp_path: Path) -> None:
+    older = tmp_path / "paper-rgb-micro-c4-standard-16-2026-05-04"
+    newer = tmp_path / "paper-rgb-micro-c4-standard-16-2026-05-05"
+    unrelated = tmp_path / "paper-rgb-dataloader-memory-c4-standard-16-2026-05-06"
+    older.mkdir()
+    newer.mkdir()
+    unrelated.mkdir()
+
+    assert latest_results_dir(tmp_path, "paper-rgb-micro-*") == newer
 
 
 def test_patch_readme_reports_no_change_when_no_sections_requested(tmp_path: Path) -> None:

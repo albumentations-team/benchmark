@@ -8,6 +8,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import re
 from pathlib import Path
 
@@ -15,6 +16,15 @@ from tools.compare import format_comparison_table, load_results_dir
 
 # Libraries to keep out of public docs (internal / historical reference only)
 _DOCS_EXCLUDED: frozenset[str] = frozenset({"albumentations_mit"})
+_DEFAULT_PUBLISHED_ROOT = Path("results/published")
+
+
+def latest_results_dir(root: Path, pattern: str) -> Path | None:
+    """Return the latest matching published results directory by lexicographic snapshot name."""
+    if not root.exists():
+        return None
+    matches = sorted(path for path in root.glob(pattern) if path.is_dir())
+    return matches[-1] if matches else None
 
 
 def patch_readme(
@@ -105,15 +115,24 @@ def main() -> None:
     parser.add_argument("--readme", default="README.md", type=Path, help="README path")
     parser.add_argument(
         "--image-results",
-        default="results/published/paper-rgb-micro-c4-standard-16-2026-05-04",
+        default=None,
         type=Path,
-        help="Directory with RGB micro *_results.json files",
+        help="Directory with RGB micro *_results.json files. Defaults to the latest paper-rgb-micro-* snapshot.",
     )
     parser.add_argument(
         "--dataloader-results",
-        default="results/published/paper-rgb-dataloader-memory-c4-standard-16-2026-05-04",
+        default=None,
         type=Path,
-        help="Directory with RGB DataLoader *_results.json files",
+        help=(
+            "Directory with RGB DataLoader *_results.json files. "
+            "Defaults to the latest paper-rgb-dataloader-* snapshot."
+        ),
+    )
+    parser.add_argument(
+        "--published-results-root",
+        default=os.environ.get("PAPER_RGB_RESULTS_ROOT", str(_DEFAULT_PUBLISHED_ROOT)),
+        type=Path,
+        help="Root used to discover latest paper-rgb-* snapshots when result directories are omitted.",
     )
     parser.add_argument(
         "--video-results",
@@ -131,8 +150,17 @@ def main() -> None:
 
     repo_root = Path(__file__).parent.parent
     readme = repo_root / args.readme
-    image_results = repo_root / args.image_results
-    dataloader_results = (repo_root / args.dataloader_results) if args.dataloader_results else None
+    published_results_root = repo_root / args.published_results_root
+    image_results = (
+        repo_root / args.image_results
+        if args.image_results is not None
+        else latest_results_dir(published_results_root, "paper-rgb-micro-*")
+    )
+    dataloader_results = (
+        repo_root / args.dataloader_results
+        if args.dataloader_results is not None
+        else latest_results_dir(published_results_root, "paper-rgb-dataloader-*")
+    )
 
     def _load(directory: Path, media: str, *, exclude_docs: bool) -> dict[str, dict[str, object]]:
         loaded = load_results_dir(directory)
@@ -143,7 +171,7 @@ def main() -> None:
         }
 
     # Public tables exclude internal/historical libraries.
-    image_loaded = _load(image_results, "image", exclude_docs=True)
+    image_loaded = _load(image_results, "image", exclude_docs=True) if image_results is not None else {}
     dataloader_loaded: dict[str, dict[str, object]] = {}
     if dataloader_results is not None and dataloader_results.exists():
         dataloader_loaded = _load(dataloader_results, "image", exclude_docs=True)
