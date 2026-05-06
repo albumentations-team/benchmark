@@ -26,6 +26,8 @@ CORE_REQUIREMENTS: tuple[CoverageRequirement, ...] = (
         scenario="image-rgb",
         mode="micro",
         libraries=("albumentationsx", "torchvision", "kornia", "pillow"),
+        # Published snapshots intentionally carry sanitized summary JSONs only.
+        # Raw pyperf files remain useful run-archive artifacts, but are not required for this repo artifact.
     ),
     CoverageRequirement(
         scenario="image-rgb",
@@ -72,8 +74,7 @@ def _flat_dir_matches(root: Path, requirement: CoverageRequirement) -> bool:
     for library in requirement.libraries + requirement.optional_libraries:
         if requirement.pipeline_scopes:
             if any(
-                any(root.glob(f"{library}_{scope}_n*_r*_w*_b*_results.json"))
-                for scope in requirement.pipeline_scopes
+                any(root.glob(f"{library}_{scope}_n*_r*_w*_b*_results.json")) for scope in requirement.pipeline_scopes
             ):
                 return True
         elif (root / f"{library}_{requirement.mode}_results.json").is_file():

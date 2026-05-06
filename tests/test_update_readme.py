@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from tools.update_readme import latest_results_dir, patch_readme
 
 if TYPE_CHECKING:
@@ -105,6 +107,21 @@ def test_patch_readme_can_update_image_and_dataloader_sections(tmp_path: Path) -
     assert "combined dataloader table" in content
     assert "combined dataloader summary" in content
     assert "old video" in content
+
+
+def test_patch_readme_raises_when_requested_markers_are_missing(tmp_path: Path) -> None:
+    readme = tmp_path / "README.md"
+    readme.write_text("# README\n")
+
+    with pytest.raises(ValueError, match="DATALOADER_BENCHMARK_TABLE_START"):
+        patch_readme(
+            readme,
+            image_table=None,
+            video_table=None,
+            image_summary=None,
+            video_summary=None,
+            dataloader_table="new dataloader table",
+        )
 
 
 def test_latest_results_dir_uses_latest_matching_snapshot(tmp_path: Path) -> None:

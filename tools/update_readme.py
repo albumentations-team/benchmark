@@ -2,7 +2,9 @@ r"""Update README.md with full RGB benchmark tables from result JSONs.
 
 Usage:
     python -m tools.update_readme
-    python -m tools.update_readme --image-results output/rgb_micro --dataloader-results output/rgb_dataloader
+    python -m tools.update_readme \
+      --image-results output/rgb_micro/image-rgb/micro \
+      --dataloader-results output/rgb_dataloader/image-rgb/pipeline
 """
 
 from __future__ import annotations
@@ -50,7 +52,9 @@ def patch_readme(
         # Blank lines after markers help some Markdown engines start a new block (tables after HTML comments).
         replacement = f"{marker_start}\n\n{new_content.strip()}\n\n{marker_end}"
         new_content_str, n = pattern.subn(replacement, content, count=1)
-        return new_content_str if n else content
+        if not n:
+            raise ValueError(f"README is missing markers {marker_start!r} / {marker_end!r}")
+        return new_content_str
 
     orig = content
 

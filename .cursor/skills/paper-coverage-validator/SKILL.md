@@ -27,7 +27,7 @@ python -m tools.check_paper_coverage gcp_runs output --require-optional-librarie
 
 ## Required Paper Core Sections
 
-- `image-rgb/micro`: AlbumentationsX, torchvision, Kornia, Pillow; summary + pyperf.
+- `image-rgb/micro`: AlbumentationsX, torchvision, Kornia, Pillow; summary JSON.
 - `image-rgb/pipeline`: AlbumentationsX, torchvision, Kornia, Pillow.
 
 9-channel and video benchmarks are still supported by the codebase, docs, and transform sets, but they are not required
@@ -46,4 +46,5 @@ It does not require decode DataLoader, 9-channel, or video runs.
 
 - Missing directory: run the scenario/mode.
 - Missing summary JSON: rerun or fetch `results/` from the GCS run prefix.
-- Missing pyperf JSON for a micro run: do not publish as final profiler data until raw pyperf is recovered or rerun.
+- Missing raw pyperf JSON for a micro run: acceptable for sanitized published snapshots, but recover it from run archives
+  before publishing profiler-level raw timing data.
