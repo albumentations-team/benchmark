@@ -14,14 +14,22 @@ from typing import Any
 import pyperf
 from tqdm import tqdm
 
+from benchmark.devices import (
+    DeviceUnavailableError,
+    move_to_device,
+    move_transform_to_device,
+    resolve_device,
+    synchronize_device,
+)
 from benchmark.media import BenchmarkMediaLoader
 from benchmark.policy import media_policy, slow_skip_config
-from benchmark.results import build_metadata, summarize_runs, write_results
+from benchmark.results import build_metadata, summarize_runs, unsupported_result, write_results
 from benchmark.runner import BenchmarkRunner, MediaType
 from benchmark.slow_threshold import is_slow_time_per_item, slow_threshold_info, slow_threshold_reason
 from benchmark.specs import load_from_python_file
 from benchmark.term import tqdm_kwargs
 from benchmark.thread_policy import apply_thread_policy
+from benchmark.transform_filters import filter_transform_dicts_for_library_device
 from benchmark.utils import make_contiguous_transform_output
 
 
@@ -30,11 +38,19 @@ def _make_micro_output_contiguous(output: Any) -> Any:
     return make_contiguous_transform_output(output)
 
 
-def _time_transform_loop(loops: int, transform: Any, media: list[Any], call_fn: Any) -> float:
+def _time_transform_loop(
+    loops: int,
+    transform: Any,
+    media: list[Any],
+    call_fn: Any,
+    device: str | None = None,
+) -> float:
+    synchronize_device(device)
     start = pyperf.perf_counter()
     for _ in range(loops):
         for item in media:
             _ = _make_micro_output_contiguous(call_fn(transform, item))
+    synchronize_device(device)
     return pyperf.perf_counter() - start
 
 
@@ -58,6 +74,10 @@ def _add_worker_args(cmd: list[str], args: argparse.Namespace) -> None:
             args.scenario,
             "--num-channels",
             str(args.num_channels),
+            "--clip-length",
+            str(args.clip_length),
+            "--device",
+            args.device,
         ],
     )
     if args.num_items is not None:
@@ -83,6 +103,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--scenario", default="manual")
     parser.add_argument("--num-items", type=int)
     parser.add_argument("--num-channels", type=int, default=3)
+    parser.add_argument("--clip-length", type=int, default=16)
+    parser.add_argument("--device", choices=["none", "cuda", "mps", "auto"], default="none")
     parser.add_argument("--transforms", default="")
     parser.add_argument("--media-cache", type=Path)
     parser.add_argument("--slow-threshold-sec-per-item", type=float)
@@ -116,7 +138,7 @@ def _preflight_slow_transform(
         return None
 
     start = time.perf_counter()
-    elapsed = _time_transform_loop(1, transform, subset, call_fn)
+    elapsed = _time_transform_loop(1, transform, subset, call_fn, getattr(args, "resolved_device", None))
     wall_time = time.perf_counter() - start
     time_per_item = elapsed / len(subset)
     throughput = len(subset) / elapsed if elapsed > 0 else 0.0
@@ -210,6 +232,10 @@ def _run_transform_subprocesses(
                 args.scenario,
                 "--num-channels",
                 str(args.num_channels),
+                "--clip-length",
+                str(args.clip_length),
+                "--device",
+                args.device,
                 "--transforms",
                 transform_name,
                 "--media-cache",
@@ -293,7 +319,52 @@ def _load_media(args: argparse.Namespace, library: str) -> list[Any]:
         media=media_type.value,
         num_items=args.num_items if args.num_items is not None else media_policy(media_type).num_items,
         num_channels=args.num_channels,
+        clip_length=args.clip_length,
     ).load()
+
+
+def _prepare_device_media(args: argparse.Namespace, media: list[Any]) -> list[Any]:
+    if args.resolved_device is None:
+        return media
+    return [move_to_device(item, args.resolved_device) for item in media]
+
+
+def _write_device_unavailable_result(
+    *,
+    args: argparse.Namespace,
+    library: str,
+    media: list[Any],
+    media_type: MediaType,
+    transforms: list[dict[str, Any]],
+    reason: str,
+) -> None:
+    num_key = "num_videos" if media_type == MediaType.VIDEO else "num_images"
+    output = {
+        "metadata": build_metadata(
+            scenario=args.scenario,
+            mode="micro",
+            library=library,
+            benchmark_params={
+                num_key: len(media),
+                "num_runs": 0,
+                "num_channels": args.num_channels,
+                "timer_backend": "pyperf",
+                "device": "none",
+                "device_option": args.device,
+                "transform_on_device": False,
+                "includes_host_to_device_transfer": False,
+                "gpu_memory_peak_measured": False,
+            },
+            timing_backend="pyperf",
+            measurement_scope="augmentation_only",
+            data_source="memory",
+            data_dir=args.data_dir,
+            media=args.media,
+            repo_root=Path(__file__).parent.parent,
+        ),
+        "results": {str(transform["name"]): unsupported_result(reason) for transform in transforms},
+    }
+    write_results(args.json_output, output)
 
 
 def _run_filtered_transforms(
@@ -313,6 +384,22 @@ def _run_filtered_transforms(
         raise RuntimeError(msg)
     pyperf_cli: Any = bench_args
     worker_mode = bool(pyperf_cli.worker)
+    args.device = getattr(args, "device", "none")
+    try:
+        args.resolved_device = resolve_device(args.device)
+    except DeviceUnavailableError as e:
+        if worker_mode:
+            raise
+        _write_device_unavailable_result(
+            args=args,
+            library=library,
+            media=media,
+            media_type=media_type,
+            transforms=transforms,
+            reason=str(e),
+        )
+        return
+    media = _prepare_device_media(args, media)
 
     results: dict[str, Any] = {}
     progress: tqdm[dict[str, Any]] | None = None
@@ -328,28 +415,40 @@ def _run_filtered_transforms(
         transform_name = str(transform_dict["name"])
         if progress is not None:
             progress.set_postfix_str(transform_name)
+        transform = move_transform_to_device(transform_dict["transform"], args.resolved_device)
         slow_result = None
         if not worker_mode:
-            slow_result = _preflight_slow_transform(
-                transform=transform_dict["transform"],
-                transform_name=transform_name,
-                media=media,
-                call_fn=call_fn,
-                media_type=media_type,
-                args=args,
-            )
+            try:
+                slow_result = _preflight_slow_transform(
+                    transform=transform,
+                    transform_name=transform_name,
+                    media=media,
+                    call_fn=call_fn,
+                    media_type=media_type,
+                    args=args,
+                )
+            except Exception as e:
+                results[transform_name] = unsupported_result(f"{type(e).__name__}: {e}")
+                continue
         if slow_result is not None:
             results[transform_name] = slow_result
             continue
 
-        bench = runner.bench_time_func(
-            transform_name,
-            _time_transform_loop,
-            transform_dict["transform"],
-            media,
-            call_fn,
-            inner_loops=len(media),
-        )
+        try:
+            bench = runner.bench_time_func(
+                transform_name,
+                _time_transform_loop,
+                transform,
+                media,
+                call_fn,
+                args.resolved_device,
+                inner_loops=len(media),
+            )
+        except Exception as e:
+            if worker_mode:
+                raise
+            results[transform_name] = unsupported_result(f"{type(e).__name__}: {e}")
+            continue
         if worker_mode:
             return
         if bench is None:
@@ -381,6 +480,12 @@ def _run_filtered_transforms(
                 "slow_skip_enabled": not args.disable_slow_skip,
                 "slow_threshold_sec_per_item": _slow_skip_config(args, media_type)[0],
                 "slow_preflight_items": _slow_skip_config(args, media_type)[1],
+                "device": args.resolved_device or "none",
+                "device_option": args.device,
+                "transform_on_device": args.resolved_device is not None,
+                "includes_host_to_device_transfer": False,
+                "gpu_memory_peak_measured": False,
+                "gpu_memory_peak_measurement": "not available for pyperf worker-process timing",
             },
             timing_backend="pyperf",
             measurement_scope="augmentation_only",
@@ -414,6 +519,13 @@ def main() -> None:
     library, call_fn, transforms = load_from_python_file(args.specs_file)
     filter_names = [name.strip() for name in args.transforms.split(",") if name.strip()]
     transforms = BenchmarkRunner.filter_transforms(transforms, filter_names or None)
+    transforms = filter_transform_dicts_for_library_device(
+        transforms,
+        scenario=args.scenario,
+        library=library,
+        media=args.media,
+        device=args.device,
+    )
 
     bench_args = runner.args
     if bench_args is None:

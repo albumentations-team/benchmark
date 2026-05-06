@@ -5,12 +5,25 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCHITECTURE_MODULES = (
     "benchmark/cli.py",
+    "benchmark/config/argv.py",
+    "benchmark/config/env.py",
+    "benchmark/config/models.py",
+    "benchmark/config/plan.py",
+    "benchmark/config/resolve.py",
+    "benchmark/config/transform_sets.py",
     "benchmark/matrix.py",
+    "benchmark/devices.py",
+    "benchmark/transform_filters.py",
     "benchmark/policy.py",
     "benchmark/jobs.py",
     "benchmark/orchestrator.py",
     "benchmark/dali_pipeline_worker.py",
     "benchmark/envs.py",
+    "benchmark/parser.py",
+    "benchmark/output_naming.py",
+    "benchmark/cloud/launch.py",
+    "benchmark/cloud/paths.py",
+    "benchmark/cloud/stage_dataset.py",
     "benchmark/specs/load.py",
     "benchmark/media/loaders.py",
     "benchmark/pyperf_micro_runner.py",
@@ -30,6 +43,16 @@ def test_architecture_doc_references_existing_core_modules() -> None:
         assert module_path in doc
         assert (REPO_ROOT / module_path).exists()
 
+    assert "converts typed configs to legacy namespaces during the migration" not in doc
+
+
+def test_stage_dataset_is_bootstrap_safe() -> None:
+    source = _read("benchmark/cloud/stage_dataset.py")
+
+    assert "pydantic" not in source
+    assert "benchmark.config" not in source
+    assert "BenchmarkRunConfig" not in source
+
 
 def test_scope_and_readme_link_to_architecture_doc() -> None:
     assert "docs/benchmark_architecture.md" in _read("README.md")
@@ -44,10 +67,16 @@ def test_skills_document_centralized_policy_and_matrix() -> None:
         ".cursor/skills/paper-benchmark-execution/SKILL.md",
     )
     required_refs = (
+        "benchmark/config/models.py",
+        "benchmark/config/plan.py",
+        "benchmark/config/resolve.py",
+        "benchmark/cloud/paths.py",
         "benchmark/matrix.py",
+        "benchmark/output_naming.py",
         "benchmark/policy.py",
         "benchmark/jobs.py",
         "benchmark/orchestrator.py",
+        "configs/",
     )
 
     for skill_path in skill_paths:

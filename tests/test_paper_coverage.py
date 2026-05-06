@@ -62,6 +62,7 @@ def test_optional_dali_is_not_required_by_default(tmp_path: Path) -> None:
                 _touch(tmp_path / requirement.relative_dir / f"{library}_{requirement.mode}_results.pyperf.json")
 
     assert missing_artifacts([tmp_path], require_optional_libraries=True) == [
+        "image-rgb/pipeline: missing dali_decode_dataloader_augment_n*_r*_w*_b*_results.json",
         "video-16f/pipeline: missing dali_decode_dataloader_augment_n*_r*_w*_b*_results.json",
     ]
 

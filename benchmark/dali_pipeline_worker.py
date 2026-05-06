@@ -13,15 +13,37 @@ from typing import Any
 
 from benchmark.jobs import BenchmarkJob
 from benchmark.pipeline_runner import PipelineBenchmarkRunner
+from benchmark.transforms.image_recipe_specs import recipe_augmentation_specs, recipe_name
 from benchmark.transforms.specs import TRANSFORM_SPECS
 
 
-def _dali_transforms_from_specs(transforms_filter: tuple[str, ...] = ()) -> list[dict[str, object]]:
-    transforms: list[dict[str, object]] = [{"name": spec.name, "transform": spec.params} for spec in TRANSFORM_SPECS]
+def _dali_transforms_from_specs(*, media: str, transforms_filter: tuple[str, ...] = ()) -> list[dict[str, object]]:
+    if media == "image":
+        image_transforms: list[dict[str, object]] = [
+            {
+                "name": recipe_name(spec),
+                "transform": {"name": spec.name, "params": spec.params},
+            }
+            for spec in recipe_augmentation_specs(num_channels=3)
+        ]
+        if not transforms_filter:
+            return image_transforms
+        allowed = set(transforms_filter)
+        filtered: list[dict[str, object]] = []
+        for transform in image_transforms:
+            transform_spec = transform["transform"]
+            spec_name = transform_spec["name"] if isinstance(transform_spec, dict) else ""
+            if str(transform["name"]) in allowed or str(spec_name) in allowed:
+                filtered.append(transform)
+        return filtered
+
+    video_transforms: list[dict[str, object]] = [
+        {"name": spec.name, "transform": spec.params} for spec in TRANSFORM_SPECS
+    ]
     if not transforms_filter:
-        return transforms
+        return video_transforms
     allowed = set(transforms_filter)
-    return [transform for transform in transforms if str(transform["name"]) in allowed]
+    return [transform for transform in video_transforms if str(transform["name"]) in allowed]
 
 
 def run_dali_pipeline_job(job: BenchmarkJob) -> None:
@@ -29,7 +51,7 @@ def run_dali_pipeline_job(job: BenchmarkJob) -> None:
         library=job.library,
         data_dir=job.data_dir,
         output_file=job.output_file,
-        transforms=_dali_transforms_from_specs(job.transforms_filter),
+        transforms=_dali_transforms_from_specs(media=job.media, transforms_filter=job.transforms_filter),
         call_fn=lambda _transform, item: item,
         media=job.media,
         scenario=job.scenario,

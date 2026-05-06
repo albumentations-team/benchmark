@@ -1,0 +1,748 @@
+{
+  "num_source_rows": 710,
+  "num_aggregate_rows": 525,
+  "regimes": {
+    "rgb_micro_cpu": 158,
+    "rgb_micro_gpu": 75,
+    "rgb_dataloader_cpu": 160,
+    "rgb_dataloader_gpu": 132
+  },
+  "headlines": {
+    "median_throughput": {
+      "rgb_micro_cpu": {
+        "albumentationsx": 1387.6136180112503,
+        "torchvision": 545.42998067663,
+        "kornia": 231.26192951582954,
+        "pillow": 609.3230182532478
+      },
+      "rgb_micro_gpu": {
+        "torchvision": 3914.5659696313005,
+        "kornia": 393.1527970488928
+      },
+      "rgb_dataloader_cpu": {
+        "albumentationsx": 4614.752875594858,
+        "torchvision": 3322.6173828059464,
+        "kornia": 1440.997726928798,
+        "pillow": 3241.223565707919
+      },
+      "rgb_dataloader_gpu": {
+        "torchvision": 2020.3409298650379,
+        "kornia": 657.6081924201931,
+        "dali": 3785.1916513893693
+      }
+    },
+    "winner_counts": {
+      "rgb_micro_cpu": {
+        "albumentationsx": 52,
+        "pillow": 1
+      },
+      "rgb_micro_gpu": {
+        "torchvision": 19
+      },
+      "rgb_dataloader_cpu": {
+        "albumentationsx": 56,
+        "kornia": 1
+      },
+      "rgb_dataloader_gpu": {
+        "dali": 21,
+        "kornia": 1,
+        "torchvision": 8
+      }
+    },
+    "gpu_vs_albumentationsx_cpu": {
+      "torchvision": {
+        "compared_rows": 25,
+        "gpu_faster": 1,
+        "median_ratio": 0.39272220070792363
+      },
+      "kornia": {
+        "compared_rows": 48,
+        "gpu_faster": 0,
+        "median_ratio": 0.13700438340579607
+      },
+      "dali": {
+        "compared_rows": 22,
+        "gpu_faster": 3,
+        "median_ratio": 0.8166213609779431
+      }
+    },
+    "open_dataloader": {
+      "universe_rows": 57,
+      "leaderboard": [
+        {
+          "implementation": "AlbumentationsX CPU",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "full": 57,
+          "universe_rows": 57,
+          "median_throughput": 4614.752875594858,
+          "wins": 53
+        },
+        {
+          "implementation": "DALI GPU",
+          "regime": "rgb_dataloader_gpu",
+          "regime_label": "GPU DataLoader",
+          "library": "dali",
+          "full": 22,
+          "universe_rows": 57,
+          "median_throughput": 3785.1916513893693,
+          "wins": 3
+        },
+        {
+          "implementation": "TorchVision CPU",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "torchvision",
+          "full": 26,
+          "universe_rows": 57,
+          "median_throughput": 3322.6173828059464,
+          "wins": 0
+        },
+        {
+          "implementation": "Pillow CPU",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "pillow",
+          "full": 25,
+          "universe_rows": 57,
+          "median_throughput": 3241.223565707919,
+          "wins": 0
+        },
+        {
+          "implementation": "TorchVision GPU",
+          "regime": "rgb_dataloader_gpu",
+          "regime_label": "GPU DataLoader",
+          "library": "torchvision",
+          "full": 25,
+          "universe_rows": 57,
+          "median_throughput": 2020.3409298650379,
+          "wins": 0
+        },
+        {
+          "implementation": "Kornia CPU",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "kornia",
+          "full": 51,
+          "universe_rows": 57,
+          "median_throughput": 1440.997726928798,
+          "wins": 1
+        },
+        {
+          "implementation": "Kornia GPU",
+          "regime": "rgb_dataloader_gpu",
+          "regime_label": "GPU DataLoader",
+          "library": "kornia",
+          "full": 48,
+          "universe_rows": 57,
+          "median_throughput": 657.6081924201931,
+          "wins": 0
+        }
+      ],
+      "winner_rows": [
+        {
+          "transform": "RandomCrop224+Affine+Normalize+ToTensor",
+          "display_transform": "Affine",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4527.747738309672
+        },
+        {
+          "transform": "RandomCrop224+AutoContrast+Normalize+ToTensor",
+          "display_transform": "AutoContrast",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4645.639570365569
+        },
+        {
+          "transform": "RandomCrop224+Blur+Normalize+ToTensor",
+          "display_transform": "Blur",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5274.913803622625
+        },
+        {
+          "transform": "RandomCrop224+Brightness+Normalize+ToTensor",
+          "display_transform": "Brightness",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5230.883823338855
+        },
+        {
+          "transform": "RandomCrop224+CLAHE+Normalize+ToTensor",
+          "display_transform": "CLAHE",
+          "regime": "rgb_dataloader_gpu",
+          "regime_label": "GPU DataLoader",
+          "library": "dali",
+          "implementation": "DALI GPU",
+          "median_throughput": 3730.619752153531
+        },
+        {
+          "transform": "RandomCrop224+ChannelDropout+Normalize+ToTensor",
+          "display_transform": "ChannelDropout",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5316.452380620635
+        },
+        {
+          "transform": "RandomCrop224+ChannelShuffle+Normalize+ToTensor",
+          "display_transform": "ChannelShuffle",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5086.627144872512
+        },
+        {
+          "transform": "RandomCrop224+ColorJiggle+Normalize+ToTensor",
+          "display_transform": "ColorJiggle",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4255.088937760526
+        },
+        {
+          "transform": "RandomCrop224+ColorJitter+Normalize+ToTensor",
+          "display_transform": "ColorJitter",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4224.677428715556
+        },
+        {
+          "transform": "RandomCrop224+Contrast+Normalize+ToTensor",
+          "display_transform": "Contrast",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5258.2047627119055
+        },
+        {
+          "transform": "RandomCrop224+CornerIllumination+Normalize+ToTensor",
+          "display_transform": "CornerIllumination",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 3824.05418987048
+        },
+        {
+          "transform": "RandomCrop224+Elastic+Normalize+ToTensor",
+          "display_transform": "Elastic",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 2954.0307791337787
+        },
+        {
+          "transform": "RandomCrop224+EnhanceDetail+Normalize+ToTensor",
+          "display_transform": "EnhanceDetail",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5033.135083628458
+        },
+        {
+          "transform": "RandomCrop224+EnhanceEdge+Normalize+ToTensor",
+          "display_transform": "EnhanceEdge",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4923.419845177329
+        },
+        {
+          "transform": "RandomCrop224+Equalize+Normalize+ToTensor",
+          "display_transform": "Equalize",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4304.379162154424
+        },
+        {
+          "transform": "RandomCrop224+Erasing+Normalize+ToTensor",
+          "display_transform": "Erasing",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5118.181694298492
+        },
+        {
+          "transform": "RandomCrop224+GaussianBlur+Normalize+ToTensor",
+          "display_transform": "GaussianBlur",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5028.959211328799
+        },
+        {
+          "transform": "RandomCrop224+GaussianIllumination+Normalize+ToTensor",
+          "display_transform": "GaussianIllumination",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 3655.891458281857
+        },
+        {
+          "transform": "RandomCrop224+GaussianNoise+Normalize+ToTensor",
+          "display_transform": "GaussianNoise",
+          "regime": "rgb_dataloader_gpu",
+          "regime_label": "GPU DataLoader",
+          "library": "dali",
+          "implementation": "DALI GPU",
+          "median_throughput": 3820.015122339706
+        },
+        {
+          "transform": "RandomCrop224+Grayscale+Normalize+ToTensor",
+          "display_transform": "Grayscale",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5263.194581973169
+        },
+        {
+          "transform": "RandomCrop224+HorizontalFlip+Normalize+ToTensor",
+          "display_transform": "HorizontalFlip",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5218.143511078761
+        },
+        {
+          "transform": "RandomCrop224+Hue+Normalize+ToTensor",
+          "display_transform": "Hue",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4697.977937631386
+        },
+        {
+          "transform": "RandomCrop224+Invert+Normalize+ToTensor",
+          "display_transform": "Invert",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5491.894898125391
+        },
+        {
+          "transform": "RandomCrop224+JpegCompression+Normalize+ToTensor",
+          "display_transform": "JpegCompression",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4106.199380257377
+        },
+        {
+          "transform": "RandomCrop224+LinearIllumination+Normalize+ToTensor",
+          "display_transform": "LinearIllumination",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4076.2646218444656
+        },
+        {
+          "transform": "RandomCrop224+LongestMaxSize+Normalize+ToTensor",
+          "display_transform": "LongestMaxSize",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 1316.8638105134712
+        },
+        {
+          "transform": "RandomCrop224+MedianBlur+Normalize+ToTensor",
+          "display_transform": "MedianBlur",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4038.148979750936
+        },
+        {
+          "transform": "RandomCrop224+MotionBlur+Normalize+ToTensor",
+          "display_transform": "MotionBlur",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4614.752875594858
+        },
+        {
+          "transform": "RandomCrop224+OpticalDistortion+Normalize+ToTensor",
+          "display_transform": "OpticalDistortion",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 3556.4438660851315
+        },
+        {
+          "transform": "RandomCrop224+Pad+Normalize+ToTensor",
+          "display_transform": "Pad",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4866.595973293161
+        },
+        {
+          "transform": "RandomCrop224+Perspective+Normalize+ToTensor",
+          "display_transform": "Perspective",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 3991.9726252808637
+        },
+        {
+          "transform": "RandomCrop224+PhotoMetricDistort+Normalize+ToTensor",
+          "display_transform": "PhotoMetricDistort",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4148.99100552892
+        },
+        {
+          "transform": "RandomCrop224+PlankianJitter+Normalize+ToTensor",
+          "display_transform": "PlankianJitter",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4899.355059923485
+        },
+        {
+          "transform": "RandomCrop224+PlasmaBrightness+Normalize+ToTensor",
+          "display_transform": "PlasmaBrightness",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 2671.9837811482407
+        },
+        {
+          "transform": "RandomCrop224+PlasmaContrast+Normalize+ToTensor",
+          "display_transform": "PlasmaContrast",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 2155.634253321533
+        },
+        {
+          "transform": "RandomCrop224+PlasmaShadow+Normalize+ToTensor",
+          "display_transform": "PlasmaShadow",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 2795.5004539381484
+        },
+        {
+          "transform": "RandomCrop224+Posterize+Normalize+ToTensor",
+          "display_transform": "Posterize",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5318.989423072557
+        },
+        {
+          "transform": "RandomCrop224+RGBShift+Normalize+ToTensor",
+          "display_transform": "RGBShift",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4830.704378265731
+        },
+        {
+          "transform": "RandomCrop224+Rain+Normalize+ToTensor",
+          "display_transform": "Rain",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4528.476287471207
+        },
+        {
+          "transform": "RandomCrop224+Normalize+ToTensor",
+          "display_transform": "RandomCrop224",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5084.525347676295
+        },
+        {
+          "transform": "RandomCrop224+RandomGamma+Normalize+ToTensor",
+          "display_transform": "RandomGamma",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5251.25801342494
+        },
+        {
+          "transform": "RandomCrop224+RandomJigsaw+Normalize+ToTensor",
+          "display_transform": "RandomJigsaw",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4868.344803782538
+        },
+        {
+          "transform": "RandomResizedCrop+Normalize+ToTensor",
+          "display_transform": "RandomResizedCrop",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5056.20900585008
+        },
+        {
+          "transform": "RandomCrop224+RandomRotate90+Normalize+ToTensor",
+          "display_transform": "RandomRotate90",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5086.526497876588
+        },
+        {
+          "transform": "RandomCrop224+Resize+Normalize+ToTensor",
+          "display_transform": "Resize",
+          "regime": "rgb_dataloader_gpu",
+          "regime_label": "GPU DataLoader",
+          "library": "dali",
+          "implementation": "DALI GPU",
+          "median_throughput": 3523.1399410311906
+        },
+        {
+          "transform": "RandomCrop224+Rotate+Normalize+ToTensor",
+          "display_transform": "Rotate",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4782.327715185465
+        },
+        {
+          "transform": "RandomCrop224+SaltAndPepper+Normalize+ToTensor",
+          "display_transform": "SaltAndPepper",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4459.661821435879
+        },
+        {
+          "transform": "RandomCrop224+Saturation+Normalize+ToTensor",
+          "display_transform": "Saturation",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4581.65912827197
+        },
+        {
+          "transform": "RandomCrop224+Sharpen+Normalize+ToTensor",
+          "display_transform": "Sharpen",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4821.655211523693
+        },
+        {
+          "transform": "RandomCrop224+Shear+Normalize+ToTensor",
+          "display_transform": "Shear",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4261.200174545933
+        },
+        {
+          "transform": "RandomCrop224+SmallestMaxSize+Normalize+ToTensor",
+          "display_transform": "SmallestMaxSize",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 1328.7369796606447
+        },
+        {
+          "transform": "RandomCrop224+Snow+Normalize+ToTensor",
+          "display_transform": "Snow",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4135.045604222957
+        },
+        {
+          "transform": "RandomCrop224+Solarize+Normalize+ToTensor",
+          "display_transform": "Solarize",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5338.813635495953
+        },
+        {
+          "transform": "RandomCrop224+ThinPlateSpline+Normalize+ToTensor",
+          "display_transform": "ThinPlateSpline",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "kornia",
+          "implementation": "Kornia CPU",
+          "median_throughput": 753.1876182116495
+        },
+        {
+          "transform": "RandomCrop224+Transpose+Normalize+ToTensor",
+          "display_transform": "Transpose",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5230.601565203944
+        },
+        {
+          "transform": "RandomCrop224+UnsharpMask+Normalize+ToTensor",
+          "display_transform": "UnsharpMask",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 4521.635281919213
+        },
+        {
+          "transform": "RandomCrop224+VerticalFlip+Normalize+ToTensor",
+          "display_transform": "VerticalFlip",
+          "regime": "rgb_dataloader_cpu",
+          "regime_label": "CPU DataLoader",
+          "library": "albumentationsx",
+          "implementation": "AlbumentationsX CPU",
+          "median_throughput": 5301.694351161125
+        }
+      ]
+    },
+    "coverage": {
+      "rgb_micro_cpu": {
+        "albumentationsx": {
+          "rows": 57,
+          "full": 57,
+          "early_stopped": 0,
+          "unsupported": 0
+        },
+        "torchvision": {
+          "rows": 26,
+          "full": 25,
+          "early_stopped": 1,
+          "unsupported": 0
+        },
+        "kornia": {
+          "rows": 51,
+          "full": 47,
+          "early_stopped": 4,
+          "unsupported": 0
+        },
+        "pillow": {
+          "rows": 24,
+          "full": 23,
+          "early_stopped": 1,
+          "unsupported": 0
+        }
+      },
+      "rgb_micro_gpu": {
+        "torchvision": {
+          "rows": 25,
+          "full": 24,
+          "early_stopped": 1,
+          "unsupported": 0
+        },
+        "kornia": {
+          "rows": 50,
+          "full": 42,
+          "early_stopped": 3,
+          "unsupported": 5
+        }
+      },
+      "rgb_dataloader_cpu": {
+        "albumentationsx": {
+          "rows": 57,
+          "full": 57,
+          "early_stopped": 0,
+          "unsupported": 0
+        },
+        "torchvision": {
+          "rows": 26,
+          "full": 26,
+          "early_stopped": 0,
+          "unsupported": 0
+        },
+        "kornia": {
+          "rows": 51,
+          "full": 51,
+          "early_stopped": 0,
+          "unsupported": 0
+        },
+        "pillow": {
+          "rows": 26,
+          "full": 25,
+          "early_stopped": 1,
+          "unsupported": 0
+        }
+      },
+      "rgb_dataloader_gpu": {
+        "torchvision": {
+          "rows": 25,
+          "full": 25,
+          "early_stopped": 0,
+          "unsupported": 0
+        },
+        "kornia": {
+          "rows": 50,
+          "full": 48,
+          "early_stopped": 0,
+          "unsupported": 2
+        },
+        "dali": {
+          "rows": 57,
+          "full": 22,
+          "early_stopped": 0,
+          "unsupported": 35
+        }
+      }
+    }
+  }
+}

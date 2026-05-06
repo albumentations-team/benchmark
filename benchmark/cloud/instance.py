@@ -4,6 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+_GPU_MACHINE_PREFIXES = ("a2-", "a3-", "a4-", "g2-")
+
+
+def is_gpu_machine_type(machine_type: str) -> bool:
+    """Return true for GCE machine families with attached GPUs baked into the machine type."""
+    name = machine_type.rsplit("/", 1)[-1].lower()
+    return name.startswith(_GPU_MACHINE_PREFIXES)
+
 
 @dataclass
 class GCPInstanceConfig:
@@ -43,6 +51,10 @@ class GCPInstanceConfig:
         if self.instance_name_override:
             return self.instance_name_override
         return f"benchmark-{self.machine_type.replace('/', '-')}"
+
+    @property
+    def requires_terminate_maintenance(self) -> bool:
+        return bool(self.accelerator_type and self.accelerator_count > 0) or is_gpu_machine_type(self.machine_type)
 
     @classmethod
     def cpu(cls, project: str, zone: str = "us-central1-a", machine_type: str = "n1-standard-8") -> GCPInstanceConfig:

@@ -93,13 +93,6 @@ def create_transform(spec: TransformSpec) -> Any:
             interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
             p=1,
         )
-    if spec.name == "CenterCrop224":
-        return A.CenterCrop(
-            height=params["height"],
-            width=params["width"],
-            pad_if_needed=True,
-            p=1,
-        )
     if spec.name == "HorizontalFlip":
         return A.HorizontalFlip(p=1)
     if spec.name == "VerticalFlip":

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+from benchmark.config import RUN_CONFIG_ENV_VAR
 from benchmark.reliability import audit_results, dataset_fingerprint, doctor_report
 from benchmark.results import build_metadata, summarize_runs, unsupported_result
 
@@ -43,6 +44,14 @@ def test_build_metadata_includes_timing_and_dataset(tmp_path) -> None:
     assert metadata["timing"]["timing_backend"] == "simple"
     assert metadata["dataset"]["file_count"] == 1
     assert metadata["environment"]["git"]["branch"] is not None
+
+
+def test_build_metadata_embeds_resolved_run_config(monkeypatch) -> None:
+    monkeypatch.setenv(RUN_CONFIG_ENV_VAR, json.dumps({"selection": {"scenario": "image-rgb"}}))
+
+    metadata = build_metadata(scenario="image-rgb", mode="micro", library="torchvision")
+
+    assert metadata["run_config"] == {"selection": {"scenario": "image-rgb"}}
 
 
 def test_dataset_fingerprint_counts_files(tmp_path) -> None:

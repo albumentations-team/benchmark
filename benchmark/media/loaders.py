@@ -3,10 +3,12 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from importlib import import_module
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 from tqdm import tqdm
 
+from benchmark.decoders.video import decode_video
 from benchmark.term import tqdm_kwargs
 from benchmark.utils import get_image_loader, get_video_loader, make_multichannel_loader
 
@@ -14,6 +16,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+IMAGE_SUFFIXES = {".bmp", ".jpeg", ".jpg", ".png", ".tif", ".tiff", ".webp"}
 
 
 @dataclass
@@ -23,6 +27,7 @@ class BenchmarkMediaLoader:
     media: Literal["image", "video"]
     num_items: int
     num_channels: int = 3
+    clip_length: int = 16
 
     def load(self) -> list[Any]:
         if self.media == "image":
@@ -34,9 +39,12 @@ class BenchmarkMediaLoader:
         if self.num_channels != 3:
             loader = make_multichannel_loader(loader, self.num_channels)
 
-        image_paths = sorted(self.data_dir.rglob("*.*"))
+        image_paths = sorted(path for path in self.data_dir.rglob("*") if _is_candidate_image(path))
         logger.info("Found %d image paths in %s (searching recursively)", len(image_paths), self.data_dir)
         images: list[Any] = []
+        invalid_files = 0
+        non_rgb_files = 0
+        load_errors = 0
 
         with tqdm(
             image_paths,
@@ -50,14 +58,17 @@ class BenchmarkMediaLoader:
 
                     img_check = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
                     if img_check is None:
+                        invalid_files += 1
                         continue
                     if img_check.ndim < 3 or img_check.shape[2] < 3:
+                        non_rgb_files += 1
                         continue
 
                     images.append(loader(path))
                     if len(images) >= self.num_items:
                         break
-                except Exception:  # noqa: S112
+                except Exception:
+                    load_errors += 1
                     continue
 
                 pbar.set_postfix({"loaded": len(images)})
@@ -66,9 +77,20 @@ class BenchmarkMediaLoader:
             raise ValueError("No valid RGB images found in the directory (only RGB images are used for benchmarking)")
 
         if len(images) < self.num_items:
-            logger.warning("Only found %d valid RGB images, requested %d", len(images), self.num_items)
+            logger.warning(
+                "Only found %d valid RGB images after scanning %d candidate files, requested %d",
+                len(images),
+                len(image_paths),
+                self.num_items,
+            )
 
-        logger.info("Loaded %d images for benchmarking", len(images))
+        logger.info(
+            "Loaded %d images for benchmarking (invalid=%d, non_rgb=%d, load_errors=%d)",
+            len(images),
+            invalid_files,
+            non_rgb_files,
+            load_errors,
+        )
         return images
 
     def _load_videos(self) -> list[Any]:
@@ -88,12 +110,11 @@ class BenchmarkMediaLoader:
         logger.info("Found %d video files in %s (including subdirectories)", len(video_paths), self.data_dir)
 
         videos: list[Any] = []
-        loader = get_video_loader(self.library)
-
-        with tqdm(video_paths, desc=f"Load videos ({self.library})", unit="video", **tqdm_kwargs()) as pbar:
+        progress_desc = f"Load videos ({self.library}, {self.clip_length}f)"
+        with tqdm(video_paths, desc=progress_desc, unit="video", **tqdm_kwargs()) as pbar:
             for path in pbar:
                 try:
-                    video = loader(path)
+                    video = self._load_video_clip(path)
                     if torch_module and isinstance(video, torch_module.Tensor) and gpu_available:
                         video = video.to(device, non_blocking=True) if self.library == "kornia" else video.to(device)
                     videos.append(video)
@@ -124,3 +145,32 @@ class BenchmarkMediaLoader:
             logger.info("GPU memory: %.2fGB / %.2fGB", allocated, total)
 
         return videos
+
+    def _load_video_clip(self, path: Path) -> Any:
+        if self.library in {"torchvision", "kornia"}:
+            import numpy as np
+
+            clip = decode_video("opencv", path, self.clip_length).frames
+            clip = np.ascontiguousarray(clip)
+            try:
+                import torch
+            except ImportError:
+                tensor = np.ascontiguousarray(clip.transpose(0, 3, 1, 2))
+                if self.library == "torchvision":
+                    return tensor
+                return np.ascontiguousarray((tensor.astype(np.float32) / 255.0).astype(np.float16))
+
+            tensor = torch.from_numpy(clip).permute(0, 3, 1, 2)
+            if self.library == "torchvision":
+                return tensor.contiguous()
+            return (tensor.float() / 255.0).half()
+
+        try:
+            clip = decode_video("opencv", path, self.clip_length).frames
+        except Exception:
+            return get_video_loader(self.library)(path)
+        return clip
+
+
+def _is_candidate_image(path: Path) -> bool:
+    return path.is_file() and path.suffix.lower() in IMAGE_SUFFIXES

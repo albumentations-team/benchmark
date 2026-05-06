@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import functools
 import math
 import random
 from typing import TYPE_CHECKING, Any
 
 from PIL import Image
-from torchvision.transforms import PILToTensor
 
 from benchmark.transforms.image_recipe_specs import (
     NORMALIZE_MEAN,
@@ -20,7 +20,13 @@ if TYPE_CHECKING:
     import torch
 
 LIBRARY = "pillow"
-_PIL_TO_TENSOR = PILToTensor()
+
+
+@functools.lru_cache(maxsize=1)
+def _pil_to_tensor() -> Any:
+    from torchvision.transforms import PILToTensor
+
+    return PILToTensor()
 
 
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
@@ -28,7 +34,7 @@ def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
 
 
 def _to_normalized_chw_tensor(image: Image.Image) -> torch.Tensor:
-    tensor = _PIL_TO_TENSOR(image).float().div_(255.0)
+    tensor = _pil_to_tensor()(image).float().div_(255.0)
     mean = tensor.new_tensor(NORMALIZE_MEAN).view(-1, 1, 1)
     std = tensor.new_tensor(NORMALIZE_STD).view(-1, 1, 1)
     return tensor.sub_(mean).div_(std)
@@ -106,26 +112,11 @@ class _PillowRandomResizedCropRecipe:
         return _to_normalized_chw_tensor(cropped.resize(size, Image.Resampling.BILINEAR))
 
 
-class _PillowCenterCropRecipe:
-    def __call__(self, image: Image.Image) -> torch.Tensor:
-        params = spec_by_name("CenterCrop224").params
-        crop_width = params["width"]
-        crop_height = params["height"]
-        image = _pad_to_min_size(image, crop_width, crop_height)
-        width, height = image.size
-        left = (width - crop_width) // 2
-        top = (height - crop_height) // 2
-        image = image.crop((left, top, left + crop_width, top + crop_height))
-        return _to_normalized_chw_tensor(image)
-
-
 def _create_transform(name: str) -> Any | None:
     if name == "RandomCrop224":
         return _PillowCropRecipe()
     if name == "RandomResizedCrop":
         return _PillowRandomResizedCropRecipe()
-    if name == "CenterCrop224":
-        return _PillowCenterCropRecipe()
     spec = spec_by_name(name)
     augmentation = create_transform(spec)
     return None if augmentation is None else _PillowCropRecipe(augmentation)

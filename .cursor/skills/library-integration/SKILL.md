@@ -13,7 +13,8 @@ Add support for new augmentation libraries to the benchmark suite.
 - [ ] Create transform implementation file
 - [ ] Create requirements file
 - [ ] Register matrix spec maps, requirements, and environment groups
-- [ ] Add or update matrix/job tests
+- [ ] Add or update config examples if the library affects paper/common run configs
+- [ ] Add or update matrix/config/job tests
 - [ ] Test with sample data
 - [ ] Generate baseline results
 - [ ] Update documentation
@@ -101,23 +102,24 @@ If it needs a non-standard backend, add a `BenchmarkJob.backend` value in `bench
 `benchmark/orchestrator.py`; do not add a library-specific branch to `benchmark/cli.py`.
 If it needs different media defaults or slow-skip thresholds, add them to `benchmark/policy.py`, not to individual
 runners.
+If it needs new user-facing run options, add them to `BenchmarkRunConfig` in `benchmark/config/models.py` first, then
+update YAML loading/overrides in `benchmark/config/resolve.py`, dry-run expansion in `benchmark/config/plan.py`, and
+examples under `configs/`.
+Keep result filename changes in `benchmark/output_naming.py`, and detached GCP path changes in `benchmark/cloud/paths.py`.
 
 Update tests when the matrix changes:
 
 ```bash
-python -m pytest tests/test_matrix.py tests/test_jobs_orchestrator.py
+python -m pytest tests/test_matrix.py tests/test_config_models.py tests/test_config_plan.py tests/test_jobs_orchestrator.py
 ```
 
 ## Step 4: Test Integration
 
 ```bash
-# Test single library
-python -m benchmark.cli run \
-  --scenario image-rgb \
-  --mode micro \
-  --data-dir /path/to/test/images \
+# Prefer a config-first smoke run, with CLI overrides for temporary values.
+python -m benchmark.cli plan --config configs/examples/local_rgb_micro_cpu.yaml --num-items 10 --num-runs 1
+python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml \
   --output test_output/newlib \
-  --libraries newlib \
   --num-items 10 \
   --num-runs 1
 
@@ -129,12 +131,8 @@ python -c "import json; print(json.load(open('test_output/newlib/image-rgb/micro
 
 ```bash
 # Full benchmark run
-python -m benchmark.cli run \
-  --scenario image-rgb \
-  --mode micro \
-  --data-dir /path/to/full/dataset \
+python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml \
   --output output/newlib_rgb_micro \
-  --libraries newlib \
   --num-items 2000 \
   --num-runs 5
 ```

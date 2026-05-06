@@ -8,13 +8,14 @@
 
 A transform is included only when it exists in at least two of these libraries.
 
-Transform count: 42.
+`CenterCrop224` is omitted (redundant with `RandomCrop224` / `RandomResizedCrop`).
+
+Transform count: 41.
 
 ```text
 Resize
 RandomCrop224
 RandomResizedCrop
-CenterCrop224
 HorizontalFlip
 VerticalFlip
 Pad

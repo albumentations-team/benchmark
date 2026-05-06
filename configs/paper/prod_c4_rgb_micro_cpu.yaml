@@ -1,0 +1,22 @@
+version: 1
+selection:
+  scenario: image-rgb
+  mode: micro
+  libraries: [albumentationsx, torchvision, kornia, pillow]
+  transform_set: paper
+data:
+  data_dir: /tmp/unused
+  gcs_uri: gs://imagenet_validation/imagenet/val.tar
+  num_items: 2000
+output:
+  output_dir: gcp_runs/prod-c4-standard-16-rgb-micro-cpu
+  gcs_results_uri: gs://imagenet_validation/augmentation-results
+execution:
+  num_runs: 1
+  device: none
+cloud:
+  provider: gcp
+  project: albumentations
+  zone: us-central1-a
+  machine_type: c4-standard-16
+  disk_size_gb: 100

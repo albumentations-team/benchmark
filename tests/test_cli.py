@@ -6,23 +6,24 @@ import argparse
 import json
 import subprocess
 import sys
-from typing import TYPE_CHECKING
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
 from benchmark.cli import (
-    _compile_requirements,
     _extract_library,
-    _library_env_group,
-    _requirements_cache_key,
-    _requirements_for_env_group,
-    build_gcp_benchmark_cli_argv,
-    build_parser,
 )
+from benchmark.config import (
+    BenchmarkRunConfig,
+    build_run_cli_argv_from_config,
+    load_run_config,
+    resolve_config_transform_set,
+)
+from benchmark.envs import compile_requirements, requirements_cache_key
+from benchmark.matrix import library_env_group, requirements_for_env_group
+from benchmark.output_naming import micro_output_file
+from benchmark.parser import build_parser, collect_provided_flags
 
 
 class TestBuildParser:
@@ -40,6 +41,12 @@ class TestBuildParser:
         args = parser.parse_args(["compare", "--baseline", "/baseline", "--current", "/current"])
         assert args.command == "compare"
 
+    def test_plan_subcommand_exists(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["plan", "--config", "configs/examples/local_rgb_micro_cpu.yaml"])
+        assert args.command == "plan"
+        assert args.config == Path("configs/examples/local_rgb_micro_cpu.yaml")
+
     def test_doctor_subcommand_exists(self) -> None:
         parser = build_parser()
         args = parser.parse_args(["doctor", "--json"])
@@ -52,15 +59,21 @@ class TestBuildParser:
         assert args.command == "validate-results"
         assert args.path == "/results"
 
-    def test_run_requires_data_dir(self) -> None:
+    def test_run_allows_config_without_data_dir(self) -> None:
         parser = build_parser()
-        with pytest.raises(SystemExit):
-            parser.parse_args(["run", "--output", "/out"])
+        args = parser.parse_args(["run", "--config", "config.yaml"])
+        assert args.config == Path("config.yaml")
 
-    def test_run_requires_output(self) -> None:
+    def test_run_allows_config_without_output(self) -> None:
         parser = build_parser()
-        with pytest.raises(SystemExit):
-            parser.parse_args(["run", "--data-dir", "/data"])
+        args = parser.parse_args(["run", "--config", "config.yaml"])
+        assert args.output is None
+
+    def test_collect_provided_flags_supports_equals_form(self) -> None:
+        assert collect_provided_flags(["run", "--config=c.yaml", "--num-items=5"]) == {
+            "--config",
+            "--num-items",
+        }
 
     def test_compare_requires_baseline(self) -> None:
         parser = build_parser()
@@ -159,6 +172,12 @@ class TestBuildParser:
         assert args.min_time == pytest.approx(1.5)
         assert args.min_batches == 3
 
+    def test_device_flag_parse(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out", "--device", "cuda"])
+
+        assert args.device == "cuda"
+
     def test_refresh_requirements_is_default(self) -> None:
         parser = build_parser()
         args = parser.parse_args(["run", "--data-dir", "/data", "--output", "/out"])
@@ -245,145 +264,45 @@ class TestBuildParser:
         assert args.decoders == ["opencv", "pyav"]
 
 
-class TestBuildGcpBenchmarkCliArgv:
-    def test_builds_argv_without_cloud_flags(self, tmp_path: Path) -> None:
-        parser = build_parser()
-        args = parser.parse_args(
-            [
-                "run",
-                "--data-dir",
-                "/ignored",
-                "--output",
-                "/ignored",
-                "--num-runs",
-                "3",
-                "--num-items",
-                "10",
-                "--libraries",
-                "kornia",
-            ],
+class TestBuildAttachedBenchmarkCliArgv:
+    def test_builds_attached_argv_from_typed_config(self, tmp_path: Path) -> None:
+        config = BenchmarkRunConfig.model_validate(
+            {
+                "selection": {
+                    "scenario": "image-rgb",
+                    "mode": "pipeline",
+                    "libraries": ["torchvision", "kornia"],
+                    "transforms": ["HorizontalFlip"],
+                },
+                "data": {"data_dir": "/ignored", "num_items": 11},
+                "execution": {"num_runs": 2, "batch_size": 8, "workers": 3, "device": "cuda"},
+                "output": {"output_dir": "/ignored"},
+            },
         )
-        repo_root = tmp_path
-        argv = build_gcp_benchmark_cli_argv(
-            args,
+
+        argv = build_run_cli_argv_from_config(
+            config,
             data_dir="/remote/data",
             output="/remote/out",
-            repo_root=repo_root,
+            repo_root=tmp_path,
+            verbose=True,
         )
-        assert "--data-dir" in argv
-        idx = argv.index("--data-dir")
-        assert argv[idx + 1] == "/remote/data"
+
+        assert argv[argv.index("--data-dir") + 1] == "/remote/data"
         assert argv[argv.index("--output") + 1] == "/remote/out"
-        assert "--num-items" in argv
-        assert argv[argv.index("--num-items") + 1] == "10"
-        assert "--libraries" in argv
-        assert "kornia" in argv
-        assert "--cloud" not in argv
-
-    def test_builds_scenario_argv(self, tmp_path: Path) -> None:
-        parser = build_parser()
-        args = parser.parse_args(
-            [
-                "run",
-                "--data-dir",
-                "/ignored",
-                "--output",
-                "/ignored",
-                "--scenario",
-                "video-16f",
-                "--mode",
-                "pipeline",
-                "--batch-size",
-                "4",
-                "--workers",
-                "2",
-                "--clip-length",
-                "16",
-            ],
-        )
-        argv = build_gcp_benchmark_cli_argv(
-            args,
-            data_dir="/remote/data",
-            output="/remote/out",
-            repo_root=tmp_path,
-        )
-        assert argv[argv.index("--scenario") + 1] == "video-16f"
+        assert argv[argv.index("--scenario") + 1] == "image-rgb"
         assert argv[argv.index("--mode") + 1] == "pipeline"
-        assert argv[argv.index("--batch-size") + 1] == "4"
-        assert argv[argv.index("--workers") + 1] == "2"
-        assert argv[argv.index("--clip-length") + 1] == "16"
+        assert argv[argv.index("--device") + 1] == "cuda"
+        assert argv[argv.index("--batch-size") + 1] == "8"
+        assert argv[argv.index("--workers") + 1] == "3"
+        assert "torchvision" in argv
+        assert "kornia" in argv
+        assert "HorizontalFlip" in argv
+        assert "--verbose" in argv
 
-    def test_builds_no_refresh_requirements_argv(self, tmp_path: Path) -> None:
-        parser = build_parser()
-        args = parser.parse_args(
-            ["run", "--data-dir", "/ignored", "--output", "/ignored", "--no-refresh-requirements"],
-        )
-        argv = build_gcp_benchmark_cli_argv(
-            args,
-            data_dir="/remote/data",
-            output="/remote/out",
-            repo_root=tmp_path,
-        )
-        assert "--no-refresh-requirements" in argv
 
-    def test_builds_slow_skip_argv(self, tmp_path: Path) -> None:
-        parser = build_parser()
-        args = parser.parse_args(
-            [
-                "run",
-                "--data-dir",
-                "/ignored",
-                "--output",
-                "/ignored",
-                "--slow-threshold-sec-per-item",
-                "0.2",
-                "--slow-preflight-items",
-                "5",
-                "--disable-slow-skip",
-            ],
-        )
-        argv = build_gcp_benchmark_cli_argv(
-            args,
-            data_dir="/remote/data",
-            output="/remote/out",
-            repo_root=tmp_path,
-        )
-        assert argv[argv.index("--slow-threshold-sec-per-item") + 1] == "0.2"
-        assert argv[argv.index("--slow-preflight-items") + 1] == "5"
-        assert "--disable-slow-skip" in argv
-
-    def test_spec_must_be_inside_repo(self, tmp_path: Path) -> None:
-        parser = build_parser()
-        outside = tmp_path / "outside.py"
-        outside.write_text('LIBRARY = "kornia"\n')
-        args = parser.parse_args(
-            ["run", "--data-dir", "/d", "--output", "/o", "--spec", str(outside)],
-        )
-        with pytest.raises(ValueError, match="inside the repository"):
-            build_gcp_benchmark_cli_argv(
-                args,
-                data_dir="/d",
-                output="/o",
-                repo_root=tmp_path / "repo_only",
-            )
-
-    def test_spec_inside_repo_uses_relative_path(self, tmp_path: Path) -> None:
-        parser = build_parser()
-        repo_root = tmp_path / "repo"
-        spec_path = repo_root / "configs" / "spec.py"
-        spec_path.parent.mkdir(parents=True)
-        spec_path.write_text('LIBRARY = "kornia"\n')
-        args = parser.parse_args(
-            ["run", "--data-dir", "/d", "--output", "/o", "--spec", str(spec_path)],
-        )
-        argv = build_gcp_benchmark_cli_argv(
-            args,
-            data_dir="/d",
-            output="/o",
-            repo_root=repo_root,
-        )
-        assert "--spec" in argv
-        assert argv[argv.index("--spec") + 1] == str(spec_path.relative_to(repo_root))
+def test_micro_output_file_includes_device_suffix(tmp_path: Path) -> None:
+    assert micro_output_file(tmp_path, "kornia", device="cuda").name == "kornia_micro_dev-cuda_results.json"
 
 
 class TestCmdRunGcp:
@@ -393,7 +312,7 @@ class TestCmdRunGcp:
         base = ["run", "--data-dir", "/d", "--output", "/o", "--cloud", "gcp", "--gcp-project", "proj"]
         return parser.parse_args(base + (extra or []))
 
-    def test_detached_requires_gcs_uris(self, tmp_path: Path) -> None:
+    def test_gcp_requires_typed_run_config(self, tmp_path: Path) -> None:
         parser = build_parser()
         args = self._base_args(parser)
         from benchmark.cli import _cmd_run_gcp
@@ -401,26 +320,14 @@ class TestCmdRunGcp:
         with pytest.raises(SystemExit):
             _cmd_run_gcp(args, tmp_path, tmp_path)
 
-    def test_attached_requires_remote_data_dir(self, tmp_path: Path) -> None:
-        parser = build_parser()
-        args = self._base_args(parser, ["--gcp-attached"])
-        from benchmark.cli import _cmd_run_gcp
-
-        with pytest.raises(SystemExit):
-            _cmd_run_gcp(args, tmp_path, tmp_path)
-
     def test_detached_dry_run_does_not_create_vm(self, tmp_path: Path) -> None:
-        parser = build_parser()
-        args = self._base_args(
-            parser,
-            [
-                "--gcp-gcs-data-uri",
-                "gs://b/d",
-                "--gcp-gcs-results-uri",
-                "gs://b/r",
-                "--gcp-dry-run",
-            ],
-        )
+        data = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml")).model_dump()
+        data["data"]["gcs_uri"] = "gs://b/d.tar"
+        data["output"]["gcs_results_uri"] = "gs://b/r"
+        data["cloud"]["project"] = "proj"
+        data["cloud"]["dry_run"] = True
+        config = BenchmarkRunConfig.model_validate(data)
+        args = argparse.Namespace(verbose=False)
         mock_runner = MagicMock()
         mock_runner.run_detached.return_value = "gs://b/r/dryrunid"
 
@@ -431,7 +338,7 @@ class TestCmdRunGcp:
         ):
             from benchmark.cli import _cmd_run_gcp
 
-            _cmd_run_gcp(args, tmp_path, tmp_path)
+            _cmd_run_gcp(args, tmp_path, tmp_path, run_config=config)
 
         assert mock_config.call_args.kwargs["preemptible"] is False
         mock_runner.run_detached.assert_called_once()
@@ -440,27 +347,42 @@ class TestCmdRunGcp:
         assert kwargs["job"]["venv_cache_uri"] == "gs://b/augmentation-cache"
         mock_runner.create_instance.assert_not_called()
 
+    def test_g2_machine_uses_gpu_image_without_explicit_accelerator(self, tmp_path: Path) -> None:
+        data = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml")).model_dump()
+        data["data"]["gcs_uri"] = "gs://b/d.tar"
+        data["output"]["gcs_results_uri"] = "gs://b/r"
+        data["cloud"]["project"] = "proj"
+        data["cloud"]["machine_type"] = "g2-standard-16"
+        data["cloud"]["dry_run"] = True
+        config = BenchmarkRunConfig.model_validate(data)
+        args = argparse.Namespace(verbose=False)
+        mock_runner = MagicMock()
+        mock_runner.run_detached.return_value = "gs://b/r/dryrunid"
+
+        with (
+            patch("benchmark.cloud.gcp.GCPRunner", return_value=mock_runner),
+            patch("benchmark.cloud.instance.GCPInstanceConfig") as mock_config,
+            patch("benchmark.cloud.gcp.new_run_id", return_value="testrunid"),
+        ):
+            from benchmark.cli import _cmd_run_gcp
+
+            _cmd_run_gcp(args, tmp_path, tmp_path, run_config=config)
+
+        assert mock_config.call_args.kwargs["accelerator_type"] is None
+        assert mock_config.call_args.kwargs["accelerator_count"] == 0
+        assert mock_config.call_args.kwargs["image_project"] == "deeplearning-platform-release"
+        assert mock_config.call_args.kwargs["image_family"] == "pytorch-2-9-cu129-ubuntu-2404-nvidia-580"
+
     def test_detached_writes_metadata_json(self, tmp_path: Path) -> None:
         out_dir = tmp_path / "out"
         out_dir.mkdir()
-        parser = build_parser()
-        args = parser.parse_args(
-            [
-                "run",
-                "--data-dir",
-                "/d",
-                "--output",
-                str(out_dir),
-                "--cloud",
-                "gcp",
-                "--gcp-project",
-                "proj",
-                "--gcp-gcs-data-uri",
-                "gs://b/data",
-                "--gcp-gcs-results-uri",
-                "gs://b/runs",
-            ],
-        )
+        data = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml")).model_dump()
+        data["data"]["gcs_uri"] = "gs://b/data.tar"
+        data["output"]["output_dir"] = str(out_dir)
+        data["output"]["gcs_results_uri"] = "gs://b/runs"
+        data["cloud"]["project"] = "proj"
+        config = BenchmarkRunConfig.model_validate(data)
+        args = argparse.Namespace(verbose=False)
         mock_runner = MagicMock()
         mock_runner.run_detached.return_value = "gs://b/runs/abc123"
 
@@ -472,27 +394,80 @@ class TestCmdRunGcp:
         ):
             from benchmark.cli import _cmd_run_gcp
 
-            _cmd_run_gcp(args, tmp_path, out_dir)
+            _cmd_run_gcp(args, tmp_path, out_dir, run_config=config)
 
         meta = json.loads((out_dir / "gcp_last_run.json").read_text())
         assert meta["run_id"] == "abc123"
         assert meta["run_prefix"] == "gs://b/runs/abc123"
         assert "fetch_results_hint" in meta
 
-    def test_attached_calls_run_attached_with_correct_argv(self, tmp_path: Path) -> None:
-        parser = build_parser()
-        args = self._base_args(
-            parser,
-            [
-                "--gcp-attached",
-                "--gcp-remote-data-dir",
-                "/vm/data",
-                "--media",
-                "video",
-                "--libraries",
-                "kornia",
-            ],
+    def test_detached_typed_job_payload_uses_vm_paths(self, tmp_path: Path) -> None:
+        config = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml"))
+        data = config.model_dump()
+        data["cloud"]["dry_run"] = True
+        config = BenchmarkRunConfig.model_validate(data)
+        args = argparse.Namespace(verbose=False)
+        mock_runner = MagicMock()
+        mock_runner.run_detached.return_value = "gs://b/runs/abc123"
+
+        with (
+            patch("benchmark.cloud.gcp.GCPRunner", return_value=mock_runner),
+            patch("benchmark.cloud.instance.GCPInstanceConfig"),
+            patch("benchmark.cloud.gcp.new_run_id", return_value="abc123"),
+        ):
+            from benchmark.cli import _cmd_run_gcp
+
+            _cmd_run_gcp(args, tmp_path, tmp_path, run_config=config)
+
+        _, kwargs = mock_runner.run_detached.call_args
+        run_config = kwargs["job"]["run_config"]
+        assert run_config["data"]["data_dir"] == "/root/benchmark-data/val"
+        assert run_config["output"]["output_dir"] == "/root/benchmark-work/results"
+        assert "cloud" not in run_config
+
+    def test_typed_gcp_config_takes_precedence_over_stale_namespace(self, tmp_path: Path) -> None:
+        data = load_run_config(Path("configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml")).model_dump()
+        data["cloud"]["dry_run"] = True
+        data["cloud"]["project"] = "typed-project"
+        data["cloud"]["machine_type"] = "g2-standard-16"
+        config = BenchmarkRunConfig.model_validate(data)
+        args = argparse.Namespace(
+            gcp_project="stale-project",
+            gcp_machine_type="n1-standard-8",
+            gcp_dry_run=False,
+            device="none",
+            verbose=False,
         )
+        mock_runner = MagicMock()
+        mock_runner.run_detached.return_value = "gs://b/runs/abc123"
+
+        with (
+            patch("benchmark.cloud.gcp.GCPRunner", return_value=mock_runner),
+            patch("benchmark.cloud.instance.GCPInstanceConfig") as mock_config,
+            patch("benchmark.cloud.gcp.new_run_id", return_value="abc123"),
+        ):
+            from benchmark.cli import _cmd_run_gcp
+
+            _cmd_run_gcp(args, tmp_path, tmp_path, run_config=config)
+
+        assert mock_config.call_args.kwargs["project"] == "typed-project"
+        assert mock_config.call_args.kwargs["machine_type"] == "g2-standard-16"
+        _, kwargs = mock_runner.run_detached.call_args
+        assert kwargs["dry_run"] is True
+        assert "benchmark_cli_args" not in kwargs["job"]
+        assert kwargs["job"]["run_config"]["execution"]["device"] == "cuda"
+
+    def test_attached_calls_run_attached_with_correct_argv(self, tmp_path: Path) -> None:
+        config = BenchmarkRunConfig.model_validate(
+            {
+                "selection": {"scenario": "image-rgb", "mode": "micro", "libraries": ["kornia"]},
+                "data": {"data_dir": "/ignored", "remote_data_dir": "/vm/data", "num_items": 10},
+                "output": {"output_dir": "/ignored"},
+                "execution": {"num_runs": 1},
+                "cloud": {"provider": "gcp", "project": "proj", "attached": True},
+            },
+        )
+        args = argparse.Namespace(verbose=False)
         mock_runner = MagicMock()
 
         with (
@@ -501,16 +476,95 @@ class TestCmdRunGcp:
         ):
             from benchmark.cli import _cmd_run_gcp
 
-            _cmd_run_gcp(args, tmp_path, tmp_path)
+            _cmd_run_gcp(args, tmp_path, tmp_path, run_config=config)
 
         mock_runner.run_attached.assert_called_once()
         _, kwargs = mock_runner.run_attached.call_args
         argv = kwargs["remote_cli_args"]
         assert "--data-dir" in argv
         assert argv[argv.index("--data-dir") + 1] == "/vm/data"
-        assert "--media" in argv
-        assert "video" in argv
+        assert "--scenario" in argv
+        assert argv[argv.index("--scenario") + 1] == "image-rgb"
         assert "kornia" in argv
+
+
+def test_gcp_job_dict_can_carry_typed_config() -> None:
+    from benchmark.cloud.gcp import build_gcp_job_dict
+
+    job = build_gcp_job_dict(
+        run_id="abc",
+        gcs_data_uri="gs://bucket/data.tar",
+        run_config={"selection": {"scenario": "image-rgb"}},
+        cloud_config={"provider": "gcp", "project": "p"},
+        terminate_instance=True,
+        keep_instance_on_failure=False,
+        venv_cache_uri="",
+        force_venv_cache_rebuild=False,
+        submission={},
+        instance_meta={},
+    )
+
+    assert job["run_config"] == {"selection": {"scenario": "image-rgb"}}
+    assert job["cloud_config"] == {"provider": "gcp", "project": "p"}
+    assert "benchmark_cli_args" not in job
+
+
+def test_scenario_run_builds_jobs_from_resolved_config(tmp_path: Path) -> None:
+    from benchmark.cli import _cmd_run_scenario
+
+    data = load_run_config(Path("configs/examples/local_rgb_micro_cpu.yaml")).model_dump()
+    data["selection"]["libraries"] = ["kornia"]
+    data["data"]["data_dir"] = str(tmp_path / "data")
+    config = resolve_config_transform_set(BenchmarkRunConfig.model_validate(data), Path.cwd())
+
+    with patch("benchmark.cli.execute_job") as execute:
+        _cmd_run_scenario(run_config=config, repo_root=Path.cwd(), output_dir=tmp_path / "out", verbose=False)
+
+    job = execute.call_args.args[0]
+    assert job.library == "kornia"
+    assert job.mode == "micro"
+    assert job.data_dir == tmp_path / "data"
+    assert "HorizontalFlip" in job.transforms_filter
+
+
+def test_manual_micro_job_uses_typed_config_and_preserves_micro_semantics(tmp_path: Path) -> None:
+    from benchmark.cli import _run_micro_job
+
+    config = BenchmarkRunConfig.model_validate(
+        {
+            "selection": {
+                "mode": "pipeline",
+                "media": "image",
+                "libraries": ["kornia"],
+                "transforms": ["HorizontalFlip"],
+            },
+            "data": {"data_dir": str(tmp_path / "data"), "num_items": 7, "num_channels": 9},
+            "execution": {"num_runs": 3, "workers": 2, "device": "none"},
+            "output": {"output_dir": str(tmp_path / "out")},
+        },
+    )
+    spec = tmp_path / "spec.py"
+    spec.write_text('LIBRARY = "kornia"\n', encoding="utf-8")
+
+    with patch("benchmark.cli.execute_job") as execute:
+        _run_micro_job(
+            library="kornia",
+            spec_file=spec,
+            data_dir=tmp_path / "data",
+            output_file=tmp_path / "out.json",
+            run_config=config,
+            repo_root=Path.cwd(),
+            verbose=True,
+        )
+
+    job = execute.call_args.args[0]
+    assert job.mode == "micro"
+    assert job.scenario == "image-manual"
+    assert job.workers == 0
+    assert job.num_items == 7
+    assert job.num_runs == 3
+    assert job.num_channels == 9
+    assert job.transforms_filter == ("HorizontalFlip",)
 
 
 class TestExtractLibrary:
@@ -552,11 +606,11 @@ class TestExtractLibrary:
 
 class TestRequirementsCacheKey:
     def test_torch_libraries_share_image_env_group(self, tmp_path: Path) -> None:
-        assert _library_env_group("torchvision", "image") == "torch_stack"
-        assert _library_env_group("kornia", "image") == "torch_stack"
-        assert _library_env_group("pillow", "image") == "torch_stack"
+        assert library_env_group("torchvision", "image") == "torch_stack"
+        assert library_env_group("kornia", "image") == "torch_stack"
+        assert library_env_group("pillow", "image") == "torch_stack"
 
-        reqs = _requirements_for_env_group("torch_stack", "image", tmp_path)
+        reqs = requirements_for_env_group("torch_stack", "image", tmp_path)
         assert [path.name for path in reqs] == ["requirements.txt", "torchvision.txt", "kornia.txt", "pillow.txt"]
 
     def test_cache_key_changes_when_requirements_change(self, tmp_path: Path) -> None:
@@ -564,14 +618,14 @@ class TestRequirementsCacheKey:
         req.write_text("numpy\n", encoding="utf-8")
         python = tmp_path / "python"
 
-        first = _requirements_cache_key(
+        first = requirements_cache_key(
             python=python,
             requirements_paths=[req],
             env_group="pillow",
             media="image",
         )
         req.write_text("numpy\npillow\n", encoding="utf-8")
-        second = _requirements_cache_key(
+        second = requirements_cache_key(
             python=python,
             requirements_paths=[req],
             env_group="pillow",
@@ -589,9 +643,9 @@ class TestRequirementsCacheKey:
             patch("benchmark.envs.subprocess.run", side_effect=RuntimeError("wrong exception")),
             pytest.raises(RuntimeError),
         ):
-            _compile_requirements(tmp_path / "python", req)
+            compile_requirements(tmp_path / "python", req)
 
         with patch("benchmark.envs.subprocess.run", side_effect=subprocess.CalledProcessError(1, "uv")):
-            _compile_requirements(tmp_path / "python", req)
+            compile_requirements(tmp_path / "python", req)
 
         assert req.read_text(encoding="utf-8") == "nvidia-dali-cuda120\n"

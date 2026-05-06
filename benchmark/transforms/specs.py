@@ -69,13 +69,6 @@ TRANSFORM_SPECS = [
         },
     ),
     TransformSpec(
-        "CenterCrop224",
-        {
-            "height": 224,
-            "width": 224,
-        },
-    ),
-    TransformSpec(
         "HorizontalFlip",
         {},
     ),

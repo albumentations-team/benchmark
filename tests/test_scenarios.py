@@ -11,10 +11,14 @@ def test_video_decode_scenario_defaults_to_decode() -> None:
     assert scenario.clip_length == 16
 
 
-def test_dali_only_available_for_video_pipeline_libraries() -> None:
-    scenario = get_scenario("video-16f")
-    assert "dali" not in resolve_libraries(scenario, "micro", None)
-    assert "dali" in resolve_libraries(scenario, "pipeline", None)
+def test_dali_available_for_pipeline_libraries_only() -> None:
+    video = get_scenario("video-16f")
+    rgb = get_scenario("image-rgb")
+
+    assert "dali" not in resolve_libraries(video, "micro", None)
+    assert "dali" in resolve_libraries(video, "pipeline", None)
+    assert "dali" not in resolve_libraries(rgb, "micro", None)
+    assert "dali" in resolve_libraries(rgb, "pipeline", None)
 
 
 def test_unknown_library_lists_available() -> None:

@@ -1,0 +1,8 @@
+implementation,regime,regime_label,library,full,universe_rows,median_throughput,wins
+Kornia GPU,rgb_dataloader_gpu,GPU DataLoader,kornia,48,57,657.6081924201931,0
+Kornia CPU,rgb_dataloader_cpu,CPU DataLoader,kornia,51,57,1440.997726928798,1
+TorchVision GPU,rgb_dataloader_gpu,GPU DataLoader,torchvision,25,57,2020.340929865038,0
+Pillow CPU,rgb_dataloader_cpu,CPU DataLoader,pillow,25,57,3241.223565707919,0
+TorchVision CPU,rgb_dataloader_cpu,CPU DataLoader,torchvision,26,57,3322.6173828059464,0
+DALI GPU,rgb_dataloader_gpu,GPU DataLoader,dali,22,57,3785.19165138937,3
+AlbumentationsX CPU,rgb_dataloader_cpu,CPU DataLoader,albumentationsx,57,57,4614.752875594858,53

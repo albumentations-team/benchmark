@@ -5,7 +5,7 @@ from benchmark.transforms.specs import TRANSFORM_SPECS, TransformSpec
 NORMALIZE_MEAN = (0.485, 0.456, 0.406)
 NORMALIZE_STD = (0.229, 0.224, 0.225)
 
-_CROP_RECIPE_NAMES = {"RandomCrop224", "RandomResizedCrop", "CenterCrop224"}
+_CROP_RECIPE_NAMES = {"RandomCrop224", "RandomResizedCrop"}
 _RECIPE_EXCLUDED_NAMES = {"Normalize"}
 _MIN_RECIPE_LIBRARY_SUPPORT = 2
 
@@ -33,7 +33,6 @@ _TORCHVISION_PIPELINE_SUPPORTED_NAMES = {
     "Affine",
     "AutoContrast",
     "Brightness",
-    "CenterCrop224",
     "ChannelShuffle",
     "ColorJiggle",
     "ColorJitter",
@@ -65,7 +64,6 @@ _KORNIA_PIPELINE_SUPPORTED_NAMES = {
     "Blur",
     "Brightness",
     "CLAHE",
-    "CenterCrop224",
     "ChannelDropout",
     "ChannelShuffle",
     "ColorJiggle",
@@ -133,7 +131,6 @@ _PILLOW_PIPELINE_SUPPORTED_NAMES = {
     "AutoContrast",
     "Blur",
     "Brightness",
-    "CenterCrop224",
     "Contrast",
     "EnhanceDetail",
     "EnhanceEdge",

@@ -63,8 +63,9 @@ Example recipe names:
 RandomCrop224+Affine+Normalize+ToTensor
 RandomCrop224+Brightness+Normalize+ToTensor
 RandomResizedCrop+Normalize+ToTensor
-CenterCrop224+Normalize+ToTensor
 ```
+
+`CenterCrop224` is not in the shared catalog (use `RandomCrop224` / `RandomResizedCrop` for crop coverage).
 
 `Normalize` is not benchmarked as a pipeline augmentation because it is already part of every pipeline recipe.
 
@@ -115,16 +116,37 @@ For a full module map, see `docs/benchmark_architecture.md`.
 Long benchmark runs must show tqdm progress with descriptive labels. Progress bars should make it clear which dimension is moving:
 
 - Library loops: `<scenario>/<mode>`.
-- Media loading: `Load images (<library>, <channels>ch)` or `Load videos (<library>)`.
+- Media loading: `Load images (<library>, <channels>ch)` or `Load videos (<library>, <clip-length>f)`.
 - Micro transforms: `Micro transforms (<library>, <media>)`.
 - Pyperf micro transforms: `Pyperf micro transforms (<library>, <media>)`.
 - Pipeline transforms: `Pipeline transforms (<library>, <scope>, w=<workers>, b=<batch_size>)`.
 
 Do not add anonymous tqdm bars. Every tqdm must have a useful `desc` and a unit such as `lib`, `img`, `video`, or `transform`.
 
+## Paper Plot Policy
+
+Plot choice must follow the paper claim and benchmark regime. Use `docs/good_plots.md` as the source of truth for
+claim-to-plot mapping, figure captions, and visualization anti-patterns.
+
+In particular:
+
+- Never use one merged leaderboard to support claims across micro, CPU DataLoader, GPU DataLoader, and DALI regimes.
+- Pair throughput plots with coverage or unsupported-row reporting when library support differs.
+- Use paired ratios for paired claims, for example `GPU pipeline / AlbumentationsX CPU pipeline` for the same transform.
+- Keep unsupported and early-stopped rows visible in either the main figure, a coverage figure, or the generated supplement.
+- Put memory-versus-throughput plots in the appendix unless the manuscript makes GPU memory an explicit claim.
+
 ## Paper Run Plan
 
 The paper does not need the full benchmark matrix on every CPU vendor. Run the complete CPU suite once on a modern Intel VM, run a small AMD sanity check, and run video GPU benchmarks separately.
+
+**GCP quota:** Current project quota is **128 vCPUs** (`CPUS_ALL_REGIONS`), **96 C4-family vCPUs** in `us-central1`
+(`CPUS_PER_VM_FAMILY`, `vm_family=C4`), and **1 GPU** (`GPUS_ALL_REGIONS`). That allows up to six concurrent
+`c4-standard-16` CPU benchmark VMs from the C4-family quota, or five C4 jobs plus one `g2-standard-16` GPU job from the
+all-CPU quota. Keep only one G2 job active because L4 quota remains one GPU.
+The regional Hyperdisk Balanced quota is currently **500 GB** (`HDB_TOTAL_GB`), so production C4 configs use **100 GB**
+boot disks. A 200 GB disk limits parallel C4 launch capacity to two active VMs before the third creation can fail on disk
+quota.
 
 ### Main CPU Suite
 
@@ -133,24 +155,36 @@ Machine: `c4-standard-16` or equivalent modern Intel CPU.
 Run these as the main paper tables:
 
 - RGB micro benchmark: `image-rgb`, `micro`, libraries `albumentationsx torchvision kornia pillow`, transforms from `docs/paper_transform_sets/rgb.md`.
-- 9-channel micro benchmark: `image-9ch`, `micro`, libraries `albumentationsx torchvision kornia`, transforms from `docs/paper_transform_sets/9ch.md`.
 - RGB DataLoader memory pipeline: `image-rgb`, `pipeline`, `memory_dataloader_augment`.
 - RGB DataLoader disk/decode pipeline: `image-rgb`, `pipeline`, `decode_dataloader_augment`.
-- 9-channel DataLoader memory pipeline: `image-9ch`, `pipeline`, `memory_dataloader_augment`.
-- 9-channel DataLoader disk/decode pipeline: `image-9ch`, `pipeline`, `decode_dataloader_augment`.
-- Video benchmarks use transforms from `docs/paper_transform_sets/video.md`.
+- RGB GPU image benchmarks: `image-rgb`, modes `micro` and `pipeline`, libraries `torchvision kornia`, `--device cuda`
+  on `g2-standard-16`. Micro rows are device-resident transform-only measurements; DataLoader rows include CPU
+  load/decode, library-native CPU crop/pad shape preparation, batch collation, host-to-device copy, GPU augmentation plus
+  normalization, and synchronization. Kornia uses batched GPU augmentation with `same_on_batch=False`; TorchVision uses a
+  per-sample GPU loop to preserve per-image random parameters.
+
+Defer these from the deadline RGB paper:
+
+- 9-channel micro/DataLoader benchmarks. They target multichannel imaging audiences and should be a separate paper or
+  appendix after RGB is complete.
+- Video micro/DataLoader benchmarks. Video has distinct decode, clip sampling, temporal consistency, and GPU pipeline
+  questions; keep current smoke results as path validation only.
 
 Recommended DataLoader settings for final paper runs:
 
 ```text
---batch-size 256
+--num-items 10000
+--batch-size 256  # RGB
 --workers 8
---num-runs 3
+--num-runs 1
 --min-time 0
---thread-policy pipeline-single-worker
+--thread-policy pipeline-default
 ```
 
-Use the full ImageNet validation set for final DataLoader runs. For cheaper iteration, keep the same production path and reduce only explicit sizing flags, for example `--num-items 1000 --batch-size 64 --workers 8 --num-runs 1 --min-time 0`.
+Use `10,000` ImageNet validation images for the deadline-first DataLoader table. Keep the same production path and
+reduce only explicit sizing flags for cheaper iteration, for example
+`--num-items 1000 --batch-size 64 --workers 8 --num-runs 1 --min-time 0`. After one complete coverage pass, add repeat
+runs for important rows and aggregate them; do not block first coverage on 3- or 5-run sweeps.
 
 ### AMD Sanity Check
 
@@ -169,11 +203,50 @@ Machine: `g2-standard-16` with an L4 GPU, or equivalent.
 
 Run these for video/GPU tables:
 
-- GPU video micro benchmarks for GPU-capable libraries, especially `torchvision` and `kornia`.
-- GPU video DataLoader/pipeline benchmarks for GPU-capable paths.
-- DALI video pipeline benchmarks when DALI is available on the target image.
+- GPU image micro and DataLoader sanity checks for `torchvision` and `kornia` on RGB and 9-channel images. DataLoader
+  workers use the same library on CPU for crop/pad shape preparation, then the fixed-shape batch is copied to GPU.
+  RGB GPU micro uses 2,000 device-resident images. 9-channel GPU micro uses 1,000 device-resident images because the
+  2,000-sample Kornia preload OOMs on an L4; label this row as memory-limited and do not compare it as a same-`n` row.
+  Kornia applies the measured augmentation with `same_on_batch=False` plus normalization. TorchVision applies the measured
+  augmentation in a per-sample GPU loop, then normalizes the batch, because TorchVision v2 does not expose a
+  `same_on_batch=False` equivalent for batched image transforms.
+  TorchVision `JpegCompression` is excluded from TorchVision GPU image rows because `torchvision.transforms.v2.JPEG`
+  requires `uint8` CPU input. Keep it in CPU TorchVision rows and in other libraries that support it.
+  CUDA DataLoader rows also record per-transform peak GPU memory during timed runs. Use these fields when discussing the
+  accelerator-memory cost of GPU augmentations; pyperf micro rows remain transform-time measurements and do not report
+  peak memory because they execute inside pyperf worker processes.
+  Production GPU image configs are `configs/paper/prod_g2_rgb_micro_gpu.yaml`,
+  `configs/paper/prod_g2_9ch_micro_gpu.yaml`, `configs/paper/prod_g2_rgb_dataloader_gpu.yaml`, and
+  `configs/paper/prod_g2_9ch_dataloader_gpu.yaml`. The corresponding `gcp_*_smoke.yaml` configs remain for fast path
+  checks and reruns.
+- Kornia image GPU rows exclude `Shear` in both micro and DataLoader modes because the current Kornia CUDA shear path can
+  fail while moving the transform's parameter generator to GPU. Kornia 9-channel image GPU rows also exclude
+  `MedianBlur` because the L4 9-channel GPU micro path OOMed on a multi-GB temporary allocation after device-resident
+  preload; Kornia RGB GPU keeps `MedianBlur`. TorchVision
+  image GPU rows exclude `JpegCompression` because TorchVision's JPEG op is CPU-only. These are library/device
+  limitations, not global paper transform-set removals: the transforms remain in CPU rows and in other libraries that
+  support them.
+- Kornia RGB GPU DataLoader can fail `GaussianIllumination` with a mixed CPU/CUDA tensor error in the current L4 run.
+  Treat this as an unsupported Kornia GPU recipe result and keep it as methodology evidence for GPU augmentation
+  benchmarking complexity.
+- GPU video micro benchmarks for GPU-capable libraries, especially `torchvision` and `kornia`. Micro video preload uses
+  fixed-length clips from `--clip-length` (16 frames for `video-16f`), not full source videos.
+- GPU video DataLoader/pipeline benchmarks for GPU-capable paths. These use dedicated video pipeline specs rather than
+  micro specs, so AlbumentationsX, torchvision, and Kornia all run recipe-style clips through DataLoader collation.
+- Reduced G2 smoke has already succeeded on UCF101 for `torchvision kornia` video micro and for
+  `albumentationsx torchvision kornia` video pipeline with `decode_dataloader_augment_batch_copy`, `--device cuda`,
+  `--num-items 10`, `--batch-size 2`, and `--workers 2`.
+- Kornia video DataLoader/pipeline rows exclude transforms in `benchmark/transforms/kornia_unstable.py` due to CUDA
+  stability issues in that recipe path only. Kornia image GPU rows additionally exclude `Shear`; Kornia 9-channel image
+  GPU rows additionally exclude `MedianBlur`. Kornia image CPU rows, 9-channel CPU rows, RGB GPU rows for `MedianBlur`,
+  and video micro keep the global paper transform sets.
+- DALI pipeline benchmarks when DALI is available on the target image. Current DALI coverage is video pipeline plus RGB
+  image GPU DataLoader-style pipeline; DALI image rows use the DALI-supported subset and report unsupported recipes
+  explicitly.
 
-CPU-only image rows should not be rerun on GPU machines for hardware symmetry. Label each result row with the machine class that actually ran it.
+CPU-only image rows should not be rerun on GPU machines for hardware symmetry. GPU image rows are a separate
+TorchVision/Kornia/DALI sanity section and must be labeled with device, machine class, whether transfer is included, and
+whether TorchVision used the per-sample GPU loop or DALI used its own graph executor.
 
 ### Validation
 

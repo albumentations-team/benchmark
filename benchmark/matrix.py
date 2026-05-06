@@ -65,12 +65,19 @@ VIDEO_SPECS: dict[str, str] = {
     "kornia": "benchmark/transforms/kornia_video_impl.py",
 }
 
+VIDEO_PIPELINE_SPECS: dict[str, str] = {
+    "albumentationsx": "benchmark/transforms/albumentationsx_video_pipeline_impl.py",
+    "torchvision": "benchmark/transforms/torchvision_video_pipeline_impl.py",
+    "kornia": "benchmark/transforms/kornia_video_pipeline_impl.py",
+}
+
 IMAGE_REQUIREMENTS: dict[str, str] = {
     "albumentationsx": "requirements/albumentationsx.txt",
     "albumentations_mit": "requirements/albumentations_mit.txt",
     "torchvision": "requirements/torchvision.txt",
     "kornia": "requirements/kornia.txt",
     "pillow": "requirements/pillow.txt",
+    "dali": "requirements/dali-video.txt",
 }
 
 VIDEO_REQUIREMENTS: dict[str, str] = {
@@ -86,6 +93,7 @@ ENV_GROUPS: dict[MediaName, dict[str, tuple[str, ...]]] = {
         "albumentationsx": ("albumentationsx",),
         "albumentations_mit": ("albumentations_mit",),
         "torch_stack": ("torchvision", "kornia", "pillow"),
+        "dali_image": ("dali",),
     },
     "video": {
         "albumentationsx_video": ("albumentationsx",),
@@ -115,7 +123,7 @@ def _scenario_spec_maps() -> dict[tuple[ScenarioName, BenchmarkMode], dict[str, 
         ("image-9ch", "micro"): MULTICHANNEL_IMAGE_SPECS,
         ("image-9ch", "pipeline"): MULTICHANNEL_IMAGE_PIPELINE_SPECS,
         ("video-16f", "micro"): VIDEO_SPECS,
-        ("video-16f", "pipeline"): VIDEO_SPECS,
+        ("video-16f", "pipeline"): VIDEO_PIPELINE_SPECS,
     }
 
 
@@ -161,9 +169,13 @@ def requirements_for_env_group(env_group: str, media: str, repo_root: Path) -> l
 
 
 def _devices_for(scenario_name: ScenarioName, mode: BenchmarkMode, library: str) -> tuple[DeviceOption, ...]:
+    if mode == "micro" and scenario_name.startswith("image-") and library in {"torchvision", "kornia"}:
+        return ("none", "cuda", "mps", "auto")
     if mode != "pipeline":
         return ("none",)
-    if scenario_name == "video-16f" or library in {"torchvision", "kornia"}:
+    if scenario_name == "image-rgb" and mode == "pipeline" and library == "dali":
+        return ("cuda", "auto")
+    if scenario_name == "video-16f" or (scenario_name.startswith("image-") and library in {"torchvision", "kornia"}):
         return ("none", "cuda", "mps", "auto")
     return ("none",)
 
@@ -199,6 +211,19 @@ def benchmark_matrix() -> tuple[LibraryScenarioConfig, ...]:
             env_group=library_env_group("dali", "video"),
             devices=("cuda", "auto"),
             pipeline_scopes=PIPELINE_SCOPES,
+            backend="dali_pipeline",
+        ),
+    )
+    entries.append(
+        LibraryScenarioConfig(
+            scenario="image-rgb",
+            mode="pipeline",
+            library="dali",
+            spec_path=None,
+            requirements_media="image",
+            env_group=library_env_group("dali", "image"),
+            devices=("cuda", "auto"),
+            pipeline_scopes=("decode_dataloader_augment",),
             backend="dali_pipeline",
         ),
     )

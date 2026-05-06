@@ -25,6 +25,7 @@ Automate updating benchmark documentation with latest results.
 ### Architecture / Policy Docs
 - `docs/benchmark_architecture.md` - Control-plane and runner architecture.
 - `docs/benchmark_scope.md` - Paper benchmark scope, transform selection, pipeline recipes, and architecture source of truth.
+- `docs/good_plots.md` - Claim-to-plot guidance for benchmark paper figures.
 - `.cursor/skills/benchmark-runner/SKILL.md` - Agent-facing benchmark execution policy.
 - `.cursor/skills/paper-benchmark-execution/SKILL.md` - Agent-facing paper run policy.
 
@@ -117,6 +118,8 @@ repository: https://github.com/org/library
 
 ```
 docs/
+├── good_plots.md                      # Paper figure and claim-to-plot policy
+├── benchmark_scope.md                 # Benchmark scope and paper policy
 ├── images/
 │   ├── README.md                      # Detailed benchmark results
 │   ├── images_speedup_analysis.webp   # Main visualization
@@ -195,6 +198,14 @@ grep -n "IMAGE_SPEEDUP_SUMMARY" README.md
 grep -n "VIDEO_SPEEDUP_SUMMARY" README.md
 ```
 
+5. **Validate paper figures against claims**:
+```bash
+git diff docs/good_plots.md _internal/paper/generated/insights.md
+```
+
+When figure recommendations change, ensure each recommended main-text figure has a stated claim, regime, metric, support
+denominator when applicable, and source CSV provenance.
+
 ## Workflow
 
 Complete documentation update workflow:
@@ -202,8 +213,7 @@ Complete documentation update workflow:
 ```bash
 # 1. Run benchmarks (if needed)
 python -m benchmark.cli run \
-  --scenario image-rgb \
-  --mode micro \
+  --config configs/examples/local_rgb_micro_cpu.yaml \
   --data-dir /path/to/imagenet/val \
   --output output/rgb_micro \
   --num-items 2000
@@ -227,9 +237,17 @@ Keep README guidance aligned with these policies:
 - Benchmark architecture docs should say that `benchmark/matrix.py` owns scenario/library/mode support, `benchmark/policy.py`
   owns media defaults and slow-skip thresholds, `benchmark/jobs.py` owns command construction, and
   `benchmark/orchestrator.py` owns backend dispatch.
+- Benchmark architecture docs should say that `benchmark/config/models.py` owns `BenchmarkRunConfig` validation,
+  `benchmark/config/resolve.py` owns YAML loading/CLI overrides/payload shaping, `benchmark/config/plan.py` owns dry-run
+  job expansion, and `benchmark/config/env.py` owns resolved-config metadata handoff.
+- Benchmark docs should use `python -m benchmark.cli plan --config ...` and
+  `python -m benchmark.cli run --config ...` examples for reproducible runs. Do not add flag-only benchmark run examples;
+  checked-in run examples live under `configs/`.
+- Benchmark docs should mention `benchmark/output_naming.py` for result filename policy and `benchmark/cloud/paths.py` for
+  detached GCP VM path policy whenever those rules are described.
 - If the benchmark matrix changes, update `docs/benchmark_architecture.md`, `docs/benchmark_scope.md`, and the relevant
   skill docs in the same change.
-- Cloud benchmark docs should show `--gcp-gcs-data-uri` pointing at one dataset archive/object, not a directory of individual images.
+- Cloud benchmark docs should show `--gcp-gcs-data-uri` pointing at one dataset tarball, not a directory of individual images/videos. For macOS-created tarballs, document `COPYFILE_DISABLE=1`, `tar --no-xattrs`, and excludes for `.DS_Store`, AppleDouble `._*`, and `__MACOSX`.
 - Micro benchmark docs should state that media is preloaded once per library and reused across transform measurements.
 - Pyperf docs should mention per-transform subprocess isolation, media-cache reuse, lazy transform construction, and slow-transform preflight/early-stop behavior.
 - Benchmark policy docs should mention lazy output materialization: micro timing should force returned outputs to contiguous memory, including contiguous NumPy conversion for Pillow/PIL `Image.Image` outputs. Checksums belong only in diagnostics.

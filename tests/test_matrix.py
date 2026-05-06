@@ -25,6 +25,7 @@ def test_matrix_covers_rgb_9ch_video_and_dali_pipeline() -> None:
     keys = {(entry.scenario, entry.mode, entry.library, entry.backend) for entry in entries}
 
     assert ("image-rgb", "micro", "albumentationsx", "pyperf") in keys
+    assert ("image-rgb", "pipeline", "dali", "dali_pipeline") in keys
     assert ("image-9ch", "pipeline", "kornia", "pipeline") in keys
     assert ("video-16f", "micro", "torchvision", "pyperf") in keys
     assert ("video-16f", "pipeline", "dali", "dali_pipeline") in keys
@@ -34,7 +35,8 @@ def test_spec_maps_are_scenario_and_mode_specific() -> None:
     assert spec_map_for_scenario("image-rgb", "micro")["kornia"].endswith("kornia_impl.py")
     assert spec_map_for_scenario("image-9ch", "micro")["kornia"].endswith("kornia_multichannel_impl.py")
     assert spec_map_for_scenario("image-rgb", "pipeline")["kornia"].endswith("kornia_pipeline_impl.py")
-    assert spec_map_for_scenario("video-16f", "pipeline")["kornia"].endswith("kornia_video_impl.py")
+    assert spec_map_for_scenario("video-16f", "micro")["kornia"].endswith("kornia_video_impl.py")
+    assert spec_map_for_scenario("video-16f", "pipeline")["kornia"].endswith("kornia_video_pipeline_impl.py")
 
 
 def test_paper_transform_sets_are_declared_in_matrix() -> None:
@@ -46,6 +48,13 @@ def test_paper_transform_sets_are_declared_in_matrix() -> None:
 def test_pipeline_device_policy_includes_gpu_and_mps_where_applicable() -> None:
     entries = {(entry.scenario, entry.mode, entry.library): entry for entry in benchmark_matrix()}
 
+    assert entries[("image-rgb", "micro", "torchvision")].devices == ("none", "cuda", "mps", "auto")
+    assert entries[("image-rgb", "micro", "kornia")].devices == ("none", "cuda", "mps", "auto")
+    assert entries[("image-9ch", "micro", "torchvision")].devices == ("none", "cuda", "mps", "auto")
+    assert entries[("image-rgb", "micro", "albumentationsx")].devices == ("none",)
+    assert entries[("image-rgb", "micro", "pillow")].devices == ("none",)
+    assert entries[("image-rgb", "pipeline", "torchvision")].devices == ("none", "cuda", "mps", "auto")
     assert entries[("image-rgb", "pipeline", "kornia")].devices == ("none", "cuda", "mps", "auto")
+    assert entries[("image-rgb", "pipeline", "dali")].devices == ("cuda", "auto")
     assert entries[("image-rgb", "pipeline", "pillow")].devices == ("none",)
     assert entries[("video-16f", "pipeline", "dali")].devices == ("cuda", "auto")

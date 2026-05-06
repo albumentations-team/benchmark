@@ -179,8 +179,7 @@ for t in module.TRANSFORMS:
 ```bash
 # Quick test with small dataset
 python -m benchmark.cli run \
-  --scenario image-rgb \
-  --mode micro \
+  --config configs/examples/local_rgb_micro_cpu.yaml \
   --data-dir /path/to/test/images \
   --output test_output/custom_spec \
   --spec my_transforms.py \

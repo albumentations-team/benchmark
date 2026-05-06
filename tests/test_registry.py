@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from benchmark.transforms.registry import _BY_NAME, TRANSFORMS, build_transforms, register_library
 from benchmark.transforms.specs import TRANSFORM_SPECS
 
@@ -94,6 +96,15 @@ class TestBuildTransforms:
 
         assert [entry["name"] for entry in result] == [first_name]
         assert built_names == [first_name]
+
+    def test_kornia_video_shear_is_unsupported(self, monkeypatch) -> None:
+        monkeypatch.setenv("BENCHMARK_TRANSFORMS_FILTER", "Shear")
+        pytest.importorskip("kornia")
+        import benchmark.transforms.kornia_video_impl  # noqa: F401
+
+        result = build_transforms("kornia", media="video")
+
+        assert result == []
 
 
 class TestRegisterLibrary:

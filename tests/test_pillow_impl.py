@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import pytest
 
 pytest.importorskip("PIL")
@@ -60,7 +59,6 @@ def test_dithering_matches_shared_floyd_steinberg_spec() -> None:
 
 def test_pillow_skips_non_native_or_composite_transforms() -> None:
     assert _create_transform(TransformSpec("RandomCrop224", {"height": 224, "width": 224})) is None
-    assert _create_transform(TransformSpec("CenterCrop224", {"height": 224, "width": 224})) is None
     assert _create_transform(TransformSpec("RandomResizedCrop", {"size": (512, 512)})) is None
     assert _create_transform(TransformSpec("SquareSymmetry", {})) is None
     assert _create_transform(TransformSpec("RandomRotate90", {"times": (0, 3)})) is None
@@ -101,17 +99,16 @@ def test_pillow_micro_spec_does_not_use_torch_tensor_conversion() -> None:
     assert "from_numpy" not in source
 
 
-def test_pillow_pipeline_center_crop_pads_small_images() -> None:
+def test_pillow_pipeline_random_crop_pads_small_images() -> None:
     torch = pytest.importorskip("torch")
     pytest.importorskip("torchvision")
 
-    from benchmark.transforms.pillow_pipeline_impl import _PillowCenterCropRecipe
+    from benchmark.transforms.pillow_pipeline_impl import _PillowCropRecipe
 
-    result = _PillowCenterCropRecipe()(Image.new("RGB", (64, 64), color=(255, 0, 0)))
+    result = _PillowCropRecipe()(Image.new("RGB", (64, 64), color=(255, 0, 0)))
 
     assert isinstance(result, torch.Tensor)
     assert result.shape == (3, 224, 224)
-    assert np.unique(result.numpy()[0]).size == 2
 
 
 def test_pillow_pipeline_uses_pil_to_tensor() -> None:

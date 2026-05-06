@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
+
+from benchmark.transform_filters import filter_transforms_for_library_device
 
 if TYPE_CHECKING:
-    import argparse
     from pathlib import Path
+
+    from benchmark.config import BenchmarkRunConfig
 
 
 @dataclass(frozen=True)
@@ -36,46 +39,56 @@ class BenchmarkJob:
     backend: Literal["pyperf", "pipeline", "dali_pipeline"] = "pyperf"
 
     @classmethod
-    def from_args(
+    def from_run_config(
         cls,
         *,
         library: str,
-        scenario_name: str,
-        mode: Literal["micro", "pipeline"],
-        media: Literal["image", "video"],
+        config: BenchmarkRunConfig,
         data_dir: Path,
         output_file: Path,
-        args: argparse.Namespace,
         num_channels: int,
         clip_length: int,
         spec_file: Path | None,
         backend: Literal["pyperf", "pipeline", "dali_pipeline"] | None = None,
     ) -> BenchmarkJob:
+        mode = config.resolved_mode()
+        if mode not in {"micro", "pipeline"}:
+            msg = f"BenchmarkJob does not support mode {mode!r}"
+            raise ValueError(msg)
+        mode = cast("Literal['micro', 'pipeline']", mode)
         selected_backend = backend or ("pyperf" if mode == "micro" else "pipeline")
+        media = config.resolved_media()
+        transforms_filter = filter_transforms_for_library_device(
+            tuple(config.selection.transforms or ()),
+            scenario=config.selection.scenario,
+            library=library,
+            media=media,
+            device=config.execution.device,
+        )
         return cls(
             library=library,
-            scenario=scenario_name,
+            scenario=config.selection.scenario or f"{media}-manual",
             mode=mode,
             media=media,
             data_dir=data_dir,
             output_file=output_file,
-            num_items=args.num_items,
-            num_runs=args.num_runs,
+            num_items=config.data.num_items,
+            num_runs=config.execution.num_runs,
             num_channels=num_channels,
             clip_length=clip_length,
             spec_file=spec_file,
-            transforms_filter=tuple(args.transforms or ()),
-            pipeline_scope=args.pipeline_scope,
-            batch_size=args.batch_size,
-            workers=args.workers,
-            min_time=args.min_time,
-            min_batches=args.min_batches,
-            device=args.device,
-            thread_policy=args.thread_policy,
-            refresh_requirements=args.refresh_requirements,
-            slow_threshold_sec_per_item=args.slow_threshold_sec_per_item,
-            slow_preflight_items=args.slow_preflight_items,
-            disable_slow_skip=args.disable_slow_skip,
+            transforms_filter=transforms_filter,
+            pipeline_scope=config.execution.pipeline_scope,
+            batch_size=config.execution.batch_size,
+            workers=config.execution.workers,
+            min_time=config.execution.min_time,
+            min_batches=config.execution.min_batches,
+            device=config.execution.device,
+            thread_policy=config.execution.thread_policy or "pipeline-default",
+            refresh_requirements=config.execution.refresh_requirements,
+            slow_threshold_sec_per_item=config.execution.slow_threshold_sec_per_item,
+            slow_preflight_items=config.execution.slow_preflight_items,
+            disable_slow_skip=config.execution.disable_slow_skip,
             backend=selected_backend,
         )
 
@@ -104,6 +117,10 @@ class BenchmarkJob:
             self.scenario,
             "--num-channels",
             str(self.num_channels),
+            "--clip-length",
+            str(self.clip_length),
+            "--device",
+            self.device,
             "--processes",
             "1",
             "--values",

@@ -18,25 +18,6 @@ from benchmark.transforms.specs import TransformSpec
 LIBRARY = "kornia"
 
 
-class _CenterCropWithPad(torch.nn.Module):
-    def __init__(self, size: tuple[int, int]) -> None:
-        super().__init__()
-        self.height, self.width = size
-        self.crop = Kaug.CenterCrop(size=size, p=1)
-
-    def forward(self, image: torch.Tensor) -> torch.Tensor:
-        height, width = image.shape[-2:]
-        pad_height = max(0, self.height - height)
-        pad_width = max(0, self.width - width)
-        if pad_height or pad_width:
-            top = pad_height // 2
-            bottom = pad_height - top
-            left = pad_width // 2
-            right = pad_width - left
-            image = F.pad(image, (left, right, top, bottom))
-        return self.crop(image)
-
-
 class _RandomJigsawWithPad(torch.nn.Module):
     def __init__(self, grid: tuple[int, int]) -> None:
         super().__init__()
@@ -257,8 +238,6 @@ def create_transform(spec: TransformSpec) -> Any | None:
             thresholds=params["threshold"],
             p=1,
         )
-    if spec.name == "CenterCrop224":
-        return _CenterCropWithPad(size=(params["height"], params["width"]))
     if spec.name == "Affine":
         angle_degrees = float(params["angle"])
         # Translation in pixels (same as albumentations translate_px)
