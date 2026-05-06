@@ -95,7 +95,7 @@ def test_paper_production_configs_use_deadline_sizing() -> None:
             "num_items": 10000,
             "device": "cuda",
             "machine_type": "g2-standard-16",
-            "pipeline_scope": "decode_dataloader_augment",
+            "pipeline_scope": "memory_dataloader_augment",
             "disk_size_gb": 200,
         },
         "prod_g2_9ch_micro_gpu.yaml": {

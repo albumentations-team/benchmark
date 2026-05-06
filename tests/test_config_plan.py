@@ -42,11 +42,11 @@ def test_plan_lists_production_gpu_pipeline_outputs() -> None:
     assert all("_n10000_r1_w8_b256_dev-cuda_results.json" in job.output_file for job in plan.jobs)
     assert (
         "/root/benchmark-work/results/image-rgb/pipeline/"
-        "torchvision_decode_dataloader_augment_n10000_r1_w8_b256_dev-cuda_results.json"
+        "torchvision_memory_dataloader_augment_n10000_r1_w8_b256_dev-cuda_results.json"
     ) in plan.expected_outputs
     assert (
         "/root/benchmark-work/results/image-rgb/pipeline/"
-        "kornia_decode_dataloader_augment_n10000_r1_w8_b256_dev-cuda_results.json"
+        "kornia_memory_dataloader_augment_n10000_r1_w8_b256_dev-cuda_results.json"
     ) in plan.expected_outputs
 
 
