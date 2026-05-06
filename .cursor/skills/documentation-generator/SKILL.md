@@ -25,6 +25,7 @@ Automate updating benchmark documentation with latest results.
 ### Architecture / Policy Docs
 - `docs/benchmark_architecture.md` - Control-plane and runner architecture.
 - `docs/benchmark_scope.md` - Paper benchmark scope, transform selection, pipeline recipes, and architecture source of truth.
+- `docs/good_plots.md` - Claim-to-plot guidance for benchmark paper figures.
 - `.cursor/skills/benchmark-runner/SKILL.md` - Agent-facing benchmark execution policy.
 - `.cursor/skills/paper-benchmark-execution/SKILL.md` - Agent-facing paper run policy.
 
@@ -117,6 +118,8 @@ repository: https://github.com/org/library
 
 ```
 docs/
+├── good_plots.md                      # Paper figure and claim-to-plot policy
+├── benchmark_scope.md                 # Benchmark scope and paper policy
 ├── images/
 │   ├── README.md                      # Detailed benchmark results
 │   ├── images_speedup_analysis.webp   # Main visualization
@@ -194,6 +197,14 @@ print(f"Shape: {df.shape}")
 grep -n "IMAGE_SPEEDUP_SUMMARY" README.md
 grep -n "VIDEO_SPEEDUP_SUMMARY" README.md
 ```
+
+5. **Validate paper figures against claims**:
+```bash
+git diff docs/good_plots.md _internal/paper/generated/insights.md
+```
+
+When figure recommendations change, ensure each recommended main-text figure has a stated claim, regime, metric, support
+denominator when applicable, and source CSV provenance.
 
 ## Workflow
 

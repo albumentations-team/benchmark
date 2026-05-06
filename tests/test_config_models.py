@@ -234,6 +234,9 @@ def test_cli_overrides_apply_after_yaml_config() -> None:
         gcp_no_venv_cache=False,
         gcp_force_venv_cache_rebuild=True,
         gcp_remote_data_dir=None,
+        slow_threshold_sec_per_item=0.2,
+        slow_preflight_items=256,
+        disable_slow_skip=True,
         dry_run=False,
         _provided_flags={
             "--data-dir",
@@ -241,6 +244,9 @@ def test_cli_overrides_apply_after_yaml_config() -> None:
             "--libraries",
             "--num-items",
             "--num-runs",
+            "--slow-threshold-sec-per-item",
+            "--slow-preflight-items",
+            "--disable-slow-skip",
             "--no-refresh-requirements",
             "--gcp-project",
             "--gcp-zone",
@@ -263,6 +269,9 @@ def test_cli_overrides_apply_after_yaml_config() -> None:
     assert resolved.selection.libraries == ["kornia"]
     assert resolved.data.num_items == 5
     assert resolved.execution.num_runs == 2
+    assert resolved.execution.slow_threshold_sec_per_item == pytest.approx(0.2)
+    assert resolved.execution.slow_preflight_items == 256
+    assert resolved.execution.disable_slow_skip is True
     assert resolved.execution.refresh_requirements is False
     assert resolved.data.gcs_uri == "gs://bucket/data.tar"
     assert resolved.output.gcs_results_uri == "gs://bucket/results"

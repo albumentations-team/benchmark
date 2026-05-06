@@ -29,7 +29,7 @@
 ### 5. Test Documentation Generator
 ```bash
 # Ask Cursor: "Update benchmark documentation"
-# Expected: Should reference update_docs.sh
+# Expected: Should reference update_docs.sh and preserve docs/good_plots.md figure policy
 ```
 
 ### 6. Test Transform Spec Validator

@@ -1,0 +1,9 @@
+regime_label,winner,wins
+CPU DataLoader,albumentationsx,56
+CPU DataLoader,kornia,1
+CPU micro,albumentationsx,52
+CPU micro,pillow,1
+GPU DataLoader,dali,21
+GPU DataLoader,kornia,1
+GPU DataLoader,torchvision,8
+GPU micro,torchvision,19

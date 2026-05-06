@@ -103,6 +103,21 @@ print(f"Max speedup: {df['albumentationsx'].max():.2f}×")
 print(f"Min speedup: {df['albumentationsx'].min():.2f}×")
 ```
 
+## Choosing Paper Figures
+
+Before recommending or generating a paper plot, read `docs/good_plots.md` and identify the claim being supported.
+
+Use these defaults for benchmark-paper analysis:
+
+- Winner/count claim across regimes: stacked winner-count bars by regime.
+- Paired CPU-vs-GPU claim: ratio plot with `GPU / AlbumentationsX CPU` and a visible `1.0` reference line.
+- Coverage claim: stacked bars or heatmap for full, early-stopped, and unsupported rows; always show denominators.
+- Memory tradeoff: throughput-versus-peak-memory scatter, usually appendix.
+- Stability claim: show every repeated run plus median/IQR; do not rely on a mean-only bar chart.
+
+Do not claim a universal fastest library from mixed regimes. Micro, CPU DataLoader, GPU DataLoader, and DALI answer
+different questions and need separate labels or an explicit regime-shift figure.
+
 ## Checking Lazy Output Artifacts
 
 When a library is unexpectedly faster, check whether it returns lazy or partially materialized outputs.

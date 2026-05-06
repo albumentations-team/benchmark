@@ -37,6 +37,7 @@ Ensures code quality before committing:
 Deep analysis of benchmark results:
 - Identify slow transforms and warmup issues
 - Compare speedups across libraries
+- Choose paper plots from explicit benchmark claims using `docs/good_plots.md`
 - Detect performance regressions
 - Generate optimization recommendations
 
@@ -46,6 +47,7 @@ Deep analysis of benchmark results:
 Automates documentation updates:
 - Generate comparison tables
 - Create speedup plots
+- Maintain paper figure guidance in `docs/good_plots.md`
 - Update README summaries
 - Maintain library metadata
 

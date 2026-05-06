@@ -14,6 +14,7 @@ A comprehensive benchmarking suite for comparing the performance of popular imag
     - [Image Benchmarks](#image-benchmarks)
     - [Multi-Channel Image Benchmarks (9ch)](#multi-channel-image-benchmarks-9ch)
     - [Video Benchmarks](#video-benchmarks)
+  - [Paper Figures](#paper-figures)
   - [Performance Highlights](#performance-highlights)
     - [Image Augmentation Performance](#image-augmentation-performance)
     - [Video Augmentation Performance](#video-augmentation-performance)
@@ -55,6 +56,44 @@ The image benchmarks compare the performance of various libraries on standard im
 For the deadline-first paper pass, use `2,000` ImageNet validation images for micro benchmarks and `10,000` images for
 DataLoader/pipeline benchmarks. Run one measurement per row first, validate coverage, then top up important rows with
 additional repeats.
+
+## Paper Figures
+
+<!-- PAPER_FIGURES_START -->
+
+The paper figures below are regenerated from `docs/paper_data/all_results.csv` by `python scripts/paper/generate_figures_and_insights.py`.
+
+### Figure 1. Open production DataLoader category
+
+![Figure 1. Open production DataLoader category](docs/paper_figures/open_dataloader_leaderboard.png)
+
+CPU and GPU DataLoader implementations compete together over the same 57-recipe universe. Bars show median measured-row throughput; labels show full measured coverage and open-category wins. AlbumentationsX CPU wins 53 of 57 recipes and has the highest median throughput.
+
+### Figure 2. Coverage breadth versus measured throughput
+
+![Figure 2. Coverage breadth versus measured throughput](docs/paper_figures/coverage_vs_throughput.png)
+
+DataLoader coverage and throughput are distinct benchmark axes. The x-axis is the count of full measured recipes over the canonical 57 CPU DataLoader recipes, and the y-axis is median throughput over measured rows only. The Elastic drill-down shows that GPU execution does not rescue a slow implementation of a hard transform.
+
+### Figure 3. GPU DataLoader pipelines versus AlbumentationsX CPU
+
+![Figure 3. GPU DataLoader pipelines versus AlbumentationsX CPU](docs/paper_figures/gpu_vs_albumentationsx_cpu_ratios.png)
+
+Each point is a paired GPU DataLoader recipe divided by the AlbumentationsX CPU DataLoader throughput for the same recipe. The dashed line marks parity. Most GPU rows fall below parity once the full DataLoader path is measured.
+
+### Figure 4. GPU memory consumed by augmentation pipelines
+
+![Figure 4. GPU memory consumed by augmentation pipelines](docs/paper_figures/gpu_memory_vs_throughput.png)
+
+GPU augmentation also consumes accelerator memory that would otherwise be available to model parameters, activations, optimizer state, or larger batches. Each point is a measured GPU DataLoader row with peak allocated memory recorded during the benchmark.
+
+### Appendix Figure. Winner counts by benchmark regime
+
+![Appendix Figure. Winner counts by benchmark regime](docs/paper_figures/winner_counts.png)
+
+Measured winner counts among comparable measured transforms by regime. The conclusion changes when moving from augmentation-only microbenchmarks to production-style DataLoader measurements.
+
+<!-- PAPER_FIGURES_END -->
 
 <!-- IMAGE_BENCHMARK_TABLE_START -->
 

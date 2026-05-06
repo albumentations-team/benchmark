@@ -123,6 +123,19 @@ Long benchmark runs must show tqdm progress with descriptive labels. Progress ba
 
 Do not add anonymous tqdm bars. Every tqdm must have a useful `desc` and a unit such as `lib`, `img`, `video`, or `transform`.
 
+## Paper Plot Policy
+
+Plot choice must follow the paper claim and benchmark regime. Use `docs/good_plots.md` as the source of truth for
+claim-to-plot mapping, figure captions, and visualization anti-patterns.
+
+In particular:
+
+- Never use one merged leaderboard to support claims across micro, CPU DataLoader, GPU DataLoader, and DALI regimes.
+- Pair throughput plots with coverage or unsupported-row reporting when library support differs.
+- Use paired ratios for paired claims, for example `GPU pipeline / AlbumentationsX CPU pipeline` for the same transform.
+- Keep unsupported and early-stopped rows visible in either the main figure, a coverage figure, or the generated supplement.
+- Put memory-versus-throughput plots in the appendix unless the manuscript makes GPU memory an explicit claim.
+
 ## Paper Run Plan
 
 The paper does not need the full benchmark matrix on every CPU vendor. Run the complete CPU suite once on a modern Intel VM, run a small AMD sanity check, and run video GPU benchmarks separately.

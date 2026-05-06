@@ -87,6 +87,12 @@ def apply_cli_overrides(config: BenchmarkRunConfig, args: argparse.Namespace) ->
         data["execution"]["workers"] = args.workers
     if _provided(args, "--batch-size"):
         data["execution"]["batch_size"] = args.batch_size
+    if _provided(args, "--slow-threshold-sec-per-item"):
+        data["execution"]["slow_threshold_sec_per_item"] = args.slow_threshold_sec_per_item
+    if _provided(args, "--slow-preflight-items"):
+        data["execution"]["slow_preflight_items"] = args.slow_preflight_items
+    if _provided(args, "--disable-slow-skip"):
+        data["execution"]["disable_slow_skip"] = args.disable_slow_skip
     if _provided(args, "--no-refresh-requirements"):
         data["execution"]["refresh_requirements"] = args.refresh_requirements
     if _provided(args, "--cloud"):
