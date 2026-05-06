@@ -1,6 +1,7 @@
-# 9-Channel Paper Transform Set
+# 9-Channel Additional Transform Set
 
-9-channel paper benchmarks use three libraries:
+9-channel benchmarks use three libraries. This set is retained for additional website/material runs; it is not part of
+the current RGB paper artifact.
 
 - `albumentationsx`
 - `torchvision`

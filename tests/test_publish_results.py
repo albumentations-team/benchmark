@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 
-from tools.publish_results import publish_results
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from tools.publish_results import _library_name, publish_results
 
 
 def _write_result(path: Path, library: str) -> None:
@@ -66,6 +63,52 @@ def test_publish_results_copies_summary_jsons_and_manifest(tmp_path: Path) -> No
     assert manifest["library_versions"] == {"albumentationsx": "1.2.3", "pillow": "1.2.3"}
     assert manifest["files"] == ["albumentationsx_micro_results.json", "pillow_micro_results.json"]
     assert manifest["entries"][0]["system_info"]["python_executable"] == "<external-path>"
+
+
+def test_publish_results_manifest_uses_metadata_library_for_pipeline_names(tmp_path: Path) -> None:
+    source = tmp_path / "output" / "image-rgb" / "pipeline"
+    source.mkdir(parents=True)
+    result = {
+        "metadata": {
+            "library": "albumentationsx",
+            "library_versions": {"albumentationsx": "2.2.6"},
+            "benchmark_params": {"pipeline_scope": "memory_dataloader_augment"},
+        },
+        "results": {"RandomCrop224+Normalize+ToTensor": {"supported": True, "median_throughput": 123.0}},
+    }
+    (source / "albumentationsx_memory_dataloader_augment_n10000_r2_w8_b256_results.json").write_text(
+        json.dumps(result),
+        encoding="utf-8",
+    )
+
+    destination = tmp_path / "results" / "published" / "paper-rgb-dataloader"
+    publish_results(
+        source_dir=source,
+        destination_dir=destination,
+        purpose="paper-rgb-dataloader",
+        machine="test-machine",
+    )
+
+    manifest = json.loads((destination / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["libraries"] == ["albumentationsx"]
+    assert manifest["library_versions"] == {"albumentationsx": "2.2.6"}
+    assert manifest["entries"][0]["library"] == "albumentationsx"
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        None,
+        "not-a-dict",
+        {},
+        {"library": ""},
+    ],
+)
+def test_library_name_falls_back_to_filename_when_metadata_missing_or_invalid(metadata: object) -> None:
+    payload = {} if metadata is None else {"metadata": metadata}
+    path = Path("albumentationsx_memory_dataloader_augment_n10000_r2_w8_b256_results.json")
+
+    assert _library_name(path, payload) == "albumentationsx"
 
 
 def test_publish_results_rejects_file_destination(tmp_path: Path) -> None:

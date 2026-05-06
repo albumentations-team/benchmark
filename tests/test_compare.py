@@ -49,6 +49,39 @@ class TestLoadResultFile:
         assert library == "albumentationsx"
         assert media == "image"
 
+    def test_pipeline_result_file_uses_metadata_library(self, tmp_path: Path) -> None:
+        data = {
+            "metadata": {
+                "library": "albumentationsx",
+                "scenario": "image-rgb",
+                "mode": "pipeline",
+            },
+            "results": {"RandomCrop224+Normalize+ToTensor": {}},
+        }
+        path = tmp_path / "albumentationsx_memory_dataloader_augment_n10000_r2_w8_b256_results.json"
+        path.write_text(json.dumps(data))
+
+        library, media, _metadata, results = load_result_file(path)
+        assert library == "albumentationsx"
+        assert media == "image"
+        assert "RandomCrop224+Normalize+ToTensor" in results
+
+    def test_pipeline_video_result_file_uses_scenario_media(self, tmp_path: Path) -> None:
+        data = {
+            "metadata": {
+                "library": "dali",
+                "scenario": "video-16f",
+                "mode": "pipeline",
+            },
+            "results": {"Decode": {}},
+        }
+        path = tmp_path / "dali_decode_dataloader_augment_n10000_r3_w8_b256_dev-cuda_results.json"
+        path.write_text(json.dumps(data))
+
+        library, media, _metadata, _results = load_result_file(path)
+        assert library == "dali"
+        assert media == "video"
+
     def test_returns_metadata_dict(self, minimal_result_json: Path) -> None:
         _, _, metadata, _results = load_result_file(minimal_result_json)
         assert isinstance(metadata, dict)
@@ -69,6 +102,17 @@ class TestLoadResultFile:
         path = tmp_path / "torchvision_results.json"
         path.write_text(json.dumps({"metadata": {}}))
         _, _, _metadata, results = load_result_file(path)
+        assert results == {}
+
+    def test_malformed_metadata_and_results_return_empty_dicts(self, tmp_path: Path) -> None:
+        path = tmp_path / "kornia_results.json"
+        path.write_text(json.dumps({"metadata": [], "results": "not-a-dict"}))
+
+        library, media, metadata, results = load_result_file(path)
+
+        assert library == "kornia"
+        assert media == "image"
+        assert metadata == {}
         assert results == {}
 
 

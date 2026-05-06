@@ -1,0 +1,1520 @@
+{
+  "metadata": {
+    "system_info": {
+      "python_version": "3.13.13 (main, Apr 14 2026, 14:28:56) [Clang 22.1.3 ]",
+      "python_executable": "<external-path>",
+      "platform": "Linux-6.17.0-1013-gcp-x86_64-with-glibc2.39",
+      "system": "Linux",
+      "machine": "x86_64",
+      "processor": "x86_64",
+      "cpu_count": "16",
+      "memory_total_bytes": "63189995520",
+      "timestamp": "2026-05-03T14:16:00.475353+00:00"
+    },
+    "library_versions": {
+      "kornia": "0.8.2",
+      "numpy": "2.4.4",
+      "pillow": "12.2.0",
+      "opencv-python-headless": "4.13.0.92",
+      "torch": "2.11.0",
+      "torchvision": "0.26.0",
+      "opencv-python": "not installed",
+      "av": "not installed",
+      "decord": "not installed",
+      "torchcodec": "not installed"
+    },
+    "thread_settings": {
+      "environment": "{'OMP_NUM_THREADS': 'None', 'OPENBLAS_NUM_THREADS': 'None', 'MKL_NUM_THREADS': 'None', 'VECLIB_MAXIMUM_THREADS': 'None', 'NUMEXPR_NUM_THREADS': 'None'}",
+      "opencv": "{'threads': 16, 'opencl': False}",
+      "pytorch": "{'threads': 8, 'gpu_available': False, 'gpu_device': None}",
+      "pillow": "{'threads': 'unknown', 'simd': False}"
+    },
+    "environment": {
+      "cwd": "<external-path>",
+      "python_executable": "<external-path>",
+      "python_prefix": "<external-path>",
+      "argv": [
+        "<external-path>",
+        "--specs-file",
+        "<external-path>",
+        "--data-dir",
+        "<external-path>",
+        "--output",
+        "<external-path>",
+        "--media",
+        "image",
+        "--scenario",
+        "image-rgb",
+        "--num-runs",
+        "2",
+        "--batch-size",
+        "256",
+        "--workers",
+        "8",
+        "--min-time",
+        "0.0",
+        "--min-batches",
+        "1",
+        "--num-channels",
+        "3",
+        "--clip-length",
+        "16",
+        "--pipeline-scope",
+        "memory_dataloader_augment",
+        "--device",
+        "none",
+        "--thread-policy",
+        "pipeline-default",
+        "--num-items",
+        "10000"
+      ],
+      "platform": {
+        "system": "Linux",
+        "release": "6.17.0-1013-gcp",
+        "machine": "x86_64",
+        "processor": "x86_64"
+      },
+      "thread_env": {},
+      "git": {
+        "dirty": false
+      }
+    },
+    "gpu": {
+      "torch_available": true,
+      "torch_version": "2.11.0+cu130",
+      "cuda_available": false,
+      "torch_cuda_version": "13.0"
+    },
+    "dataset": {
+      "available": true,
+      "path": "<external-path>",
+      "media": "image",
+      "file_count": 50000,
+      "total_bytes": 6706560319,
+      "extensions": {
+        ".jpeg": 50000
+      },
+      "sample_paths": [
+        "ILSVRC2012_val_00000001.JPEG",
+        "ILSVRC2012_val_00000002.JPEG",
+        "ILSVRC2012_val_00000003.JPEG",
+        "ILSVRC2012_val_00000004.JPEG",
+        "ILSVRC2012_val_00000005.JPEG",
+        "ILSVRC2012_val_00000006.JPEG",
+        "ILSVRC2012_val_00000007.JPEG",
+        "ILSVRC2012_val_00000008.JPEG",
+        "ILSVRC2012_val_00000009.JPEG",
+        "ILSVRC2012_val_00000010.JPEG"
+      ]
+    },
+    "timing": {
+      "timing_backend": "perf_counter",
+      "measurement_scope": "memory_dataloader_augment",
+      "data_source": "memory",
+      "includes_decode": false,
+      "includes_collate": true,
+      "includes_gpu_transfer": false,
+      "includes_dataloader_workers": true
+    },
+    "scenario": "image-rgb",
+    "mode": "pipeline",
+    "library": "kornia",
+    "benchmark_params": {
+      "num_images": 10000,
+      "num_runs": 2,
+      "batch_size": 256,
+      "workers": 8,
+      "min_time": 0.0,
+      "min_batches": 1,
+      "num_channels": 3,
+      "pipeline_scope": "memory_dataloader_augment",
+      "decode_included": false,
+      "decoder": "kornia",
+      "device": "none",
+      "device_option": "none",
+      "transform_on_device": false,
+      "includes_host_to_device_transfer": false,
+      "gpu_memory_peak_measured": false,
+      "thread_policy": "pipeline-default",
+      "batch_collate": true,
+      "preload_time": 21.57005699599995,
+      "slow_skip_enabled": true,
+      "slow_threshold_sec_per_item": 0.05,
+      "slow_preflight_items": 10
+    },
+    "run_config": {
+      "version": 1,
+      "selection": {
+        "scenario": "image-rgb",
+        "mode": "pipeline",
+        "media": "image",
+        "libraries": [
+          "albumentationsx",
+          "torchvision",
+          "kornia",
+          "pillow"
+        ],
+        "transforms": [
+          "RandomCrop224+Resize+Normalize+ToTensor",
+          "RandomCrop224+Normalize+ToTensor",
+          "RandomResizedCrop+Normalize+ToTensor",
+          "RandomCrop224+HorizontalFlip+Normalize+ToTensor",
+          "RandomCrop224+VerticalFlip+Normalize+ToTensor",
+          "RandomCrop224+Pad+Normalize+ToTensor",
+          "RandomCrop224+Rotate+Normalize+ToTensor",
+          "RandomCrop224+Affine+Normalize+ToTensor",
+          "RandomCrop224+Perspective+Normalize+ToTensor",
+          "RandomCrop224+Elastic+Normalize+ToTensor",
+          "RandomCrop224+ColorJitter+Normalize+ToTensor",
+          "RandomCrop224+ChannelShuffle+Normalize+ToTensor",
+          "RandomCrop224+Grayscale+Normalize+ToTensor",
+          "RandomCrop224+RGBShift+Normalize+ToTensor",
+          "RandomCrop224+GaussianBlur+Normalize+ToTensor",
+          "RandomCrop224+GaussianNoise+Normalize+ToTensor",
+          "RandomCrop224+Invert+Normalize+ToTensor",
+          "RandomCrop224+Posterize+Normalize+ToTensor",
+          "RandomCrop224+Solarize+Normalize+ToTensor",
+          "RandomCrop224+Sharpen+Normalize+ToTensor",
+          "RandomCrop224+AutoContrast+Normalize+ToTensor",
+          "RandomCrop224+Equalize+Normalize+ToTensor",
+          "RandomCrop224+Erasing+Normalize+ToTensor",
+          "RandomCrop224+JpegCompression+Normalize+ToTensor",
+          "RandomCrop224+RandomGamma+Normalize+ToTensor",
+          "RandomCrop224+PlankianJitter+Normalize+ToTensor",
+          "RandomCrop224+MedianBlur+Normalize+ToTensor",
+          "RandomCrop224+MotionBlur+Normalize+ToTensor",
+          "RandomCrop224+CLAHE+Normalize+ToTensor",
+          "RandomCrop224+Brightness+Normalize+ToTensor",
+          "RandomCrop224+Contrast+Normalize+ToTensor",
+          "RandomCrop224+Blur+Normalize+ToTensor",
+          "RandomCrop224+ChannelDropout+Normalize+ToTensor",
+          "RandomCrop224+LinearIllumination+Normalize+ToTensor",
+          "RandomCrop224+CornerIllumination+Normalize+ToTensor",
+          "RandomCrop224+GaussianIllumination+Normalize+ToTensor",
+          "RandomCrop224+Hue+Normalize+ToTensor",
+          "RandomCrop224+PlasmaBrightness+Normalize+ToTensor",
+          "RandomCrop224+PlasmaContrast+Normalize+ToTensor",
+          "RandomCrop224+PlasmaShadow+Normalize+ToTensor",
+          "RandomCrop224+Rain+Normalize+ToTensor",
+          "RandomCrop224+SaltAndPepper+Normalize+ToTensor",
+          "RandomCrop224+Saturation+Normalize+ToTensor",
+          "RandomCrop224+Snow+Normalize+ToTensor",
+          "RandomCrop224+OpticalDistortion+Normalize+ToTensor",
+          "RandomCrop224+Shear+Normalize+ToTensor",
+          "RandomCrop224+ThinPlateSpline+Normalize+ToTensor",
+          "RandomCrop224+PhotoMetricDistort+Normalize+ToTensor",
+          "RandomCrop224+ColorJiggle+Normalize+ToTensor",
+          "RandomCrop224+LongestMaxSize+Normalize+ToTensor",
+          "RandomCrop224+SmallestMaxSize+Normalize+ToTensor",
+          "RandomCrop224+Transpose+Normalize+ToTensor",
+          "RandomCrop224+RandomRotate90+Normalize+ToTensor",
+          "RandomCrop224+RandomJigsaw+Normalize+ToTensor",
+          "RandomCrop224+EnhanceEdge+Normalize+ToTensor",
+          "RandomCrop224+EnhanceDetail+Normalize+ToTensor",
+          "RandomCrop224+UnsharpMask+Normalize+ToTensor"
+        ],
+        "transform_set": "paper",
+        "multichannel": false
+      },
+      "data": {
+        "data_dir": "<external-path>",
+        "gcs_uri": "gs://imagenet_validation/imagenet/val.tar",
+        "num_items": 10000,
+        "num_channels": 3
+      },
+      "execution": {
+        "num_runs": 2,
+        "batch_size": 256,
+        "workers": 8,
+        "min_time": 0.0,
+        "min_batches": 1,
+        "pipeline_scope": "memory_dataloader_augment",
+        "device": "none",
+        "thread_policy": "pipeline-default",
+        "refresh_requirements": true,
+        "disable_slow_skip": false
+      },
+      "output": {
+        "output_dir": "<external-path>",
+        "gcs_results_uri": "gs://imagenet_validation/augmentation-results"
+      }
+    }
+  },
+  "results": {
+    "RandomCrop224+Resize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        533.8397184580344,
+        547.4614845905379
+      ],
+      "median_throughput": 540.6506015242862,
+      "mean_throughput": 540.6506015242862,
+      "std_throughput": 9.632043204030452,
+      "cv_throughput": 0.01781565243222573,
+      "throughput_ci95": 13.349330809853397,
+      "p50_throughput": 540.6506015242862,
+      "p75_throughput": 544.056043057412,
+      "p90_throughput": 546.0993079772876,
+      "p95_throughput": 546.7803962839128,
+      "times": [
+        18.732214285000055,
+        18.26612516399996
+      ],
+      "mean_time": 18.499169724500007,
+      "std_time": 0.32957477809644475,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1837.3932691346238,
+        1909.373461369556
+      ],
+      "median_throughput": 1873.3833652520898,
+      "mean_throughput": 1873.3833652520898,
+      "std_throughput": 50.89768204043186,
+      "cv_throughput": 0.027168855550066692,
+      "throughput_ci95": 70.5405883902336,
+      "p50_throughput": 1873.3833652520898,
+      "p75_throughput": 1891.378413310823,
+      "p90_throughput": 1902.1754421460628,
+      "p95_throughput": 1905.7744517578094,
+      "times": [
+        5.442492996999931,
+        5.237320096000076
+      ],
+      "mean_time": 5.3399065465000035,
+      "std_time": 0.14507914961271387,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomResizedCrop+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1532.7779252844887,
+        1541.0016758377756
+      ],
+      "median_throughput": 1536.8898005611322,
+      "mean_throughput": 1536.8898005611322,
+      "std_throughput": 5.815069783015782,
+      "cv_throughput": 0.0037836608590236256,
+      "throughput_ci95": 8.059275542221151,
+      "p50_throughput": 1536.8898005611322,
+      "p75_throughput": 1538.945738199454,
+      "p90_throughput": 1540.179300782447,
+      "p95_throughput": 1540.5904883101111,
+      "times": [
+        6.5241023080000105,
+        6.4892856100000245
+      ],
+      "mean_time": 6.5066939590000175,
+      "std_time": 0.0246191232543142,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+HorizontalFlip+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1817.1275997109174,
+        1819.0104091732032
+      ],
+      "median_throughput": 1818.0690044420603,
+      "mean_throughput": 1818.0690044420603,
+      "std_throughput": 1.331347338464541,
+      "cv_throughput": 0.0007322864727420578,
+      "throughput_ci95": 1.8451532730401594,
+      "p50_throughput": 1818.0690044420603,
+      "p75_throughput": 1818.5397068076318,
+      "p90_throughput": 1818.8221282269747,
+      "p95_throughput": 1818.916268700089,
+      "times": [
+        5.503190861000007,
+        5.497494653999979
+      ],
+      "mean_time": 5.500342757499993,
+      "std_time": 0.004027826596762187,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+VerticalFlip+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1817.4660082031296,
+        1769.6623713561291
+      ],
+      "median_throughput": 1793.5641897796295,
+      "mean_throughput": 1793.5641897796295,
+      "std_throughput": 33.80227577989314,
+      "cv_throughput": 0.018846426558085067,
+      "throughput_ci95": 46.847564110060446,
+      "p50_throughput": 1793.5641897796295,
+      "p75_throughput": 1805.5150989913795,
+      "p90_throughput": 1812.6856445184296,
+      "p95_throughput": 1815.0758263607795,
+      "times": [
+        5.502166178000039,
+        5.650795407000032
+      ],
+      "mean_time": 5.5764807925000355,
+      "std_time": 0.10509673570842384,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Rotate+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1458.5675535447692,
+        1449.3333070845479
+      ],
+      "median_throughput": 1453.9504303146587,
+      "mean_throughput": 1453.9504303146587,
+      "std_throughput": 6.529598291170394,
+      "cv_throughput": 0.004490935973489331,
+      "throughput_ci95": 9.049561531016929,
+      "p50_throughput": 1453.9504303146587,
+      "p75_throughput": 1456.2589919297138,
+      "p90_throughput": 1457.644128898747,
+      "p95_throughput": 1458.105841221758,
+      "times": [
+        6.8560417210001106,
+        6.899724136000032
+      ],
+      "mean_time": 6.877882928500071,
+      "std_time": 0.030888131865049167,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Affine+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1515.893547569564,
+        1486.2005535502335
+      ],
+      "median_throughput": 1501.0470505598987,
+      "mean_throughput": 1501.0470505598987,
+      "std_throughput": 20.996117424800126,
+      "cv_throughput": 0.013987647766916073,
+      "throughput_ci95": 29.099134138943793,
+      "p50_throughput": 1501.0470505598987,
+      "p75_throughput": 1508.4702990647313,
+      "p90_throughput": 1512.9242481676308,
+      "p95_throughput": 1514.4088978685975,
+      "times": [
+        6.596769288999894,
+        6.728567000000112
+      ],
+      "mean_time": 6.662668144500003,
+      "std_time": 0.09319505519311864,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Perspective+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1255.5108919566571,
+        1263.0633828682126
+      ],
+      "median_throughput": 1259.2871374124347,
+      "mean_throughput": 1259.2871374124347,
+      "std_throughput": 5.34041753841061,
+      "cv_throughput": 0.004240825924247923,
+      "throughput_ci95": 7.401441093324314,
+      "p50_throughput": 1259.2871374124347,
+      "p75_throughput": 1261.1752601403236,
+      "p90_throughput": 1262.308133777057,
+      "p95_throughput": 1262.6857583226347,
+      "times": [
+        7.964885103000142,
+        7.917259050999974
+      ],
+      "mean_time": 7.941072077000058,
+      "std_time": 0.033676704330462486,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Elastic+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        102.20509319260678,
+        102.55083742290549
+      ],
+      "median_throughput": 102.37796530775614,
+      "mean_throughput": 102.37796530775614,
+      "std_throughput": 0.2444780898003385,
+      "cv_throughput": 0.002387995200582648,
+      "throughput_ci95": 0.338829345692732,
+      "p50_throughput": 102.37796530775614,
+      "p75_throughput": 102.46440136533081,
+      "p90_throughput": 102.51626299987562,
+      "p95_throughput": 102.53355021139055,
+      "times": [
+        97.842482088,
+        97.512611806
+      ],
+      "mean_time": 97.677546947,
+      "std_time": 0.23325351331411992,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+ColorJitter+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        951.4746367240468,
+        968.0403434127714
+      ],
+      "median_throughput": 959.7574900684092,
+      "mean_throughput": 959.7574900684092,
+      "std_throughput": 11.713723534744524,
+      "cv_throughput": 0.01220487847811388,
+      "throughput_ci95": 16.234392554950123,
+      "p50_throughput": 959.7574900684092,
+      "p75_throughput": 963.8989167405903,
+      "p90_throughput": 966.383772743899,
+      "p95_throughput": 967.2120580783352,
+      "times": [
+        10.51000164800007,
+        10.330147981999971
+      ],
+      "mean_time": 10.42007481500002,
+      "std_time": 0.1271757468499305,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+ChannelShuffle+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1735.888164002438,
+        1637.7978143989435
+      ],
+      "median_throughput": 1686.8429892006907,
+      "mean_throughput": 1686.8429892006907,
+      "std_throughput": 69.3603513735902,
+      "cv_throughput": 0.04111843948585669,
+      "throughput_ci95": 96.1285426114247,
+      "p50_throughput": 1686.8429892006907,
+      "p75_throughput": 1711.3655766015645,
+      "p90_throughput": 1726.0791290420887,
+      "p95_throughput": 1730.9836465222634,
+      "times": [
+        5.760739779999994,
+        6.105759766000119
+      ],
+      "mean_time": 5.933249773000057,
+      "std_time": 0.24396597174557597,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Grayscale+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1723.3082451712203,
+        1661.2071426165924
+      ],
+      "median_throughput": 1692.2576938939064,
+      "mean_throughput": 1692.2576938939064,
+      "std_throughput": 43.912110735538626,
+      "cv_throughput": 0.025948832080353142,
+      "throughput_ci95": 60.859080503535345,
+      "p50_throughput": 1692.2576938939064,
+      "p75_throughput": 1707.7829695325634,
+      "p90_throughput": 1717.0981349157576,
+      "p95_throughput": 1720.2031900434888,
+      "times": [
+        5.80279240699997,
+        6.019718880000028
+      ],
+      "mean_time": 5.911255643499999,
+      "std_time": 0.15339018007722133,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+RGBShift+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1716.5022619052422,
+        1699.7614258886088
+      ],
+      "median_throughput": 1708.1318438969256,
+      "mean_throughput": 1708.1318438969256,
+      "std_throughput": 11.837558670093514,
+      "cv_throughput": 0.00693012000940592,
+      "throughput_ci95": 16.406019296300794,
+      "p50_throughput": 1708.1318438969256,
+      "p75_throughput": 1712.3170529010838,
+      "p90_throughput": 1714.8281783035789,
+      "p95_throughput": 1715.6652201044105,
+      "times": [
+        5.825800653999977,
+        5.883178573000123
+      ],
+      "mean_time": 5.85448961350005,
+      "std_time": 0.04057231561537568,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+GaussianBlur+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1226.0602004807859,
+        1214.6372919001049
+      ],
+      "median_throughput": 1220.3487461904454,
+      "mean_throughput": 1220.3487461904454,
+      "std_throughput": 8.077216118273533,
+      "cv_throughput": 0.006618776922161083,
+      "throughput_ci95": 11.194450409067375,
+      "p50_throughput": 1220.3487461904454,
+      "p75_throughput": 1223.2044733356156,
+      "p90_throughput": 1224.9179096227178,
+      "p95_throughput": 1225.4890550517518,
+      "times": [
+        8.156206355999984,
+        8.232910405999974
+      ],
+      "mean_time": 8.194558380999979,
+      "std_time": 0.05423795389946448,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+GaussianNoise+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1556.785167167138,
+        1427.0478723056099
+      ],
+      "median_throughput": 1491.916519736374,
+      "mean_throughput": 1491.916519736374,
+      "std_throughput": 91.73812096938522,
+      "cv_throughput": 0.06149011674299016,
+      "throughput_ci95": 127.14254896429763,
+      "p50_throughput": 1491.916519736374,
+      "p75_throughput": 1524.350843451756,
+      "p90_throughput": 1543.8114376809854,
+      "p95_throughput": 1550.2983024240616,
+      "times": [
+        6.423493883999981,
+        7.007473396000023
+      ],
+      "mean_time": 6.715483640000002,
+      "std_time": 0.4129358730092403,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Invert+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1780.2677643989516,
+        1741.7688501823066
+      ],
+      "median_throughput": 1761.018307290629,
+      "mean_throughput": 1761.018307290629,
+      "std_throughput": 27.222843310908903,
+      "cv_throughput": 0.015458580525941228,
+      "throughput_ci95": 37.728935932312154,
+      "p50_throughput": 1761.018307290629,
+      "p75_throughput": 1770.6430358447903,
+      "p90_throughput": 1776.417872977287,
+      "p95_throughput": 1778.3428186881195,
+      "times": [
+        5.6171325459999935,
+        5.741289952999978
+      ],
+      "mean_time": 5.679211249499986,
+      "std_time": 0.08779254442422697,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Posterize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1586.103349161913,
+        1520.2518151065551
+      ],
+      "median_throughput": 1553.177582134234,
+      "mean_throughput": 1553.177582134234,
+      "std_throughput": 46.56406628208043,
+      "cv_throughput": 0.029979872757432136,
+      "throughput_ci95": 64.53450337425073,
+      "p50_throughput": 1553.177582134234,
+      "p75_throughput": 1569.6404656480736,
+      "p90_throughput": 1579.5181957563773,
+      "p95_throughput": 1582.810772459145,
+      "times": [
+        6.304759399999966,
+        6.577857629000164
+      ],
+      "mean_time": 6.441308514500065,
+      "std_time": 0.19310960965607632,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Solarize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1529.6671679780757,
+        1481.1017140560969
+      ],
+      "median_throughput": 1505.3844410170864,
+      "mean_throughput": 1505.3844410170864,
+      "std_throughput": 34.34096179963403,
+      "cv_throughput": 0.02281208763950833,
+      "throughput_ci95": 47.59414484353924,
+      "p50_throughput": 1505.3844410170864,
+      "p75_throughput": 1517.525804497581,
+      "p90_throughput": 1524.8106225858778,
+      "p95_throughput": 1527.2388952819767,
+      "times": [
+        6.537369833999946,
+        6.751730758999884
+      ],
+      "mean_time": 6.644550296499915,
+      "std_time": 0.15157606368887652,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Sharpen+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1207.9590619349603,
+        1192.0751036411573
+      ],
+      "median_throughput": 1200.0170827880588,
+      "mean_throughput": 1200.0170827880588,
+      "std_throughput": 11.231654621632448,
+      "cv_throughput": 0.009359578944940843,
+      "throughput_ci95": 15.566279127926999,
+      "p50_throughput": 1200.0170827880588,
+      "p75_throughput": 1203.9880723615097,
+      "p90_throughput": 1206.37066610558,
+      "p95_throughput": 1207.1648640202702,
+      "times": [
+        8.278426244000002,
+        8.388733200999923
+      ],
+      "mean_time": 8.333579722499962,
+      "std_time": 0.0779987973066968,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+AutoContrast+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1618.5034120730725,
+        1589.417529662559
+      ],
+      "median_throughput": 1603.9604708678157,
+      "mean_throughput": 1603.9604708678157,
+      "std_throughput": 20.566824689268604,
+      "cv_throughput": 0.012822525905604776,
+      "throughput_ci95": 28.5041647623032,
+      "p50_throughput": 1603.9604708678157,
+      "p75_throughput": 1611.231941470444,
+      "p90_throughput": 1615.5948238320211,
+      "p95_throughput": 1617.0491179525468,
+      "times": [
+        6.178547369999933,
+        6.291613005000045
+      ],
+      "mean_time": 6.235080187499989,
+      "std_time": 0.0799494772277421,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Equalize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1194.9898856444356,
+        1268.1659173462815
+      ],
+      "median_throughput": 1231.5779014953587,
+      "mean_throughput": 1231.5779014953587,
+      "std_throughput": 51.743268236697006,
+      "cv_throughput": 0.0420138004862472,
+      "throughput_ci95": 71.71251106780896,
+      "p50_throughput": 1231.5779014953587,
+      "p75_throughput": 1249.87190942082,
+      "p90_throughput": 1260.848314176097,
+      "p95_throughput": 1264.5071157611892,
+      "times": [
+        8.368271665000066,
+        7.885403529000087
+      ],
+      "mean_time": 8.126837597000076,
+      "std_time": 0.34143933338449334,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Erasing+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1390.1012962394004,
+        1459.7554476486685
+      ],
+      "median_throughput": 1424.9283719440346,
+      "mean_throughput": 1424.9283719440346,
+      "std_throughput": 49.25292279928794,
+      "cv_throughput": 0.03456519202582233,
+      "throughput_ci95": 68.26106838108267,
+      "p50_throughput": 1424.9283719440346,
+      "p75_throughput": 1442.3419097963515,
+      "p90_throughput": 1452.7900325077417,
+      "p95_throughput": 1456.272740078205,
+      "times": [
+        7.193720362000022,
+        6.850462531999938
+      ],
+      "mean_time": 7.02209144699998,
+      "std_time": 0.24271993928843863,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+JpegCompression+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        728.9776701617976,
+        726.7908421099609
+      ],
+      "median_throughput": 727.8842561358792,
+      "mean_throughput": 727.8842561358792,
+      "std_throughput": 1.5463209447427368,
+      "cv_throughput": 0.0021244049884410116,
+      "throughput_ci95": 2.1430914908000203,
+      "p50_throughput": 727.8842561358792,
+      "p75_throughput": 728.4309631488384,
+      "p90_throughput": 728.7589873566139,
+      "p95_throughput": 728.8683287592057,
+      "times": [
+        13.717841313000008,
+        13.759116682000013
+      ],
+      "mean_time": 13.73847899750001,
+      "std_time": 0.02918609331588019,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+RandomGamma+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1522.8320364313663,
+        1560.45894091773
+      ],
+      "median_throughput": 1541.6454886745482,
+      "mean_throughput": 1541.6454886745482,
+      "std_throughput": 26.60623931736625,
+      "cv_throughput": 0.017258338257935903,
+      "throughput_ci95": 36.874366396636354,
+      "p50_throughput": 1541.6454886745482,
+      "p75_throughput": 1551.052214796139,
+      "p90_throughput": 1556.6962504690937,
+      "p95_throughput": 1558.5775956934117,
+      "times": [
+        6.566712389000031,
+        6.4083711130001575
+      ],
+      "mean_time": 6.487541751000094,
+      "std_time": 0.11196419000124141,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+PlankianJitter+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1620.292570072307,
+        1704.001494184377
+      ],
+      "median_throughput": 1662.1470321283418,
+      "mean_throughput": 1662.1470321283418,
+      "std_throughput": 59.1911478854748,
+      "cv_throughput": 0.03561125865602988,
+      "throughput_ci95": 82.0347456298286,
+      "p50_throughput": 1662.1470321283418,
+      "p75_throughput": 1683.0742631563594,
+      "p90_throughput": 1695.63060177317,
+      "p95_throughput": 1699.8160479787734,
+      "times": [
+        6.171724899999845,
+        5.868539455000018
+      ],
+      "mean_time": 6.0201321774999315,
+      "std_time": 0.21438448411643826,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+MedianBlur+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        87.61332979411374,
+        87.62131946131413
+      ],
+      "median_throughput": 87.61732462771394,
+      "mean_throughput": 87.61732462771394,
+      "std_throughput": 0.005649547856820343,
+      "cv_throughput": 6.447980329033413e-05,
+      "throughput_ci95": 0.007829873856383358,
+      "p50_throughput": 87.61732462771394,
+      "p75_throughput": 87.61932204451404,
+      "p90_throughput": 87.62052049459409,
+      "p95_throughput": 87.62091997795412,
+      "times": [
+        114.13788316799992,
+        114.12747561299989
+      ],
+      "mean_time": 114.1326793904999,
+      "std_time": 0.007359252716092379,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+MotionBlur+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1174.0239079085513,
+        1144.4776244212403
+      ],
+      "median_throughput": 1159.2507661648958,
+      "mean_throughput": 1159.2507661648958,
+      "std_throughput": 20.89237741273774,
+      "cv_throughput": 0.01802231063590769,
+      "throughput_ci95": 28.955357817564803,
+      "p50_throughput": 1159.2507661648958,
+      "p75_throughput": 1166.6373370367237,
+      "p90_throughput": 1171.0692795598202,
+      "p95_throughput": 1172.5465937341858,
+      "times": [
+        8.517714105000096,
+        8.737610755000105
+      ],
+      "mean_time": 8.6276624300001,
+      "std_time": 0.15549041237521166,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+CLAHE+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        754.8629240509775,
+        761.3696879367064
+      ],
+      "median_throughput": 758.1163059938419,
+      "mean_throughput": 758.1163059938419,
+      "std_throughput": 4.600976867178636,
+      "cv_throughput": 0.006068959117225489,
+      "throughput_ci95": 6.376628608014323,
+      "p50_throughput": 758.1163059938419,
+      "p75_throughput": 759.7429969652742,
+      "p90_throughput": 760.7190115481336,
+      "p95_throughput": 761.04434974242,
+      "times": [
+        13.247438285000044,
+        13.13422396299984
+      ],
+      "mean_time": 13.190831123999942,
+      "std_time": 0.08005461481378126,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Brightness+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1722.446073821083,
+        1669.0271247182209
+      ],
+      "median_throughput": 1695.7365992696518,
+      "mean_throughput": 1695.7365992696518,
+      "std_throughput": 37.77290115449286,
+      "cv_throughput": 0.022275217254119253,
+      "throughput_ci95": 52.35057012080489,
+      "p50_throughput": 1695.7365992696518,
+      "p75_throughput": 1709.0913365453675,
+      "p90_throughput": 1717.104178910797,
+      "p95_throughput": 1719.77512636594,
+      "times": [
+        5.80569699800003,
+        5.991514369000015
+      ],
+      "mean_time": 5.898605683500023,
+      "std_time": 0.13139272309634564,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Contrast+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1711.4427329995842,
+        1728.1064010539642
+      ],
+      "median_throughput": 1719.774567026774,
+      "mean_throughput": 1719.774567026774,
+      "std_throughput": 11.782992680693718,
+      "cv_throughput": 0.006851475133199988,
+      "throughput_ci95": 16.330394693292366,
+      "p50_throughput": 1719.774567026774,
+      "p75_throughput": 1723.9404840403693,
+      "p90_throughput": 1726.4400342485262,
+      "p95_throughput": 1727.2732176512452,
+      "times": [
+        5.843023437000056,
+        5.786680724000007
+      ],
+      "mean_time": 5.814852080500032,
+      "std_time": 0.03984031443278218,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Blur+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1249.8233049804503,
+        1206.740465212869
+      ],
+      "median_throughput": 1228.2818850966596,
+      "mean_throughput": 1228.2818850966596,
+      "std_throughput": 30.46416815243026,
+      "cv_throughput": 0.024802261208983704,
+      "throughput_ci95": 42.22118297222976,
+      "p50_throughput": 1228.2818850966596,
+      "p75_throughput": 1239.052595038555,
+      "p90_throughput": 1245.5150210036923,
+      "p95_throughput": 1247.6691629920713,
+      "times": [
+        8.001131007999902,
+        8.286786006000057
+      ],
+      "mean_time": 8.14395850699998,
+      "std_time": 0.20198858616573898,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+ChannelDropout+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1739.4255753715722,
+        1728.305697911301
+      ],
+      "median_throughput": 1733.8656366414366,
+      "mean_throughput": 1733.8656366414366,
+      "std_throughput": 7.862940758121248,
+      "cv_throughput": 0.00453491931090581,
+      "throughput_ci95": 10.897479911065828,
+      "p50_throughput": 1733.8656366414366,
+      "p75_throughput": 1736.6456060065043,
+      "p90_throughput": 1738.313587625545,
+      "p95_throughput": 1738.8695814985585,
+      "times": [
+        5.749024357000053,
+        5.786013442000012
+      ],
+      "mean_time": 5.767518899500033,
+      "std_time": 0.02615523283335678,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+LinearIllumination+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1591.9272411895727,
+        1567.175938526078
+      ],
+      "median_throughput": 1579.5515898578253,
+      "mean_throughput": 1579.5515898578253,
+      "std_throughput": 17.501813956557758,
+      "cv_throughput": 0.011080242056628924,
+      "throughput_ci95": 24.256276610224802,
+      "p50_throughput": 1579.5515898578253,
+      "p75_throughput": 1585.7394155236989,
+      "p90_throughput": 1589.4521109232232,
+      "p95_throughput": 1590.689676056398,
+      "times": [
+        6.281694126000048,
+        6.380904501000032
+      ],
+      "mean_time": 6.33129931350004,
+      "std_time": 0.07015232892654916,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+CornerIllumination+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1440.997726928798,
+        1400.3460525362568
+      ],
+      "median_throughput": 1420.6718897325275,
+      "mean_throughput": 1420.6718897325275,
+      "std_throughput": 28.745074629553464,
+      "cv_throughput": 0.020233436613548646,
+      "throughput_ci95": 39.83864090469045,
+      "p50_throughput": 1420.6718897325275,
+      "p75_throughput": 1430.8348083306628,
+      "p90_throughput": 1436.932559489544,
+      "p95_throughput": 1438.965143209171,
+      "times": [
+        6.939636207000149,
+        7.141092005000019
+      ],
+      "mean_time": 7.040364106000084,
+      "std_time": 0.14245076087505532,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+GaussianIllumination+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1409.2918436350549,
+        1351.187501607505
+      ],
+      "median_throughput": 1380.23967262128,
+      "mean_throughput": 1380.23967262128,
+      "std_throughput": 41.08597426406299,
+      "cv_throughput": 0.029767275263168334,
+      "throughput_ci95": 56.942255186998814,
+      "p50_throughput": 1380.23967262128,
+      "p75_throughput": 1394.7657581281674,
+      "p90_throughput": 1403.4814094322999,
+      "p95_throughput": 1406.3866265336774,
+      "times": [
+        7.095762347000118,
+        7.400897349999923
+      ],
+      "mean_time": 7.2483298485000205,
+      "std_time": 0.21576302979853948,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Hue+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1095.1170270730984,
+        1090.4408749081374
+      ],
+      "median_throughput": 1092.778950990618,
+      "mean_throughput": 1092.778950990618,
+      "std_throughput": 3.3065389057040555,
+      "cv_throughput": 0.003025807646374078,
+      "throughput_ci95": 4.582629121661748,
+      "p50_throughput": 1092.778950990618,
+      "p75_throughput": 1093.947989031858,
+      "p90_throughput": 1094.6494118566022,
+      "p95_throughput": 1094.8832194648503,
+      "times": [
+        9.131444176999821,
+        9.17060267099987
+      ],
+      "mean_time": 9.151023423999845,
+      "std_time": 0.027689236648486992,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+PlasmaBrightness+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        439.6750757240442,
+        439.13464169840216
+      ],
+      "median_throughput": 439.40485871122314,
+      "mean_throughput": 439.40485871122314,
+      "std_throughput": 0.3821445643154127,
+      "cv_throughput": 0.0008696867063241968,
+      "throughput_ci95": 0.5296253451291738,
+      "p50_throughput": 439.40485871122314,
+      "p75_throughput": 439.53996721763366,
+      "p90_throughput": 439.62103232147996,
+      "p95_throughput": 439.6480540227621,
+      "times": [
+        22.744068409000192,
+        22.772059068999624
+      ],
+      "mean_time": 22.75806373899991,
+      "std_time": 0.01979238549548538,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+PlasmaContrast+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        433.58985725364,
+        437.85702765980596
+      ],
+      "median_throughput": 435.723442456723,
+      "mean_throughput": 435.723442456723,
+      "std_throughput": 3.0173451306785144,
+      "cv_throughput": 0.0069249088680332,
+      "throughput_ci95": 4.181826998042654,
+      "p50_throughput": 435.723442456723,
+      "p75_throughput": 436.79023505826444,
+      "p90_throughput": 437.43031061918936,
+      "p95_throughput": 437.64366913949766,
+      "times": [
+        23.06327012199972,
+        22.838505192999946
+      ],
+      "mean_time": 22.950887657499834,
+      "std_time": 0.158932805468654,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+PlasmaShadow+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        902.8688890173404,
+        902.5660088279199
+      ],
+      "median_throughput": 902.7174489226302,
+      "mean_throughput": 902.7174489226302,
+      "std_throughput": 0.2141686358263259,
+      "cv_throughput": 0.00023724880479703876,
+      "throughput_ci95": 0.2968225856321237,
+      "p50_throughput": 902.7174489226302,
+      "p75_throughput": 902.7931689699852,
+      "p90_throughput": 902.8386009983983,
+      "p95_throughput": 902.8537450078694,
+      "times": [
+        11.075805270999808,
+        11.079522054000336
+      ],
+      "mean_time": 11.077663662500072,
+      "std_time": 0.0026281624638717777,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Rain+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1479.3288911642312,
+        1469.2178873442529
+      ],
+      "median_throughput": 1474.273389254242,
+      "mean_throughput": 1474.273389254242,
+      "std_throughput": 7.149559365709778,
+      "cv_throughput": 0.0048495478639320536,
+      "throughput_ci95": 9.908783743578784,
+      "p50_throughput": 1474.273389254242,
+      "p75_throughput": 1476.8011402092366,
+      "p90_throughput": 1478.3177907822335,
+      "p95_throughput": 1478.8233409732322,
+      "times": [
+        6.759822010999869,
+        6.806342398999732
+      ],
+      "mean_time": 6.7830822049998005,
+      "std_time": 0.03289488181813212,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+SaltAndPepper+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1429.0316482137216,
+        1379.497916015465
+      ],
+      "median_throughput": 1404.2647821145933,
+      "mean_throughput": 1404.2647821145933,
+      "std_throughput": 35.02563793486563,
+      "cv_throughput": 0.024942331660645037,
+      "throughput_ci95": 48.5430575542914,
+      "p50_throughput": 1404.2647821145933,
+      "p75_throughput": 1416.6482151641576,
+      "p90_throughput": 1424.078274993896,
+      "p95_throughput": 1426.5549616038088,
+      "times": [
+        6.99774565000007,
+        7.2490142130000095
+      ],
+      "mean_time": 7.12337993150004,
+      "std_time": 0.17767370479625652,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Saturation+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1088.2541101624497,
+        1100.7560894341782
+      ],
+      "median_throughput": 1094.505099798314,
+      "mean_throughput": 1094.505099798314,
+      "std_throughput": 8.840234321292868,
+      "cv_throughput": 0.008076923828789717,
+      "throughput_ci95": 12.251939686293918,
+      "p50_throughput": 1094.505099798314,
+      "p75_throughput": 1097.630594616246,
+      "p90_throughput": 1099.5058915070053,
+      "p95_throughput": 1100.1309904705918,
+      "times": [
+        9.189030306999939,
+        9.084664709999743
+      ],
+      "mean_time": 9.13684750849984,
+      "std_time": 0.0737976213614213,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Snow+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1037.6905609316639,
+        1044.5917991064453
+      ],
+      "median_throughput": 1041.1411800190544,
+      "mean_throughput": 1041.1411800190544,
+      "std_throughput": 4.879912311971388,
+      "cv_throughput": 0.004687080297680742,
+      "throughput_ci95": 6.763213411285755,
+      "p50_throughput": 1041.1411800190544,
+      "p75_throughput": 1042.8664895627498,
+      "p90_throughput": 1043.9016752889672,
+      "p95_throughput": 1044.2467371977061,
+      "times": [
+        9.636784197999987,
+        9.573117468999953
+      ],
+      "mean_time": 9.60495083349997,
+      "std_time": 0.04501917581188972,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+OpticalDistortion+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1408.8992624288014,
+        1346.7114376251882
+      ],
+      "median_throughput": 1377.8053500269948,
+      "mean_throughput": 1377.8053500269948,
+      "std_throughput": 43.9734326258759,
+      "cv_throughput": 0.03191556240147735,
+      "throughput_ci95": 60.944068307540974,
+      "p50_throughput": 1377.8053500269948,
+      "p75_throughput": 1393.3523062278982,
+      "p90_throughput": 1402.68047994844,
+      "p95_throughput": 1405.7898711886207,
+      "times": [
+        7.097739538000042,
+        7.425495707999744
+      ],
+      "mean_time": 7.261617622999893,
+      "std_time": 0.23175861038252032,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+Shear+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1488.7440819478375,
+        1463.9178175486675
+      ],
+      "median_throughput": 1476.3309497482524,
+      "mean_throughput": 1476.3309497482524,
+      "std_throughput": 17.554819908183266,
+      "cv_throughput": 0.011890843249731206,
+      "throughput_ci95": 24.329739111186584,
+      "p50_throughput": 1476.3309497482524,
+      "p75_throughput": 1482.537515848045,
+      "p90_throughput": 1486.2614555079206,
+      "p95_throughput": 1487.502768727879,
+      "times": [
+        6.71707120200017,
+        6.83098455399977
+      ],
+      "mean_time": 6.77402787799997,
+      "std_time": 0.0805489036666069,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+ThinPlateSpline+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        746.9927251825359,
+        753.1876182116495
+      ],
+      "median_throughput": 750.0901716970927,
+      "mean_throughput": 750.0901716970927,
+      "std_throughput": 4.380450869611489,
+      "cv_throughput": 0.00583989903467291,
+      "throughput_ci95": 6.070995168531314,
+      "p50_throughput": 750.0901716970927,
+      "p75_throughput": 751.638894954371,
+      "p90_throughput": 752.5681289087381,
+      "p95_throughput": 752.8778735601937,
+      "times": [
+        13.387011229000109,
+        13.276904396999726
+      ],
+      "mean_time": 13.331957812999917,
+      "std_time": 0.07785728756243898,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+ColorJiggle+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        764.0483515102103,
+        770.0468662027391
+      ],
+      "median_throughput": 767.0476088564747,
+      "mean_throughput": 767.0476088564747,
+      "std_throughput": 4.241590416134273,
+      "cv_throughput": 0.005529761604312535,
+      "throughput_ci95": 5.878544398678252,
+      "p50_throughput": 767.0476088564747,
+      "p75_throughput": 768.547237529607,
+      "p90_throughput": 769.4470147334863,
+      "p95_throughput": 769.7469404681127,
+      "times": [
+        13.088176920000024,
+        12.986222577999797
+      ],
+      "mean_time": 13.03719974899991,
+      "std_time": 0.07209260659977257,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+LongestMaxSize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        629.1283786401946,
+        628.1043908774041
+      ],
+      "median_throughput": 628.6163847587993,
+      "mean_throughput": 628.6163847587993,
+      "std_throughput": 0.7240686909212126,
+      "cv_throughput": 0.0011518450814784894,
+      "throughput_ci95": 1.0035080075347012,
+      "p50_throughput": 628.6163847587993,
+      "p75_throughput": 628.8723816994969,
+      "p90_throughput": 629.0259798639155,
+      "p95_throughput": 629.0771792520551,
+      "times": [
+        15.895007027999782,
+        15.920920384000055
+      ],
+      "mean_time": 15.907963705999919,
+      "std_time": 0.0183235097510947,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+SmallestMaxSize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        553.6421833335977,
+        550.0946498052843
+      ],
+      "median_throughput": 551.868416569441,
+      "mean_throughput": 551.868416569441,
+      "std_throughput": 2.50848501435701,
+      "cv_throughput": 0.004545440432975693,
+      "throughput_ci95": 3.4765828577470845,
+      "p50_throughput": 551.868416569441,
+      "p75_throughput": 552.7552999515194,
+      "p90_throughput": 553.2874299807663,
+      "p95_throughput": 553.4648066571821,
+      "times": [
+        18.06220750700004,
+        18.17868980100002
+      ],
+      "mean_time": 18.12044865400003,
+      "std_time": 0.08236541997555057,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+RandomRotate90+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1454.861897694874,
+        1454.736682062815
+      ],
+      "median_throughput": 1454.7992898788443,
+      "mean_throughput": 1454.7992898788443,
+      "std_throughput": 0.088540822539516,
+      "cv_throughput": 6.086119449981976e-05,
+      "throughput_ci95": 0.1227113194178719,
+      "p50_throughput": 1454.7992898788443,
+      "p75_throughput": 1454.8305937868593,
+      "p90_throughput": 1454.8493761316681,
+      "p95_throughput": 1454.855636913271,
+      "times": [
+        6.873504636999769,
+        6.874096269999882
+      ],
+      "mean_time": 6.873800453499825,
+      "std_time": 0.00041834770635348743,
+      "num_successful_runs": 2,
+      "unstable": false
+    },
+    "RandomCrop224+RandomJigsaw+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1563.8580416170196,
+        1480.9986785451188
+      ],
+      "median_throughput": 1522.428360081069,
+      "mean_throughput": 1522.428360081069,
+      "std_throughput": 58.59041751293927,
+      "cv_throughput": 0.03848484372021245,
+      "throughput_ci95": 81.20217581046279,
+      "p50_throughput": 1522.428360081069,
+      "p75_throughput": 1543.1432008490444,
+      "p90_throughput": 1555.5721053098296,
+      "p95_throughput": 1559.7150734634245,
+      "times": [
+        6.394442291999894,
+        6.752200488000199
+      ],
+      "mean_time": 6.5733213900000464,
+      "std_time": 0.25297324641688124,
+      "num_successful_runs": 2,
+      "unstable": false
+    }
+  }
+}

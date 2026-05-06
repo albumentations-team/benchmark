@@ -1,13 +1,16 @@
-r"""Update README.md with full benchmark tables from result JSONs.
+r"""Update README.md with full RGB benchmark tables from result JSONs.
 
 Usage:
     python -m tools.update_readme
-    python -m tools.update_readme --image-results output/ --video-results output_videos/
+    python -m tools.update_readme \
+      --image-results output/rgb_micro/image-rgb/micro \
+      --dataloader-results output/rgb_dataloader/image-rgb/pipeline
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import re
 from pathlib import Path
 
@@ -15,6 +18,15 @@ from tools.compare import format_comparison_table, load_results_dir
 
 # Libraries to keep out of public docs (internal / historical reference only)
 _DOCS_EXCLUDED: frozenset[str] = frozenset({"albumentations_mit"})
+_DEFAULT_PUBLISHED_ROOT = Path("results/published")
+
+
+def latest_results_dir(root: Path, pattern: str) -> Path | None:
+    """Return the latest matching published results directory by lexicographic snapshot name."""
+    if not root.exists():
+        return None
+    matches = sorted(path for path in root.glob(pattern) if path.is_dir())
+    return matches[-1] if matches else None
 
 
 def patch_readme(
@@ -24,6 +36,8 @@ def patch_readme(
     image_summary: str | None,
     video_summary: str | None,
     multichannel_table: str | None = None,
+    dataloader_table: str | None = None,
+    dataloader_summary: str | None = None,
 ) -> bool:
     """Patch README between markers. Returns True if changed."""
     content = readme_path.read_text()
@@ -38,7 +52,9 @@ def patch_readme(
         # Blank lines after markers help some Markdown engines start a new block (tables after HTML comments).
         replacement = f"{marker_start}\n\n{new_content.strip()}\n\n{marker_end}"
         new_content_str, n = pattern.subn(replacement, content, count=1)
-        return new_content_str if n else content
+        if not n:
+            raise ValueError(f"README is missing markers {marker_start!r} / {marker_end!r}")
+        return new_content_str
 
     orig = content
 
@@ -60,11 +76,23 @@ def patch_readme(
             "<!-- MULTICHANNEL_BENCHMARK_TABLE_END -->",
             multichannel_table,
         )
+    if dataloader_table is not None:
+        content = replace_section(
+            "<!-- DATALOADER_BENCHMARK_TABLE_START -->",
+            "<!-- DATALOADER_BENCHMARK_TABLE_END -->",
+            dataloader_table,
+        )
     if image_summary is not None:
         content = replace_section(
             "<!-- IMAGE_SPEEDUP_SUMMARY_START -->",
             "<!-- IMAGE_SPEEDUP_SUMMARY_END -->",
             image_summary,
+        )
+    if dataloader_summary is not None:
+        content = replace_section(
+            "<!-- DATALOADER_SPEEDUP_SUMMARY_START -->",
+            "<!-- DATALOADER_SPEEDUP_SUMMARY_END -->",
+            dataloader_summary,
         )
     if video_summary is not None:
         content = replace_section(
@@ -86,33 +114,56 @@ def compute_summary_text(_table: str, media: str) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m tools.update_readme",
-        description="Update README with full benchmark tables from result JSONs",
+        description="Update README with full RGB benchmark tables from result JSONs",
     )
     parser.add_argument("--readme", default="README.md", type=Path, help="README path")
-    parser.add_argument("--image-results", default="output", type=Path, help="Directory with *_results.json (image)")
+    parser.add_argument(
+        "--image-results",
+        default=None,
+        type=Path,
+        help="Directory with RGB micro *_results.json files. Defaults to the latest paper-rgb-micro-* snapshot.",
+    )
+    parser.add_argument(
+        "--dataloader-results",
+        default=None,
+        type=Path,
+        help=(
+            "Directory with RGB DataLoader *_results.json files. "
+            "Defaults to the latest paper-rgb-dataloader-* snapshot."
+        ),
+    )
+    parser.add_argument(
+        "--published-results-root",
+        default=os.environ.get("PAPER_RGB_RESULTS_ROOT", str(_DEFAULT_PUBLISHED_ROOT)),
+        type=Path,
+        help="Root used to discover latest paper-rgb-* snapshots when result directories are omitted.",
+    )
     parser.add_argument(
         "--video-results",
         default="output_videos",
         type=Path,
-        help="Directory with *_video_results.json",
+        help="Accepted for backwards compatibility; public README output is RGB-only.",
     )
     parser.add_argument(
         "--multichannel-results",
         type=Path,
         default=None,
-        help=(
-            "Directory with multichannel *_results.json (e.g. output/multichannel). "
-            "If unset, derived as image-results/multichannel."
-        ),
+        help="Accepted for backwards compatibility; public README output is RGB-only.",
     )
     args = parser.parse_args()
 
     repo_root = Path(__file__).parent.parent
     readme = repo_root / args.readme
-    image_results = repo_root / args.image_results
-    video_results = repo_root / args.video_results
-    multichannel_results = (
-        (repo_root / args.multichannel_results) if args.multichannel_results else (image_results / "multichannel")
+    published_results_root = repo_root / args.published_results_root
+    image_results = (
+        repo_root / args.image_results
+        if args.image_results is not None
+        else latest_results_dir(published_results_root, "paper-rgb-micro-*")
+    )
+    dataloader_results = (
+        repo_root / args.dataloader_results
+        if args.dataloader_results is not None
+        else latest_results_dir(published_results_root, "paper-rgb-dataloader-*")
     )
 
     def _load(directory: Path, media: str, *, exclude_docs: bool) -> dict[str, dict[str, object]]:
@@ -124,28 +175,27 @@ def main() -> None:
         }
 
     # Public tables exclude internal/historical libraries.
-    image_loaded = _load(image_results, "image", exclude_docs=True)
-    video_loaded = _load(video_results, "video", exclude_docs=True)
-
-    multichannel_loaded: dict[str, dict[str, object]] = {}
-    if multichannel_results.exists():
-        multichannel_loaded = _load(multichannel_results, "image", exclude_docs=True)
+    image_loaded = _load(image_results, "image", exclude_docs=True) if image_results is not None else {}
+    dataloader_loaded: dict[str, dict[str, object]] = {}
+    if dataloader_results is not None and dataloader_results.exists():
+        dataloader_loaded = _load(dataloader_results, "image", exclude_docs=True)
 
     image_table = format_comparison_table(image_loaded) if image_loaded else None
-    video_table = format_comparison_table(video_loaded) if video_loaded else None
-    multichannel_table = format_comparison_table(multichannel_loaded) if multichannel_loaded else None
+    dataloader_table = format_comparison_table(dataloader_loaded, name_header="Recipe") if dataloader_loaded else None
 
     # Summary text for Performance Highlights
-    image_summary = compute_summary_text(image_table, "image") if image_table else None
-    video_summary = compute_summary_text(video_table, "video") if video_table else None
+    image_summary = compute_summary_text(image_table, "RGB micro") if image_table else None
+    dataloader_summary = compute_summary_text(dataloader_table, "RGB DataLoader") if dataloader_table else None
 
     changed = patch_readme(
         readme,
         image_table=image_table,
-        video_table=video_table,
+        video_table=None,
         image_summary=image_summary,
-        video_summary=video_summary,
-        multichannel_table=multichannel_table,
+        video_summary=None,
+        multichannel_table=None,
+        dataloader_table=dataloader_table,
+        dataloader_summary=dataloader_summary,
     )
     if changed:
         print(f"Updated {readme}")

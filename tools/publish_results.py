@@ -109,6 +109,27 @@ def _sanitize_result_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return _sanitize_value(payload, root=_repo_root())
 
 
+def _library_name(path: Path, payload: dict[str, Any]) -> str:
+    metadata = payload.get("metadata", {})
+    if isinstance(metadata, dict):
+        library = metadata.get("library")
+        if isinstance(library, str) and library:
+            return library
+    name = (
+        path.name.removesuffix("_micro_results.json")
+        .removesuffix("_pipeline_results.json")
+        .removesuffix("_results.json")
+    )
+    for scope in (
+        "_decode_dataloader_augment_batch_copy",
+        "_memory_dataloader_augment",
+        "_decode_dataloader_augment",
+    ):
+        if scope in name:
+            return name.split(scope, maxsplit=1)[0]
+    return name
+
+
 def _manifest(
     *,
     source_dir: Path,
@@ -125,13 +146,7 @@ def _manifest(
         payload = _sanitize_result_payload(_load_json(path))
         metadata = payload["metadata"]
         versions = metadata.get("library_versions", {})
-        library = (
-            path.name.removesuffix("_micro_results.json")
-            .removesuffix("_pipeline_results.json")
-            .removesuffix(
-                "_results.json",
-            )
-        )
+        library = _library_name(path, payload)
         if isinstance(versions, dict) and library in versions:
             library_versions[library] = versions[library]
         entries.append(
