@@ -35,6 +35,7 @@ repos:
       - id: check-json
       - id: debug-statements
       - id: end-of-file-fixer
+        exclude: \.json$
       - id: no-commit-to-branch
         args: [--branch, main]
       - id: trailing-whitespace
