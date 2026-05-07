@@ -1057,7 +1057,7 @@ def _figure_markdown(figures: list[dict[str, str]], prefix: str) -> str:
 def _write_figure_markdown() -> None:
     readme_block = "\n".join(
         [
-            "The paper figures below are regenerated from `docs/paper_data/all_results.csv` by `python _internal/paper/scripts/generate_figures_and_insights.py`.",
+            "The paper figures below are generated from the checked-in data under `docs/paper_data/`.",
             "",
             _figure_markdown(MAIN_FIGURES, "docs/paper_figures/"),
             "",
