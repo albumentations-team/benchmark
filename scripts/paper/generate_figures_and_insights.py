@@ -1,6 +1,7 @@
-# ruff: noqa: INP001, E402, E501, S603, RUF059, PD010, ARG001, PERF401, T201
+# ruff: noqa: INP001, E402, E501, S603, RUF059, PD010, ARG001, PERF401, T201, PLW0603
 from __future__ import annotations
 
+import argparse
 import math
 import os
 import shutil
@@ -89,31 +90,6 @@ MAIN_FIGURES = [
         ),
     },
 ]
-STALE_GENERATED_FILES = [
-    FIGURES / "benchmarking_pitfalls.png",
-    FIGURES / "benchmarking_pitfalls.pdf",
-    FIGURES / "gpu_vs_albumentationsx_cpu_boxplot.png",
-    FIGURES / "gpu_vs_albumentationsx_cpu_boxplot.pdf",
-    FIGURES / "abstract_claims.png",
-    FIGURES / "abstract_claims.pdf",
-    PUBLIC_FIGURES / "benchmarking_pitfalls.png",
-    PUBLIC_FIGURES / "benchmarking_pitfalls.pdf",
-    PUBLIC_FIGURES / "gpu_vs_albumentationsx_cpu_boxplot.png",
-    PUBLIC_FIGURES / "gpu_vs_albumentationsx_cpu_boxplot.pdf",
-    PUBLIC_FIGURES / "abstract_claims.png",
-    PUBLIC_FIGURES / "abstract_claims.pdf",
-    PUBLIC_FIGURES / "coverage_by_regime.png",
-    PUBLIC_FIGURES / "coverage_by_regime.pdf",
-    PAPER_FIGURES / "benchmarking_pitfalls.png",
-    PAPER_FIGURES / "benchmarking_pitfalls.pdf",
-    PAPER_FIGURES / "gpu_vs_albumentationsx_cpu_boxplot.png",
-    PAPER_FIGURES / "gpu_vs_albumentationsx_cpu_boxplot.pdf",
-    PAPER_FIGURES / "abstract_claims.png",
-    PAPER_FIGURES / "abstract_claims.pdf",
-    PAPER_FIGURES / "coverage_by_regime.png",
-    PAPER_FIGURES / "coverage_by_regime.pdf",
-    GENERATED / "figure_benchmarking_pitfalls.csv",
-]
 APPENDIX_FIGURES = [
     {
         "path": "winner_counts.png",
@@ -126,9 +102,19 @@ APPENDIX_FIGURES = [
 ]
 
 
-def _run_data_generator() -> None:
+def _resolve_path(path: Path) -> Path:
+    return path if path.is_absolute() else ROOT / path
+
+
+def _run_data_generator(extra_args: list[str]) -> None:
     subprocess.run(
-        [sys.executable, str(ROOT / "scripts/paper/generate_paper_data.py")],
+        [
+            sys.executable,
+            str(ROOT / "scripts/paper/generate_paper_data.py"),
+            "--output-dir",
+            str(GENERATED),
+            *extra_args,
+        ],
         check=True,
         cwd=ROOT,
     )
@@ -415,6 +401,7 @@ def _write_latex_support_table(matrix: pd.DataFrame) -> None:
     lines.extend([r"\bottomrule", r"\end{longtable}", r"}"])
     table = "\n".join(lines) + "\n"
     (GENERATED / "production_support_matrix_table.tex").write_text(table, encoding="utf-8")
+    PAPER_DIR.mkdir(parents=True, exist_ok=True)
     (PAPER_DIR / "production_support_matrix_table.tex").write_text(table, encoding="utf-8")
 
 
@@ -1068,12 +1055,18 @@ def _sync_public_figures() -> None:
     PAPER_FIGURES.mkdir(parents=True, exist_ok=True)
     for figure in [*MAIN_FIGURES, *APPENDIX_FIGURES]:
         source = FIGURES / figure["path"]
-        shutil.copy2(source, PUBLIC_FIGURES / source.name)
-        shutil.copy2(source, PAPER_FIGURES / source.name)
+        _copy_if_different(source, PUBLIC_FIGURES / source.name)
+        _copy_if_different(source, PAPER_FIGURES / source.name)
         pdf_source = source.with_suffix(".pdf")
         if pdf_source.exists():
-            shutil.copy2(pdf_source, PUBLIC_FIGURES / pdf_source.name)
-            shutil.copy2(pdf_source, PAPER_FIGURES / pdf_source.name)
+            _copy_if_different(pdf_source, PUBLIC_FIGURES / pdf_source.name)
+            _copy_if_different(pdf_source, PAPER_FIGURES / pdf_source.name)
+
+
+def _copy_if_different(source: Path, destination: Path) -> None:
+    if source.resolve() == destination.resolve():
+        return
+    shutil.copy2(source, destination)
 
 
 def _sync_public_data() -> None:
@@ -1101,16 +1094,80 @@ def _sync_public_data() -> None:
     for name in names:
         source = GENERATED / name
         if source.exists():
-            shutil.copy2(source, PUBLIC_DATA / name)
+            _copy_if_different(source, PUBLIC_DATA / name)
 
 
 def _remove_stale_generated_files() -> None:
-    for path in STALE_GENERATED_FILES:
+    for path in [
+        FIGURES / "benchmarking_pitfalls.png",
+        FIGURES / "benchmarking_pitfalls.pdf",
+        FIGURES / "gpu_vs_albumentationsx_cpu_boxplot.png",
+        FIGURES / "gpu_vs_albumentationsx_cpu_boxplot.pdf",
+        FIGURES / "abstract_claims.png",
+        FIGURES / "abstract_claims.pdf",
+        PUBLIC_FIGURES / "benchmarking_pitfalls.png",
+        PUBLIC_FIGURES / "benchmarking_pitfalls.pdf",
+        PUBLIC_FIGURES / "gpu_vs_albumentationsx_cpu_boxplot.png",
+        PUBLIC_FIGURES / "gpu_vs_albumentationsx_cpu_boxplot.pdf",
+        PUBLIC_FIGURES / "abstract_claims.png",
+        PUBLIC_FIGURES / "abstract_claims.pdf",
+        PUBLIC_FIGURES / "coverage_by_regime.png",
+        PUBLIC_FIGURES / "coverage_by_regime.pdf",
+        PAPER_FIGURES / "benchmarking_pitfalls.png",
+        PAPER_FIGURES / "benchmarking_pitfalls.pdf",
+        PAPER_FIGURES / "gpu_vs_albumentationsx_cpu_boxplot.png",
+        PAPER_FIGURES / "gpu_vs_albumentationsx_cpu_boxplot.pdf",
+        PAPER_FIGURES / "abstract_claims.png",
+        PAPER_FIGURES / "abstract_claims.pdf",
+        PAPER_FIGURES / "coverage_by_regime.png",
+        PAPER_FIGURES / "coverage_by_regime.pdf",
+        GENERATED / "figure_benchmarking_pitfalls.csv",
+    ]:
         path.unlink(missing_ok=True)
 
 
 def main() -> None:
-    _run_data_generator()
+    global DRAFT, FIGURES, GENERATED, PAPER_DIR, PAPER_FIGURES, PUBLIC_DATA, PUBLIC_FIGURES, README
+
+    parser = argparse.ArgumentParser(description="Regenerate paper figures and derived insight files.")
+    parser.add_argument("--data", type=Path, default=GENERATED, help="Directory containing/generated paper CSV data.")
+    parser.add_argument("--output", type=Path, default=FIGURES, help="Directory for primary generated figures.")
+    parser.add_argument("--public-data", type=Path, default=PUBLIC_DATA, help="Directory to sync public data CSVs.")
+    parser.add_argument("--public-figures", type=Path, default=PUBLIC_FIGURES, help="Directory to sync public figures.")
+    parser.add_argument(
+        "--paper-dir",
+        type=Path,
+        default=PAPER_DIR,
+        help="Paper directory for synced LaTeX tables/figures.",
+    )
+    parser.add_argument("--readme", type=Path, default=README, help="README path to patch.")
+    parser.add_argument("--draft", type=Path, default=DRAFT, help="Optional draft markdown path to patch.")
+    parser.add_argument(
+        "--skip-data-generation",
+        action="store_true",
+        help="Use existing CSVs in --data instead of regenerating from raw JSON artifacts.",
+    )
+    parser.add_argument(
+        "--extra-run-dir",
+        action="append",
+        default=[],
+        metavar="REGIME=PATH",
+        help="Forwarded to generate_paper_data.py when data generation is enabled.",
+    )
+    args = parser.parse_args()
+
+    GENERATED = _resolve_path(args.data)
+    FIGURES = _resolve_path(args.output)
+    PUBLIC_DATA = _resolve_path(args.public_data)
+    PUBLIC_FIGURES = _resolve_path(args.public_figures)
+    PAPER_DIR = _resolve_path(args.paper_dir)
+    PAPER_FIGURES = PAPER_DIR / "figures"
+    README = _resolve_path(args.readme)
+    DRAFT = _resolve_path(args.draft)
+
+    if not args.skip_data_generation:
+        forwarded = [item for value in args.extra_run_dir for item in ("--extra-run-dir", value)]
+        _run_data_generator(forwarded)
     FIGURES.mkdir(parents=True, exist_ok=True)
     df = _load_results()
     _remove_stale_generated_files()

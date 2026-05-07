@@ -26,22 +26,16 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT / "_internal" / "paper" / "generated"
 DEFAULT_DRAFT = ROOT / "_internal" / "paper" / "draft.md"
 PAPER_DIR = ROOT / "_internal" / "paper" / "neurips_2026_ed"
+PUBLISHED_ROOT = ROOT / "results" / "published"
 
 
-RUN_GROUPS = {
-    "rgb_micro_cpu": [
-        ROOT / "gcp_runs/prod-c4-standard-16-rgb-micro-cpu-r3/results/image-rgb/micro",
-    ],
-    "rgb_micro_gpu": [
-        ROOT / "gcp_runs/prod-g2-standard-16-rgb-micro-gpu-r3/results/image-rgb/micro",
-    ],
-    "rgb_dataloader_cpu": [
-        ROOT / "gcp_runs/prod-c4-standard-16-rgb-dataloader-cpu/results/image-rgb/pipeline",
-        ROOT / "gcp_runs/prod-c4-standard-16-rgb-dataloader-cpu-topup-r2/results/image-rgb/pipeline",
-    ],
+RUN_GROUP_PATTERNS = {
+    "rgb_micro_cpu": [("paper-rgb-micro-c4-*", "latest")],
+    "rgb_micro_gpu": [("paper-rgb-micro-gpu-g2-*", "latest")],
+    "rgb_dataloader_cpu": [("paper-rgb-dataloader-memory-c4-*", "all")],
     "rgb_dataloader_gpu": [
-        ROOT / "results/published/paper-rgb-dataloader-gpu-memory-g2-standard-16-2026-05-07",
-        ROOT / "gcp_runs/prod-g2-standard-16-rgb-dataloader-dali/results/image-rgb/pipeline",
+        ("paper-rgb-dataloader-gpu-memory-g2-*", "latest"),
+        ("paper-rgb-dataloader-dali-g2-*", "latest"),
     ],
 }
 
@@ -115,9 +109,42 @@ def _library_from_payload(path: Path, payload: dict[str, Any]) -> str:
     raise ValueError(msg)
 
 
-def _iter_sources() -> list[SourceResult]:
+def _matching_results_dirs(root: Path, pattern: str) -> list[Path]:
+    if not root.exists():
+        return []
+    return sorted(path for path in root.glob(pattern) if path.is_dir())
+
+
+def _default_run_groups() -> dict[str, list[Path]]:
+    groups: dict[str, list[Path]] = defaultdict(list)
+    for regime, pattern_specs in RUN_GROUP_PATTERNS.items():
+        for pattern, selection in pattern_specs:
+            matches = _matching_results_dirs(PUBLISHED_ROOT, pattern)
+            if selection == "latest":
+                groups[regime].extend(matches[-1:])
+            elif selection == "all":
+                groups[regime].extend(matches)
+            else:
+                msg = f"Unsupported published snapshot selection {selection!r} for {pattern}"
+                raise ValueError(msg)
+    return dict(groups)
+
+
+def _parse_extra_run_dir(value: str) -> tuple[str, Path]:
+    regime, separator, raw_path = value.partition("=")
+    if not separator or regime not in REGIME_LABELS:
+        valid = ", ".join(REGIME_LABELS)
+        msg = f"Expected REGIME=PATH with REGIME in {{{valid}}}: {value}"
+        raise argparse.ArgumentTypeError(msg)
+    path = Path(raw_path).expanduser()
+    if not path.is_absolute():
+        path = ROOT / path
+    return regime, path
+
+
+def _iter_sources(run_groups: dict[str, list[Path]]) -> list[SourceResult]:
     rows: list[SourceResult] = []
-    for regime, dirs in RUN_GROUPS.items():
+    for regime, dirs in run_groups.items():
         for directory in dirs:
             if not directory.exists():
                 continue
@@ -801,7 +828,7 @@ def _write_markdown(path: Path, rows: list[AggregateResult]) -> str:
     sections = [
         "# Generated Paper Data",
         "",
-        "Generated from committed `results/published/*` snapshots plus local `gcp_runs/prod-*` artifacts that have not yet been published. Throughput units are images/second.",
+        "Generated from committed `results/published/*` snapshots. Use `--extra-run-dir REGIME=PATH` to add local unpublished artifacts. Throughput units are images/second.",
         "",
         "## Coverage Summary",
         "",
@@ -866,9 +893,20 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--draft", type=Path, default=DEFAULT_DRAFT)
     parser.add_argument("--update-draft", action="store_true")
+    parser.add_argument(
+        "--extra-run-dir",
+        action="append",
+        default=[],
+        type=_parse_extra_run_dir,
+        metavar="REGIME=PATH",
+        help="Append an additional result directory for a regime, e.g. rgb_dataloader_gpu=output/run/image-rgb/pipeline.",
+    )
     args = parser.parse_args()
 
-    sources = _iter_sources()
+    run_groups = _default_run_groups()
+    for regime, path in args.extra_run_dir:
+        run_groups.setdefault(regime, []).append(path)
+    sources = _iter_sources(run_groups)
     rows = _aggregate_sources(sources)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     _write_csv(args.output_dir / "all_results.csv", rows)

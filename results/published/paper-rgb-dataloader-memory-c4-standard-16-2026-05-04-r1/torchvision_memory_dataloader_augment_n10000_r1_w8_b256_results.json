@@ -1,0 +1,842 @@
+{
+  "metadata": {
+    "system_info": {
+      "python_version": "3.13.13 (main, Apr 14 2026, 14:28:56) [Clang 22.1.3 ]",
+      "python_executable": "<external-path>",
+      "platform": "Linux-6.17.0-1013-gcp-x86_64-with-glibc2.39",
+      "system": "Linux",
+      "machine": "x86_64",
+      "processor": "x86_64",
+      "cpu_count": "16",
+      "memory_total_bytes": "63189983232",
+      "timestamp": "2026-05-03T10:13:35.569318+00:00"
+    },
+    "library_versions": {
+      "torchvision": "0.26.0",
+      "numpy": "2.4.4",
+      "pillow": "12.2.0",
+      "opencv-python-headless": "4.13.0.92",
+      "torch": "2.11.0",
+      "opencv-python": "not installed",
+      "av": "not installed",
+      "decord": "not installed",
+      "torchcodec": "not installed"
+    },
+    "thread_settings": {
+      "environment": "{'OMP_NUM_THREADS': 'None', 'OPENBLAS_NUM_THREADS': 'None', 'MKL_NUM_THREADS': 'None', 'VECLIB_MAXIMUM_THREADS': 'None', 'NUMEXPR_NUM_THREADS': 'None'}",
+      "opencv": "{'threads': 16, 'opencl': False}",
+      "pytorch": "{'threads': 8, 'gpu_available': False, 'gpu_device': None}",
+      "pillow": "{'threads': 'unknown', 'simd': False}"
+    },
+    "environment": {
+      "cwd": "<external-path>",
+      "python_executable": "<external-path>",
+      "python_prefix": "<external-path>",
+      "argv": [
+        "<external-path>",
+        "--specs-file",
+        "<external-path>",
+        "--data-dir",
+        "<external-path>",
+        "--output",
+        "<external-path>",
+        "--media",
+        "image",
+        "--scenario",
+        "image-rgb",
+        "--num-runs",
+        "1",
+        "--batch-size",
+        "256",
+        "--workers",
+        "8",
+        "--min-time",
+        "0.0",
+        "--min-batches",
+        "1",
+        "--num-channels",
+        "3",
+        "--clip-length",
+        "16",
+        "--pipeline-scope",
+        "memory_dataloader_augment",
+        "--device",
+        "none",
+        "--thread-policy",
+        "pipeline-default",
+        "--num-items",
+        "10000"
+      ],
+      "platform": {
+        "system": "Linux",
+        "release": "6.17.0-1013-gcp",
+        "machine": "x86_64",
+        "processor": "x86_64"
+      },
+      "thread_env": {},
+      "git": {
+        "dirty": false
+      }
+    },
+    "gpu": {
+      "torch_available": true,
+      "torch_version": "2.11.0+cu130",
+      "cuda_available": false,
+      "torch_cuda_version": "13.0"
+    },
+    "dataset": {
+      "available": true,
+      "path": "<external-path>",
+      "media": "image",
+      "file_count": 50000,
+      "total_bytes": 6706560319,
+      "extensions": {
+        ".jpeg": 50000
+      },
+      "sample_paths": [
+        "ILSVRC2012_val_00000001.JPEG",
+        "ILSVRC2012_val_00000002.JPEG",
+        "ILSVRC2012_val_00000003.JPEG",
+        "ILSVRC2012_val_00000004.JPEG",
+        "ILSVRC2012_val_00000005.JPEG",
+        "ILSVRC2012_val_00000006.JPEG",
+        "ILSVRC2012_val_00000007.JPEG",
+        "ILSVRC2012_val_00000008.JPEG",
+        "ILSVRC2012_val_00000009.JPEG",
+        "ILSVRC2012_val_00000010.JPEG"
+      ]
+    },
+    "timing": {
+      "timing_backend": "perf_counter",
+      "measurement_scope": "memory_dataloader_augment",
+      "data_source": "memory",
+      "includes_decode": false,
+      "includes_collate": true,
+      "includes_gpu_transfer": false,
+      "includes_dataloader_workers": true
+    },
+    "scenario": "image-rgb",
+    "mode": "pipeline",
+    "library": "torchvision",
+    "benchmark_params": {
+      "num_images": 10000,
+      "num_runs": 1,
+      "batch_size": 256,
+      "workers": 8,
+      "min_time": 0.0,
+      "min_batches": 1,
+      "num_channels": 3,
+      "pipeline_scope": "memory_dataloader_augment",
+      "decode_included": false,
+      "decoder": "torchvision",
+      "device": "none",
+      "device_option": "none",
+      "transform_on_device": false,
+      "includes_host_to_device_transfer": false,
+      "gpu_memory_peak_measured": false,
+      "thread_policy": "pipeline-default",
+      "batch_collate": true,
+      "preload_time": 19.242808695999997,
+      "slow_skip_enabled": true,
+      "slow_threshold_sec_per_item": 0.05,
+      "slow_preflight_items": 10
+    },
+    "run_config": {
+      "version": 1,
+      "selection": {
+        "scenario": "image-rgb",
+        "mode": "pipeline",
+        "media": "image",
+        "libraries": [
+          "albumentationsx",
+          "torchvision",
+          "kornia",
+          "pillow"
+        ],
+        "transforms": [
+          "RandomCrop224+Resize+Normalize+ToTensor",
+          "RandomCrop224+Normalize+ToTensor",
+          "RandomResizedCrop+Normalize+ToTensor",
+          "RandomCrop224+HorizontalFlip+Normalize+ToTensor",
+          "RandomCrop224+VerticalFlip+Normalize+ToTensor",
+          "RandomCrop224+Pad+Normalize+ToTensor",
+          "RandomCrop224+Rotate+Normalize+ToTensor",
+          "RandomCrop224+Affine+Normalize+ToTensor",
+          "RandomCrop224+Perspective+Normalize+ToTensor",
+          "RandomCrop224+Elastic+Normalize+ToTensor",
+          "RandomCrop224+ColorJitter+Normalize+ToTensor",
+          "RandomCrop224+ChannelShuffle+Normalize+ToTensor",
+          "RandomCrop224+Grayscale+Normalize+ToTensor",
+          "RandomCrop224+RGBShift+Normalize+ToTensor",
+          "RandomCrop224+GaussianBlur+Normalize+ToTensor",
+          "RandomCrop224+GaussianNoise+Normalize+ToTensor",
+          "RandomCrop224+Invert+Normalize+ToTensor",
+          "RandomCrop224+Posterize+Normalize+ToTensor",
+          "RandomCrop224+Solarize+Normalize+ToTensor",
+          "RandomCrop224+Sharpen+Normalize+ToTensor",
+          "RandomCrop224+AutoContrast+Normalize+ToTensor",
+          "RandomCrop224+Equalize+Normalize+ToTensor",
+          "RandomCrop224+Erasing+Normalize+ToTensor",
+          "RandomCrop224+JpegCompression+Normalize+ToTensor",
+          "RandomCrop224+RandomGamma+Normalize+ToTensor",
+          "RandomCrop224+PlankianJitter+Normalize+ToTensor",
+          "RandomCrop224+MedianBlur+Normalize+ToTensor",
+          "RandomCrop224+MotionBlur+Normalize+ToTensor",
+          "RandomCrop224+CLAHE+Normalize+ToTensor",
+          "RandomCrop224+Brightness+Normalize+ToTensor",
+          "RandomCrop224+Contrast+Normalize+ToTensor",
+          "RandomCrop224+Blur+Normalize+ToTensor",
+          "RandomCrop224+ChannelDropout+Normalize+ToTensor",
+          "RandomCrop224+LinearIllumination+Normalize+ToTensor",
+          "RandomCrop224+CornerIllumination+Normalize+ToTensor",
+          "RandomCrop224+GaussianIllumination+Normalize+ToTensor",
+          "RandomCrop224+Hue+Normalize+ToTensor",
+          "RandomCrop224+PlasmaBrightness+Normalize+ToTensor",
+          "RandomCrop224+PlasmaContrast+Normalize+ToTensor",
+          "RandomCrop224+PlasmaShadow+Normalize+ToTensor",
+          "RandomCrop224+Rain+Normalize+ToTensor",
+          "RandomCrop224+SaltAndPepper+Normalize+ToTensor",
+          "RandomCrop224+Saturation+Normalize+ToTensor",
+          "RandomCrop224+Snow+Normalize+ToTensor",
+          "RandomCrop224+OpticalDistortion+Normalize+ToTensor",
+          "RandomCrop224+Shear+Normalize+ToTensor",
+          "RandomCrop224+ThinPlateSpline+Normalize+ToTensor",
+          "RandomCrop224+PhotoMetricDistort+Normalize+ToTensor",
+          "RandomCrop224+ColorJiggle+Normalize+ToTensor",
+          "RandomCrop224+LongestMaxSize+Normalize+ToTensor",
+          "RandomCrop224+SmallestMaxSize+Normalize+ToTensor",
+          "RandomCrop224+Transpose+Normalize+ToTensor",
+          "RandomCrop224+RandomRotate90+Normalize+ToTensor",
+          "RandomCrop224+RandomJigsaw+Normalize+ToTensor",
+          "RandomCrop224+EnhanceEdge+Normalize+ToTensor",
+          "RandomCrop224+EnhanceDetail+Normalize+ToTensor",
+          "RandomCrop224+UnsharpMask+Normalize+ToTensor"
+        ],
+        "transform_set": "paper",
+        "multichannel": false
+      },
+      "data": {
+        "data_dir": "<external-path>",
+        "gcs_uri": "gs://imagenet_validation/imagenet/val.tar",
+        "num_items": 10000,
+        "num_channels": 3
+      },
+      "execution": {
+        "num_runs": 1,
+        "batch_size": 256,
+        "workers": 8,
+        "min_time": 0.0,
+        "min_batches": 1,
+        "pipeline_scope": "memory_dataloader_augment",
+        "device": "none",
+        "thread_policy": "pipeline-default",
+        "refresh_requirements": true,
+        "disable_slow_skip": false
+      },
+      "output": {
+        "output_dir": "<external-path>",
+        "gcs_results_uri": "gs://imagenet_validation/augmentation-results"
+      }
+    }
+  },
+  "results": {
+    "RandomCrop224+Resize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1235.1674544142452
+      ],
+      "median_throughput": 1235.1674544142452,
+      "mean_throughput": 1235.1674544142452,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 1235.1674544142452,
+      "p75_throughput": 1235.1674544142452,
+      "p90_throughput": 1235.1674544142452,
+      "p95_throughput": 1235.1674544142452,
+      "times": [
+        8.096068241000012
+      ],
+      "mean_time": 8.096068241000012,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        4367.061443256683
+      ],
+      "median_throughput": 4367.061443256683,
+      "mean_throughput": 4367.061443256683,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 4367.061443256683,
+      "p75_throughput": 4367.061443256683,
+      "p90_throughput": 4367.061443256683,
+      "p95_throughput": 4367.061443256683,
+      "times": [
+        2.2898693159999652
+      ],
+      "mean_time": 2.2898693159999652,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomResizedCrop+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        3869.944616464081
+      ],
+      "median_throughput": 3869.944616464081,
+      "mean_throughput": 3869.944616464081,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 3869.944616464081,
+      "p75_throughput": 3869.944616464081,
+      "p90_throughput": 3869.944616464081,
+      "p95_throughput": 3869.944616464081,
+      "times": [
+        2.5840163080000025
+      ],
+      "mean_time": 2.5840163080000025,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+HorizontalFlip+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        4023.5819288151965
+      ],
+      "median_throughput": 4023.5819288151965,
+      "mean_throughput": 4023.5819288151965,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 4023.5819288151965,
+      "p75_throughput": 4023.5819288151965,
+      "p90_throughput": 4023.5819288151965,
+      "p95_throughput": 4023.5819288151965,
+      "times": [
+        2.485347676999993
+      ],
+      "mean_time": 2.485347676999993,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+VerticalFlip+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        4007.526686553061
+      ],
+      "median_throughput": 4007.526686553061,
+      "mean_throughput": 4007.526686553061,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 4007.526686553061,
+      "p75_throughput": 4007.526686553061,
+      "p90_throughput": 4007.526686553061,
+      "p95_throughput": 4007.526686553061,
+      "times": [
+        2.4953046559999734
+      ],
+      "mean_time": 2.4953046559999734,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+Pad+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        4162.098106729862
+      ],
+      "median_throughput": 4162.098106729862,
+      "mean_throughput": 4162.098106729862,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 4162.098106729862,
+      "p75_throughput": 4162.098106729862,
+      "p90_throughput": 4162.098106729862,
+      "p95_throughput": 4162.098106729862,
+      "times": [
+        2.4026343790000055
+      ],
+      "mean_time": 2.4026343790000055,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+Rotate+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        3141.051665283005
+      ],
+      "median_throughput": 3141.051665283005,
+      "mean_throughput": 3141.051665283005,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 3141.051665283005,
+      "p75_throughput": 3141.051665283005,
+      "p90_throughput": 3141.051665283005,
+      "p95_throughput": 3141.051665283005,
+      "times": [
+        3.183647092000001
+      ],
+      "mean_time": 3.183647092000001,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+Affine+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        3174.667625395117
+      ],
+      "median_throughput": 3174.667625395117,
+      "mean_throughput": 3174.667625395117,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 3174.667625395117,
+      "p75_throughput": 3174.667625395117,
+      "p90_throughput": 3174.667625395117,
+      "p95_throughput": 3174.667625395117,
+      "times": [
+        3.149936050000008
+      ],
+      "mean_time": 3.149936050000008,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+Perspective+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        2639.8980476653737
+      ],
+      "median_throughput": 2639.8980476653737,
+      "mean_throughput": 2639.8980476653737,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 2639.8980476653737,
+      "p75_throughput": 2639.8980476653737,
+      "p90_throughput": 2639.8980476653737,
+      "p95_throughput": 2639.8980476653737,
+      "times": [
+        3.7880250750000073
+      ],
+      "mean_time": 3.7880250750000073,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+Elastic+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        233.99960389600045
+      ],
+      "median_throughput": 233.99960389600045,
+      "mean_throughput": 233.99960389600045,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 233.99960389600045,
+      "p75_throughput": 233.99960389600045,
+      "p90_throughput": 233.99960389600045,
+      "p95_throughput": 233.99960389600045,
+      "times": [
+        42.73511507500001
+      ],
+      "mean_time": 42.73511507500001,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+ColorJitter+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1263.2868590912685
+      ],
+      "median_throughput": 1263.2868590912685,
+      "mean_throughput": 1263.2868590912685,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 1263.2868590912685,
+      "p75_throughput": 1263.2868590912685,
+      "p90_throughput": 1263.2868590912685,
+      "p95_throughput": 1263.2868590912685,
+      "times": [
+        7.915858482999965
+      ],
+      "mean_time": 7.915858482999965,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+ChannelShuffle+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        4543.323458283498
+      ],
+      "median_throughput": 4543.323458283498,
+      "mean_throughput": 4543.323458283498,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 4543.323458283498,
+      "p75_throughput": 4543.323458283498,
+      "p90_throughput": 4543.323458283498,
+      "p95_throughput": 4543.323458283498,
+      "times": [
+        2.201031929999999
+      ],
+      "mean_time": 2.201031929999999,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+Grayscale+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        4187.580639586068
+      ],
+      "median_throughput": 4187.580639586068,
+      "mean_throughput": 4187.580639586068,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 4187.580639586068,
+      "p75_throughput": 4187.580639586068,
+      "p90_throughput": 4187.580639586068,
+      "p95_throughput": 4187.580639586068,
+      "times": [
+        2.3880137149999996
+      ],
+      "mean_time": 2.3880137149999996,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+GaussianBlur+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        2654.020906045959
+      ],
+      "median_throughput": 2654.020906045959,
+      "mean_throughput": 2654.020906045959,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 2654.020906045959,
+      "p75_throughput": 2654.020906045959,
+      "p90_throughput": 2654.020906045959,
+      "p95_throughput": 2654.020906045959,
+      "times": [
+        3.7678678329999684
+      ],
+      "mean_time": 3.7678678329999684,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+Invert+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        4064.642363371461
+      ],
+      "median_throughput": 4064.642363371461,
+      "mean_throughput": 4064.642363371461,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 4064.642363371461,
+      "p75_throughput": 4064.642363371461,
+      "p90_throughput": 4064.642363371461,
+      "p95_throughput": 4064.642363371461,
+      "times": [
+        2.4602410509999686
+      ],
+      "mean_time": 2.4602410509999686,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+Posterize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        4125.504747306398
+      ],
+      "median_throughput": 4125.504747306398,
+      "mean_throughput": 4125.504747306398,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 4125.504747306398,
+      "p75_throughput": 4125.504747306398,
+      "p90_throughput": 4125.504747306398,
+      "p95_throughput": 4125.504747306398,
+      "times": [
+        2.423945822999997
+      ],
+      "mean_time": 2.423945822999997,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+Solarize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        3568.70869539085
+      ],
+      "median_throughput": 3568.70869539085,
+      "mean_throughput": 3568.70869539085,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 3568.70869539085,
+      "p75_throughput": 3568.70869539085,
+      "p90_throughput": 3568.70869539085,
+      "p95_throughput": 3568.70869539085,
+      "times": [
+        2.802134007999996
+      ],
+      "mean_time": 2.802134007999996,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+Sharpen+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1899.4735529460067
+      ],
+      "median_throughput": 1899.4735529460067,
+      "mean_throughput": 1899.4735529460067,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 1899.4735529460067,
+      "p75_throughput": 1899.4735529460067,
+      "p90_throughput": 1899.4735529460067,
+      "p95_throughput": 1899.4735529460067,
+      "times": [
+        5.264616601
+      ],
+      "mean_time": 5.264616601,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+AutoContrast+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        2424.0029092495024
+      ],
+      "median_throughput": 2424.0029092495024,
+      "mean_throughput": 2424.0029092495024,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 2424.0029092495024,
+      "p75_throughput": 2424.0029092495024,
+      "p90_throughput": 2424.0029092495024,
+      "p95_throughput": 2424.0029092495024,
+      "times": [
+        4.125407590000009
+      ],
+      "mean_time": 4.125407590000009,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+Equalize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        3061.889410950156
+      ],
+      "median_throughput": 3061.889410950156,
+      "mean_throughput": 3061.889410950156,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 3061.889410950156,
+      "p75_throughput": 3061.889410950156,
+      "p90_throughput": 3061.889410950156,
+      "p95_throughput": 3061.889410950156,
+      "times": [
+        3.2659572759999946
+      ],
+      "mean_time": 3.2659572759999946,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+Erasing+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        4068.139794029619
+      ],
+      "median_throughput": 4068.139794029619,
+      "mean_throughput": 4068.139794029619,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 4068.139794029619,
+      "p75_throughput": 4068.139794029619,
+      "p90_throughput": 4068.139794029619,
+      "p95_throughput": 4068.139794029619,
+      "times": [
+        2.4581259509999995
+      ],
+      "mean_time": 2.4581259509999995,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+JpegCompression+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        3447.3088134907543
+      ],
+      "median_throughput": 3447.3088134907543,
+      "mean_throughput": 3447.3088134907543,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 3447.3088134907543,
+      "p75_throughput": 3447.3088134907543,
+      "p90_throughput": 3447.3088134907543,
+      "p95_throughput": 3447.3088134907543,
+      "times": [
+        2.900813516000028
+      ],
+      "mean_time": 2.900813516000028,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+Brightness+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        3888.185227159524
+      ],
+      "median_throughput": 3888.185227159524,
+      "mean_throughput": 3888.185227159524,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 3888.185227159524,
+      "p75_throughput": 3888.185227159524,
+      "p90_throughput": 3888.185227159524,
+      "p95_throughput": 3888.185227159524,
+      "times": [
+        2.571893934000002
+      ],
+      "mean_time": 2.571893934000002,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+Contrast+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        3312.5520205653665
+      ],
+      "median_throughput": 3312.5520205653665,
+      "mean_throughput": 3312.5520205653665,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 3312.5520205653665,
+      "p75_throughput": 3312.5520205653665,
+      "p90_throughput": 3312.5520205653665,
+      "p95_throughput": 3312.5520205653665,
+      "times": [
+        3.0188205160000052
+      ],
+      "mean_time": 3.0188205160000052,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+PhotoMetricDistort+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1233.894939200046
+      ],
+      "median_throughput": 1233.894939200046,
+      "mean_throughput": 1233.894939200046,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 1233.894939200046,
+      "p75_throughput": 1233.894939200046,
+      "p90_throughput": 1233.894939200046,
+      "p95_throughput": 1233.894939200046,
+      "times": [
+        8.104417711999986
+      ],
+      "mean_time": 8.104417711999986,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    },
+    "RandomCrop224+ColorJiggle+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        1266.616782298859
+      ],
+      "median_throughput": 1266.616782298859,
+      "mean_throughput": 1266.616782298859,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 1266.616782298859,
+      "p75_throughput": 1266.616782298859,
+      "p90_throughput": 1266.616782298859,
+      "p95_throughput": 1266.616782298859,
+      "times": [
+        7.89504776800004
+      ],
+      "mean_time": 7.89504776800004,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false
+    }
+  }
+}
