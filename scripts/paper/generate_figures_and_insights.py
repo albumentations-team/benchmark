@@ -9,6 +9,15 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+from common import (
+    LIBRARY_DISPLAY,
+    LIBRARY_ORDER,
+    PALETTE,
+    REGIME_ORDER,
+    fmt_ratio,
+    latex_escape,
+    recipe_display_name,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 os.environ.setdefault("MPLCONFIGDIR", "/private/tmp/benchmark-matplotlib")
@@ -25,22 +34,6 @@ PAPER_FIGURES = PAPER_DIR / "figures"
 README = ROOT / "README.md"
 DRAFT = ROOT / "_internal" / "paper" / "draft.md"
 
-PALETTE = {
-    "albumentationsx": "#177245",
-    "torchvision": "#2f6fbd",
-    "kornia": "#8a4fb5",
-    "pillow": "#c47a1b",
-    "dali": "#5f6b2f",
-}
-LIBRARY_DISPLAY = {
-    "albumentationsx": "AlbumentationsX",
-    "torchvision": "TorchVision",
-    "kornia": "Kornia",
-    "pillow": "Pillow",
-    "dali": "DALI",
-}
-LIBRARY_ORDER = ["albumentationsx", "torchvision", "kornia", "pillow", "dali"]
-REGIME_ORDER = ["CPU micro", "CPU DataLoader", "GPU micro", "GPU DataLoader"]
 PAPER_UNIVERSE_REGIME = "rgb_dataloader_cpu"
 PAPER_UNIVERSE_LIBRARY = "albumentationsx"
 DATALOADER_REGIMES = ["rgb_dataloader_cpu", "rgb_dataloader_gpu"]
@@ -338,15 +331,6 @@ def _dataloader_coverage_vs_throughput(df: pd.DataFrame) -> pd.DataFrame:
     return summary
 
 
-def _recipe_display_name(recipe: str) -> str:
-    label = recipe
-    suffix = "+Normalize+ToTensor"
-    label = label.removesuffix(suffix)
-    prefix = "RandomCrop224+"
-    label = label.removeprefix(prefix)
-    return label or "RandomCrop224"
-
-
 def _format_ci_cell(row: pd.Series, *, latex: bool = False, bold: bool = False) -> str:
     median = float(row["median_throughput"])
     ci95 = float(row["ci95"]) if pd.notna(row["ci95"]) else 0.0
@@ -387,22 +371,6 @@ def _dominant_columns(cells: dict[str, pd.Series | None]) -> set[str]:
     return set()
 
 
-def _latex_escape(value: str) -> str:
-    replacements = {
-        "\\": r"\textbackslash{}",
-        "&": r"\&",
-        "%": r"\%",
-        "$": r"\$",
-        "#": r"\#",
-        "_": r"\_",
-        "{": r"\{",
-        "}": r"\}",
-        "~": r"\textasciitilde{}",
-        "^": r"\textasciicircum{}",
-    }
-    return "".join(replacements.get(char, char) for char in value)
-
-
 def _write_markdown_table(matrix: pd.DataFrame) -> None:
     headers = ["Transform", *[title for _, title, _, _ in PRODUCTION_MATRIX_COLUMNS]]
     lines = [
@@ -440,7 +408,7 @@ def _write_latex_support_table(matrix: pd.DataFrame) -> None:
     ]
     for row in matrix.itertuples(index=False):
         values = [
-            _latex_escape(row.transform),
+            latex_escape(row.transform),
             *[str(getattr(row, column)) for column, _, _, _ in PRODUCTION_MATRIX_COLUMNS],
         ]
         lines.append(" & ".join(values) + r" \\")
@@ -456,8 +424,8 @@ def _production_support_matrix(df: pd.DataFrame) -> pd.DataFrame:
     display_rows: list[dict[str, str]] = []
     latex_rows: list[dict[str, str]] = []
     for recipe in universe:
-        display_row = {"transform": _recipe_display_name(recipe), "recipe": recipe}
-        latex_row = {"transform": _recipe_display_name(recipe), "recipe": recipe}
+        display_row = {"transform": recipe_display_name(recipe), "recipe": recipe}
+        latex_row = {"transform": recipe_display_name(recipe), "recipe": recipe}
         cells: dict[str, pd.Series | None] = {}
         for column, _, regime, library in PRODUCTION_MATRIX_COLUMNS:
             row = indexed.get((regime, library, recipe))
@@ -840,12 +808,6 @@ def _abstract_claims_plot(
     _savefig(FIGURES / "abstract_claims.png")
 
 
-def _fmt_ratio(value: float) -> str:
-    if not math.isfinite(value):
-        return "-"
-    return f"{value:.2f}x"
-
-
 def _write_insights(
     df: pd.DataFrame,
     winners: pd.DataFrame,
@@ -977,7 +939,7 @@ def _write_insights(
         ],
     )
     for row in gpu_vs_alb_summary.itertuples():
-        lines.append(f"| {row.library} | {int(row.count)} | {int(row.wins_over_alb_cpu)} | {_fmt_ratio(row.median)} |")
+        lines.append(f"| {row.library} | {int(row.count)} | {int(row.wins_over_alb_cpu)} | {fmt_ratio(row.median)} |")
 
     lines.extend(
         [

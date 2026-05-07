@@ -12,6 +12,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from common import (
+    LIBRARY_ORDER,
+    REGIME_LABELS,
+    fmt,
+    implementation_label,
+    is_measured,
+    latex_escape,
+    recipe_display_name,
+)
+
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT / "_internal" / "paper" / "generated"
 DEFAULT_DRAFT = ROOT / "_internal" / "paper" / "draft.md"
@@ -38,20 +48,6 @@ RUN_GROUPS = {
 REPLACED_RESULT_FILES: set[Path] = set()
 
 
-LIBRARY_ORDER = ["albumentationsx", "torchvision", "kornia", "pillow", "dali"]
-LIBRARY_DISPLAY = {
-    "albumentationsx": "AlbumentationsX",
-    "torchvision": "TorchVision",
-    "kornia": "Kornia",
-    "pillow": "Pillow",
-    "dali": "DALI",
-}
-REGIME_LABELS = {
-    "rgb_micro_cpu": "CPU micro",
-    "rgb_micro_gpu": "GPU micro",
-    "rgb_dataloader_cpu": "CPU DataLoader",
-    "rgb_dataloader_gpu": "GPU DataLoader",
-}
 GENERATED_START = "<!-- GENERATED_RESULTS_START -->"
 GENERATED_END = "<!-- GENERATED_RESULTS_END -->"
 OPEN_DATALOADER_IMPLEMENTATION_ORDER = [
@@ -227,24 +223,16 @@ def _aggregate_sources(sources: list[SourceResult]) -> list[AggregateResult]:
     return aggregates
 
 
-def _fmt(value: float | None, digits: int = 1) -> str:
-    if value is None:
-        return "-"
-    if not math.isfinite(value):
-        return "-"
-    return f"{value:.{digits}f}"
-
-
 def _status_cell(row: AggregateResult) -> str:
     if not row.supported:
         return "unsupported"
     if row.status == "partial_early_stop":
-        return f"{_fmt(row.median_throughput)} (partial)"
+        return f"{fmt(row.median_throughput)} (partial)"
     if row.early_stopped:
-        return f"≤20 img/s ({_fmt(row.median_throughput)})"
+        return f"≤20 img/s ({fmt(row.median_throughput)})"
     if row.num_successful_runs == 0:
         return "no full run"
-    return _fmt(row.median_throughput)
+    return fmt(row.median_throughput)
 
 
 def _write_csv(path: Path, rows: list[AggregateResult]) -> None:
@@ -314,24 +302,6 @@ def _regime_rows(rows: list[AggregateResult], regime: str) -> list[AggregateResu
     return [row for row in rows if row.regime == regime]
 
 
-def _is_measured(row: AggregateResult) -> bool:
-    return row.supported and not row.early_stopped and row.num_successful_runs > 0
-
-
-def _implementation_label(regime: str, library: str) -> str:
-    device = "GPU" if regime == "rgb_dataloader_gpu" else "CPU"
-    return f"{LIBRARY_DISPLAY.get(library, library)} {device}"
-
-
-def _recipe_display_name(recipe: str) -> str:
-    label = recipe
-    suffix = "+Normalize+ToTensor"
-    label = label.removesuffix(suffix)
-    prefix = "RandomCrop224+"
-    label = label.removeprefix(prefix)
-    return label or "RandomCrop224"
-
-
 def _join_display_list(items: list[str]) -> str:
     if not items:
         return ""
@@ -358,7 +328,7 @@ def _open_dataloader_stats(rows: list[AggregateResult]) -> dict[str, Any]:
         candidates = [
             row
             for (regime, library, candidate_transform), row in by_key.items()
-            if candidate_transform == transform and _is_measured(row)
+            if candidate_transform == transform and is_measured(row)
         ]
         if not candidates:
             continue
@@ -367,11 +337,11 @@ def _open_dataloader_stats(rows: list[AggregateResult]) -> dict[str, Any]:
         winner_rows.append(
             {
                 "transform": transform,
-                "display_transform": _recipe_display_name(transform),
+                "display_transform": recipe_display_name(transform),
                 "regime": winner.regime,
                 "regime_label": REGIME_LABELS[winner.regime],
                 "library": winner.library,
-                "implementation": _implementation_label(winner.regime, winner.library),
+                "implementation": implementation_label(winner.regime, winner.library),
                 "median_throughput": winner.median_throughput,
             },
         )
@@ -381,14 +351,14 @@ def _open_dataloader_stats(rows: list[AggregateResult]) -> dict[str, Any]:
         measured_rows = [
             row
             for row in rows
-            if row.regime == regime and row.library == library and row.transform in universe_set and _is_measured(row)
+            if row.regime == regime and row.library == library and row.transform in universe_set and is_measured(row)
         ]
         if not measured_rows and not any(row.regime == regime and row.library == library for row in rows):
             continue
         median = statistics.median([row.median_throughput for row in measured_rows]) if measured_rows else None
         leaderboard.append(
             {
-                "implementation": _implementation_label(regime, library),
+                "implementation": implementation_label(regime, library),
                 "regime": regime,
                 "regime_label": REGIME_LABELS[regime],
                 "library": library,
@@ -428,7 +398,7 @@ def _open_dataloader_leaderboard_table(rows: list[AggregateResult]) -> str:
                     str(item["implementation"]),
                     str(item["regime_label"]),
                     f"{item['full']}/{item['universe_rows']}",
-                    _fmt(item["median_throughput"]),
+                    fmt(item["median_throughput"]),
                     str(item["wins"]),
                 ],
             )
@@ -446,22 +416,6 @@ def _open_dataloader_leaderboard_table(rows: list[AggregateResult]) -> str:
     if exception_text:
         lines.extend(["", f"Open-category exception rows: {exception_text}."])
     return "\n".join(lines)
-
-
-def _latex_escape(value: str) -> str:
-    replacements = {
-        "\\": r"\textbackslash{}",
-        "&": r"\&",
-        "%": r"\%",
-        "$": r"\$",
-        "#": r"\#",
-        "_": r"\_",
-        "{": r"\{",
-        "}": r"\}",
-        "~": r"\textasciitilde{}",
-        "^": r"\textasciicircum{}",
-    }
-    return "".join(replacements.get(char, char) for char in value)
 
 
 def _write_open_dataloader_files(output_dir: Path, rows: list[AggregateResult]) -> None:
@@ -509,10 +463,10 @@ def _write_open_dataloader_files(output_dir: Path, rows: list[AggregateResult]) 
     ]
     for item in stats["leaderboard"]:
         values = [
-            _latex_escape(str(item["implementation"])),
-            _latex_escape(str(item["regime_label"])),
+            latex_escape(str(item["implementation"])),
+            latex_escape(str(item["regime_label"])),
             f"{item['full']}/{item['universe_rows']}",
-            _fmt(item["median_throughput"]),
+            fmt(item["median_throughput"]),
             str(item["wins"]),
         ]
         lines.append("    " + " & ".join(values) + r" \\")
@@ -546,7 +500,7 @@ def _library_summary(rows: list[AggregateResult]) -> str:
                         str(sum(1 for r in subset if r.num_successful_runs)),
                         str(sum(1 for r in subset if r.early_stopped)),
                         str(sum(1 for r in subset if not r.supported)),
-                        _fmt(statistics.median(measured) if measured else None),
+                        fmt(statistics.median(measured) if measured else None),
                     ],
                 )
                 + " |",
@@ -594,7 +548,7 @@ def _best_library_table(rows: list[AggregateResult], regime: str) -> str:
         ],
     )
     for transform, winner, gap, second in sorted(speedups, key=lambda item: item[2], reverse=True)[:10]:
-        lines.append(f"| {transform} | {winner} | {_fmt(gap)}x | {second} |")
+        lines.append(f"| {transform} | {winner} | {fmt(gap)}x | {second} |")
     return "\n".join(lines)
 
 
@@ -631,7 +585,7 @@ def _cpu_vs_gpu_table(rows: list[AggregateResult]) -> str:
         ratios = [row[4] for row in subset]
         lines.append(
             f"| {library} | {len(subset)} | {sum(1 for ratio in ratios if ratio > 1)} | "
-            f"{sum(1 for ratio in ratios if ratio <= 1)} | {_fmt(statistics.median(ratios) if ratios else None, 2)}x |",
+            f"{sum(1 for ratio in ratios if ratio <= 1)} | {fmt(statistics.median(ratios) if ratios else None, 2)}x |",
         )
     lines.extend(
         [
@@ -643,7 +597,7 @@ def _cpu_vs_gpu_table(rows: list[AggregateResult]) -> str:
         ],
     )
     for library, transform, cpu_tp, gpu_tp, ratio in sorted(comparisons, key=lambda item: item[4], reverse=True)[:10]:
-        lines.append(f"| {library} | {transform} | {_fmt(cpu_tp)} | {_fmt(gpu_tp)} | {_fmt(ratio, 2)}x |")
+        lines.append(f"| {library} | {transform} | {fmt(cpu_tp)} | {fmt(gpu_tp)} | {fmt(ratio, 2)}x |")
     lines.extend(
         [
             "",
@@ -654,7 +608,7 @@ def _cpu_vs_gpu_table(rows: list[AggregateResult]) -> str:
         ],
     )
     for library, transform, cpu_tp, gpu_tp, ratio in sorted(comparisons, key=lambda item: item[4])[:10]:
-        lines.append(f"| {library} | {transform} | {_fmt(cpu_tp)} | {_fmt(gpu_tp)} | {_fmt(ratio, 2)}x |")
+        lines.append(f"| {library} | {transform} | {fmt(cpu_tp)} | {fmt(gpu_tp)} | {fmt(ratio, 2)}x |")
     return "\n".join(lines)
 
 
@@ -688,7 +642,7 @@ def _albumentations_vs_gpu_table(rows: list[AggregateResult]) -> str:
         ratios = [row[4] for row in subset]
         lines.append(
             f"| {library} | {len(subset)} | {sum(1 for ratio in ratios if ratio > 1)} | "
-            f"{sum(1 for ratio in ratios if ratio <= 1)} | {_fmt(statistics.median(ratios) if ratios else None, 2)}x |",
+            f"{sum(1 for ratio in ratios if ratio <= 1)} | {fmt(statistics.median(ratios) if ratios else None, 2)}x |",
         )
     return "\n".join(lines)
 
@@ -705,8 +659,8 @@ def _gpu_memory_table(rows: list[AggregateResult]) -> str:
     ]
     lines.extend(
         (
-            f"| {row.library} | {row.transform} | {_status_cell(row)} | {_fmt(row.gpu_peak_allocated_mb)} | "
-            f"{_fmt(row.gpu_peak_reserved_mb)} | {row.status} |"
+            f"| {row.library} | {row.transform} | {_status_cell(row)} | {fmt(row.gpu_peak_allocated_mb)} | "
+            f"{fmt(row.gpu_peak_reserved_mb)} | {row.status} |"
         )
         for row in sorted(gpu_rows, key=lambda r: r.gpu_peak_allocated_mb or 0, reverse=True)[:20]
     )
@@ -778,13 +732,13 @@ def _write_limitations_files(output_dir: Path, rows: list[AggregateResult]) -> N
 
 def _headline_metrics(rows: list[AggregateResult]) -> dict[str, Any]:
     def median_for(regime: str, library: str) -> float | None:
-        values = [r.median_throughput for r in rows if r.regime == regime and r.library == library and _is_measured(r)]
+        values = [r.median_throughput for r in rows if r.regime == regime and r.library == library and is_measured(r)]
         return statistics.median(values) if values else None
 
     def winner_counts(regime: str) -> dict[str, int]:
         by_transform: dict[str, list[AggregateResult]] = defaultdict(list)
         for row in rows:
-            if row.regime == regime and _is_measured(row):
+            if row.regime == regime and is_measured(row):
                 by_transform[row.transform].append(row)
         wins: dict[str, int] = defaultdict(int)
         for candidates in by_transform.values():
@@ -797,13 +751,13 @@ def _headline_metrics(rows: list[AggregateResult]) -> dict[str, Any]:
     alb_cpu = {
         r.transform: r
         for r in rows
-        if r.regime == "rgb_dataloader_cpu" and r.library == "albumentationsx" and _is_measured(r)
+        if r.regime == "rgb_dataloader_cpu" and r.library == "albumentationsx" and is_measured(r)
     }
     gpu_vs_alb: dict[str, dict[str, float | int | None]] = {}
     for library in ["torchvision", "kornia", "dali"]:
         ratios: list[float] = []
         for row in rows:
-            if row.regime != "rgb_dataloader_gpu" or row.library != library or not _is_measured(row):
+            if row.regime != "rgb_dataloader_gpu" or row.library != library or not is_measured(row):
                 continue
             cpu_row = alb_cpu.get(row.transform)
             if cpu_row and cpu_row.median_throughput > 0:
@@ -822,7 +776,7 @@ def _headline_metrics(rows: list[AggregateResult]) -> dict[str, Any]:
             if subset:
                 coverage[regime][library] = {
                     "rows": len(subset),
-                    "full": sum(1 for r in subset if _is_measured(r)),
+                    "full": sum(1 for r in subset if is_measured(r)),
                     "early_stopped": sum(1 for r in subset if r.supported and r.early_stopped),
                     "unsupported": sum(1 for r in subset if not r.supported),
                 }
