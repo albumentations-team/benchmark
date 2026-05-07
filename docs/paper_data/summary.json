@@ -1,5 +1,5 @@
 {
-  "num_source_rows": 710,
+  "num_source_rows": 685,
   "num_aggregate_rows": 525,
   "regimes": {
     "rgb_micro_cpu": 158,
@@ -26,8 +26,8 @@
         "pillow": 3241.223565707919
       },
       "rgb_dataloader_gpu": {
-        "torchvision": 2020.3409298650379,
-        "kornia": 657.6081924201931,
+        "torchvision": 2561.893384972934,
+        "kornia": 632.3004232768778,
         "dali": 3785.1916513893693
       }
     },
@@ -44,21 +44,21 @@
         "kornia": 1
       },
       "rgb_dataloader_gpu": {
-        "dali": 21,
+        "dali": 16,
         "kornia": 1,
-        "torchvision": 8
+        "torchvision": 13
       }
     },
     "gpu_vs_albumentationsx_cpu": {
       "torchvision": {
         "compared_rows": 25,
-        "gpu_faster": 1,
-        "median_ratio": 0.39272220070792363
+        "gpu_faster": 2,
+        "median_ratio": 0.5514619346096488
       },
       "kornia": {
-        "compared_rows": 48,
+        "compared_rows": 49,
         "gpu_faster": 0,
-        "median_ratio": 0.13700438340579607
+        "median_ratio": 0.12842782277926593
       },
       "dali": {
         "compared_rows": 22,
@@ -77,7 +77,7 @@
           "full": 57,
           "universe_rows": 57,
           "median_throughput": 4614.752875594858,
-          "wins": 53
+          "wins": 52
         },
         {
           "implementation": "DALI GPU",
@@ -116,8 +116,8 @@
           "library": "torchvision",
           "full": 25,
           "universe_rows": 57,
-          "median_throughput": 2020.3409298650379,
-          "wins": 0
+          "median_throughput": 2561.893384972934,
+          "wins": 1
         },
         {
           "implementation": "Kornia CPU",
@@ -134,9 +134,9 @@
           "regime": "rgb_dataloader_gpu",
           "regime_label": "GPU DataLoader",
           "library": "kornia",
-          "full": 48,
+          "full": 49,
           "universe_rows": 57,
-          "median_throughput": 657.6081924201931,
+          "median_throughput": 632.3004232768778,
           "wins": 0
         }
       ],
@@ -495,11 +495,11 @@
         {
           "transform": "RandomCrop224+Normalize+ToTensor",
           "display_transform": "RandomCrop224",
-          "regime": "rgb_dataloader_cpu",
-          "regime_label": "CPU DataLoader",
-          "library": "albumentationsx",
-          "implementation": "AlbumentationsX CPU",
-          "median_throughput": 5084.525347676295
+          "regime": "rgb_dataloader_gpu",
+          "regime_label": "GPU DataLoader",
+          "library": "torchvision",
+          "implementation": "TorchVision GPU",
+          "median_throughput": 6252.6494195069445
         },
         {
           "transform": "RandomCrop224+RandomGamma+Normalize+ToTensor",
@@ -732,9 +732,9 @@
         },
         "kornia": {
           "rows": 50,
-          "full": 48,
+          "full": 49,
           "early_stopped": 0,
-          "unsupported": 2
+          "unsupported": 1
         },
         "dali": {
           "rows": 57,

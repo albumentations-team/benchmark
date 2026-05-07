@@ -371,9 +371,14 @@ class PipelineBenchmarkRunner:
             preflight_items=self.slow_preflight_items,
         )
 
-    def _preflight_items(self, paths: list[Path], preloaded: list[Any] | None) -> list[Any]:
+    def _preflight_limit(self, paths: list[Path], *, min_items: int = 1) -> int:
         _, preflight_items, _ = self._slow_skip_config()
-        limit = max(1, min(preflight_items, len(paths)))
+        if not paths:
+            return 0
+        return max(1, min(max(preflight_items, min_items), len(paths)))
+
+    def _preflight_items(self, paths: list[Path], preloaded: list[Any] | None) -> list[Any]:
+        limit = self._preflight_limit(paths)
         if preloaded is not None:
             return preloaded[:limit]
         return [self._load_item(path) for path in paths[:limit]]
@@ -390,14 +395,24 @@ class PipelineBenchmarkRunner:
             return None
 
         threshold, _, max_preflight_secs = self._slow_skip_config()
-        items = self._preflight_items(paths, preloaded)
-        if not items:
-            return None
+        uses_gpu_batch = self._uses_gpu_image_batch_transform()
+        item_limit = 0
+        gpu_items: list[Any] | None = None
+        cpu_items: list[Any] = []
+        if uses_gpu_batch:
+            item_limit = self._preflight_limit(paths, min_items=self.batch_size)
+            gpu_items = preloaded[:item_limit] if preloaded is not None else None
+            if item_limit == 0 or (preloaded is not None and not gpu_items):
+                return None
+        else:
+            cpu_items = self._preflight_items(paths, preloaded)
+            if not cpu_items:
+                return None
 
         start = time.perf_counter()
-        if self._uses_gpu_image_batch_transform():
+        if uses_gpu_batch:
             dataset_transform, batch_transform = self._split_gpu_image_transform(transform)
-            loader = self._loader(paths[: len(items)], dataset_transform, items if preloaded is not None else None)
+            loader = self._loader(paths[:item_limit], dataset_transform, gpu_items)
             processed, _ = self._run_loader_once(
                 loader,
                 desc=f"{transform_name} GPU preflight",
@@ -405,9 +420,9 @@ class PipelineBenchmarkRunner:
             )
             item_count = processed
         else:
-            for item in items:
+            for item in cpu_items:
                 materialize_transform_output(self.call_fn(transform, item))
-            item_count = len(items)
+            item_count = len(cpu_items)
         elapsed = time.perf_counter() - start
         time_per_item = elapsed / item_count
         throughput = item_count / elapsed if elapsed > 0 else 0.0

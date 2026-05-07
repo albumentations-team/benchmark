@@ -40,7 +40,6 @@ This supplement table preserves the full unsupported and slow-row detail used by
 | GPU DataLoader | dali | RandomCrop224+ThinPlateSpline+Normalize+ToTensor | unsupported | DALI image pipeline does not implement transform 'ThinPlateSpline' |
 | GPU DataLoader | dali | RandomCrop224+Transpose+Normalize+ToTensor | unsupported | DALI image pipeline does not implement transform 'Transpose' |
 | GPU DataLoader | dali | RandomCrop224+UnsharpMask+Normalize+ToTensor | unsupported | DALI image pipeline does not implement transform 'UnsharpMask' |
-| GPU DataLoader | kornia | RandomCrop224+Affine+Normalize+ToTensor | unsupported | ValueError: Inputs must have same batch size dimension. Got center torch.Size([256, 2]), angle torch.Size([1]) and scale torch.Size([1, 2]) |
 | GPU DataLoader | kornia | RandomCrop224+GaussianIllumination+Normalize+ToTensor | unsupported | RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! |
 | CPU micro | kornia | Elastic | early_stopped | Elastic slower than threshold: 0.268 sec/image >= 0.050 |
 | CPU micro | kornia | MedianBlur | early_stopped | MedianBlur slower than threshold: 0.398 sec/image >= 0.050 |

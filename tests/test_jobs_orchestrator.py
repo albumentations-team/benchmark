@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 from dataclasses import asdict
 from pathlib import Path
 from unittest.mock import patch
@@ -565,3 +567,21 @@ def test_attached_gcp_run_deletes_instance_when_setup_fails(tmp_path: Path) -> N
         runner.run_attached(repo_root=tmp_path, remote_cli_args=[], local_output_dir=tmp_path)
 
     assert runner.events == ["create", "wait", "delete"]
+
+
+def test_detached_gcp_bootstrap_resolves_gcloud_executable(tmp_path: Path) -> None:
+    from benchmark.cloud.gcp import _BOOTSTRAP_SH, _STARTUP_INLINE
+
+    bash = shutil.which("bash")
+    assert bash is not None
+
+    for name, script in {"bootstrap": _BOOTSTRAP_SH, "startup": _STARTUP_INLINE}.items():
+        path = tmp_path / f"{name}.sh"
+        path.write_text(script, encoding="utf-8")
+
+        result = subprocess.run([bash, "-n", str(path)], capture_output=True, text=True, check=False)  # noqa: S603
+
+        assert result.returncode == 0, result.stderr
+        assert "resolve_gcloud()" in script
+        assert '"$GCLOUD_BIN" --quiet storage' in script
+        assert "gcloud --quiet storage" not in script

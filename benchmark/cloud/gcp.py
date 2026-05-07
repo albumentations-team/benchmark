@@ -77,12 +77,25 @@ _REPO_EXCLUDE_PATTERNS = [
     ".git",
 ]
 
+_RESOLVE_GCLOUD_SH = r"""
+resolve_gcloud() {
+  local candidate
+  for candidate in "$(command -v gcloud 2>/dev/null || true)" /usr/bin/gcloud /usr/local/bin/gcloud /snap/bin/gcloud; do
+    if [[ -n "$candidate" && -x "$candidate" ]] && "$candidate" --version >/dev/null 2>&1; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+"""
+
 # Bootstrap: fetch job.json + repo, stage data from GCS, run benchmark, upload artifacts, optional self-delete.
 _BOOTSTRAP_SH = (
     r"""#!/bin/bash
 set -euo pipefail
 export HOME="${HOME:-/root}"
-export PATH="/snap/bin:${HOME}/.local/bin:${PATH}"
+export PATH="${HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin:/snap/bin:${PATH}"
 RUN_LOG=/var/log/benchmark-gcp-run.log
 touch "$RUN_LOG"
 echo "benchmark bootstrap logging to ${RUN_LOG}"
@@ -100,7 +113,13 @@ REPODIR="""
     + r"""
 DATADIR="""
     + _VM_DATADIR
+    + _RESOLVE_GCLOUD_SH
     + r"""
+GCLOUD_BIN="$(resolve_gcloud)" || {
+  echo "ERROR: gcloud is required on the VM image, but no working executable was found." >&2
+  exit 1
+}
+echo "Using gcloud at ${GCLOUD_BIN}"
 
 self_delete_vm() {
   MD=http://metadata.google.internal/computeMetadata/v1
@@ -156,7 +175,7 @@ upload_terminal_artifacts() {
     for attempt in 1 2 3 4 5; do
       terminal_log "upload ${label} attempt ${attempt}/5: timeout ${timeout_secs}s to ${dest}"
       set +e
-      timeout "${timeout_secs}s" gcloud --quiet storage cp "$src" "$dest"
+      timeout "${timeout_secs}s" "$GCLOUD_BIN" --quiet storage cp "$src" "$dest"
       rc=$?
       set -e
       if [[ "$rc" == "0" ]]; then
@@ -173,11 +192,12 @@ upload_terminal_artifacts() {
   gcs_describe_retry() {
     local label="$1"
     local uri="$2"
-    local attempt rc
+    local attempt describe_cmd rc
     for attempt in 1 2 3 4 5; do
-      terminal_log "confirm ${label} attempt ${attempt}/5: timeout 30s gcloud --quiet storage objects describe ${uri}"
+      describe_cmd="${GCLOUD_BIN} --quiet storage objects describe ${uri}"
+      terminal_log "confirm ${label} attempt ${attempt}/5: timeout 30s ${describe_cmd}"
       set +e
-      timeout 30s gcloud --quiet storage objects describe "$uri" >/dev/null 2>&1
+      timeout 30s "$GCLOUD_BIN" --quiet storage objects describe "$uri" >/dev/null 2>&1
       rc=$?
       set -e
       if [[ "$rc" == "0" ]]; then
@@ -234,7 +254,7 @@ PY
 
   if [[ -d "$WORKDIR/results" ]]; then
     terminal_log "sync results to ${run_prefix}/results/"
-    timeout 300s gcloud --quiet storage rsync --recursive "$WORKDIR/results" "${run_prefix}/results/" || \
+    timeout 300s "$GCLOUD_BIN" --quiet storage rsync --recursive "$WORKDIR/results" "${run_prefix}/results/" || \
       terminal_log "WARN: result rsync failed after terminal marker confirmation"
   fi
   gcs_cp_retry "vm.log" 60 "$RUN_LOG" "${run_prefix}/vm.log" || true
@@ -258,15 +278,10 @@ on_error() {
 }
 trap 'on_error $LINENO' ERR
 
-if ! command -v gcloud >/dev/null 2>&1; then
-  echo "ERROR: gcloud is required on the VM image; Ubuntu GCE images should provide google-cloud-cli snap." >&2
-  exit 1
-fi
-
 (
   while true; do
     sleep 15
-    timeout 60s gcloud --quiet storage cp "$RUN_LOG" "${PREFIX}/vm.log" >/dev/null 2>&1 || true
+    timeout 60s "$GCLOUD_BIN" --quiet storage cp "$RUN_LOG" "${PREFIX}/vm.log" >/dev/null 2>&1 || true
   done
 ) &
 LOG_SYNC_PID=$!
@@ -279,15 +294,15 @@ trap cleanup_background_syncs EXIT
 mkdir -p "$WORKDIR" "$DATADIR"
 cd "$WORKDIR"
 
-gcloud --quiet storage cp "${PREFIX}/job.json" ./job.json
-gcloud --quiet storage cp "${PREFIX}/repo.tar.gz" ./repo.tar.gz
+"$GCLOUD_BIN" --quiet storage cp "${PREFIX}/job.json" ./job.json
+"$GCLOUD_BIN" --quiet storage cp "${PREFIX}/repo.tar.gz" ./repo.tar.gz
 RUN_PREFIX=$(python3 -c 'import json; print(json.load(open("job.json"))["gcs_results_prefix"].rstrip("/"))')
 mkdir -p "$WORKDIR/results"
 (
   while true; do
     sleep 30
     if [[ -d "$WORKDIR/results" ]]; then
-      timeout 300s gcloud --quiet storage rsync --recursive \
+      timeout 300s "$GCLOUD_BIN" --quiet storage rsync --recursive \
         "$WORKDIR/results" "${RUN_PREFIX}/results/" >/dev/null 2>&1 || true
     fi
   done
@@ -332,9 +347,9 @@ if [[ -n "$VENV_CACHE_PATH" ]]; then
   echo "Venv cache path: ${VENV_CACHE_PATH}"
   if [[ "$FORCE_VENV_CACHE_REBUILD" == "True" ]]; then
     echo "Venv cache lookup skipped: force rebuild requested."
-  elif timeout 30s gcloud --quiet storage objects describe "$VENV_CACHE_PATH" >/dev/null 2>&1; then
+  elif timeout 30s "$GCLOUD_BIN" --quiet storage objects describe "$VENV_CACHE_PATH" >/dev/null 2>&1; then
     echo "Venv cache hit; restoring..."
-    if timeout 300s gcloud --quiet storage cp "$VENV_CACHE_PATH" "$WORKDIR/venvs.tar.gz"; then
+    if timeout 300s "$GCLOUD_BIN" --quiet storage cp "$VENV_CACHE_PATH" "$WORKDIR/venvs.tar.gz"; then
       tar xzf "$WORKDIR/venvs.tar.gz" -C "$WORKDIR"
       rm -f "$WORKDIR/venvs.tar.gz"
       VENV_CACHE_HIT=1
@@ -355,7 +370,7 @@ TAR_URI=$(python3 -c 'import json; print(json.load(open("job.json"))["gcs_data_u
 mkdir -p "$DATADIR"
 if [[ "$TAR_URI" == *.tar || "$TAR_URI" == *.tar.gz || "$TAR_URI" == *.tgz ]]; then
   echo "Staging dataset tarball: ${TAR_URI}"
-  gcloud storage cp "$TAR_URI" "$TAR_PATH"
+  "$GCLOUD_BIN" storage cp "$TAR_URI" "$TAR_PATH"
   python3 "$REPODIR/benchmark/cloud/stage_dataset.py" extract \
     --job-json "$WORKDIR/job.json" \
     --tar-path "$TAR_PATH" \
@@ -363,7 +378,7 @@ if [[ "$TAR_URI" == *.tar || "$TAR_URI" == *.tar.gz || "$TAR_URI" == *.tgz ]]; t
   rm -f "$TAR_PATH"
 else
   echo "Staging dataset directory: ${TAR_URI}"
-  gcloud --quiet storage rsync --recursive "$TAR_URI" "$DATADIR"
+  "$GCLOUD_BIN" --quiet storage rsync --recursive "$TAR_URI" "$DATADIR"
 fi
 
 cd "$REPODIR"
@@ -423,7 +438,7 @@ if [[ "$RC" == "0" ]]; then
       (
         cd "$WORKDIR"
         GZIP=-1 timeout 300s tar czf "$WORKDIR/venvs.tar.gz" "${cache_inputs[@]}"
-      ) && timeout 600s gcloud --quiet storage cp "$WORKDIR/venvs.tar.gz" "$VENV_CACHE_PATH" || \
+      ) && timeout 600s "$GCLOUD_BIN" --quiet storage cp "$WORKDIR/venvs.tar.gz" "$VENV_CACHE_PATH" || \
         echo "WARN: failed to populate venv cache at ${VENV_CACHE_PATH}" >&2
       rm -f "$WORKDIR/venvs.tar.gz"
     else
@@ -444,20 +459,25 @@ exit "$RC"
 """
 )
 
-_STARTUP_INLINE = r"""#!/bin/bash
+_STARTUP_INLINE = (
+    r"""#!/bin/bash
 set -euo pipefail
-export PATH="/snap/bin:${PATH}"
+export PATH="/usr/local/bin:/usr/bin:/bin:/snap/bin:${PATH}"
 PREFIX=$(curl -s -f -H "Metadata-Flavor: Google" \
   "http://metadata.google.internal/computeMetadata/v1/instance/attributes/benchmark-run-prefix")
 TMP=/tmp/benchmark-gcp-bootstrap.sh
-if ! command -v gcloud >/dev/null 2>&1; then
-  echo "ERROR: gcloud is required to fetch bootstrap.sh; expected it from the GCE image google-cloud-cli snap."
+"""
+    + _RESOLVE_GCLOUD_SH
+    + r"""
+GCLOUD_BIN="$(resolve_gcloud)" || {
+  echo "ERROR: gcloud is required to fetch bootstrap.sh, but no working executable was found." >&2
   exit 1
-fi
-gcloud --quiet storage cp "${PREFIX}/bootstrap.sh" "$TMP"
+}
+"$GCLOUD_BIN" --quiet storage cp "${PREFIX}/bootstrap.sh" "$TMP"
 chmod +x "$TMP"
 exec "$TMP"
 """
+)
 
 
 def _run(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:

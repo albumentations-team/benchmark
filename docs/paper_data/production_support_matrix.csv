@@ -1,58 +1,58 @@
 transform,recipe,albumentationsx_cpu,kornia_cpu,kornia_gpu,torchvision_cpu,torchvision_gpu,pillow_cpu,dali_gpu
-Affine,RandomCrop224+Affine+Normalize+ToTensor,**4528 +/- 32**,1516 +/- 46,-,2858 +/- 217,1227 +/- 39,2679 +/- 200,3806 +/- 90
-AutoContrast,RandomCrop224+AutoContrast+Normalize+ToTensor,**4646 +/- 90**,1619 +/- 78,695 +/- 8,2330 +/- 116,2044 +/- 86,3272 +/- 202,-
-Blur,RandomCrop224+Blur+Normalize+ToTensor,**5275 +/- 196**,1250 +/- 65,684 +/- 8,-,-,3053 +/- 211,-
-Brightness,RandomCrop224+Brightness+Normalize+ToTensor,**5231 +/- 275**,1722 +/- 94,683 +/- 9,3491 +/- 267,2020 +/- 39,3260 +/- 193,3798 +/- 38
-CLAHE,RandomCrop224+CLAHE+Normalize+ToTensor,3384 +/- 192,761 +/- 20,163 +/- 1,-,-,-,3731 +/- 159
-ChannelDropout,RandomCrop224+ChannelDropout+Normalize+ToTensor,**5316 +/- 101**,1739 +/- 8,690 +/- 4,-,-,-,-
-ChannelShuffle,RandomCrop224+ChannelShuffle+Normalize+ToTensor,**5087 +/- 251**,1736 +/- 65,678 +/- 6,4066 +/- 315,2161 +/- 146,-,-
-ColorJiggle,RandomCrop224+ColorJiggle+Normalize+ToTensor,**4255 +/- 68**,770 +/- 22,553 +/- 2,1235 +/- 38,629 +/- 7,-,3742 +/- 39
-ColorJitter,RandomCrop224+ColorJitter+Normalize+ToTensor,**4225 +/- 261**,968 +/- 20,613 +/- 9,1249 +/- 57,636 +/- 8,-,3818 +/- 114
-Contrast,RandomCrop224+Contrast+Normalize+ToTensor,**5258 +/- 163**,1728 +/- 72,690 +/- 2,3198 +/- 187,1985 +/- 76,2967 +/- 214,3759 +/- 83
-CornerIllumination,RandomCrop224+CornerIllumination+Normalize+ToTensor,**3824 +/- 95**,1441 +/- 58,412 +/- 6,-,-,-,-
-Elastic,RandomCrop224+Elastic+Normalize+ToTensor,**2954 +/- 66**,103 +/- 0,331 +/- 1,233 +/- 1,110 +/- 2,-,-
+Affine,RandomCrop224+Affine+Normalize+ToTensor,**4528 +/- 32**,1516 +/- 46,646 +/- 2,2858 +/- 217,1221 +/- 4,2679 +/- 200,3806 +/- 90
+AutoContrast,RandomCrop224+AutoContrast+Normalize+ToTensor,**4646 +/- 90**,1619 +/- 78,651 +/- 5,2330 +/- 116,2562 +/- 88,3272 +/- 202,-
+Blur,RandomCrop224+Blur+Normalize+ToTensor,**5275 +/- 196**,1250 +/- 65,651 +/- 3,-,-,3053 +/- 211,-
+Brightness,RandomCrop224+Brightness+Normalize+ToTensor,**5231 +/- 275**,1722 +/- 94,651 +/- 5,3491 +/- 267,3097 +/- 18,3260 +/- 193,3798 +/- 38
+CLAHE,RandomCrop224+CLAHE+Normalize+ToTensor,3384 +/- 192,761 +/- 20,165 +/- 0,-,-,-,3731 +/- 159
+ChannelDropout,RandomCrop224+ChannelDropout+Normalize+ToTensor,**5316 +/- 101**,1739 +/- 8,660 +/- 4,-,-,-,-
+ChannelShuffle,RandomCrop224+ChannelShuffle+Normalize+ToTensor,**5087 +/- 251**,1736 +/- 65,643 +/- 2,4066 +/- 315,3631 +/- 57,-,-
+ColorJiggle,RandomCrop224+ColorJiggle+Normalize+ToTensor,**4255 +/- 68**,770 +/- 22,529 +/- 2,1235 +/- 38,626 +/- 3,-,3742 +/- 39
+ColorJitter,RandomCrop224+ColorJitter+Normalize+ToTensor,**4225 +/- 261**,968 +/- 20,573 +/- 4,1249 +/- 57,629 +/- 3,-,3818 +/- 114
+Contrast,RandomCrop224+Contrast+Normalize+ToTensor,**5258 +/- 163**,1728 +/- 72,649 +/- 6,3198 +/- 187,2282 +/- 17,2967 +/- 214,3759 +/- 83
+CornerIllumination,RandomCrop224+CornerIllumination+Normalize+ToTensor,**3824 +/- 95**,1441 +/- 58,395 +/- 3,-,-,-,-
+Elastic,RandomCrop224+Elastic+Normalize+ToTensor,**2954 +/- 66**,103 +/- 0,316 +/- 2,233 +/- 1,118 +/- 0,-,-
 EnhanceDetail,RandomCrop224+EnhanceDetail+Normalize+ToTensor,**5033 +/- 64**,-,-,-,-,2707 +/- 194,-
 EnhanceEdge,RandomCrop224+EnhanceEdge+Normalize+ToTensor,**4923 +/- 112**,-,-,-,-,2519 +/- 113,-
-Equalize,RandomCrop224+Equalize+Normalize+ToTensor,**4304 +/- 140**,1268 +/- 84,322 +/- 1,2962 +/- 178,1490 +/- 12,3241 +/- 195,3824 +/- 56
-Erasing,RandomCrop224+Erasing+Normalize+ToTensor,**5118 +/- 296**,1460 +/- 74,525 +/- 8,3698 +/- 289,1795 +/- 47,-,3791 +/- 51
-GaussianBlur,RandomCrop224+GaussianBlur+Normalize+ToTensor,**5029 +/- 106**,1226 +/- 45,700 +/- 18,1458 +/- 787,1871 +/- 65,2310 +/- 131,3701 +/- 95
+Equalize,RandomCrop224+Equalize+Normalize+ToTensor,**4304 +/- 140**,1268 +/- 84,321 +/- 0,2962 +/- 178,1518 +/- 6,3241 +/- 195,3824 +/- 56
+Erasing,RandomCrop224+Erasing+Normalize+ToTensor,**5118 +/- 296**,1460 +/- 74,503 +/- 3,3698 +/- 289,2150 +/- 30,-,3791 +/- 51
+GaussianBlur,RandomCrop224+GaussianBlur+Normalize+ToTensor,**5029 +/- 106**,1226 +/- 45,650 +/- 5,1458 +/- 787,1957 +/- 16,2310 +/- 131,3701 +/- 95
 GaussianIllumination,RandomCrop224+GaussianIllumination+Normalize+ToTensor,**3656 +/- 48**,1409 +/- 60,-,-,-,-,-
-GaussianNoise,RandomCrop224+GaussianNoise+Normalize+ToTensor,3321 +/- 68,1557 +/- 118,698 +/- 2,-,-,-,**3820 +/- 68**
-Grayscale,RandomCrop224+Grayscale+Normalize+ToTensor,**5263 +/- 90**,1723 +/- 106,706 +/- 7,3946 +/- 176,2188 +/- 43,3542 +/- 293,-
-HorizontalFlip,RandomCrop224+HorizontalFlip+Normalize+ToTensor,**5218 +/- 163**,1819 +/- 1,726 +/- 14,3760 +/- 180,2214 +/- 10,3613 +/- 318,3722 +/- 86
-Hue,RandomCrop224+Hue+Normalize+ToTensor,**4698 +/- 54**,1095 +/- 33,717 +/- 5,-,-,-,3784 +/- 6
-Invert,RandomCrop224+Invert+Normalize+ToTensor,**5492 +/- 106**,1780 +/- 92,700 +/- 2,3794 +/- 179,2211 +/- 41,3567 +/- 298,-
-JpegCompression,RandomCrop224+JpegCompression+Normalize+ToTensor,**4106 +/- 171**,729 +/- 28,626 +/- 8,3447 +/- 39,-,2972 +/- 112,3786 +/- 27
-LinearIllumination,RandomCrop224+LinearIllumination+Normalize+ToTensor,**4076 +/- 91**,1592 +/- 97,520 +/- 4,-,-,-,-
-LongestMaxSize,RandomCrop224+LongestMaxSize+Normalize+ToTensor,**1317 +/- 33**,628 +/- 45,182 +/- 0,-,-,-,-
-MedianBlur,RandomCrop224+MedianBlur+Normalize+ToTensor,**4038 +/- 113**,88 +/- 1,342 +/- 2,-,-,165 +/- 2,-
-MotionBlur,RandomCrop224+MotionBlur+Normalize+ToTensor,**4615 +/- 137**,1174 +/- 54,683 +/- 9,-,-,-,-
-RandomCrop224,RandomCrop224+Normalize+ToTensor,**5085 +/- 123**,1856 +/- 42,941 +/- 25,3940 +/- 295,2193 +/- 88,3710 +/- 225,3589 +/- 83
-OpticalDistortion,RandomCrop224+OpticalDistortion+Normalize+ToTensor,**3556 +/- 70**,1409 +/- 56,656 +/- 9,-,-,-,-
-Pad,RandomCrop224+Pad+Normalize+ToTensor,**4867 +/- 93**,-,-,3707 +/- 358,2189 +/- 78,3372 +/- 218,3756 +/- 88
-Perspective,RandomCrop224+Perspective+Normalize+ToTensor,**3992 +/- 132**,1263 +/- 43,689 +/- 16,2550 +/- 64,795 +/- 4,-,-
-PhotoMetricDistort,RandomCrop224+PhotoMetricDistort+Normalize+ToTensor,**4149 +/- 105**,-,-,1191 +/- 41,585 +/- 4,-,-
-PlankianJitter,RandomCrop224+PlankianJitter+Normalize+ToTensor,**4899 +/- 85**,1704 +/- 81,695 +/- 9,-,-,-,-
-PlasmaBrightness,RandomCrop224+PlasmaBrightness+Normalize+ToTensor,**2672 +/- 65**,440 +/- 12,588 +/- 30,-,-,-,-
-PlasmaContrast,RandomCrop224+PlasmaContrast+Normalize+ToTensor,**2156 +/- 96**,438 +/- 13,584 +/- 2,-,-,-,-
-PlasmaShadow,RandomCrop224+PlasmaShadow+Normalize+ToTensor,**2796 +/- 44**,903 +/- 35,634 +/- 29,-,-,-,-
-Posterize,RandomCrop224+Posterize+Normalize+ToTensor,**5319 +/- 74**,1586 +/- 79,588 +/- 5,3702 +/- 287,2204 +/- 22,3498 +/- 315,-
-RGBShift,RandomCrop224+RGBShift+Normalize+ToTensor,**4831 +/- 131**,1717 +/- 41,706 +/- 8,-,-,-,-
-Rain,RandomCrop224+Rain+Normalize+ToTensor,**4528 +/- 225**,1479 +/- 44,306 +/- 1,-,-,-,-
-RandomGamma,RandomCrop224+RandomGamma+Normalize+ToTensor,**5251 +/- 153**,1560 +/- 58,691 +/- 3,-,-,-,-
-RandomJigsaw,RandomCrop224+RandomJigsaw+Normalize+ToTensor,**4868 +/- 31**,1564 +/- 104,667 +/- 9,-,-,-,-
-RandomRotate90,RandomCrop224+RandomRotate90+Normalize+ToTensor,**5087 +/- 49**,1455 +/- 43,660 +/- 1,-,-,-,-
-Resize,RandomCrop224+Resize+Normalize+ToTensor,1334 +/- 16,538 +/- 8,186 +/- 1,1225 +/- 12,2050 +/- 118,-,**3523 +/- 69**
-Rotate,RandomCrop224+Rotate+Normalize+ToTensor,**4782 +/- 137**,1459 +/- 23,690 +/- 8,2988 +/- 155,1261 +/- 27,3532 +/- 304,3809 +/- 72
-SaltAndPepper,RandomCrop224+SaltAndPepper+Normalize+ToTensor,**4460 +/- 46**,1429 +/- 47,386 +/- 4,-,-,-,3824 +/- 86
-Saturation,RandomCrop224+Saturation+Normalize+ToTensor,**4582 +/- 110**,1101 +/- 31,620 +/- 7,-,-,3156 +/- 209,3792 +/- 34
-Sharpen,RandomCrop224+Sharpen+Normalize+ToTensor,**4822 +/- 142**,1208 +/- 44,655 +/- 3,1401 +/- 328,1944 +/- 52,-,-
+GaussianNoise,RandomCrop224+GaussianNoise+Normalize+ToTensor,3321 +/- 68,1557 +/- 118,660 +/- 8,-,-,-,**3820 +/- 68**
+Grayscale,RandomCrop224+Grayscale+Normalize+ToTensor,**5263 +/- 90**,1723 +/- 106,655 +/- 2,3946 +/- 176,3960 +/- 138,3542 +/- 293,-
+HorizontalFlip,RandomCrop224+HorizontalFlip+Normalize+ToTensor,5218 +/- 163,1819 +/- 1,670 +/- 2,3760 +/- 180,5050 +/- 66,3613 +/- 318,3722 +/- 86
+Hue,RandomCrop224+Hue+Normalize+ToTensor,**4698 +/- 54**,1095 +/- 33,586 +/- 7,-,-,-,3784 +/- 6
+Invert,RandomCrop224+Invert+Normalize+ToTensor,**5492 +/- 106**,1780 +/- 92,659 +/- 3,3794 +/- 179,4868 +/- 118,3567 +/- 298,-
+JpegCompression,RandomCrop224+JpegCompression+Normalize+ToTensor,**4106 +/- 171**,729 +/- 28,590 +/- 2,3447 +/- 39,-,2972 +/- 112,3786 +/- 27
+LinearIllumination,RandomCrop224+LinearIllumination+Normalize+ToTensor,**4076 +/- 91**,1592 +/- 97,503 +/- 3,-,-,-,-
+LongestMaxSize,RandomCrop224+LongestMaxSize+Normalize+ToTensor,**1317 +/- 33**,628 +/- 45,179 +/- 0,-,-,-,-
+MedianBlur,RandomCrop224+MedianBlur+Normalize+ToTensor,**4038 +/- 113**,88 +/- 1,327 +/- 2,-,-,165 +/- 2,-
+MotionBlur,RandomCrop224+MotionBlur+Normalize+ToTensor,**4615 +/- 137**,1174 +/- 54,657 +/- 2,-,-,-,-
+RandomCrop224,RandomCrop224+Normalize+ToTensor,5085 +/- 123,1856 +/- 42,959 +/- 10,3940 +/- 295,**6253 +/- 110**,3710 +/- 225,3589 +/- 83
+OpticalDistortion,RandomCrop224+OpticalDistortion+Normalize+ToTensor,**3556 +/- 70**,1409 +/- 56,641 +/- 7,-,-,-,-
+Pad,RandomCrop224+Pad+Normalize+ToTensor,**4867 +/- 93**,-,-,3707 +/- 358,4634 +/- 41,3372 +/- 218,3756 +/- 88
+Perspective,RandomCrop224+Perspective+Normalize+ToTensor,**3992 +/- 132**,1263 +/- 43,635 +/- 1,2550 +/- 64,792 +/- 5,-,-
+PhotoMetricDistort,RandomCrop224+PhotoMetricDistort+Normalize+ToTensor,**4149 +/- 105**,-,-,1191 +/- 41,580 +/- 3,-,-
+PlankianJitter,RandomCrop224+PlankianJitter+Normalize+ToTensor,**4899 +/- 85**,1704 +/- 81,654 +/- 9,-,-,-,-
+PlasmaBrightness,RandomCrop224+PlasmaBrightness+Normalize+ToTensor,**2672 +/- 65**,440 +/- 12,562 +/- 25,-,-,-,-
+PlasmaContrast,RandomCrop224+PlasmaContrast+Normalize+ToTensor,**2156 +/- 96**,438 +/- 13,557 +/- 3,-,-,-,-
+PlasmaShadow,RandomCrop224+PlasmaShadow+Normalize+ToTensor,**2796 +/- 44**,903 +/- 35,612 +/- 25,-,-,-,-
+Posterize,RandomCrop224+Posterize+Normalize+ToTensor,**5319 +/- 74**,1586 +/- 79,562 +/- 3,3702 +/- 287,4726 +/- 83,3498 +/- 315,-
+RGBShift,RandomCrop224+RGBShift+Normalize+ToTensor,**4831 +/- 131**,1717 +/- 41,658 +/- 3,-,-,-,-
+Rain,RandomCrop224+Rain+Normalize+ToTensor,**4528 +/- 225**,1479 +/- 44,306 +/- 2,-,-,-,-
+RandomGamma,RandomCrop224+RandomGamma+Normalize+ToTensor,**5251 +/- 153**,1560 +/- 58,653 +/- 6,-,-,-,-
+RandomJigsaw,RandomCrop224+RandomJigsaw+Normalize+ToTensor,**4868 +/- 31**,1564 +/- 104,636 +/- 3,-,-,-,-
+RandomRotate90,RandomCrop224+RandomRotate90+Normalize+ToTensor,**5087 +/- 49**,1455 +/- 43,632 +/- 9,-,-,-,-
+Resize,RandomCrop224+Resize+Normalize+ToTensor,1334 +/- 16,538 +/- 8,181 +/- 0,1225 +/- 12,2829 +/- 111,-,**3523 +/- 69**
+Rotate,RandomCrop224+Rotate+Normalize+ToTensor,**4782 +/- 137**,1459 +/- 23,642 +/- 6,2988 +/- 155,1273 +/- 9,3532 +/- 304,3809 +/- 72
+SaltAndPepper,RandomCrop224+SaltAndPepper+Normalize+ToTensor,**4460 +/- 46**,1429 +/- 47,375 +/- 12,-,-,-,3824 +/- 86
+Saturation,RandomCrop224+Saturation+Normalize+ToTensor,**4582 +/- 110**,1101 +/- 31,587 +/- 4,-,-,3156 +/- 209,3792 +/- 34
+Sharpen,RandomCrop224+Sharpen+Normalize+ToTensor,**4822 +/- 142**,1208 +/- 44,627 +/- 6,1401 +/- 328,2304 +/- 14,-,-
 Shear,RandomCrop224+Shear+Normalize+ToTensor,**4261 +/- 88**,1489 +/- 54,-,-,-,2524 +/- 76,3772 +/- 61
-SmallestMaxSize,RandomCrop224+SmallestMaxSize+Normalize+ToTensor,**1329 +/- 42**,554 +/- 3,182 +/- 1,-,-,-,-
-Snow,RandomCrop224+Snow+Normalize+ToTensor,**4135 +/- 171**,1045 +/- 40,623 +/- 1,-,-,-,-
-Solarize,RandomCrop224+Solarize+Normalize+ToTensor,**5339 +/- 72**,1530 +/- 73,679 +/- 17,3545 +/- 75,2097 +/- 90,3603 +/- 207,-
-ThinPlateSpline,RandomCrop224+ThinPlateSpline+Normalize+ToTensor,721 +/- 66,753 +/- 28,624 +/- 2,-,-,-,-
+SmallestMaxSize,RandomCrop224+SmallestMaxSize+Normalize+ToTensor,**1329 +/- 42**,554 +/- 3,179 +/- 0,-,-,-,-
+Snow,RandomCrop224+Snow+Normalize+ToTensor,**4135 +/- 171**,1045 +/- 40,596 +/- 3,-,-,-,-
+Solarize,RandomCrop224+Solarize+Normalize+ToTensor,**5339 +/- 72**,1530 +/- 73,644 +/- 2,3545 +/- 75,4130 +/- 101,3603 +/- 207,-
+ThinPlateSpline,RandomCrop224+ThinPlateSpline+Normalize+ToTensor,721 +/- 66,753 +/- 28,598 +/- 3,-,-,-,-
 Transpose,RandomCrop224+Transpose+Normalize+ToTensor,**5231 +/- 130**,-,-,-,-,3606 +/- 359,-
 UnsharpMask,RandomCrop224+UnsharpMask+Normalize+ToTensor,**4522 +/- 78**,-,-,-,-,2083 +/- 33,-
-VerticalFlip,RandomCrop224+VerticalFlip+Normalize+ToTensor,**5302 +/- 166**,1817 +/- 67,726 +/- 7,3828 +/- 132,2242 +/- 65,3737 +/- 256,3766 +/- 134
-RandomResizedCrop,RandomResizedCrop+Normalize+ToTensor,**5056 +/- 144**,1541 +/- 80,825 +/- 33,3788 +/- 85,2047 +/- 115,2805 +/- 123,3898 +/- 117
+VerticalFlip,RandomCrop224+VerticalFlip+Normalize+ToTensor,**5302 +/- 166**,1817 +/- 67,669 +/- 2,3828 +/- 132,5020 +/- 65,3737 +/- 256,3766 +/- 134
+RandomResizedCrop,RandomResizedCrop+Normalize+ToTensor,**5056 +/- 144**,1541 +/- 80,905 +/- 8,3788 +/- 85,4140 +/- 206,2805 +/- 123,3898 +/- 117

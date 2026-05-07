@@ -429,6 +429,106 @@ def test_pipeline_slow_preflight_uses_shared_defaults(tmp_path: Path, monkeypatc
     assert max_preflight_secs == 60.0
 
 
+def test_gpu_image_slow_preflight_uses_at_least_one_full_batch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = [tmp_path / f"{index}.jpg" for index in range(20)]
+    preloaded = [object() for _ in paths]
+    captured: dict[str, int] = {}
+
+    class SplitTransform:
+        cpu_transform = object()
+        gpu_transform = object()
+
+    runner = PipelineBenchmarkRunner(
+        library="kornia",
+        data_dir=tmp_path,
+        output_file=tmp_path / "pipeline.json",
+        transforms=[],
+        call_fn=lambda _transform, item: item,
+        media="image",
+        scenario="image-rgb",
+        batch_size=16,
+        device="cuda",
+        slow_preflight_items=10,
+    )
+
+    monkeypatch.setattr(runner, "_resolved_device", lambda: "cuda")
+
+    def capture_loader(
+        paths_arg: list[Path],
+        _transform_arg: object | None,
+        preloaded_arg: list[object] | None = None,
+    ) -> object:
+        captured["paths"] = len(paths_arg)
+        captured["preloaded"] = len(preloaded_arg or [])
+        return object()
+
+    monkeypatch.setattr(runner, "_loader", capture_loader)
+    monkeypatch.setattr(runner, "_run_loader_once", lambda *_args, **_kwargs: (captured["preloaded"], 1))
+
+    result = runner._preflight_slow_transform(
+        transform_name="Identity",
+        transform=SplitTransform(),
+        paths=paths,
+        preloaded=preloaded,
+    )
+
+    assert result is None
+    assert captured == {"paths": 16, "preloaded": 16}
+
+
+def test_gpu_image_slow_preflight_avoids_redundant_decode_without_preload(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = [tmp_path / f"{index}.jpg" for index in range(20)]
+    captured: dict[str, int | None] = {}
+
+    class SplitTransform:
+        cpu_transform = object()
+        gpu_transform = object()
+
+    runner = PipelineBenchmarkRunner(
+        library="kornia",
+        data_dir=tmp_path,
+        output_file=tmp_path / "pipeline.json",
+        transforms=[],
+        call_fn=lambda _transform, item: item,
+        media="image",
+        scenario="image-rgb",
+        batch_size=16,
+        device="cuda",
+        slow_preflight_items=10,
+    )
+
+    monkeypatch.setattr(runner, "_resolved_device", lambda: "cuda")
+    monkeypatch.setattr(runner, "_load_item", lambda _path: pytest.fail("_load_item should not run for GPU preflight"))
+
+    def capture_loader(
+        paths_arg: list[Path],
+        _transform_arg: object | None,
+        preloaded_arg: list[object] | None = None,
+    ) -> object:
+        captured["paths"] = len(paths_arg)
+        captured["preloaded"] = None if preloaded_arg is None else len(preloaded_arg)
+        return object()
+
+    monkeypatch.setattr(runner, "_loader", capture_loader)
+    monkeypatch.setattr(runner, "_run_loader_once", lambda *_args, **_kwargs: (captured["paths"], 1))
+
+    result = runner._preflight_slow_transform(
+        transform_name="Identity",
+        transform=SplitTransform(),
+        paths=paths,
+        preloaded=None,
+    )
+
+    assert result is None
+    assert captured == {"paths": 16, "preloaded": None}
+
+
 def test_materialize_batch_counts_tensor_batch_dimension(tmp_path: Path) -> None:
     torch = pytest.importorskip("torch")
     runner = PipelineBenchmarkRunner(
