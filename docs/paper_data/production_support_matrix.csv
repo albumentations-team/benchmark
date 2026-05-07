@@ -1,58 +1,293 @@
-transform,recipe,albumentationsx_cpu,kornia_cpu,kornia_gpu,torchvision_cpu,torchvision_gpu,pillow_cpu,dali_gpu
-Affine,RandomCrop224+Affine+Normalize+ToTensor,**4528 +/- 32**,1516 +/- 46,646 +/- 2,2858 +/- 217,1221 +/- 4,2679 +/- 200,3806 +/- 90
-AutoContrast,RandomCrop224+AutoContrast+Normalize+ToTensor,**4646 +/- 90**,1619 +/- 78,651 +/- 5,2330 +/- 116,2562 +/- 88,3272 +/- 202,-
-Blur,RandomCrop224+Blur+Normalize+ToTensor,**5275 +/- 196**,1250 +/- 65,651 +/- 3,-,-,3053 +/- 211,-
-Brightness,RandomCrop224+Brightness+Normalize+ToTensor,**5231 +/- 275**,1722 +/- 94,651 +/- 5,3491 +/- 267,3097 +/- 18,3260 +/- 193,3798 +/- 38
-CLAHE,RandomCrop224+CLAHE+Normalize+ToTensor,3384 +/- 192,761 +/- 20,165 +/- 0,-,-,-,3731 +/- 159
-ChannelDropout,RandomCrop224+ChannelDropout+Normalize+ToTensor,**5316 +/- 101**,1739 +/- 8,660 +/- 4,-,-,-,-
-ChannelShuffle,RandomCrop224+ChannelShuffle+Normalize+ToTensor,**5087 +/- 251**,1736 +/- 65,643 +/- 2,4066 +/- 315,3631 +/- 57,-,-
-ColorJiggle,RandomCrop224+ColorJiggle+Normalize+ToTensor,**4255 +/- 68**,770 +/- 22,529 +/- 2,1235 +/- 38,626 +/- 3,-,3742 +/- 39
-ColorJitter,RandomCrop224+ColorJitter+Normalize+ToTensor,**4225 +/- 261**,968 +/- 20,573 +/- 4,1249 +/- 57,629 +/- 3,-,3818 +/- 114
-Contrast,RandomCrop224+Contrast+Normalize+ToTensor,**5258 +/- 163**,1728 +/- 72,649 +/- 6,3198 +/- 187,2282 +/- 17,2967 +/- 214,3759 +/- 83
-CornerIllumination,RandomCrop224+CornerIllumination+Normalize+ToTensor,**3824 +/- 95**,1441 +/- 58,395 +/- 3,-,-,-,-
-Elastic,RandomCrop224+Elastic+Normalize+ToTensor,**2954 +/- 66**,103 +/- 0,316 +/- 2,233 +/- 1,118 +/- 0,-,-
-EnhanceDetail,RandomCrop224+EnhanceDetail+Normalize+ToTensor,**5033 +/- 64**,-,-,-,-,2707 +/- 194,-
-EnhanceEdge,RandomCrop224+EnhanceEdge+Normalize+ToTensor,**4923 +/- 112**,-,-,-,-,2519 +/- 113,-
-Equalize,RandomCrop224+Equalize+Normalize+ToTensor,**4304 +/- 140**,1268 +/- 84,321 +/- 0,2962 +/- 178,1518 +/- 6,3241 +/- 195,3824 +/- 56
-Erasing,RandomCrop224+Erasing+Normalize+ToTensor,**5118 +/- 296**,1460 +/- 74,503 +/- 3,3698 +/- 289,2150 +/- 30,-,3791 +/- 51
-GaussianBlur,RandomCrop224+GaussianBlur+Normalize+ToTensor,**5029 +/- 106**,1226 +/- 45,650 +/- 5,1458 +/- 787,1957 +/- 16,2310 +/- 131,3701 +/- 95
-GaussianIllumination,RandomCrop224+GaussianIllumination+Normalize+ToTensor,**3656 +/- 48**,1409 +/- 60,-,-,-,-,-
-GaussianNoise,RandomCrop224+GaussianNoise+Normalize+ToTensor,3321 +/- 68,1557 +/- 118,660 +/- 8,-,-,-,**3820 +/- 68**
-Grayscale,RandomCrop224+Grayscale+Normalize+ToTensor,**5263 +/- 90**,1723 +/- 106,655 +/- 2,3946 +/- 176,3960 +/- 138,3542 +/- 293,-
-HorizontalFlip,RandomCrop224+HorizontalFlip+Normalize+ToTensor,5218 +/- 163,1819 +/- 1,670 +/- 2,3760 +/- 180,5050 +/- 66,3613 +/- 318,3722 +/- 86
-Hue,RandomCrop224+Hue+Normalize+ToTensor,**4698 +/- 54**,1095 +/- 33,586 +/- 7,-,-,-,3784 +/- 6
-Invert,RandomCrop224+Invert+Normalize+ToTensor,**5492 +/- 106**,1780 +/- 92,659 +/- 3,3794 +/- 179,4868 +/- 118,3567 +/- 298,-
-JpegCompression,RandomCrop224+JpegCompression+Normalize+ToTensor,**4106 +/- 171**,729 +/- 28,590 +/- 2,3447 +/- 39,-,2972 +/- 112,3786 +/- 27
-LinearIllumination,RandomCrop224+LinearIllumination+Normalize+ToTensor,**4076 +/- 91**,1592 +/- 97,503 +/- 3,-,-,-,-
-LongestMaxSize,RandomCrop224+LongestMaxSize+Normalize+ToTensor,**1317 +/- 33**,628 +/- 45,179 +/- 0,-,-,-,-
-MedianBlur,RandomCrop224+MedianBlur+Normalize+ToTensor,**4038 +/- 113**,88 +/- 1,327 +/- 2,-,-,165 +/- 2,-
-MotionBlur,RandomCrop224+MotionBlur+Normalize+ToTensor,**4615 +/- 137**,1174 +/- 54,657 +/- 2,-,-,-,-
-RandomCrop224,RandomCrop224+Normalize+ToTensor,5085 +/- 123,1856 +/- 42,959 +/- 10,3940 +/- 295,**6253 +/- 110**,3710 +/- 225,3589 +/- 83
-OpticalDistortion,RandomCrop224+OpticalDistortion+Normalize+ToTensor,**3556 +/- 70**,1409 +/- 56,641 +/- 7,-,-,-,-
-Pad,RandomCrop224+Pad+Normalize+ToTensor,**4867 +/- 93**,-,-,3707 +/- 358,4634 +/- 41,3372 +/- 218,3756 +/- 88
-Perspective,RandomCrop224+Perspective+Normalize+ToTensor,**3992 +/- 132**,1263 +/- 43,635 +/- 1,2550 +/- 64,792 +/- 5,-,-
-PhotoMetricDistort,RandomCrop224+PhotoMetricDistort+Normalize+ToTensor,**4149 +/- 105**,-,-,1191 +/- 41,580 +/- 3,-,-
-PlankianJitter,RandomCrop224+PlankianJitter+Normalize+ToTensor,**4899 +/- 85**,1704 +/- 81,654 +/- 9,-,-,-,-
-PlasmaBrightness,RandomCrop224+PlasmaBrightness+Normalize+ToTensor,**2672 +/- 65**,440 +/- 12,562 +/- 25,-,-,-,-
-PlasmaContrast,RandomCrop224+PlasmaContrast+Normalize+ToTensor,**2156 +/- 96**,438 +/- 13,557 +/- 3,-,-,-,-
-PlasmaShadow,RandomCrop224+PlasmaShadow+Normalize+ToTensor,**2796 +/- 44**,903 +/- 35,612 +/- 25,-,-,-,-
-Posterize,RandomCrop224+Posterize+Normalize+ToTensor,**5319 +/- 74**,1586 +/- 79,562 +/- 3,3702 +/- 287,4726 +/- 83,3498 +/- 315,-
-RGBShift,RandomCrop224+RGBShift+Normalize+ToTensor,**4831 +/- 131**,1717 +/- 41,658 +/- 3,-,-,-,-
-Rain,RandomCrop224+Rain+Normalize+ToTensor,**4528 +/- 225**,1479 +/- 44,306 +/- 2,-,-,-,-
-RandomGamma,RandomCrop224+RandomGamma+Normalize+ToTensor,**5251 +/- 153**,1560 +/- 58,653 +/- 6,-,-,-,-
-RandomJigsaw,RandomCrop224+RandomJigsaw+Normalize+ToTensor,**4868 +/- 31**,1564 +/- 104,636 +/- 3,-,-,-,-
-RandomRotate90,RandomCrop224+RandomRotate90+Normalize+ToTensor,**5087 +/- 49**,1455 +/- 43,632 +/- 9,-,-,-,-
-Resize,RandomCrop224+Resize+Normalize+ToTensor,1334 +/- 16,538 +/- 8,181 +/- 0,1225 +/- 12,2829 +/- 111,-,**3523 +/- 69**
-Rotate,RandomCrop224+Rotate+Normalize+ToTensor,**4782 +/- 137**,1459 +/- 23,642 +/- 6,2988 +/- 155,1273 +/- 9,3532 +/- 304,3809 +/- 72
-SaltAndPepper,RandomCrop224+SaltAndPepper+Normalize+ToTensor,**4460 +/- 46**,1429 +/- 47,375 +/- 12,-,-,-,3824 +/- 86
-Saturation,RandomCrop224+Saturation+Normalize+ToTensor,**4582 +/- 110**,1101 +/- 31,587 +/- 4,-,-,3156 +/- 209,3792 +/- 34
-Sharpen,RandomCrop224+Sharpen+Normalize+ToTensor,**4822 +/- 142**,1208 +/- 44,627 +/- 6,1401 +/- 328,2304 +/- 14,-,-
-Shear,RandomCrop224+Shear+Normalize+ToTensor,**4261 +/- 88**,1489 +/- 54,-,-,-,2524 +/- 76,3772 +/- 61
-SmallestMaxSize,RandomCrop224+SmallestMaxSize+Normalize+ToTensor,**1329 +/- 42**,554 +/- 3,179 +/- 0,-,-,-,-
-Snow,RandomCrop224+Snow+Normalize+ToTensor,**4135 +/- 171**,1045 +/- 40,596 +/- 3,-,-,-,-
-Solarize,RandomCrop224+Solarize+Normalize+ToTensor,**5339 +/- 72**,1530 +/- 73,644 +/- 2,3545 +/- 75,4130 +/- 101,3603 +/- 207,-
-ThinPlateSpline,RandomCrop224+ThinPlateSpline+Normalize+ToTensor,721 +/- 66,753 +/- 28,598 +/- 3,-,-,-,-
-Transpose,RandomCrop224+Transpose+Normalize+ToTensor,**5231 +/- 130**,-,-,-,-,3606 +/- 359,-
-UnsharpMask,RandomCrop224+UnsharpMask+Normalize+ToTensor,**4522 +/- 78**,-,-,-,-,2083 +/- 33,-
-VerticalFlip,RandomCrop224+VerticalFlip+Normalize+ToTensor,**5302 +/- 166**,1817 +/- 67,669 +/- 2,3828 +/- 132,5020 +/- 65,3737 +/- 256,3766 +/- 134
-RandomResizedCrop,RandomResizedCrop+Normalize+ToTensor,**5056 +/- 144**,1541 +/- 80,905 +/- 8,3788 +/- 85,4140 +/- 206,2805 +/- 123,3898 +/- 117
+regime,regime_label,library,transform,status,supported,early_stopped,num_successful_runs,median_throughput,mean_throughput,std_throughput,cv_throughput,ci95,gpu_peak_allocated_mb,gpu_peak_reserved_mb,reason
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Affine+Normalize+ToTensor,ok,True,False,3,4527.747738309672,4531.405176335574,28.061617201851256,0.006192696549935077,31.754709200954707,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+AutoContrast+Normalize+ToTensor,ok,True,False,3,4645.639570365569,4611.409069764671,79.57826315390768,0.017256821494252887,90.0512820409609,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Blur+Normalize+ToTensor,ok,True,False,3,5274.913803622625,5317.035874377028,173.0979042674259,0.03255533879347898,195.87871838491847,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Brightness+Normalize+ToTensor,ok,True,False,3,5230.883823338855,5132.314467173842,242.61570494325608,0.04727218226689347,274.5455154148947,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+CLAHE+Normalize+ToTensor,ok,True,False,3,3384.45160412926,3353.210600484623,169.71332116145666,0.050612186761227834,192.04870204895954,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+ChannelDropout+Normalize+ToTensor,ok,True,False,3,5316.452380620635,5366.811479654103,89.62236028150247,0.016699368073811813,101.41724791451274,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+ChannelShuffle+Normalize+ToTensor,ok,True,False,3,5086.627144872512,5210.806764193116,221.65123600664379,0.04253683662379411,250.82198551831215,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+ColorJiggle+Normalize+ToTensor,ok,True,False,3,4255.088937760526,4230.0607197720565,60.13865641264678,0.01421697237856374,68.05329615834631,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+ColorJitter+Normalize+ToTensor,ok,True,False,3,4224.677428715556,4130.24765843754,230.68513043439495,0.0558526145431343,261.04479942251004,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Contrast+Normalize+ToTensor,ok,True,False,3,5258.2047627119055,5281.530692898678,143.68768091025905,0.027205688893080823,162.5979176554314,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+CornerIllumination+Normalize+ToTensor,ok,True,False,3,3824.05418987048,3871.7678664386926,84.24930318030937,0.021759905574556846,95.33706142557241,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Elastic+Normalize+ToTensor,ok,True,False,3,2954.0307791337787,2941.87202647497,58.25787616574213,0.019802994705907816,65.92499295394592,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+EnhanceDetail+Normalize+ToTensor,ok,True,False,3,5033.135083628458,5022.2234473779945,56.247630914154314,0.01119974678616104,63.65018630514879,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+EnhanceEdge+Normalize+ToTensor,ok,True,False,3,4923.419845177329,4899.580395006385,99.12824170885831,0.020231985949223135,112.17416538841113,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Equalize+Normalize+ToTensor,ok,True,False,3,4304.379162154424,4369.1155275768115,123.46252063062481,0.028258012371464872,139.71099426100508,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Erasing+Normalize+ToTensor,ok,True,False,3,5118.181694298492,5141.981406760849,261.6620979275235,0.050887406473987144,296.09853804334875,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+GaussianBlur+Normalize+ToTensor,ok,True,False,3,5028.959211328799,4977.804336938788,93.73928955556967,0.018831453229279947,106.07599195476276,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+GaussianIllumination+Normalize+ToTensor,ok,True,False,3,3655.891458281857,3668.268540195219,42.367631416250944,0.01154976277009322,47.94348827007469,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+GaussianNoise+Normalize+ToTensor,ok,True,False,3,3321.2510747207707,3346.2739170862747,60.13900560321276,0.01797193149554775,68.05369130467015,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Grayscale+Normalize+ToTensor,ok,True,False,3,5263.194581973169,5289.081543012123,79.34639455959127,0.01500192309653892,89.78889802608433,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+HorizontalFlip+Normalize+ToTensor,ok,True,False,3,5218.143511078761,5165.063846498622,144.22496917218172,0.027923172579938444,163.20591655983222,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Hue+Normalize+ToTensor,ok,True,False,3,4697.977937631386,4683.651246778188,47.69603995166067,0.01018351654266958,53.97315015052605,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Invert+Normalize+ToTensor,ok,True,False,3,5491.894898125391,5481.033544374831,94.07324523318061,0.017163413518920662,106.45389837948028,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+JpegCompression+Normalize+ToTensor,ok,True,False,3,4106.199380257377,4112.965884667718,150.99196960527442,0.03671121371760975,170.86349842227088,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+LinearIllumination+Normalize+ToTensor,ok,True,False,3,4076.2646218444656,4092.0254836396093,80.59367684356566,0.019695301792666858,91.20033080040412,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+LongestMaxSize+Normalize+ToTensor,ok,True,False,3,1316.8638105134712,1330.1704305968922,28.933707115321816,0.021751879646233218,32.74157183970229,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+MedianBlur+Normalize+ToTensor,ok,True,False,3,4038.148979750936,4070.352024502908,100.28221492132262,0.024637233909410965,113.48000900832474,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+MotionBlur+Normalize+ToTensor,ok,True,False,3,4614.752875594858,4649.946389621442,120.92746295157522,0.026006205839594655,136.8423064435205,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Normalize+ToTensor,ok,True,False,3,5084.525347676295,5045.950136096931,108.50737066241186,0.021503853136833194,122.7876489355639,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+OpticalDistortion+Normalize+ToTensor,ok,True,False,3,3556.4438660851315,3532.6395597908654,62.25299996676615,0.01762223371875832,70.44590112580143,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Pad+Normalize+ToTensor,ok,True,False,3,4866.595973293161,4902.2580742646305,81.76450523970371,0.01667894753826662,92.52524785618702,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Perspective+Normalize+ToTensor,ok,True,False,3,3991.9726252808637,4008.107813137785,116.552194392313,0.029079106607431553,131.89122398180527,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+PhotoMetricDistort+Normalize+ToTensor,ok,True,False,3,4148.99100552892,4167.98200508445,92.86991121391868,0.02228174476296401,105.0921977483863,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+PlankianJitter+Normalize+ToTensor,ok,True,False,3,4899.355059923485,4902.017774330669,75.38722926727645,0.015378815976971843,85.3086807374073,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+PlasmaBrightness+Normalize+ToTensor,ok,True,False,3,2671.9837811482407,2670.7890521104414,57.22725025056076,0.021427094815047308,64.75872994080093,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+PlasmaContrast+Normalize+ToTensor,ok,True,False,3,2155.634253321533,2193.793226384904,84.99333294068553,0.038742636233198645,96.17901035915142,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+PlasmaShadow+Normalize+ToTensor,ok,True,False,3,2795.5004539381484,2773.87815690917,39.03911971763044,0.014073840849999806,44.17692270468393,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Posterize+Normalize+ToTensor,ok,True,False,3,5318.989423072557,5356.0048423251965,65.09307406549529,0.01215328887515279,73.65974751482415,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+RGBShift+Normalize+ToTensor,ok,True,False,3,4830.704378265731,4851.909631215636,115.85657082563215,0.02387855084526884,131.1040518129887,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Rain+Normalize+ToTensor,ok,True,False,3,4528.476287471207,4427.757896665174,199.23035848607861,0.04499576605941614,225.45037416125894,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+RandomGamma+Normalize+ToTensor,ok,True,False,3,5251.25801342494,5297.102954527877,135.530365969069,0.025585752652441816,153.36704682019658,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+RandomJigsaw+Normalize+ToTensor,ok,True,False,3,4868.344803782538,4881.553417867751,27.44079290629199,0.00562132390190622,31.052180375599928,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+RandomRotate90+Normalize+ToTensor,ok,True,False,3,5086.526497876588,5089.342990809528,42.952100897818035,0.008439616071344,48.60487775060581,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Resize+Normalize+ToTensor,ok,True,False,3,1333.7565195167397,1335.287582796477,13.85011319515285,0.010372382229561907,15.672878499795441,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Rotate+Normalize+ToTensor,ok,True,False,3,4782.327715185465,4757.626181860017,121.32991649625879,0.025502196233673884,137.29772550174485,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+SaltAndPepper+Normalize+ToTensor,ok,True,False,3,4459.661821435879,4464.869656772439,40.53967199495189,0.009079698873954848,45.87495745672343,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Saturation+Normalize+ToTensor,ok,True,False,3,4581.65912827197,4560.462374978127,97.43715483891206,0.021365630681116934,110.26052044762157,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Sharpen+Normalize+ToTensor,ok,True,False,3,4821.655211523693,4843.441191507086,125.26992004194435,0.025863825963573915,141.75625923285577,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Shear+Normalize+ToTensor,ok,True,False,3,4261.200174545933,4230.006492786416,77.89596709143596,0.018415093977816533,88.14758483529249,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+SmallestMaxSize+Normalize+ToTensor,ok,True,False,3,1328.7369796606447,1331.4897894459314,37.313071332269274,0.02802355048309927,42.22371508483566,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Snow+Normalize+ToTensor,ok,True,False,3,4135.045604222957,4056.2987410969945,151.25484474437775,0.037288881908996686,171.16096964562703,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Solarize+Normalize+ToTensor,ok,True,False,3,5338.813635495953,5341.813643563902,63.34378132475586,0.0118581039233886,71.68023643069971,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+ThinPlateSpline+Normalize+ToTensor,ok,True,False,3,720.9504677079678,698.5251237590966,58.54541994371359,0.0838129051517185,66.25037937007254,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+Transpose+Normalize+ToTensor,ok,True,False,3,5230.601565203944,5225.314247892071,115.177843642075,0.022042280746758642,130.33599970160796,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+UnsharpMask+Normalize+ToTensor,ok,True,False,3,4521.635281919213,4555.350445541239,68.95589497536392,0.01513734141856368,78.03094087142632,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomCrop224+VerticalFlip+Normalize+ToTensor,ok,True,False,3,5301.694351161125,5348.388658626679,146.2598184404986,0.027346520190635167,165.50856527456543,,,
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,RandomResizedCrop+Normalize+ToTensor,ok,True,False,3,5056.20900585008,5008.758360035987,127.20673865557322,0.025396860761048825,143.94797581883796,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Affine+Normalize+ToTensor,ok,True,False,3,1515.893547569564,1522.783532331585,40.47026554015381,0.026576505905726747,45.796416659415534,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+AutoContrast+Normalize+ToTensor,ok,True,False,3,1618.5034120730725,1643.0448052126494,69.24054240425744,0.04214160331147881,78.35304976003012,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Blur+Normalize+ToTensor,ok,True,False,3,1249.8233049804503,1259.1119794625258,57.58052558317271,0.045731060082322444,65.1584986132288,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Brightness+Normalize+ToTensor,ok,True,False,3,1722.446073821083,1741.2789371517822,83.28090807696537,0.047827436661692084,94.24121920532117,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+CLAHE+Normalize+ToTensor,ok,True,False,3,761.3696879367064,768.3233392045535,17.975958248723757,0.023396345433596092,20.341711694330584,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+ChannelDropout+Normalize+ToTensor,ok,True,False,3,1739.4255753715722,1736.661093157318,7.372696255740876,0.004245328167245934,8.34299120909447,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+ChannelShuffle+Normalize+ToTensor,ok,True,False,3,1735.888164002438,1704.082496849259,57.41977919871418,0.03369542220219956,64.97659695528556,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+ColorJiggle+Normalize+ToTensor,ok,True,False,3,770.0468662027391,777.9168691460727,19.06352544410962,0.024505864572696368,21.57240983184554,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+ColorJitter+Normalize+ToTensor,ok,True,False,3,968.0403434127714,968.674925962384,17.526198911734113,0.018092962295190758,19.832761092738806,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Contrast+Normalize+ToTensor,ok,True,False,3,1728.1064010539642,1756.1834721013165,63.61009797538258,0.03622064493026548,71.98160209096058,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+CornerIllumination+Normalize+ToTensor,ok,True,False,3,1440.997726928798,1447.6912648142152,51.02234360693464,0.035243939676241974,57.73721707965262,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Elastic+Normalize+ToTensor,ok,True,False,3,102.55083742290549,102.48907072461748,0.25868515451027085,0.002524026734570984,0.29272980944005506,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Equalize+Normalize+ToTensor,ok,True,False,3,1268.1659173462815,1269.1053878097848,74.58967482933359,0.05877342854722258,84.40616292930552,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Erasing+Normalize+ToTensor,ok,True,False,3,1459.7554476486685,1457.1667236301034,65.80926348501639,0.0451624803241951,74.47019213696063,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+GaussianBlur+Normalize+ToTensor,ok,True,False,3,1226.0602004807859,1243.2376168169314,40.05398738925617,0.03221748348622738,45.32535358655766,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+GaussianIllumination+Normalize+ToTensor,ok,True,False,3,1409.2918436350549,1406.0276558412397,53.28310122611495,0.0378961971372001,60.29550515886488,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+GaussianNoise+Normalize+ToTensor,ok,True,False,3,1556.785167167138,1539.341698687971,104.66797129623637,0.06799528096032749,118.44295955069163,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Grayscale+Normalize+ToTensor,ok,True,False,3,1723.3082451712203,1743.222151316598,93.57491381664846,0.05367928221080396,105.88998329561852,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+HorizontalFlip+Normalize+ToTensor,ok,True,False,3,1818.6819474506399,1818.2733187782535,1.0057215875879881,0.0005531190372763977,1.1380811134745359,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Hue+Normalize+ToTensor,ok,True,False,3,1095.1170270730984,1109.7566455920635,29.499032894441463,0.02658153299789749,33.38129818158123,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Invert+Normalize+ToTensor,ok,True,False,3,1780.2677643989516,1806.5568615653199,81.19003248707322,0.044941863837446465,91.87517073937532,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+JpegCompression+Normalize+ToTensor,ok,True,False,3,728.9776701617976,742.3481227541259,25.076001812158278,0.033779302517969366,28.376167337040286,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+LinearIllumination+Normalize+ToTensor,ok,True,False,3,1591.9272411895727,1628.2894453020106,85.31876936395547,0.052397790583314126,96.54727634004628,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+LongestMaxSize+Normalize+ToTensor,ok,True,False,3,628.1043908774041,605.7780371303867,39.560491717409796,0.06530525917514382,44.7669106629482,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+MedianBlur+Normalize+ToTensor,ok,True,False,3,87.62131946131413,87.96615032096274,0.6041970303692438,0.0068685173576961776,0.6837133035294205,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+MotionBlur+Normalize+ToTensor,ok,True,False,3,1174.0239079085513,1185.6660975084949,48.078632540396846,0.04054989228538044,54.40609442135575,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Normalize+ToTensor,ok,True,False,3,1856.4677867646988,1867.744839089626,37.29163378559343,0.019966128672999076,42.1994562170813,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+OpticalDistortion+Normalize+ToTensor,ok,True,False,3,1408.8992624288014,1400.17594640626,49.68060119949457,0.03548168451758261,56.218892613020046,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Perspective+Normalize+ToTensor,ok,True,False,3,1263.0633828682126,1281.155394223543,38.06470803266454,0.029711234253307763,43.07427208139543,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+PlankianJitter+Normalize+ToTensor,ok,True,False,3,1704.001494184377,1695.9065980095547,71.90911527382252,0.04240157763300204,81.37282423863736,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+PlasmaBrightness+Normalize+ToTensor,ok,True,False,3,439.6750757240442,445.5011816154808,10.56259798027673,0.023709472423786918,11.952704823018951,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+PlasmaContrast+Normalize+ToTensor,ok,True,False,3,437.85702765980596,442.26941284169305,11.536956733104729,0.026085811946561843,13.055295547954678,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+PlasmaShadow+Normalize+ToTensor,ok,True,False,3,902.8688890173404,920.4497330571563,30.713590411819233,0.03336802576910741,34.75569939640574,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Posterize+Normalize+ToTensor,ok,True,False,3,1586.103349161913,1588.837838398537,69.99334086088653,0.04405316840353957,79.20492140752759,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+RGBShift+Normalize+ToTensor,ok,True,False,3,1716.5022619052422,1728.73433500457,36.65312834064315,0.021202290946888757,41.47691928765996,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Rain+Normalize+ToTensor,ok,True,False,3,1479.3288911642312,1496.6454637294719,39.077963720459856,0.026110367931147817,44.22087883184426,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+RandomGamma+Normalize+ToTensor,ok,True,False,3,1560.45894091773,1568.94504541685,50.88952132104361,0.032435502740966224,57.586914513926025,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+RandomJigsaw+Normalize+ToTensor,ok,True,False,3,1563.8580416170196,1569.528597142885,91.49707922118644,0.058295898136386,103.53869210409634,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+RandomRotate90+Normalize+ToTensor,ok,True,False,3,1454.861897694874,1476.5506446488605,37.67450361626467,0.025515212602290435,42.632714216694445,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Resize+Normalize+ToTensor,ok,True,False,3,538.2830425914069,539.8614152133264,6.946695130950646,0.0128675525518075,7.8609255555119315,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Rotate+Normalize+ToTensor,ok,True,False,3,1458.5675535447692,1465.2410964043004,20.093661915275845,0.013713553328927004,22.73811898694809,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+SaltAndPepper+Normalize+ToTensor,ok,True,False,3,1429.0316482137216,1423.6060140518337,41.6611019408092,0.029264488580119413,47.14397490371477,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Saturation+Normalize+ToTensor,ok,True,False,3,1100.7560894341782,1109.9049878173641,27.396067681795856,0.024683254857400375,31.001569019611207,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Sharpen+Normalize+ToTensor,ok,True,False,3,1207.9590619349603,1222.206937854184,39.24594292836808,0.032110718498515295,44.41096520001625,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Shear+Normalize+ToTensor,ok,True,False,3,1488.7440819478375,1503.1752513686931,48.124166896393675,0.032015007466744114,54.45762139583236,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+SmallestMaxSize+Normalize+ToTensor,ok,True,False,3,553.6421833335977,552.7779602476713,2.372352764968354,0.004291692027492241,2.6845698746357747,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Snow+Normalize+ToTensor,ok,True,False,3,1044.5917991064453,1061.5298312065454,35.482362714759844,0.03342568590317451,40.15207326310705,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+Solarize+Normalize+ToTensor,ok,True,False,3,1529.6671679780757,1540.0299489491138,64.73472397613614,0.042034717584752065,73.25423621453511,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+ThinPlateSpline+Normalize+ToTensor,ok,True,False,3,753.1876182116495,764.4321451619202,25.033393367819357,0.03274769844028059,28.327951343294984,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomCrop224+VerticalFlip+Normalize+ToTensor,ok,True,False,3,1817.4660082031296,1824.5800528995476,58.79836918801815,0.032225699877940786,66.53661838608203,,,
+rgb_dataloader_cpu,CPU DataLoader,kornia,RandomResizedCrop+Normalize+ToTensor,ok,True,False,3,1541.0016758377756,1577.4409228042052,70.35686223680435,0.04460189996322111,79.61628456944256,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Affine+Normalize+ToTensor,ok,True,False,3,2678.5863358611164,2711.680444308124,176.4506474234631,0.06507059037647184,199.6727044256955,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+AutoContrast+Normalize+ToTensor,ok,True,False,3,3271.533343289009,3370.778794494066,178.7853412257619,0.0530397727426657,202.31465917235136,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Blur+Normalize+ToTensor,ok,True,False,3,3053.485335247122,3116.2965852812226,186.48259075811276,0.059841092031772736,211.02491698781543,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Brightness+Normalize+ToTensor,ok,True,False,3,3260.2538276552145,3353.782317749401,170.44896950510693,0.05082290779667802,192.8811665166609,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Contrast+Normalize+ToTensor,ok,True,False,3,2967.3255971508315,3031.3942648767465,188.83257016268928,0.06229231622906927,213.6841690217872,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+EnhanceDetail+Normalize+ToTensor,ok,True,False,3,2707.4493949329285,2737.7019383851402,171.0366883002299,0.06247454695565491,193.54623294162215,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+EnhanceEdge+Normalize+ToTensor,ok,True,False,3,2518.7017407490416,2572.6913639114377,100.2715687096456,0.03897535869098418,113.46796168569671,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Equalize+Normalize+ToTensor,ok,True,False,3,3241.223565707919,3329.4369538852375,172.75529404487781,0.05188723992604322,195.49101842065662,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+GaussianBlur+Normalize+ToTensor,ok,True,False,3,2309.92142700161,2344.636964689585,115.58638110564172,0.04929819961315189,130.79830336215397,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Grayscale+Normalize+ToTensor,ok,True,False,3,3541.9963464622715,3685.0448470276265,259.1393208189841,0.07032189066247241,293.2437469996163,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+HorizontalFlip+Normalize+ToTensor,ok,True,False,3,3613.160069551177,3750.8236263931835,280.87874953126527,0.0748845527032579,317.8442264369821,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Invert+Normalize+ToTensor,ok,True,False,3,3566.6905351380074,3607.912346203455,263.7279709635794,0.0730971114753095,298.43629345616654,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+JpegCompression+Normalize+ToTensor,ok,True,False,3,2972.1135157423055,3026.3385168926875,98.56633278507542,0.032569500151714365,111.53830558233517,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+MedianBlur+Normalize+ToTensor,ok,True,False,3,164.82932460253565,165.28150928031087,1.5907190322515579,0.009624301225092044,1.8000680404919758,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Normalize+ToTensor,ok,True,False,3,3709.7054823195185,3806.051120095956,198.42928929231823,0.05213521390835012,224.5438790325311,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Pad+Normalize+ToTensor,ok,True,False,3,3372.448955714445,3398.5143898214997,192.50048339632136,0.05664253886134996,217.8348035796785,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Posterize+Normalize+ToTensor,ok,True,False,3,3498.265255912074,3585.6927604714547,278.5539260570872,0.07768482819494617,315.2134410180574,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Resize+Normalize+ToTensor,early_stopped,True,True,0,3.9464355838995426,3.9464355838995426,0.0,0.0,0.0,,,RandomCrop224+Resize+Normalize+ToTensor slower than threshold: 0.253 sec/image >= 0.050; RandomCrop224+Resize+Normalize+ToTensor slower than threshold: 0.257 sec/image >= 0.050
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Rotate+Normalize+ToTensor,ok,True,False,3,3532.062574759327,3671.6425879134604,268.63174805687726,0.07316391550233561,303.98543962489487,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Saturation+Normalize+ToTensor,ok,True,False,3,3155.5058657767927,3226.39460579221,184.53867197804828,0.05719655979053331,208.82516580714758,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Shear+Normalize+ToTensor,ok,True,False,3,2523.910735274077,2545.799695721208,66.80421846102784,0.02624095625956254,75.5960896824949,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Solarize+Normalize+ToTensor,ok,True,False,3,3603.135183045816,3680.2919853795997,183.36643458636019,0.04982388226662593,207.49865432280282,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+Transpose+Normalize+ToTensor,ok,True,False,3,3605.9341168744277,3722.004537300987,317.1114632227687,0.08519910710606554,358.84540176337197,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+UnsharpMask+Normalize+ToTensor,ok,True,False,3,2083.122054414947,2095.961934529025,29.092361237946577,0.013880195417043108,32.921105880496974,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomCrop224+VerticalFlip+Normalize+ToTensor,ok,True,False,3,3737.1926845821695,3821.780545356163,226.19306416562765,0.05918525710234051,255.96154791030878,,,
+rgb_dataloader_cpu,CPU DataLoader,pillow,RandomResizedCrop+Normalize+ToTensor,ok,True,False,3,2805.379710817441,2839.623688455402,108.50116108491427,0.038209697125020425,122.78062213713392,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Affine+Normalize+ToTensor,ok,True,False,3,2857.6101188532302,2953.3982392570156,192.19918483530125,0.06507730054164747,217.49385216126814,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+AutoContrast+Normalize+ToTensor,ok,True,False,3,2330.402556545724,2324.787323110182,102.13903297036288,0.04393478575653866,115.58119643320586,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Brightness+Normalize+ToTensor,ok,True,False,3,3491.334857239758,3616.1458246141633,235.85951988107198,0.06522400680736867,266.9001722967747,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+ChannelShuffle+Normalize+ToTensor,ok,True,False,3,4065.640168714122,4221.828318116849,278.4602883357389,0.06595727427872917,315.10747996134893,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+ColorJiggle+Normalize+ToTensor,ok,True,False,3,1235.4039219463996,1233.8398330798157,33.586319170823245,0.027220971693698418,38.00649801215244,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+ColorJitter+Normalize+ToTensor,ok,True,False,3,1248.5440018285258,1227.1158793540471,50.42400610585004,0.04109147877085023,57.06013445771044,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Contrast+Normalize+ToTensor,ok,True,False,3,3197.925952121139,3165.5586488715367,165.56712439028436,0.052302655788514923,187.35683871793856,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Elastic+Normalize+ToTensor,ok,True,False,3,232.8714173638744,232.94444566536188,1.0206055119968678,0.004381325809601086,1.1549238594921027,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Equalize+Normalize+ToTensor,ok,True,False,3,2961.842669448598,2925.545154282747,157.65856671163078,0.05389032074272796,178.4074632247808,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Erasing+Normalize+ToTensor,ok,True,False,3,3697.8937866423134,3781.793208641373,254.96895295272003,0.06742012026731595,288.5245314996099,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+GaussianBlur+Normalize+ToTensor,ok,True,False,3,1458.0711688261417,1851.0706585728492,695.4269633177705,0.3756890424992936,786.949691167548,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Grayscale+Normalize+ToTensor,ok,True,False,3,3946.4038467363175,4010.6706937729286,155.1061318220754,0.03867336504662355,175.51911124245615,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+HorizontalFlip+Normalize+ToTensor,ok,True,False,3,3760.4036507227393,3840.2848813039454,159.1754532219375,0.04144886594139611,180.1239819014899,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Invert+Normalize+ToTensor,ok,True,False,3,3794.0290267759565,3882.2288904695615,158.00331517369466,0.04069912404226736,178.79758283483636,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+JpegCompression+Normalize+ToTensor,ok,True,False,3,3447.3088134907543,3448.7709830968997,34.61051353627279,0.010035607961765418,39.16548304163824,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Normalize+ToTensor,ok,True,False,3,3939.9366491912415,4066.973500991307,260.9001865844221,0.06415094332943866,295.2363541940338,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Pad+Normalize+ToTensor,ok,True,False,3,3707.3613672051524,3807.914082909123,316.13763760608794,0.08302121075288785,357.7434143387806,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Perspective+Normalize+ToTensor,ok,True,False,3,2549.8237622119022,2575.2411144982393,56.41943597523711,0.021908409141809575,63.8446020337468,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+PhotoMetricDistort+Normalize+ToTensor,ok,True,False,3,1190.5039452332333,1195.2655677961782,36.48236420547428,0.030522392000917584,41.2836814776209,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Posterize+Normalize+ToTensor,ok,True,False,3,3702.217835029843,3832.910416060446,253.87415202861777,0.06623534715678418,287.2856476274605,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Resize+Normalize+ToTensor,ok,True,False,3,1225.0812076716193,1224.550402381609,10.892159359045525,0.00889482322480278,12.325638630482421,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Rotate+Normalize+ToTensor,ok,True,False,3,2987.6486404569814,2998.529621830389,137.40505422090564,0.04582414434746509,155.48845628321178,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Sharpen+Normalize+ToTensor,ok,True,False,3,1400.9595140330212,1565.159304489891,289.53973537947667,0.18499058501514135,327.64505455837036,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+Solarize+Normalize+ToTensor,ok,True,False,3,3545.486194494941,3519.3381134445535,66.42380960597062,0.018873949437315726,75.16561653895087,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomCrop224+VerticalFlip+Normalize+ToTensor,ok,True,False,3,3828.033849399919,3874.4770891441244,116.96117107093491,0.030187601676274652,132.35402466097477,,,
+rgb_dataloader_cpu,CPU DataLoader,torchvision,RandomResizedCrop+Normalize+ToTensor,ok,True,False,3,3787.7666283785366,3792.3311532152006,75.43484595205832,0.019891418471750133,85.3625640887297,,,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Affine+Normalize+ToTensor,ok,True,False,3,3805.9735959036593,3784.2912322012758,79.65970361596415,0.02105009861242288,90.14344059943572,3000.0,3000.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+AutoContrast+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'AutoContrast'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Blur+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'Blur'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Brightness+Normalize+ToTensor,ok,True,False,3,3797.7690459193827,3803.249056472066,33.53753372433794,0.008818127139811272,37.951292082457215,3096.0,3096.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+CLAHE+Normalize+ToTensor,ok,True,False,3,3730.619752153531,3663.9977474314414,140.24761368863938,0.038277210674312404,158.70511513202365,3016.0,3016.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+ChannelDropout+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'ChannelDropout'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+ChannelShuffle+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'ChannelShuffle'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+ColorJiggle+Normalize+ToTensor,ok,True,False,3,3742.4719932595017,3727.3770161867565,34.02830424870299,0.009129289605245028,38.50665121138811,3016.0,3016.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+ColorJitter+Normalize+ToTensor,ok,True,False,3,3817.7667562720076,3798.6431393471908,100.46265925136032,0.026446985296077367,113.68420099006592,3080.0,3080.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Contrast+Normalize+ToTensor,ok,True,False,3,3759.255675616503,3791.1136368100438,73.3483298311862,0.019347436362499457,83.00144882638385,3048.0,3048.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+CornerIllumination+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'CornerIllumination'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Elastic+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'Elastic'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+EnhanceDetail+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'EnhanceDetail'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+EnhanceEdge+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'EnhanceEdge'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Equalize+Normalize+ToTensor,ok,True,False,3,3823.90627268608,3809.7749278091833,49.7903795265154,0.01306911312872423,56.343118484467105,3080.0,3080.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Erasing+Normalize+ToTensor,ok,True,False,3,3791.3937358743783,3788.8767161468822,44.94162144772908,0.011861463123411598,50.856232191702695,3064.0,3064.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+GaussianBlur+Normalize+ToTensor,ok,True,False,3,3700.910678501528,3704.861697033209,83.70450656533554,0.02259315283816524,94.72056601984728,3048.0,3048.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+GaussianIllumination+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'GaussianIllumination'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+GaussianNoise+Normalize+ToTensor,ok,True,False,3,3820.015122339706,3791.805503093698,59.709849906973375,0.01574707612462102,67.56805591744393,3096.0,3096.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Grayscale+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'Grayscale'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+HorizontalFlip+Normalize+ToTensor,ok,True,False,3,3722.446227351875,3760.8629947151603,76.2335296512262,0.020270222488389257,86.2663597762051,3112.0,3112.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Hue+Normalize+ToTensor,ok,True,False,3,3784.169050853031,3785.6108787998783,5.279819192906207,0.0013947073172454602,5.974677863302025,3032.0,3032.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Invert+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'Invert'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+JpegCompression+Normalize+ToTensor,ok,True,False,3,3786.2142519257072,3779.5615341705957,23.558982458294707,0.006233258076446319,26.659498333695037,3032.0,3032.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+LinearIllumination+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'LinearIllumination'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+LongestMaxSize+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'LongestMaxSize'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+MedianBlur+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'MedianBlur'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+MotionBlur+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'MotionBlur'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Normalize+ToTensor,ok,True,False,3,3589.13204342457,3621.791219307175,73.23381453307142,0.020220330245066025,82.87186256752575,3032.0,3032.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+OpticalDistortion+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'OpticalDistortion'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Pad+Normalize+ToTensor,ok,True,False,3,3756.133175292844,3764.7204598885037,77.94109774927968,0.02070302392427511,88.19865498230386,3064.0,3064.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Perspective+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'Perspective'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+PhotoMetricDistort+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'PhotoMetricDistort'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+PlankianJitter+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'PlankianJitter'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+PlasmaBrightness+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'PlasmaBrightness'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+PlasmaContrast+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'PlasmaContrast'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+PlasmaShadow+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'PlasmaShadow'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Posterize+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'Posterize'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+RGBShift+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'RGBShift'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Rain+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'Rain'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+RandomGamma+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'RandomGamma'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+RandomJigsaw+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'RandomJigsaw'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+RandomRotate90+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'RandomRotate90'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Resize+Normalize+ToTensor,ok,True,False,3,3523.1399410311906,3548.9474013000727,61.155043728963406,0.01723188224952579,69.2034466800719,3016.0,3016.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Rotate+Normalize+ToTensor,ok,True,False,3,3808.5365410948593,3800.3997394476587,63.33485913429425,0.016665315092222164,71.67014002173275,3112.0,3112.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+SaltAndPepper+Normalize+ToTensor,ok,True,False,3,3824.420277623381,3784.796577602474,75.79361264566425,0.0200258088094332,85.76854682110383,3032.0,3032.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Saturation+Normalize+ToTensor,ok,True,False,3,3792.4858839285966,3793.8809547140518,29.720713464372004,0.007833855046886173,33.632153361559304,3000.0,3000.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Sharpen+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'Sharpen'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Shear+Normalize+ToTensor,ok,True,False,3,3771.7445775432057,3793.433995534591,53.910126894684026,0.01421143137277303,61.005051498397705,3112.0,3112.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+SmallestMaxSize+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'SmallestMaxSize'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Snow+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'Snow'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Solarize+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'Solarize'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+ThinPlateSpline+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'ThinPlateSpline'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+Transpose+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'Transpose'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+UnsharpMask+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,DALI image pipeline does not implement transform 'UnsharpMask'
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomCrop224+VerticalFlip+Normalize+ToTensor,ok,True,False,3,3766.215919065848,3741.2413315131685,118.23119757889438,0.03160213071073793,133.79119494762156,3096.0,3096.0,
+rgb_dataloader_gpu,GPU DataLoader,dali,RandomResizedCrop+Normalize+ToTensor,ok,True,False,3,3898.103782305846,3855.6369121927496,103.1019743004638,0.026740581815269632,116.67086712805511,3016.0,3016.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Affine+Normalize+ToTensor,ok,True,False,3,646.2468604684486,646.159444340917,2.1576520506577572,0.0033391944814155946,2.441613144839016,597.15478515625,2474.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+AutoContrast+Normalize+ToTensor,ok,True,False,3,650.5015769330818,650.0721200307013,4.452362026993981,0.006849027807535735,5.0383219330367,605.37744140625,3526.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Blur+Normalize+ToTensor,ok,True,False,3,650.555416220967,649.2842869758042,2.415006714951693,0.003719490465725207,2.732837362865343,608.02734375,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Brightness+Normalize+ToTensor,ok,True,False,3,651.0393064796331,653.552199737775,4.547735457607725,0.006958488487120715,5.1462471296799315,605.3974609375,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+CLAHE+Normalize+ToTensor,ok,True,False,3,165.47718274051516,165.4159813141824,0.2299312055347887,0.0013900180847585064,0.26019165308478664,2753.60400390625,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+ChannelDropout+Normalize+ToTensor,ok,True,False,3,659.5990639279294,658.9402536363904,3.2452344516319687,0.004924929739415678,3.672328489097003,605.40380859375,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+ChannelShuffle+Normalize+ToTensor,ok,True,False,3,643.248464480248,642.5426600514066,1.8044153207700175,0.0028082420560615468,2.041888155505851,597.16943359375,3356.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+ColorJiggle+Normalize+ToTensor,ok,True,False,3,528.9076281491567,528.0783046611649,1.7384468277912783,0.0032920247100602473,1.9672377782344053,2271.4326171875,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+ColorJitter+Normalize+ToTensor,ok,True,False,3,573.1301639034239,572.855891528209,3.214289796556743,0.005610991951190333,3.6373113154191863,2263.16650390625,3356.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Contrast+Normalize+ToTensor,ok,True,False,3,648.637646127332,648.5238399497913,5.22541051591889,0.008057391562233767,5.913108649264462,605.39990234375,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+CornerIllumination+Normalize+ToTensor,ok,True,False,3,394.7061993179951,395.4715900090445,2.4169773388645974,0.0061116333004080535,2.7350673337486535,605.40771484375,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Elastic+Normalize+ToTensor,ok,True,False,3,316.33419963426854,316.3708365256275,2.1881949340727833,0.0069165507102470535,2.476175671083542,695.53173828125,2474.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Equalize+Normalize+ToTensor,ok,True,False,3,320.8582268312943,320.9977624478815,0.3381977886662531,0.001053583009698282,0.3827068252785629,605.37939453125,3526.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Erasing+Normalize+ToTensor,ok,True,False,3,503.3711210720072,502.5618446782343,2.3219538982145873,0.00462023514678322,2.627538188032982,642.13037109375,3526.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+GaussianBlur+Normalize+ToTensor,ok,True,False,3,649.8226691022936,651.5533882779704,4.789605829278556,0.007351056590983731,5.419949221098504,599.8271484375,3356.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+GaussianIllumination+Normalize+ToTensor,unsupported,False,False,0,0.0,0.0,0.0,0.0,0.0,,,"RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!"
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+GaussianNoise+Normalize+ToTensor,ok,True,False,3,659.868454834207,655.8878699303226,7.456843183824424,0.011369082316793863,8.438212422192281,744.1787109375,3356.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Grayscale+Normalize+ToTensor,ok,True,False,3,655.2252205762123,654.9734756693102,2.066891219208709,0.0031556869033460867,2.338907595519811,597.17138671875,3356.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+HorizontalFlip+Normalize+ToTensor,ok,True,False,3,670.1548100775996,669.7719154560701,1.860063032764249,0.00277715889520042,2.1048594696451772,589.02294921875,2474.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Hue+Normalize+ToTensor,ok,True,False,3,585.8220293177467,586.4602104344277,5.83881831931454,0.009956034894489027,6.607244923674913,2124.4111328125,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Invert+Normalize+ToTensor,ok,True,False,3,658.899874946499,659.8236489901177,2.680704097692101,0.0040627584382509005,3.0335022555437243,605.3681640625,3356.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+JpegCompression+Normalize+ToTensor,ok,True,False,3,590.4911730762217,591.5621284598294,1.8567378090815785,0.003138702969231172,2.1010966248200984,1364.88427734375,3526.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+LinearIllumination+Normalize+ToTensor,ok,True,False,3,503.2217332762021,504.3414204431062,2.3589712316647717,0.004677329951587593,2.6694272441999884,605.40576171875,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+LongestMaxSize+Normalize+ToTensor,ok,True,False,3,178.65787893367687,178.51101169121236,0.3557457559847271,0.001992850483644643,0.40256421964246425,2468.435546875,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+MedianBlur+Normalize+ToTensor,ok,True,False,3,327.0132466696324,327.6442063132517,1.9289148295357332,0.005887223983724438,2.1827726123095808,4281.39208984375,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+MotionBlur+Normalize+ToTensor,ok,True,False,3,656.5052569845196,656.4549620358263,2.09810483861702,0.0031961139148225606,2.3742291309926418,605.392578125,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Normalize+ToTensor,ok,True,False,3,958.7694156199819,958.6247479139779,9.074303121652273,0.009465959585748723,10.268540645988635,442.0205078125,2474.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+OpticalDistortion+Normalize+ToTensor,ok,True,False,3,641.0840528237864,637.7616895507289,6.409654761369856,0.010050234854785862,7.253207167703327,605.4228515625,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Perspective+Normalize+ToTensor,ok,True,False,3,635.4084892539425,636.0121655899201,1.1092239183472388,0.0017440294044036104,1.2552050265847257,709.78271484375,2474.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+PlankianJitter+Normalize+ToTensor,ok,True,False,3,653.8484229768272,650.6169878039186,8.31346350817198,0.012777815003314165,9.407569572908798,605.388671875,3526.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+PlasmaBrightness+Normalize+ToTensor,ok,True,False,3,561.6249437165808,548.9982779425842,22.005375641706344,0.040082777170400756,24.901426718701664,2148.20361328125,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+PlasmaContrast+Normalize+ToTensor,ok,True,False,3,557.4707287457758,556.0958950368905,2.4590788466144313,0.004422040997895336,2.7827096747406586,2148.205078125,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+PlasmaShadow+Normalize+ToTensor,ok,True,False,3,612.1511603638633,601.2918497964172,21.97310713501458,0.03654316475843493,24.86491146589298,825.68408203125,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Posterize+Normalize+ToTensor,ok,True,False,3,562.3596977506668,560.8307527343212,2.7363970434533735,0.00487918508411337,3.0965247565091025,605.3701171875,3526.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+RGBShift+Normalize+ToTensor,ok,True,False,3,657.54157736047,657.6552264420966,2.675737007865926,0.00406860144994455,3.0278814642731913,597.1748046875,3356.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Rain+Normalize+ToTensor,ok,True,False,3,306.2472203283457,305.2835107749725,2.1587005251429603,0.0070711337132589504,2.4427996054105066,605.4208984375,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+RandomGamma+Normalize+ToTensor,ok,True,False,3,653.176473826147,650.4869611105144,5.144675672683588,0.00790896048692594,5.82174857365369,605.38623046875,3526.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+RandomJigsaw+Normalize+ToTensor,ok,True,False,3,636.2751367044489,636.5498481148337,2.4422017265019167,0.003836622903508011,2.763611415454051,605.43310546875,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+RandomRotate90+Normalize+ToTensor,ok,True,False,3,632.3004232768778,628.9197211595834,7.692186454282353,0.012230792254534058,8.70452840327195,605.43994140625,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Resize+Normalize+ToTensor,ok,True,False,3,181.1572968408164,181.24645525748448,0.30511199706059133,0.0016834094582823123,0.34526672752639676,2452.02734375,2474.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Rotate+Normalize+ToTensor,ok,True,False,3,642.2822696210783,641.1652429689235,5.3948697757709265,0.008414164421623849,6.104869853877267,597.15966796875,2474.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+SaltAndPepper+Normalize+ToTensor,ok,True,False,3,375.3022362389018,379.4963435429989,10.876631843566628,0.028660702609205113,12.30806759260891,605.4228515625,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Saturation+Normalize+ToTensor,ok,True,False,3,587.2923109132629,588.5785921452217,3.588200278242988,0.0060963825836153765,4.060430857237764,2124.42529296875,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Sharpen+Normalize+ToTensor,ok,True,False,3,626.6997705654267,624.900319340056,4.892997044051445,0.007830044076819863,5.536947394633205,1188.1484375,3526.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+SmallestMaxSize+Normalize+ToTensor,ok,True,False,3,179.0174038790781,178.89830390352606,0.4169751970194949,0.0023307945794967173,0.4718518547994212,2468.4375,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Snow+Normalize+ToTensor,ok,True,False,3,595.5439645977148,595.7338371187693,2.6718089095477993,0.004484903732294009,3.023436402575298,1291.4296875,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+Solarize+Normalize+ToTensor,ok,True,False,3,644.2715984639714,644.7356828416965,1.9198298054516005,0.0029777005624845817,2.172491939752467,936.1220703125,3526.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+ThinPlateSpline+Normalize+ToTensor,ok,True,False,3,598.1372656031807,596.9956914194795,2.258259453419529,0.0037827064514486773,2.555461138530293,1242.83203125,7202.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomCrop224+VerticalFlip+Normalize+ToTensor,ok,True,False,3,669.4601896999443,669.5606968072921,1.7774285381304313,0.0026546189861589163,2.011349736111658,589.0244140625,2474.0,
+rgb_dataloader_gpu,GPU DataLoader,kornia,RandomResizedCrop+Normalize+ToTensor,ok,True,False,3,904.5322554882729,901.6898360703099,6.822282283743987,0.007566107558089426,7.720139165494123,442.021484375,2474.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Affine+Normalize+ToTensor,ok,True,False,3,1221.0529116447872,1221.2761150592942,3.9535082740894705,0.0032371944602368023,4.473815769926379,522.6328125,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+AutoContrast+Normalize+ToTensor,ok,True,False,3,2561.893384972934,2521.8402417087987,77.83623658822216,0.030864856266819004,88.07999340795823,522.6435546875,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Brightness+Normalize+ToTensor,ok,True,False,3,3097.2015869059,3094.642750188696,16.008798710715688,0.005173068429219997,18.115661120267106,522.646484375,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+ChannelShuffle+Normalize+ToTensor,ok,True,False,3,3630.9020480266017,3647.231416424311,50.505141343158265,0.013847528598191534,57.15194762186774,522.63671875,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+ColorJiggle+Normalize+ToTensor,ok,True,False,3,625.5314673684398,625.9292257219545,2.6702685689127317,0.0042660870577385344,3.0216933430579105,522.6494140625,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+ColorJitter+Normalize+ToTensor,ok,True,False,3,628.8410356024212,627.3291970492429,3.0311734331162876,0.004831870487415481,3.4300956432374563,522.6357421875,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Contrast+Normalize+ToTensor,ok,True,False,3,2281.602434479279,2288.1283260435557,15.049236679974856,0.0065770946973051836,17.029814462632473,522.6474609375,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Elastic+Normalize+ToTensor,ok,True,False,3,117.79570090024366,117.69762940911464,0.26904561471370997,0.002285905128798412,0.3044537738353276,522.634765625,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Equalize+Normalize+ToTensor,ok,True,False,3,1518.1507226541366,1517.136651253419,5.26138794319888,0.003467972340429623,5.953820940821172,522.64453125,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Erasing+Normalize+ToTensor,ok,True,False,3,2149.69909550368,2153.923156977769,26.573653965582643,0.012337326835219552,30.07092028994697,522.6455078125,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+GaussianBlur+Normalize+ToTensor,ok,True,False,3,1957.1993596290276,1955.156476055673,14.089944276425387,0.007206555817389306,15.944272916887607,522.638671875,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Grayscale+Normalize+ToTensor,ok,True,False,3,3960.2815035576355,3903.438283032421,121.80502228332112,0.03120454672302281,137.83535831169067,522.6376953125,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+HorizontalFlip+Normalize+ToTensor,ok,True,False,3,5050.419231638885,5075.53216733306,58.4096121152085,0.011508076432091624,66.09669834483542,514.50390625,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Invert+Normalize+ToTensor,ok,True,False,3,4868.108269629351,4823.000250142715,104.25865487977312,0.02161697065570089,117.9797744219632,522.6396484375,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Normalize+ToTensor,ok,True,False,3,6252.6494195069445,6241.773757668784,97.49451757925287,0.015619681418197657,110.32543249903293,477.751953125,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Pad+Normalize+ToTensor,ok,True,False,3,4634.323626609513,4636.960928480413,35.99774836313484,0.007763220117304661,40.73528702704557,603.626953125,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Perspective+Normalize+ToTensor,ok,True,False,3,792.0715914231072,794.2853935209556,4.480186278742301,0.00564052457125299,5.0698080379410095,522.6337890625,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+PhotoMetricDistort+Normalize+ToTensor,ok,True,False,3,579.9180466903011,580.32415641481,2.219598476420725,0.0038247563053952524,2.5117121245946024,522.6484375,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Posterize+Normalize+ToTensor,ok,True,False,3,4725.747630216896,4755.814763559988,73.05865859740696,0.015361964716791987,82.67365496737791,522.640625,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Resize+Normalize+ToTensor,ok,True,False,3,2829.261663653838,2824.324533248368,98.30647484098812,0.03480707464163898,111.24424863655422,2532.7509765625,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Rotate+Normalize+ToTensor,ok,True,False,3,1273.2181650233713,1269.0711259071034,7.585162901908962,0.0059769407301637715,8.583419852798032,522.6318359375,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Sharpen+Normalize+ToTensor,ok,True,False,3,2303.8296951290795,2303.231788028879,12.773516295763425,0.005545910039169391,14.454594420839888,522.642578125,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+Solarize+Normalize+ToTensor,ok,True,False,3,4130.2322889021725,4097.393790675734,89.50689202906675,0.021844835181025025,101.28658328632457,522.6416015625,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomCrop224+VerticalFlip+Normalize+ToTensor,ok,True,False,3,5020.223417814098,5006.418978081969,57.56540829444168,0.011498320165863508,65.14139179062097,514.5048828125,2810.0,
+rgb_dataloader_gpu,GPU DataLoader,torchvision,RandomResizedCrop+Normalize+ToTensor,ok,True,False,3,4139.55474085695,4122.3621819048285,181.76637140906206,0.04409277093772311,205.6880123867812,477.7529296875,2810.0,

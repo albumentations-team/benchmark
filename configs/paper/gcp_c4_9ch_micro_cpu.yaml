@@ -6,18 +6,18 @@ selection:
   transform_set: paper
 data:
   data_dir: /tmp/unused
-  gcs_uri: gs://imagenet_validation/imagenet/val.tar
+  gcs_uri: gs://example-bucket/datasets/imagenet/val.tar
   num_items: 1000
   num_channels: 9
 output:
   output_dir: gcp_runs/c4-standard-16-9ch-micro-small
-  gcs_results_uri: gs://imagenet_validation/augmentation-results
+  gcs_results_uri: gs://example-bucket/benchmark-runs
 execution:
   num_runs: 1
   device: none
 cloud:
   provider: gcp
-  project: albumentations
+  project: example-project
   zone: us-central1-b
   machine_type: c4-standard-16
   disk_size_gb: 200

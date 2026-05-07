@@ -1,8 +1,8 @@
-regime,regime_label,library,full,early_stopped,explicit_unsupported,absent_or_not_in_result,universe_rows,coverage_pct,median_throughput
-rgb_dataloader_cpu,CPU DataLoader,albumentationsx,57,0,0,0,57,1.0,4614.752875594858
-rgb_dataloader_cpu,CPU DataLoader,kornia,51,0,0,6,57,0.8947368421052632,1440.997726928798
-rgb_dataloader_cpu,CPU DataLoader,torchvision,26,0,0,31,57,0.45614035087719296,3322.6173828059464
-rgb_dataloader_cpu,CPU DataLoader,pillow,25,1,0,31,57,0.43859649122807015,3241.223565707919
-rgb_dataloader_gpu,GPU DataLoader,kornia,49,0,1,7,57,0.8596491228070176,632.3004232768778
-rgb_dataloader_gpu,GPU DataLoader,torchvision,25,0,0,32,57,0.43859649122807015,2561.893384972934
-rgb_dataloader_gpu,GPU DataLoader,dali,22,0,35,0,57,0.38596491228070173,3785.1916513893693
+regime,regime_label,library,full,universe_rows,median_throughput
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,57,57,4614.752875594858
+rgb_dataloader_cpu,CPU DataLoader,kornia,51,57,1440.997726928798
+rgb_dataloader_cpu,CPU DataLoader,pillow,25,57,3241.223565707919
+rgb_dataloader_cpu,CPU DataLoader,torchvision,26,57,3322.6173828059464
+rgb_dataloader_gpu,GPU DataLoader,dali,22,57,3785.1916513893693
+rgb_dataloader_gpu,GPU DataLoader,kornia,49,57,632.3004232768778
+rgb_dataloader_gpu,GPU DataLoader,torchvision,25,57,2561.893384972934

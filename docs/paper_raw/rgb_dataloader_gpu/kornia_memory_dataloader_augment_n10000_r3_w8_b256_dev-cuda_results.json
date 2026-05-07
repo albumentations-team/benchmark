@@ -1,0 +1,2867 @@
+{
+  "metadata": {
+    "system_info": {
+      "python_version": "3.13.13 (main, May  4 2026, 21:09:13) [Clang 22.1.3 ]",
+      "python_executable": "<external-path>",
+      "platform": "Linux-6.17.0-1012-gcp-x86_64-with-glibc2.39",
+      "system": "Linux",
+      "machine": "x86_64",
+      "processor": "x86_64",
+      "cpu_count": "16",
+      "memory_total_bytes": "67418890240",
+      "timestamp": "2026-05-07T01:00:21.235963+00:00"
+    },
+    "library_versions": {
+      "kornia": "0.8.2",
+      "numpy": "2.4.4",
+      "pillow": "12.2.0",
+      "opencv-python-headless": "4.13.0.92",
+      "torch": "2.11.0",
+      "torchvision": "0.26.0",
+      "opencv-python": "not installed",
+      "av": "not installed",
+      "decord": "not installed",
+      "torchcodec": "not installed"
+    },
+    "thread_settings": {
+      "environment": "{'OMP_NUM_THREADS': 'None', 'OPENBLAS_NUM_THREADS': 'None', 'MKL_NUM_THREADS': 'None', 'VECLIB_MAXIMUM_THREADS': 'None', 'NUMEXPR_NUM_THREADS': 'None'}",
+      "opencv": "{'threads': 16, 'opencl': True}",
+      "pytorch": "{'threads': 8, 'gpu_available': True, 'gpu_device': 0, 'gpu_name': 'NVIDIA L4', 'gpu_memory_total': 22.0343017578125, 'gpu_memory_allocated': 0.01700735092163086}",
+      "pillow": "{'threads': 'unknown', 'simd': False}"
+    },
+    "environment": {
+      "cwd": "<external-path>",
+      "python_executable": "<external-path>",
+      "python_prefix": "<external-path>",
+      "argv": [
+        "<external-path>",
+        "--specs-file",
+        "<external-path>",
+        "--data-dir",
+        "<external-path>",
+        "--output",
+        "<external-path>",
+        "--media",
+        "image",
+        "--scenario",
+        "image-rgb",
+        "--num-runs",
+        "3",
+        "--batch-size",
+        "256",
+        "--workers",
+        "8",
+        "--min-time",
+        "0.0",
+        "--min-batches",
+        "1",
+        "--num-channels",
+        "3",
+        "--clip-length",
+        "16",
+        "--pipeline-scope",
+        "memory_dataloader_augment",
+        "--device",
+        "cuda",
+        "--thread-policy",
+        "pipeline-default",
+        "--num-items",
+        "10000",
+        "--slow-preflight-items",
+        "256"
+      ],
+      "platform": {
+        "system": "Linux",
+        "release": "6.17.0-1012-gcp",
+        "machine": "x86_64",
+        "processor": "x86_64"
+      },
+      "thread_env": {},
+      "git": {
+        "dirty": false
+      }
+    },
+    "gpu": {
+      "torch_available": true,
+      "torch_version": "2.11.0+cu130",
+      "cuda_available": true,
+      "torch_cuda_version": "13.0",
+      "device_index": 0,
+      "device_name": "NVIDIA L4",
+      "total_memory_gb": 22.0343017578125,
+      "compute_capability": "8.9"
+    },
+    "dataset": {
+      "available": true,
+      "path": "<external-path>",
+      "media": "image",
+      "file_count": 50000,
+      "total_bytes": 6706560319,
+      "extensions": {
+        ".jpeg": 50000
+      },
+      "sample_paths": [
+        "ILSVRC2012_val_00000001.JPEG",
+        "ILSVRC2012_val_00000002.JPEG",
+        "ILSVRC2012_val_00000003.JPEG",
+        "ILSVRC2012_val_00000004.JPEG",
+        "ILSVRC2012_val_00000005.JPEG",
+        "ILSVRC2012_val_00000006.JPEG",
+        "ILSVRC2012_val_00000007.JPEG",
+        "ILSVRC2012_val_00000008.JPEG",
+        "ILSVRC2012_val_00000009.JPEG",
+        "ILSVRC2012_val_00000010.JPEG"
+      ]
+    },
+    "timing": {
+      "timing_backend": "perf_counter",
+      "measurement_scope": "memory_dataloader_augment",
+      "data_source": "memory",
+      "includes_decode": false,
+      "includes_collate": true,
+      "includes_gpu_transfer": true,
+      "includes_dataloader_workers": true
+    },
+    "scenario": "image-rgb",
+    "mode": "pipeline",
+    "library": "kornia",
+    "benchmark_params": {
+      "num_images": 10000,
+      "num_runs": 3,
+      "batch_size": 256,
+      "workers": 8,
+      "min_time": 0.0,
+      "min_batches": 1,
+      "num_channels": 3,
+      "pipeline_scope": "memory_dataloader_augment",
+      "decode_included": false,
+      "decoder": "kornia",
+      "device": "cuda",
+      "device_option": "cuda",
+      "transform_on_device": true,
+      "includes_host_to_device_transfer": true,
+      "gpu_memory_peak_measured": true,
+      "thread_policy": "pipeline-default",
+      "batch_collate": true,
+      "preload_time": 30.660555212999952,
+      "slow_skip_enabled": true,
+      "slow_threshold_sec_per_item": 0.05,
+      "slow_preflight_items": 256
+    },
+    "run_config": {
+      "version": 1,
+      "selection": {
+        "scenario": "image-rgb",
+        "mode": "pipeline",
+        "media": "image",
+        "libraries": [
+          "torchvision",
+          "kornia"
+        ],
+        "transforms": [
+          "RandomCrop224+Resize+Normalize+ToTensor",
+          "RandomCrop224+Normalize+ToTensor",
+          "RandomResizedCrop+Normalize+ToTensor",
+          "RandomCrop224+HorizontalFlip+Normalize+ToTensor",
+          "RandomCrop224+VerticalFlip+Normalize+ToTensor",
+          "RandomCrop224+Pad+Normalize+ToTensor",
+          "RandomCrop224+Rotate+Normalize+ToTensor",
+          "RandomCrop224+Affine+Normalize+ToTensor",
+          "RandomCrop224+Perspective+Normalize+ToTensor",
+          "RandomCrop224+Elastic+Normalize+ToTensor",
+          "RandomCrop224+ColorJitter+Normalize+ToTensor",
+          "RandomCrop224+ChannelShuffle+Normalize+ToTensor",
+          "RandomCrop224+Grayscale+Normalize+ToTensor",
+          "RandomCrop224+RGBShift+Normalize+ToTensor",
+          "RandomCrop224+GaussianBlur+Normalize+ToTensor",
+          "RandomCrop224+GaussianNoise+Normalize+ToTensor",
+          "RandomCrop224+Invert+Normalize+ToTensor",
+          "RandomCrop224+Posterize+Normalize+ToTensor",
+          "RandomCrop224+Solarize+Normalize+ToTensor",
+          "RandomCrop224+Sharpen+Normalize+ToTensor",
+          "RandomCrop224+AutoContrast+Normalize+ToTensor",
+          "RandomCrop224+Equalize+Normalize+ToTensor",
+          "RandomCrop224+Erasing+Normalize+ToTensor",
+          "RandomCrop224+JpegCompression+Normalize+ToTensor",
+          "RandomCrop224+RandomGamma+Normalize+ToTensor",
+          "RandomCrop224+PlankianJitter+Normalize+ToTensor",
+          "RandomCrop224+MedianBlur+Normalize+ToTensor",
+          "RandomCrop224+MotionBlur+Normalize+ToTensor",
+          "RandomCrop224+CLAHE+Normalize+ToTensor",
+          "RandomCrop224+Brightness+Normalize+ToTensor",
+          "RandomCrop224+Contrast+Normalize+ToTensor",
+          "RandomCrop224+Blur+Normalize+ToTensor",
+          "RandomCrop224+ChannelDropout+Normalize+ToTensor",
+          "RandomCrop224+LinearIllumination+Normalize+ToTensor",
+          "RandomCrop224+CornerIllumination+Normalize+ToTensor",
+          "RandomCrop224+GaussianIllumination+Normalize+ToTensor",
+          "RandomCrop224+Hue+Normalize+ToTensor",
+          "RandomCrop224+PlasmaBrightness+Normalize+ToTensor",
+          "RandomCrop224+PlasmaContrast+Normalize+ToTensor",
+          "RandomCrop224+PlasmaShadow+Normalize+ToTensor",
+          "RandomCrop224+Rain+Normalize+ToTensor",
+          "RandomCrop224+SaltAndPepper+Normalize+ToTensor",
+          "RandomCrop224+Saturation+Normalize+ToTensor",
+          "RandomCrop224+Snow+Normalize+ToTensor",
+          "RandomCrop224+OpticalDistortion+Normalize+ToTensor",
+          "RandomCrop224+Shear+Normalize+ToTensor",
+          "RandomCrop224+ThinPlateSpline+Normalize+ToTensor",
+          "RandomCrop224+PhotoMetricDistort+Normalize+ToTensor",
+          "RandomCrop224+ColorJiggle+Normalize+ToTensor",
+          "RandomCrop224+LongestMaxSize+Normalize+ToTensor",
+          "RandomCrop224+SmallestMaxSize+Normalize+ToTensor",
+          "RandomCrop224+Transpose+Normalize+ToTensor",
+          "RandomCrop224+RandomRotate90+Normalize+ToTensor",
+          "RandomCrop224+RandomJigsaw+Normalize+ToTensor",
+          "RandomCrop224+EnhanceEdge+Normalize+ToTensor",
+          "RandomCrop224+EnhanceDetail+Normalize+ToTensor",
+          "RandomCrop224+UnsharpMask+Normalize+ToTensor"
+        ],
+        "transform_set": "paper",
+        "multichannel": false
+      },
+      "data": {
+        "data_dir": "<external-path>",
+        "gcs_uri": "gs://example-bucket/datasets/imagenet/val.tar",
+        "num_items": 10000,
+        "num_channels": 3
+      },
+      "execution": {
+        "num_runs": 3,
+        "batch_size": 256,
+        "workers": 8,
+        "min_time": 0.0,
+        "min_batches": 1,
+        "pipeline_scope": "memory_dataloader_augment",
+        "device": "cuda",
+        "thread_policy": "pipeline-default",
+        "refresh_requirements": true,
+        "slow_preflight_items": 256,
+        "disable_slow_skip": false
+      },
+      "output": {
+        "output_dir": "<external-path>",
+        "gcs_results_uri": "gs://example-bucket/benchmark-runs"
+      }
+    }
+  },
+  "results": {
+    "RandomCrop224+Resize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        181.1572968408164,
+        180.99585415938998,
+        181.58621477224702
+      ],
+      "median_throughput": 181.1572968408164,
+      "mean_throughput": 181.24645525748448,
+      "std_throughput": 0.30511199706059133,
+      "cv_throughput": 0.0016834094582823123,
+      "throughput_ci95": 0.34526672752639676,
+      "p50_throughput": 181.1572968408164,
+      "p75_throughput": 181.37175580653172,
+      "p90_throughput": 181.5004311859609,
+      "p95_throughput": 181.54332297910395,
+      "times": [
+        55.20064703100002,
+        55.249884294000026,
+        55.070259669999814
+      ],
+      "mean_time": 55.17359699833329,
+      "std_time": 0.0928171836852304,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18432,
+            "gpu_memory_allocated_after_bytes": 2048,
+            "gpu_peak_memory_allocated_bytes": 2571137024,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 2048,
+            "gpu_memory_allocated_after_bytes": 2048,
+            "gpu_peak_memory_allocated_bytes": 2571137024,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 2048,
+            "gpu_memory_allocated_after_bytes": 2048,
+            "gpu_peak_memory_allocated_bytes": 2571137024,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          }
+        ],
+        "peak_allocated_bytes": 2571137024,
+        "peak_reserved_bytes": 2594177024
+      }
+    },
+    "RandomCrop224+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        949.4789758711408,
+        958.7694156199819,
+        967.625852250811
+      ],
+      "median_throughput": 958.7694156199819,
+      "mean_throughput": 958.6247479139779,
+      "std_throughput": 9.074303121652273,
+      "cv_throughput": 0.009465959585748723,
+      "throughput_ci95": 10.268540645988635,
+      "p50_throughput": 958.7694156199819,
+      "p75_throughput": 963.1976339353964,
+      "p90_throughput": 965.8545649246452,
+      "p95_throughput": 966.7402085877281,
+      "times": [
+        10.532092078000005,
+        10.430036499999915,
+        10.334572993000165
+      ],
+      "mean_time": 10.432233857000028,
+      "std_time": 0.09877787463867073,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 11264,
+            "gpu_memory_allocated_after_bytes": 3072,
+            "gpu_peak_memory_allocated_bytes": 463492096,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 3072,
+            "gpu_memory_allocated_after_bytes": 3072,
+            "gpu_peak_memory_allocated_bytes": 463492096,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 3072,
+            "gpu_memory_allocated_after_bytes": 3072,
+            "gpu_peak_memory_allocated_bytes": 463492096,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          }
+        ],
+        "peak_allocated_bytes": 463492096,
+        "peak_reserved_bytes": 2594177024
+      }
+    },
+    "RandomResizedCrop+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        893.9059206123268,
+        904.5322554882729,
+        906.6313321103298
+      ],
+      "median_throughput": 904.5322554882729,
+      "mean_throughput": 901.6898360703099,
+      "std_throughput": 6.822282283743987,
+      "cv_throughput": 0.007566107558089426,
+      "throughput_ci95": 7.720139165494123,
+      "p50_throughput": 904.5322554882729,
+      "p75_throughput": 905.5817937993013,
+      "p90_throughput": 906.2115167859184,
+      "p95_throughput": 906.4214244481241,
+      "times": [
+        11.186859567000056,
+        11.055437701999836,
+        11.02984161900008
+      ],
+      "mean_time": 11.090712962666657,
+      "std_time": 0.08424320156466572,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 12288,
+            "gpu_memory_allocated_after_bytes": 4096,
+            "gpu_peak_memory_allocated_bytes": 463493120,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 4096,
+            "gpu_memory_allocated_after_bytes": 4096,
+            "gpu_peak_memory_allocated_bytes": 463493120,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 4096,
+            "gpu_memory_allocated_after_bytes": 4096,
+            "gpu_peak_memory_allocated_bytes": 463493120,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          }
+        ],
+        "peak_allocated_bytes": 463493120,
+        "peak_reserved_bytes": 2594177024
+      }
+    },
+    "RandomCrop224+HorizontalFlip+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        670.1548100775996,
+        671.4107354119795,
+        667.7502008786312
+      ],
+      "median_throughput": 670.1548100775996,
+      "mean_throughput": 669.7719154560701,
+      "std_throughput": 1.860063032764249,
+      "cv_throughput": 0.00277715889520042,
+      "throughput_ci95": 2.1048594696451772,
+      "p50_throughput": 670.1548100775996,
+      "p75_throughput": 670.7827727447896,
+      "p90_throughput": 671.1595503451035,
+      "p95_throughput": 671.2851428785416,
+      "times": [
+        14.9219252769999,
+        14.894012669999938,
+        14.975660039999866
+      ],
+      "mean_time": 14.930532662333235,
+      "std_time": 0.041498657432303236,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 13824,
+            "gpu_memory_allocated_after_bytes": 5632,
+            "gpu_peak_memory_allocated_bytes": 617635328,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 5632,
+            "gpu_memory_allocated_after_bytes": 5632,
+            "gpu_peak_memory_allocated_bytes": 617635328,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 5632,
+            "gpu_memory_allocated_after_bytes": 5632,
+            "gpu_peak_memory_allocated_bytes": 617635328,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          }
+        ],
+        "peak_allocated_bytes": 617635328,
+        "peak_reserved_bytes": 2594177024
+      }
+    },
+    "RandomCrop224+VerticalFlip+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        669.4601896999443,
+        667.8356543436241,
+        671.3862463783079
+      ],
+      "median_throughput": 669.4601896999443,
+      "mean_throughput": 669.5606968072921,
+      "std_throughput": 1.7774285381304313,
+      "cv_throughput": 0.0026546189861589163,
+      "throughput_ci95": 2.011349736111658,
+      "p50_throughput": 669.4601896999443,
+      "p75_throughput": 670.4232180391261,
+      "p90_throughput": 671.0010350426352,
+      "p95_throughput": 671.1936407104715,
+      "times": [
+        14.9374080099999,
+        14.973743817000013,
+        14.894555933999982
+      ],
+      "mean_time": 14.935235920333298,
+      "std_time": 0.03963860092947887,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 15360,
+            "gpu_memory_allocated_after_bytes": 7168,
+            "gpu_peak_memory_allocated_bytes": 617636864,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 7168,
+            "gpu_memory_allocated_after_bytes": 7168,
+            "gpu_peak_memory_allocated_bytes": 617636864,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 7168,
+            "gpu_memory_allocated_after_bytes": 7168,
+            "gpu_peak_memory_allocated_bytes": 617636864,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          }
+        ],
+        "peak_allocated_bytes": 617636864,
+        "peak_reserved_bytes": 2594177024
+      }
+    },
+    "RandomCrop224+Rotate+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        642.2822696210783,
+        645.9141591987901,
+        635.299300086902
+      ],
+      "median_throughput": 642.2822696210783,
+      "mean_throughput": 641.1652429689234,
+      "std_throughput": 5.3948697757709265,
+      "cv_throughput": 0.00841416442162385,
+      "throughput_ci95": 6.104869853877267,
+      "p50_throughput": 642.2822696210783,
+      "p75_throughput": 644.0982144099341,
+      "p90_throughput": 645.1877812832478,
+      "p95_throughput": 645.550970241019,
+      "times": [
+        15.569478519000086,
+        15.481933408000032,
+        15.740612335999913
+      ],
+      "mean_time": 15.59734142100001,
+      "std_time": 0.13157109457888141,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8545792,
+            "gpu_memory_allocated_after_bytes": 8529408,
+            "gpu_peak_memory_allocated_bytes": 626167296,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8529408,
+            "gpu_memory_allocated_after_bytes": 8529408,
+            "gpu_peak_memory_allocated_bytes": 626167296,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8529408,
+            "gpu_memory_allocated_after_bytes": 8529408,
+            "gpu_peak_memory_allocated_bytes": 626167296,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          }
+        ],
+        "peak_allocated_bytes": 626167296,
+        "peak_reserved_bytes": 2594177024
+      }
+    },
+    "RandomCrop224+Affine+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        643.9594127422444,
+        646.2468604684486,
+        648.272059812058
+      ],
+      "median_throughput": 646.2468604684486,
+      "mean_throughput": 646.159444340917,
+      "std_throughput": 2.1576520506577572,
+      "cv_throughput": 0.0033391944814155946,
+      "throughput_ci95": 2.441613144839016,
+      "p50_throughput": 646.2468604684486,
+      "p75_throughput": 647.2594601402534,
+      "p90_throughput": 647.8670199433361,
+      "p95_throughput": 648.0695398776971,
+      "times": [
+        15.528929001000051,
+        15.47396298800004,
+        15.425622388999955
+      ],
+      "mean_time": 15.476171459333349,
+      "std_time": 0.05168870311738502,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8540672,
+            "gpu_memory_allocated_after_bytes": 8532480,
+            "gpu_peak_memory_allocated_bytes": 626162176,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8532480,
+            "gpu_memory_allocated_after_bytes": 8532480,
+            "gpu_peak_memory_allocated_bytes": 626162176,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8532480,
+            "gpu_memory_allocated_after_bytes": 8532480,
+            "gpu_peak_memory_allocated_bytes": 626162176,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          }
+        ],
+        "peak_allocated_bytes": 626162176,
+        "peak_reserved_bytes": 2594177024
+      }
+    },
+    "RandomCrop224+Perspective+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        637.2922976105264,
+        635.3357099052914,
+        635.4084892539425
+      ],
+      "median_throughput": 635.4084892539425,
+      "mean_throughput": 636.0121655899202,
+      "std_throughput": 1.1092239183472388,
+      "cv_throughput": 0.0017440294044036102,
+      "throughput_ci95": 1.2552050265847257,
+      "p50_throughput": 635.4084892539425,
+      "p75_throughput": 636.3503934322345,
+      "p90_throughput": 636.9155359392096,
+      "p95_throughput": 637.103916774868,
+      "times": [
+        15.69138688399994,
+        15.7397102729999,
+        15.73790745500014
+      ],
+      "mean_time": 15.723001537333326,
+      "std_time": 0.027393927561190624,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8550912,
+            "gpu_memory_allocated_after_bytes": 8534528,
+            "gpu_peak_memory_allocated_bytes": 744261120,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8534528,
+            "gpu_memory_allocated_after_bytes": 8534528,
+            "gpu_peak_memory_allocated_bytes": 744261120,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8534528,
+            "gpu_memory_allocated_after_bytes": 8534528,
+            "gpu_peak_memory_allocated_bytes": 744261120,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          }
+        ],
+        "peak_allocated_bytes": 744261120,
+        "peak_reserved_bytes": 2594177024
+      }
+    },
+    "RandomCrop224+Elastic+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        318.5771198643401,
+        314.20119007827384,
+        316.33419963426854
+      ],
+      "median_throughput": 316.33419963426854,
+      "mean_throughput": 316.3708365256275,
+      "std_throughput": 2.1881949340727833,
+      "cv_throughput": 0.0069165507102470535,
+      "throughput_ci95": 2.476175671083542,
+      "p50_throughput": 316.33419963426854,
+      "p75_throughput": 317.45565974930435,
+      "p90_throughput": 318.12853581832576,
+      "p95_throughput": 318.35282784133295,
+      "times": [
+        31.389573752999922,
+        31.82674132300008,
+        31.612136820999922
+      ],
+      "mean_time": 31.60948396566664,
+      "std_time": 0.21859585836887402,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8543744,
+            "gpu_memory_allocated_after_bytes": 8535552,
+            "gpu_peak_memory_allocated_bytes": 729317888,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8535552,
+            "gpu_memory_allocated_after_bytes": 8535552,
+            "gpu_peak_memory_allocated_bytes": 729317888,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8535552,
+            "gpu_memory_allocated_after_bytes": 8535552,
+            "gpu_peak_memory_allocated_bytes": 729317888,
+            "gpu_peak_memory_reserved_bytes": 2594177024
+          }
+        ],
+        "peak_allocated_bytes": 729317888,
+        "peak_reserved_bytes": 2594177024
+      }
+    },
+    "RandomCrop224+ColorJitter+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        573.1301639034239,
+        575.9242568449522,
+        569.5132538362509
+      ],
+      "median_throughput": 573.1301639034239,
+      "mean_throughput": 572.855891528209,
+      "std_throughput": 3.214289796556743,
+      "cv_throughput": 0.005610991951190333,
+      "throughput_ci95": 3.6373113154191863,
+      "p50_throughput": 573.1301639034239,
+      "p75_throughput": 574.527210374188,
+      "p90_throughput": 575.3654382566465,
+      "p95_throughput": 575.6448475507993,
+      "times": [
+        17.44804344599993,
+        17.36339437200013,
+        17.558853868000142
+      ],
+      "mean_time": 17.4567638953334,
+      "std_time": 0.09802111161162134,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8553984,
+            "gpu_memory_allocated_after_bytes": 8537600,
+            "gpu_peak_memory_allocated_bytes": 2373102080,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8537600,
+            "gpu_memory_allocated_after_bytes": 8537600,
+            "gpu_peak_memory_allocated_bytes": 2373102080,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8537600,
+            "gpu_memory_allocated_after_bytes": 8537600,
+            "gpu_peak_memory_allocated_bytes": 2373102080,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          }
+        ],
+        "peak_allocated_bytes": 2373102080,
+        "peak_reserved_bytes": 3519021056
+      }
+    },
+    "RandomCrop224+ChannelShuffle+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        640.4920256051541,
+        643.8874900688177,
+        643.248464480248
+      ],
+      "median_throughput": 643.248464480248,
+      "mean_throughput": 642.5426600514066,
+      "std_throughput": 1.8044153207700175,
+      "cv_throughput": 0.0028082420560615468,
+      "throughput_ci95": 2.041888155505851,
+      "p50_throughput": 643.248464480248,
+      "p75_throughput": 643.5679772745328,
+      "p90_throughput": 643.7596849511037,
+      "p95_throughput": 643.8235875099607,
+      "times": [
+        15.612996883999813,
+        15.5306635930001,
+        15.546092299000065
+      ],
+      "mean_time": 15.563250925333326,
+      "std_time": 0.0437665002592647,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8556032,
+            "gpu_memory_allocated_after_bytes": 8539648,
+            "gpu_peak_memory_allocated_bytes": 626177536,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8539648,
+            "gpu_memory_allocated_after_bytes": 8539648,
+            "gpu_peak_memory_allocated_bytes": 626177536,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8539648,
+            "gpu_memory_allocated_after_bytes": 8539648,
+            "gpu_peak_memory_allocated_bytes": 626177536,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          }
+        ],
+        "peak_allocated_bytes": 626177536,
+        "peak_reserved_bytes": 3519021056
+      }
+    },
+    "RandomCrop224+Grayscale+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        652.7922424960757,
+        656.9029639356426,
+        655.2252205762123
+      ],
+      "median_throughput": 655.2252205762123,
+      "mean_throughput": 654.9734756693102,
+      "std_throughput": 2.066891219208709,
+      "cv_throughput": 0.0031556869033460867,
+      "throughput_ci95": 2.338907595519811,
+      "p50_throughput": 655.2252205762123,
+      "p75_throughput": 656.0640922559274,
+      "p90_throughput": 656.5674152637565,
+      "p95_throughput": 656.7351895996995,
+      "times": [
+        15.31880949099991,
+        15.22294851599986,
+        15.261927785999887
+      ],
+      "mean_time": 15.26789526433322,
+      "std_time": 0.04820829524297835,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8558080,
+            "gpu_memory_allocated_after_bytes": 8541696,
+            "gpu_peak_memory_allocated_bytes": 626179584,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8541696,
+            "gpu_memory_allocated_after_bytes": 8541696,
+            "gpu_peak_memory_allocated_bytes": 626179584,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8541696,
+            "gpu_memory_allocated_after_bytes": 8541696,
+            "gpu_peak_memory_allocated_bytes": 626179584,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          }
+        ],
+        "peak_allocated_bytes": 626179584,
+        "peak_reserved_bytes": 3519021056
+      }
+    },
+    "RandomCrop224+RGBShift+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        655.0381247591806,
+        657.54157736047,
+        660.3859772066393
+      ],
+      "median_throughput": 657.54157736047,
+      "mean_throughput": 657.6552264420966,
+      "std_throughput": 2.675737007865926,
+      "cv_throughput": 0.00406860144994455,
+      "throughput_ci95": 3.0278814642731913,
+      "p50_throughput": 657.54157736047,
+      "p75_throughput": 658.9637772835547,
+      "p90_throughput": 659.8170972374054,
+      "p95_throughput": 660.1015372220223,
+      "times": [
+        15.266286987000058,
+        15.20816377899996,
+        15.142659513000126
+      ],
+      "mean_time": 15.20570342633338,
+      "std_time": 0.061850449338172984,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8561664,
+            "gpu_memory_allocated_after_bytes": 8545280,
+            "gpu_peak_memory_allocated_bytes": 626183168,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8545280,
+            "gpu_memory_allocated_after_bytes": 8545280,
+            "gpu_peak_memory_allocated_bytes": 626183168,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8545280,
+            "gpu_memory_allocated_after_bytes": 8545280,
+            "gpu_peak_memory_allocated_bytes": 626183168,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          }
+        ],
+        "peak_allocated_bytes": 626183168,
+        "peak_reserved_bytes": 3519021056
+      }
+    },
+    "RandomCrop224+GaussianBlur+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        656.9677897815387,
+        649.8226691022936,
+        647.8697059500789
+      ],
+      "median_throughput": 649.8226691022936,
+      "mean_throughput": 651.5533882779704,
+      "std_throughput": 4.789605829278556,
+      "cv_throughput": 0.007351056590983731,
+      "throughput_ci95": 5.419949221098504,
+      "p50_throughput": 649.8226691022936,
+      "p75_throughput": 653.3952294419162,
+      "p90_throughput": 655.5387656456898,
+      "p95_throughput": 656.2532777136142,
+      "times": [
+        15.221446401999856,
+        15.388813711000012,
+        15.435202337999954
+      ],
+      "mean_time": 15.348487483666608,
+      "std_time": 0.11243911019760225,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8563712,
+            "gpu_memory_allocated_after_bytes": 8547328,
+            "gpu_peak_memory_allocated_bytes": 628964352,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8547328,
+            "gpu_memory_allocated_after_bytes": 8547328,
+            "gpu_peak_memory_allocated_bytes": 628964352,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 8547328,
+            "gpu_memory_allocated_after_bytes": 8547328,
+            "gpu_peak_memory_allocated_bytes": 628964352,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          }
+        ],
+        "peak_allocated_bytes": 628964352,
+        "peak_reserved_bytes": 3519021056
+      }
+    },
+    "RandomCrop224+GaussianNoise+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        647.2854130721232,
+        660.5097418846376,
+        659.868454834207
+      ],
+      "median_throughput": 659.868454834207,
+      "mean_throughput": 655.8878699303226,
+      "std_throughput": 7.456843183824424,
+      "cv_throughput": 0.011369082316793863,
+      "throughput_ci95": 8.438212422192281,
+      "p50_throughput": 659.868454834207,
+      "p75_throughput": 660.1890983594224,
+      "p90_throughput": 660.3814844745515,
+      "p95_throughput": 660.4456131795945,
+      "times": [
+        15.44913541699998,
+        15.139822118999973,
+        15.154535614999986
+      ],
+      "mean_time": 15.247831050333312,
+      "std_time": 0.17448985004989948,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 162706432,
+            "gpu_memory_allocated_after_bytes": 18183168,
+            "gpu_peak_memory_allocated_bytes": 780327936,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18183168,
+            "gpu_memory_allocated_after_bytes": 18183168,
+            "gpu_peak_memory_allocated_bytes": 780327936,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18183168,
+            "gpu_memory_allocated_after_bytes": 18183168,
+            "gpu_peak_memory_allocated_bytes": 780327936,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          }
+        ],
+        "peak_allocated_bytes": 780327936,
+        "peak_reserved_bytes": 3519021056
+      }
+    },
+    "RandomCrop224+Invert+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        658.899874946499,
+        657.7269904100986,
+        662.8440816137554
+      ],
+      "median_throughput": 658.899874946499,
+      "mean_throughput": 659.8236489901177,
+      "std_throughput": 2.680704097692101,
+      "cv_throughput": 0.0040627584382509005,
+      "throughput_ci95": 3.0335022555437243,
+      "p50_throughput": 658.899874946499,
+      "p75_throughput": 660.8719782801272,
+      "p90_throughput": 662.0552402803041,
+      "p95_throughput": 662.4496609470298,
+      "times": [
+        15.176812715000096,
+        15.203876602000037,
+        15.08650416799992
+      ],
+      "mean_time": 15.155731161666685,
+      "std_time": 0.06146052378551696,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18201600,
+            "gpu_memory_allocated_after_bytes": 18185216,
+            "gpu_peak_memory_allocated_bytes": 634774528,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18185216,
+            "gpu_memory_allocated_after_bytes": 18185216,
+            "gpu_peak_memory_allocated_bytes": 634774528,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18185216,
+            "gpu_memory_allocated_after_bytes": 18185216,
+            "gpu_peak_memory_allocated_bytes": 634774528,
+            "gpu_peak_memory_reserved_bytes": 3519021056
+          }
+        ],
+        "peak_allocated_bytes": 634774528,
+        "peak_reserved_bytes": 3519021056
+      }
+    },
+    "RandomCrop224+Posterize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        562.4609856636008,
+        557.6715747886959,
+        562.3596977506668
+      ],
+      "median_throughput": 562.3596977506668,
+      "mean_throughput": 560.8307527343212,
+      "std_throughput": 2.736397043453374,
+      "cv_throughput": 0.00487918508411337,
+      "throughput_ci95": 3.096524756509103,
+      "p50_throughput": 562.3596977506668,
+      "p75_throughput": 562.4103417071337,
+      "p90_throughput": 562.440728081014,
+      "p95_throughput": 562.4508568723074,
+      "times": [
+        17.779010908999908,
+        17.931701116000113,
+        17.782213127999967
+      ],
+      "mean_time": 17.830975050999996,
+      "std_time": 0.08724602386032818,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18203648,
+            "gpu_memory_allocated_after_bytes": 18187264,
+            "gpu_peak_memory_allocated_bytes": 634776576,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18187264,
+            "gpu_memory_allocated_after_bytes": 18187264,
+            "gpu_peak_memory_allocated_bytes": 634776576,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18187264,
+            "gpu_memory_allocated_after_bytes": 18187264,
+            "gpu_peak_memory_allocated_bytes": 634776576,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          }
+        ],
+        "peak_allocated_bytes": 634776576,
+        "peak_reserved_bytes": 3697278976
+      }
+    },
+    "RandomCrop224+Solarize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        644.2715984639714,
+        643.0904355617602,
+        646.8450144993583
+      ],
+      "median_throughput": 644.2715984639714,
+      "mean_throughput": 644.7356828416966,
+      "std_throughput": 1.9198298054516005,
+      "cv_throughput": 0.002977700562484581,
+      "throughput_ci95": 2.172491939752467,
+      "p50_throughput": 644.2715984639714,
+      "p75_throughput": 645.5583064816649,
+      "p90_throughput": 646.3303312922809,
+      "p95_throughput": 646.5876728958195,
+      "times": [
+        15.521404364000091,
+        15.549912496000161,
+        15.459653821000302
+      ],
+      "mean_time": 15.510323560333518,
+      "std_time": 0.04613832745782404,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18206720,
+            "gpu_memory_allocated_after_bytes": 18190336,
+            "gpu_peak_memory_allocated_bytes": 981595136,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18190336,
+            "gpu_memory_allocated_after_bytes": 18190336,
+            "gpu_peak_memory_allocated_bytes": 981595136,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18190336,
+            "gpu_memory_allocated_after_bytes": 18190336,
+            "gpu_peak_memory_allocated_bytes": 981595136,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          }
+        ],
+        "peak_allocated_bytes": 981595136,
+        "peak_reserved_bytes": 3697278976
+      }
+    },
+    "RandomCrop224+Sharpen+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        626.6997705654267,
+        628.6387939751746,
+        619.3623934795664
+      ],
+      "median_throughput": 626.6997705654267,
+      "mean_throughput": 624.900319340056,
+      "std_throughput": 4.892997044051445,
+      "cv_throughput": 0.007830044076819863,
+      "throughput_ci95": 5.536947394633205,
+      "p50_throughput": 626.6997705654267,
+      "p75_throughput": 627.6692822703006,
+      "p90_throughput": 628.2509892932251,
+      "p95_throughput": 628.4448916341998,
+      "times": [
+        15.956603895000171,
+        15.907386078999934,
+        16.145636392000142
+      ],
+      "mean_time": 16.00320878866675,
+      "std_time": 0.12577684602671924,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18209280,
+            "gpu_memory_allocated_after_bytes": 18192896,
+            "gpu_peak_memory_allocated_bytes": 1245863936,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18192896,
+            "gpu_memory_allocated_after_bytes": 18192896,
+            "gpu_peak_memory_allocated_bytes": 1245863936,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18192896,
+            "gpu_memory_allocated_after_bytes": 18192896,
+            "gpu_peak_memory_allocated_bytes": 1245863936,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          }
+        ],
+        "peak_allocated_bytes": 1245863936,
+        "peak_reserved_bytes": 3697278976
+      }
+    },
+    "RandomCrop224+AutoContrast+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        645.4205906265535,
+        654.2941925324689,
+        650.5015769330818
+      ],
+      "median_throughput": 650.5015769330818,
+      "mean_throughput": 650.0721200307013,
+      "std_throughput": 4.452362026993981,
+      "cv_throughput": 0.006849027807535735,
+      "throughput_ci95": 5.0383219330367,
+      "p50_throughput": 650.5015769330818,
+      "p75_throughput": 652.3978847327753,
+      "p90_throughput": 653.5356694125915,
+      "p95_throughput": 653.9149309725301,
+      "times": [
+        15.49377281299985,
+        15.283644748999905,
+        15.372752894999849
+      ],
+      "mean_time": 15.3833901523332,
+      "std_time": 0.10546712403765122,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18211328,
+            "gpu_memory_allocated_after_bytes": 18194944,
+            "gpu_peak_memory_allocated_bytes": 634784256,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18194944,
+            "gpu_memory_allocated_after_bytes": 18194944,
+            "gpu_peak_memory_allocated_bytes": 634784256,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18194944,
+            "gpu_memory_allocated_after_bytes": 18194944,
+            "gpu_peak_memory_allocated_bytes": 634784256,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          }
+        ],
+        "peak_allocated_bytes": 634784256,
+        "peak_reserved_bytes": 3697278976
+      }
+    },
+    "RandomCrop224+Equalize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        320.8582268312943,
+        320.75165828363475,
+        321.3834022287153
+      ],
+      "median_throughput": 320.8582268312943,
+      "mean_throughput": 320.9977624478815,
+      "std_throughput": 0.3381977886662531,
+      "cv_throughput": 0.001053583009698282,
+      "throughput_ci95": 0.3827068252785629,
+      "p50_throughput": 320.8582268312943,
+      "p75_throughput": 321.1208145300048,
+      "p90_throughput": 321.2783671492311,
+      "p95_throughput": 321.3308846889732,
+      "times": [
+        31.166412962999857,
+        31.176767888000086,
+        31.115483657999903
+      ],
+      "mean_time": 31.152888169666614,
+      "std_time": 0.03280440881511217,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18213376,
+            "gpu_memory_allocated_after_bytes": 18196992,
+            "gpu_peak_memory_allocated_bytes": 634786304,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18196992,
+            "gpu_memory_allocated_after_bytes": 18196992,
+            "gpu_peak_memory_allocated_bytes": 634786304,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18196992,
+            "gpu_memory_allocated_after_bytes": 18196992,
+            "gpu_peak_memory_allocated_bytes": 634786304,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          }
+        ],
+        "peak_allocated_bytes": 634786304,
+        "peak_reserved_bytes": 3697278976
+      }
+    },
+    "RandomCrop224+Erasing+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        504.3708626638422,
+        503.3711210720072,
+        499.94355029885355
+      ],
+      "median_throughput": 503.3711210720072,
+      "mean_throughput": 502.5618446782343,
+      "std_throughput": 2.3219538982145873,
+      "cv_throughput": 0.00462023514678322,
+      "throughput_ci95": 2.627538188032982,
+      "p50_throughput": 503.3711210720072,
+      "p75_throughput": 503.8709918679247,
+      "p90_throughput": 504.17091434547524,
+      "p95_throughput": 504.2708885046587,
+      "times": [
+        19.826680604000103,
+        19.86605822499996,
+        20.002258243000142
+      ],
+      "mean_time": 19.898332357333402,
+      "std_time": 0.09213083925925335,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18215424,
+            "gpu_memory_allocated_after_bytes": 18199040,
+            "gpu_peak_memory_allocated_bytes": 673322496,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18199040,
+            "gpu_memory_allocated_after_bytes": 18199040,
+            "gpu_peak_memory_allocated_bytes": 673322496,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18199040,
+            "gpu_memory_allocated_after_bytes": 18199040,
+            "gpu_peak_memory_allocated_bytes": 673322496,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          }
+        ],
+        "peak_allocated_bytes": 673322496,
+        "peak_reserved_bytes": 3697278976
+      }
+    },
+    "RandomCrop224+JpegCompression+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        590.4911730762217,
+        590.4891080271661,
+        593.7061042761004
+      ],
+      "median_throughput": 590.4911730762217,
+      "mean_throughput": 591.5621284598294,
+      "std_throughput": 1.8567378090815783,
+      "cv_throughput": 0.0031387029692311716,
+      "throughput_ci95": 2.1010966248200984,
+      "p50_throughput": 590.4911730762217,
+      "p75_throughput": 592.098638676161,
+      "p90_throughput": 593.0631180361247,
+      "p95_throughput": 593.3846111561126,
+      "times": [
+        16.935054164999656,
+        16.93511338999997,
+        16.843350485999963
+      ],
+      "mean_time": 16.90450601366653,
+      "std_time": 0.05296224881962902,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18217472,
+            "gpu_memory_allocated_after_bytes": 18201088,
+            "gpu_peak_memory_allocated_bytes": 1431184896,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18201088,
+            "gpu_memory_allocated_after_bytes": 18201088,
+            "gpu_peak_memory_allocated_bytes": 1431184896,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18201088,
+            "gpu_memory_allocated_after_bytes": 18201088,
+            "gpu_peak_memory_allocated_bytes": 1431184896,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          }
+        ],
+        "peak_allocated_bytes": 1431184896,
+        "peak_reserved_bytes": 3697278976
+      }
+    },
+    "RandomCrop224+RandomGamma+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        653.7294238221823,
+        644.5549856832138,
+        653.176473826147
+      ],
+      "median_throughput": 653.176473826147,
+      "mean_throughput": 650.4869611105144,
+      "std_throughput": 5.144675672683588,
+      "cv_throughput": 0.00790896048692594,
+      "throughput_ci95": 5.82174857365369,
+      "p50_throughput": 653.176473826147,
+      "p75_throughput": 653.4529488241647,
+      "p90_throughput": 653.6188338229753,
+      "p95_throughput": 653.6741288225787,
+      "times": [
+        15.29684856699987,
+        15.514580171000034,
+        15.309798194999985
+      ],
+      "mean_time": 15.373742310999964,
+      "std_time": 0.12214090356381468,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18220544,
+            "gpu_memory_allocated_after_bytes": 18204160,
+            "gpu_peak_memory_allocated_bytes": 634793472,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18204160,
+            "gpu_memory_allocated_after_bytes": 18204160,
+            "gpu_peak_memory_allocated_bytes": 634793472,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18204160,
+            "gpu_memory_allocated_after_bytes": 18204160,
+            "gpu_peak_memory_allocated_bytes": 634793472,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          }
+        ],
+        "peak_allocated_bytes": 634793472,
+        "peak_reserved_bytes": 3697278976
+      }
+    },
+    "RandomCrop224+PlankianJitter+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        656.8295551857173,
+        641.1729852492115,
+        653.8484229768272
+      ],
+      "median_throughput": 653.8484229768272,
+      "mean_throughput": 650.6169878039186,
+      "std_throughput": 8.31346350817198,
+      "cv_throughput": 0.012777815003314165,
+      "throughput_ci95": 9.407569572908798,
+      "p50_throughput": 653.8484229768272,
+      "p75_throughput": 655.3389890812723,
+      "p90_throughput": 656.2333287439393,
+      "p95_throughput": 656.5314419648282,
+      "times": [
+        15.224649867000153,
+        15.596415054999852,
+        15.294064569999591
+      ],
+      "mean_time": 15.371709830666532,
+      "std_time": 0.19767126404751104,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18223104,
+            "gpu_memory_allocated_after_bytes": 18206720,
+            "gpu_peak_memory_allocated_bytes": 634796032,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18206720,
+            "gpu_memory_allocated_after_bytes": 18206720,
+            "gpu_peak_memory_allocated_bytes": 634796032,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18206720,
+            "gpu_memory_allocated_after_bytes": 18206720,
+            "gpu_peak_memory_allocated_bytes": 634796032,
+            "gpu_peak_memory_reserved_bytes": 3697278976
+          }
+        ],
+        "peak_allocated_bytes": 634796032,
+        "peak_reserved_bytes": 3697278976
+      }
+    },
+    "RandomCrop224+MedianBlur+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        326.1097861740646,
+        327.0132466696324,
+        329.80958609605807
+      ],
+      "median_throughput": 327.0132466696324,
+      "mean_throughput": 327.6442063132517,
+      "std_throughput": 1.9289148295357332,
+      "cv_throughput": 0.005887223983724438,
+      "throughput_ci95": 2.1827726123095808,
+      "p50_throughput": 327.0132466696324,
+      "p75_throughput": 328.41141638284523,
+      "p90_throughput": 329.25031821077295,
+      "p95_throughput": 329.5299521534155,
+      "times": [
+        30.66451981499995,
+        30.579800977000104,
+        30.320525605000057
+      ],
+      "mean_time": 30.521615465666702,
+      "std_time": 0.17922658682575357,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18225152,
+            "gpu_memory_allocated_after_bytes": 18208768,
+            "gpu_peak_memory_allocated_bytes": 4489364992,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18208768,
+            "gpu_memory_allocated_after_bytes": 18208768,
+            "gpu_peak_memory_allocated_bytes": 4489364992,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18208768,
+            "gpu_memory_allocated_after_bytes": 18208768,
+            "gpu_peak_memory_allocated_bytes": 4489364992,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 4489364992,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+MotionBlur+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        656.5052569845196,
+        658.5274672323072,
+        654.3321618906521
+      ],
+      "median_throughput": 656.5052569845196,
+      "mean_throughput": 656.4549620358263,
+      "std_throughput": 2.09810483861702,
+      "cv_throughput": 0.0031961139148225606,
+      "throughput_ci95": 2.3742291309926418,
+      "p50_throughput": 656.5052569845196,
+      "p75_throughput": 657.5163621084134,
+      "p90_throughput": 658.1230251827498,
+      "p95_throughput": 658.3252462075285,
+      "times": [
+        15.232170487000076,
+        15.185395443000289,
+        15.282757874999788
+      ],
+      "mean_time": 15.233441268333385,
+      "std_time": 0.04869365415649264,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18227200,
+            "gpu_memory_allocated_after_bytes": 18210816,
+            "gpu_peak_memory_allocated_bytes": 634800128,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18210816,
+            "gpu_memory_allocated_after_bytes": 18210816,
+            "gpu_peak_memory_allocated_bytes": 634800128,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18210816,
+            "gpu_memory_allocated_after_bytes": 18210816,
+            "gpu_peak_memory_allocated_bytes": 634800128,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 634800128,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+CLAHE+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        165.47718274051516,
+        165.609119619383,
+        165.16164158264908
+      ],
+      "median_throughput": 165.47718274051516,
+      "mean_throughput": 165.4159813141824,
+      "std_throughput": 0.2299312055347887,
+      "cv_throughput": 0.0013900180847585064,
+      "throughput_ci95": 0.26019165308478664,
+      "p50_throughput": 165.47718274051516,
+      "p75_throughput": 165.54315117994906,
+      "p90_throughput": 165.58273224360943,
+      "p95_throughput": 165.5959259314962,
+      "times": [
+        60.43129230500017,
+        60.38314811999999,
+        60.546746230999815
+      ],
+      "mean_time": 60.45372888533333,
+      "std_time": 0.08407517816491737,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18229760,
+            "gpu_memory_allocated_after_bytes": 18213376,
+            "gpu_peak_memory_allocated_bytes": 2887363072,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18213376,
+            "gpu_memory_allocated_after_bytes": 18213376,
+            "gpu_peak_memory_allocated_bytes": 2887363072,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18213376,
+            "gpu_memory_allocated_after_bytes": 18213376,
+            "gpu_peak_memory_allocated_bytes": 2887363072,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 2887363072,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+Brightness+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        650.8154116633417,
+        658.8018810703503,
+        651.0393064796331
+      ],
+      "median_throughput": 651.0393064796331,
+      "mean_throughput": 653.552199737775,
+      "std_throughput": 4.547735457607725,
+      "cv_throughput": 0.006958488487120715,
+      "throughput_ci95": 5.1462471296799315,
+      "p50_throughput": 651.0393064796331,
+      "p75_throughput": 654.9205937749916,
+      "p90_throughput": 657.2493661522069,
+      "p95_throughput": 658.0256236112785,
+      "times": [
+        15.365339880999727,
+        15.179070198999852,
+        15.360055684000145
+      ],
+      "mean_time": 15.301488587999907,
+      "std_time": 0.10605035199615932,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18232320,
+            "gpu_memory_allocated_after_bytes": 18215936,
+            "gpu_peak_memory_allocated_bytes": 634805248,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18215936,
+            "gpu_memory_allocated_after_bytes": 18215936,
+            "gpu_peak_memory_allocated_bytes": 634805248,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18215936,
+            "gpu_memory_allocated_after_bytes": 18215936,
+            "gpu_peak_memory_allocated_bytes": 634805248,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 634805248,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+Contrast+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        653.6914178089565,
+        648.637646127332,
+        643.2424559130856
+      ],
+      "median_throughput": 648.637646127332,
+      "mean_throughput": 648.5238399497913,
+      "std_throughput": 5.225410515918891,
+      "cv_throughput": 0.008057391562233767,
+      "throughput_ci95": 5.913108649264463,
+      "p50_throughput": 648.637646127332,
+      "p75_throughput": 651.1645319681443,
+      "p90_throughput": 652.6806634726316,
+      "p95_throughput": 653.1860406407941,
+      "times": [
+        15.297737934999986,
+        15.416928171999643,
+        15.54623751600002
+      ],
+      "mean_time": 15.420301207666549,
+      "std_time": 0.12428412395195787,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18234880,
+            "gpu_memory_allocated_after_bytes": 18218496,
+            "gpu_peak_memory_allocated_bytes": 634807808,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18218496,
+            "gpu_memory_allocated_after_bytes": 18218496,
+            "gpu_peak_memory_allocated_bytes": 634807808,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18218496,
+            "gpu_memory_allocated_after_bytes": 18218496,
+            "gpu_peak_memory_allocated_bytes": 634807808,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 634807808,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+Blur+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        646.4992037408748,
+        650.555416220967,
+        650.7982409655709
+      ],
+      "median_throughput": 650.555416220967,
+      "mean_throughput": 649.2842869758042,
+      "std_throughput": 2.415006714951693,
+      "cv_throughput": 0.003719490465725207,
+      "throughput_ci95": 2.732837362865343,
+      "p50_throughput": 650.555416220967,
+      "p75_throughput": 650.676828593269,
+      "p90_throughput": 650.7496760166501,
+      "p95_throughput": 650.7739584911105,
+      "times": [
+        15.467923149999933,
+        15.371480662000067,
+        15.365745281000272
+      ],
+      "mean_time": 15.401716364333424,
+      "std_time": 0.05740842708193191,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18236928,
+            "gpu_memory_allocated_after_bytes": 18220544,
+            "gpu_peak_memory_allocated_bytes": 637562880,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18220544,
+            "gpu_memory_allocated_after_bytes": 18220544,
+            "gpu_peak_memory_allocated_bytes": 637562880,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18220544,
+            "gpu_memory_allocated_after_bytes": 18220544,
+            "gpu_peak_memory_allocated_bytes": 637562880,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 637562880,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+ChannelDropout+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        655.4161617460587,
+        661.8055352351829,
+        659.5990639279294
+      ],
+      "median_throughput": 659.5990639279294,
+      "mean_throughput": 658.9402536363904,
+      "std_throughput": 3.2452344516319687,
+      "cv_throughput": 0.004924929739415678,
+      "throughput_ci95": 3.672328489097003,
+      "p50_throughput": 659.5990639279294,
+      "p75_throughput": 660.7022995815562,
+      "p90_throughput": 661.3642409737322,
+      "p95_throughput": 661.5848881044575,
+      "times": [
+        15.257481556999664,
+        15.110178848000032,
+        15.160724972000025
+      ],
+      "mean_time": 15.176128458999907,
+      "std_time": 0.07484966652213106,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18238976,
+            "gpu_memory_allocated_after_bytes": 18222592,
+            "gpu_peak_memory_allocated_bytes": 634811904,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18222592,
+            "gpu_memory_allocated_after_bytes": 18222592,
+            "gpu_peak_memory_allocated_bytes": 634811904,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18222592,
+            "gpu_memory_allocated_after_bytes": 18222592,
+            "gpu_peak_memory_allocated_bytes": 634811904,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 634811904,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+LinearIllumination+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        503.2217332762021,
+        507.05172229353866,
+        502.75080575957764
+      ],
+      "median_throughput": 503.2217332762021,
+      "mean_throughput": 504.3414204431061,
+      "std_throughput": 2.3589712316647717,
+      "cv_throughput": 0.004677329951587594,
+      "throughput_ci95": 2.6694272441999884,
+      "p50_throughput": 503.2217332762021,
+      "p75_throughput": 505.13672778487035,
+      "p90_throughput": 506.28572449007135,
+      "p95_throughput": 506.668723391805,
+      "times": [
+        19.87195571800021,
+        19.72185392600022,
+        19.89056981199974
+      ],
+      "mean_time": 19.82812648533339,
+      "std_time": 0.09250412841745047,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18241024,
+            "gpu_memory_allocated_after_bytes": 18224640,
+            "gpu_peak_memory_allocated_bytes": 634813952,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18224640,
+            "gpu_memory_allocated_after_bytes": 18224640,
+            "gpu_peak_memory_allocated_bytes": 634813952,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18224640,
+            "gpu_memory_allocated_after_bytes": 18224640,
+            "gpu_peak_memory_allocated_bytes": 634813952,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 634813952,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+CornerIllumination+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        394.7061993179951,
+        398.1785943430916,
+        393.52997636604675
+      ],
+      "median_throughput": 394.7061993179951,
+      "mean_throughput": 395.4715900090444,
+      "std_throughput": 2.4169773388645974,
+      "cv_throughput": 0.006111633300408055,
+      "throughput_ci95": 2.7350673337486535,
+      "p50_throughput": 394.7061993179951,
+      "p75_throughput": 396.4423968305433,
+      "p90_throughput": 397.4841153380723,
+      "p95_throughput": 397.831354840582,
+      "times": [
+        25.33530007199988,
+        25.11435858699997,
+        25.411024828000336
+      ],
+      "mean_time": 25.28689449566673,
+      "std_time": 0.15414291907976302,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18243072,
+            "gpu_memory_allocated_after_bytes": 18226688,
+            "gpu_peak_memory_allocated_bytes": 634816000,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18226688,
+            "gpu_memory_allocated_after_bytes": 18226688,
+            "gpu_peak_memory_allocated_bytes": 634816000,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18226688,
+            "gpu_memory_allocated_after_bytes": 18226688,
+            "gpu_peak_memory_allocated_bytes": 634816000,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 634816000,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+GaussianIllumination+Normalize+ToTensor": {
+      "status": "unsupported",
+      "supported": false,
+      "reason": "RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!",
+      "throughputs": [],
+      "median_throughput": 0.0,
+      "mean_throughput": 0.0,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 0.0,
+      "p75_throughput": 0.0,
+      "p90_throughput": 0.0,
+      "p95_throughput": 0.0,
+      "times": [],
+      "mean_time": 0.0,
+      "std_time": 0.0,
+      "num_successful_runs": 0,
+      "unstable": false
+    },
+    "RandomCrop224+Hue+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        580.9666989065511,
+        585.8220293177467,
+        592.5919030789855
+      ],
+      "median_throughput": 585.8220293177467,
+      "mean_throughput": 586.4602104344277,
+      "std_throughput": 5.83881831931454,
+      "cv_throughput": 0.009956034894489027,
+      "throughput_ci95": 6.607244923674913,
+      "p50_throughput": 585.8220293177467,
+      "p75_throughput": 589.2069661983661,
+      "p90_throughput": 591.2379283267378,
+      "p95_throughput": 591.9149157028617,
+      "times": [
+        17.212690536000082,
+        17.07003065700019,
+        16.87501963500017
+      ],
+      "mean_time": 17.052580276000146,
+      "std_time": 0.16951046042444629,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18245632,
+            "gpu_memory_allocated_after_bytes": 18229248,
+            "gpu_peak_memory_allocated_bytes": 2227606528,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18229248,
+            "gpu_memory_allocated_after_bytes": 18229248,
+            "gpu_peak_memory_allocated_bytes": 2227606528,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18229248,
+            "gpu_memory_allocated_after_bytes": 18229248,
+            "gpu_peak_memory_allocated_bytes": 2227606528,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 2227606528,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+PlasmaBrightness+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        523.588818728332,
+        561.7810713828397,
+        561.6249437165808
+      ],
+      "median_throughput": 561.6249437165808,
+      "mean_throughput": 548.9982779425841,
+      "std_throughput": 22.005375641706344,
+      "cv_throughput": 0.04008277717040077,
+      "throughput_ci95": 24.901426718701664,
+      "p50_throughput": 561.6249437165808,
+      "p75_throughput": 561.7030075497103,
+      "p90_throughput": 561.7498458495879,
+      "p95_throughput": 561.7654586162139,
+      "times": [
+        19.09895636100009,
+        17.80052855000031,
+        17.80547696800022
+      ],
+      "mean_time": 18.234987293000206,
+      "std_time": 0.7482232518143347,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18248704,
+            "gpu_memory_allocated_after_bytes": 18232320,
+            "gpu_peak_memory_allocated_bytes": 2252554752,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18232320,
+            "gpu_memory_allocated_after_bytes": 18232320,
+            "gpu_peak_memory_allocated_bytes": 2252554752,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18232320,
+            "gpu_memory_allocated_after_bytes": 18232320,
+            "gpu_peak_memory_allocated_bytes": 2252554752,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 2252554752,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+PlasmaContrast+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        557.4707287457758,
+        553.2568641421166,
+        557.5600922227794
+      ],
+      "median_throughput": 557.4707287457758,
+      "mean_throughput": 556.0958950368905,
+      "std_throughput": 2.4590788466144318,
+      "cv_throughput": 0.004422040997895337,
+      "throughput_ci95": 2.7827096747406594,
+      "p50_throughput": 557.4707287457758,
+      "p75_throughput": 557.5154104842776,
+      "p90_throughput": 557.5422195273787,
+      "p95_throughput": 557.5511558750791,
+      "times": [
+        17.938161564999973,
+        18.074787044000004,
+        17.93528650899998
+      ],
+      "mean_time": 17.98274503933332,
+      "std_time": 0.07972367561802053,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18251264,
+            "gpu_memory_allocated_after_bytes": 18234880,
+            "gpu_peak_memory_allocated_bytes": 2252556288,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18234880,
+            "gpu_memory_allocated_after_bytes": 18234880,
+            "gpu_peak_memory_allocated_bytes": 2252556288,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18234880,
+            "gpu_memory_allocated_after_bytes": 18234880,
+            "gpu_peak_memory_allocated_bytes": 2252556288,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 2252556288,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+PlasmaShadow+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        576.003343396211,
+        612.1511603638633,
+        615.7210456291773
+      ],
+      "median_throughput": 612.1511603638633,
+      "mean_throughput": 601.2918497964172,
+      "std_throughput": 21.973107135014576,
+      "cv_throughput": 0.03654316475843492,
+      "throughput_ci95": 24.864911465892977,
+      "p50_throughput": 612.1511603638633,
+      "p75_throughput": 613.9361029965203,
+      "p90_throughput": 615.0070685761145,
+      "p95_throughput": 615.3640571026459,
+      "times": [
+        17.361010338999677,
+        16.33583442700001,
+        16.241120993000095
+      ],
+      "mean_time": 16.64598858633326,
+      "std_time": 0.6210352153739991,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18254848,
+            "gpu_memory_allocated_after_bytes": 18238464,
+            "gpu_peak_memory_allocated_bytes": 865792512,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18238464,
+            "gpu_memory_allocated_after_bytes": 18238464,
+            "gpu_peak_memory_allocated_bytes": 865792512,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18238464,
+            "gpu_memory_allocated_after_bytes": 18238464,
+            "gpu_peak_memory_allocated_bytes": 865792512,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 865792512,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+Rain+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        306.7924939826044,
+        306.2472203283457,
+        302.8108180139674
+      ],
+      "median_throughput": 306.2472203283457,
+      "mean_throughput": 305.2835107749725,
+      "std_throughput": 2.1587005251429603,
+      "cv_throughput": 0.0070711337132589504,
+      "throughput_ci95": 2.4427996054105066,
+      "p50_throughput": 306.2472203283457,
+      "p75_throughput": 306.51985715547505,
+      "p90_throughput": 306.68343925175265,
+      "p95_throughput": 306.73796661717853,
+      "times": [
+        32.59532158100001,
+        32.65335760200014,
+        33.02391924299991
+      ],
+      "mean_time": 32.75753280866669,
+      "std_time": 0.2325152559101412,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18256896,
+            "gpu_memory_allocated_after_bytes": 18240512,
+            "gpu_peak_memory_allocated_bytes": 634829824,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18240512,
+            "gpu_memory_allocated_after_bytes": 18240512,
+            "gpu_peak_memory_allocated_bytes": 634829824,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18240512,
+            "gpu_memory_allocated_after_bytes": 18240512,
+            "gpu_peak_memory_allocated_bytes": 634829824,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 634829824,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+SaltAndPepper+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        375.3022362389018,
+        371.3411672814249,
+        391.84562710867
+      ],
+      "median_throughput": 375.3022362389018,
+      "mean_throughput": 379.4963435429989,
+      "std_throughput": 10.876631843566628,
+      "cv_throughput": 0.028660702609205113,
+      "throughput_ci95": 12.30806759260891,
+      "p50_throughput": 375.3022362389018,
+      "p75_throughput": 383.57393167378586,
+      "p90_throughput": 388.53694893471635,
+      "p95_throughput": 390.19128802169314,
+      "times": [
+        26.645191619999878,
+        26.92941392199964,
+        25.520254172000023
+      ],
+      "mean_time": 26.364953237999845,
+      "std_time": 0.7452066581252762,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18258944,
+            "gpu_memory_allocated_after_bytes": 18242560,
+            "gpu_peak_memory_allocated_bytes": 634831872,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18242560,
+            "gpu_memory_allocated_after_bytes": 18242560,
+            "gpu_peak_memory_allocated_bytes": 634831872,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18242560,
+            "gpu_memory_allocated_after_bytes": 18242560,
+            "gpu_peak_memory_allocated_bytes": 634831872,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 634831872,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+Saturation+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        587.2923109132629,
+        585.8108250109071,
+        592.6326405114952
+      ],
+      "median_throughput": 587.2923109132629,
+      "mean_throughput": 588.5785921452217,
+      "std_throughput": 3.588200278242988,
+      "cv_throughput": 0.0060963825836153765,
+      "throughput_ci95": 4.060430857237764,
+      "p50_throughput": 587.2923109132629,
+      "p75_throughput": 589.962475712379,
+      "p90_throughput": 591.5645745918488,
+      "p95_throughput": 592.098607551672,
+      "times": [
+        17.027295972000047,
+        17.07035714099993,
+        16.873859650000213
+      ],
+      "mean_time": 16.9905042543334,
+      "std_time": 0.10328619878252342,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18261504,
+            "gpu_memory_allocated_after_bytes": 18245120,
+            "gpu_peak_memory_allocated_bytes": 2227621376,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18245120,
+            "gpu_memory_allocated_after_bytes": 18245120,
+            "gpu_peak_memory_allocated_bytes": 2227621376,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18245120,
+            "gpu_memory_allocated_after_bytes": 18245120,
+            "gpu_peak_memory_allocated_bytes": 2227621376,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 2227621376,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+Snow+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        593.1620292655034,
+        598.4955174930897,
+        595.5439645977148
+      ],
+      "median_throughput": 595.5439645977148,
+      "mean_throughput": 595.7338371187693,
+      "std_throughput": 2.6718089095477993,
+      "cv_throughput": 0.004484903732294009,
+      "throughput_ci95": 3.023436402575298,
+      "p50_throughput": 595.5439645977148,
+      "p75_throughput": 597.0197410454023,
+      "p90_throughput": 597.9052069140147,
+      "p95_throughput": 598.2003622035521,
+      "times": [
+        16.858799967999857,
+        16.708562901000278,
+        16.791371577000064
+      ],
+      "mean_time": 16.7862448153334,
+      "std_time": 0.07524963015888611,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18264576,
+            "gpu_memory_allocated_after_bytes": 18248192,
+            "gpu_peak_memory_allocated_bytes": 1354162176,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18248192,
+            "gpu_memory_allocated_after_bytes": 18248192,
+            "gpu_peak_memory_allocated_bytes": 1354162176,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18248192,
+            "gpu_memory_allocated_after_bytes": 18248192,
+            "gpu_peak_memory_allocated_bytes": 1354162176,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 1354162176,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+OpticalDistortion+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        630.3729341808179,
+        641.8280816475824,
+        641.0840528237864
+      ],
+      "median_throughput": 641.0840528237864,
+      "mean_throughput": 637.7616895507289,
+      "std_throughput": 6.409654761369856,
+      "cv_throughput": 0.010050234854785862,
+      "throughput_ci95": 7.253207167703327,
+      "p50_throughput": 641.0840528237864,
+      "p75_throughput": 641.4560672356844,
+      "p90_throughput": 641.6792758828232,
+      "p95_throughput": 641.7536787652028,
+      "times": [
+        15.863625256999967,
+        15.580496219999986,
+        15.598578619999898
+      ],
+      "mean_time": 15.680900032333284,
+      "std_time": 0.15850275737209293,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18258944,
+            "gpu_memory_allocated_after_bytes": 18250752,
+            "gpu_peak_memory_allocated_bytes": 634831872,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18250752,
+            "gpu_memory_allocated_after_bytes": 18250752,
+            "gpu_peak_memory_allocated_bytes": 634831872,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18250752,
+            "gpu_memory_allocated_after_bytes": 18250752,
+            "gpu_peak_memory_allocated_bytes": 634831872,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 634831872,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+ThinPlateSpline+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        598.4552594803765,
+        598.1372656031807,
+        594.3945491748813
+      ],
+      "median_throughput": 598.1372656031807,
+      "mean_throughput": 596.9956914194795,
+      "std_throughput": 2.258259453419529,
+      "cv_throughput": 0.0037827064514486773,
+      "throughput_ci95": 2.555461138530293,
+      "p50_throughput": 598.1372656031807,
+      "p75_throughput": 598.2962625417786,
+      "p90_throughput": 598.3916607049374,
+      "p95_throughput": 598.4234600926569,
+      "times": [
+        16.709686883999893,
+        16.71857042700003,
+        16.823842031999902
+      ],
+      "mean_time": 16.75069978099994,
+      "std_time": 0.06349859049667698,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18259968,
+            "gpu_memory_allocated_after_bytes": 18251776,
+            "gpu_peak_memory_allocated_bytes": 1303203840,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18251776,
+            "gpu_memory_allocated_after_bytes": 18251776,
+            "gpu_peak_memory_allocated_bytes": 1303203840,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18251776,
+            "gpu_memory_allocated_after_bytes": 18251776,
+            "gpu_peak_memory_allocated_bytes": 1303203840,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 1303203840,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+ColorJiggle+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        528.9076281491567,
+        529.2467930323685,
+        526.0804928019694
+      ],
+      "median_throughput": 528.9076281491567,
+      "mean_throughput": 528.0783046611649,
+      "std_throughput": 1.7384468277912783,
+      "cv_throughput": 0.0032920247100602473,
+      "throughput_ci95": 1.9672377782344053,
+      "p50_throughput": 528.9076281491567,
+      "p75_throughput": 529.0772105907627,
+      "p90_throughput": 529.1789600557262,
+      "p95_throughput": 529.2128765440473,
+      "times": [
+        18.906893127999865,
+        18.89477674999989,
+        19.00849800900005
+      ],
+      "mean_time": 18.936722628999934,
+      "std_time": 0.062453827221237365,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18270208,
+            "gpu_memory_allocated_after_bytes": 18253824,
+            "gpu_peak_memory_allocated_bytes": 2381769728,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18253824,
+            "gpu_memory_allocated_after_bytes": 18253824,
+            "gpu_peak_memory_allocated_bytes": 2381769728,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18253824,
+            "gpu_memory_allocated_after_bytes": 18253824,
+            "gpu_peak_memory_allocated_bytes": 2381769728,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 2381769728,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+LongestMaxSize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        178.65787893367687,
+        178.76980924359162,
+        178.10534689636856
+      ],
+      "median_throughput": 178.65787893367687,
+      "mean_throughput": 178.51101169121236,
+      "std_throughput": 0.3557457559847271,
+      "cv_throughput": 0.001992850483644643,
+      "throughput_ci95": 0.40256421964246425,
+      "p50_throughput": 178.65787893367687,
+      "p75_throughput": 178.71384408863423,
+      "p90_throughput": 178.74742318160867,
+      "p95_throughput": 178.75861621260015,
+      "times": [
+        55.97290228499969,
+        55.93785685800003,
+        56.146545706000325
+      ],
+      "mean_time": 56.01910161633335,
+      "std_time": 0.11175214754840357,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18272256,
+            "gpu_memory_allocated_after_bytes": 18255872,
+            "gpu_peak_memory_allocated_bytes": 2588342272,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18255872,
+            "gpu_memory_allocated_after_bytes": 18255872,
+            "gpu_peak_memory_allocated_bytes": 2588342272,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18255872,
+            "gpu_memory_allocated_after_bytes": 18255872,
+            "gpu_peak_memory_allocated_bytes": 2588342272,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 2588342272,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+SmallestMaxSize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        178.43473694606053,
+        179.24277088543948,
+        179.0174038790781
+      ],
+      "median_throughput": 179.0174038790781,
+      "mean_throughput": 178.89830390352606,
+      "std_throughput": 0.4169751970194949,
+      "cv_throughput": 0.0023307945794967173,
+      "throughput_ci95": 0.4718518547994212,
+      "p50_throughput": 179.0174038790781,
+      "p75_throughput": 179.1300873822588,
+      "p90_throughput": 179.1976974841672,
+      "p95_throughput": 179.22023418480333,
+      "times": [
+        56.04289933200016,
+        55.790255588000036,
+        55.860490562999985
+      ],
+      "mean_time": 55.89788182766673,
+      "std_time": 0.1304062703654771,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18274304,
+            "gpu_memory_allocated_after_bytes": 18257920,
+            "gpu_peak_memory_allocated_bytes": 2588344320,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18257920,
+            "gpu_memory_allocated_after_bytes": 18257920,
+            "gpu_peak_memory_allocated_bytes": 2588344320,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18257920,
+            "gpu_memory_allocated_after_bytes": 18257920,
+            "gpu_peak_memory_allocated_bytes": 2588344320,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 2588344320,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+RandomRotate90+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        620.1161519584191,
+        634.3425882434535,
+        632.3004232768778
+      ],
+      "median_throughput": 632.3004232768778,
+      "mean_throughput": 628.9197211595834,
+      "std_throughput": 7.692186454282353,
+      "cv_throughput": 0.012230792254534058,
+      "throughput_ci95": 8.70452840327195,
+      "p50_throughput": 632.3004232768778,
+      "p75_throughput": 633.3215057601657,
+      "p90_throughput": 633.9341552501384,
+      "p95_throughput": 634.138371746796,
+      "times": [
+        16.12601118099974,
+        15.764352236999912,
+        15.8152669709998
+      ],
+      "mean_time": 15.90187679633315,
+      "std_time": 0.19576834352615008,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18276864,
+            "gpu_memory_allocated_after_bytes": 18260480,
+            "gpu_peak_memory_allocated_bytes": 634849792,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18260480,
+            "gpu_memory_allocated_after_bytes": 18260480,
+            "gpu_peak_memory_allocated_bytes": 634849792,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18260480,
+            "gpu_memory_allocated_after_bytes": 18260480,
+            "gpu_peak_memory_allocated_bytes": 634849792,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 634849792,
+        "peak_reserved_bytes": 7551844352
+      }
+    },
+    "RandomCrop224+RandomJigsaw+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        636.2751367044489,
+        639.1177900669389,
+        634.2566175731131
+      ],
+      "median_throughput": 636.2751367044489,
+      "mean_throughput": 636.5498481148337,
+      "std_throughput": 2.4422017265019167,
+      "cv_throughput": 0.003836622903508011,
+      "throughput_ci95": 2.763611415454051,
+      "p50_throughput": 636.2751367044489,
+      "p75_throughput": 637.696463385694,
+      "p90_throughput": 638.5492593944409,
+      "p95_throughput": 638.8335247306899,
+      "times": [
+        15.716471418000765,
+        15.646568058999947,
+        15.766489024999828
+      ],
+      "mean_time": 15.70984283400018,
+      "std_time": 0.06023465045948047,
+      "num_successful_runs": 3,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 18269696,
+            "gpu_memory_allocated_after_bytes": 18261504,
+            "gpu_peak_memory_allocated_bytes": 634842624,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18261504,
+            "gpu_memory_allocated_after_bytes": 18261504,
+            "gpu_peak_memory_allocated_bytes": 634842624,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          },
+          {
+            "gpu_memory_allocated_before_bytes": 18261504,
+            "gpu_memory_allocated_after_bytes": 18261504,
+            "gpu_peak_memory_allocated_bytes": 634842624,
+            "gpu_peak_memory_reserved_bytes": 7551844352
+          }
+        ],
+        "peak_allocated_bytes": 634842624,
+        "peak_reserved_bytes": 7551844352
+      }
+    }
+  }
+}

@@ -1,9 +1,9 @@
-regime_label,winner,wins
-CPU DataLoader,albumentationsx,56
-CPU DataLoader,kornia,1
-CPU micro,albumentationsx,52
-CPU micro,pillow,1
-GPU DataLoader,dali,16
-GPU DataLoader,kornia,1
-GPU DataLoader,torchvision,13
-GPU micro,torchvision,19
+regime,regime_label,winner,wins
+rgb_dataloader_cpu,CPU DataLoader,albumentationsx,56
+rgb_dataloader_cpu,CPU DataLoader,kornia,1
+rgb_dataloader_gpu,GPU DataLoader,dali,16
+rgb_dataloader_gpu,GPU DataLoader,kornia,1
+rgb_dataloader_gpu,GPU DataLoader,torchvision,13
+rgb_micro_cpu,CPU micro,albumentationsx,52
+rgb_micro_cpu,CPU micro,pillow,1
+rgb_micro_gpu,GPU micro,torchvision,19

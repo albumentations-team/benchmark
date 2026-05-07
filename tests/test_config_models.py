@@ -130,7 +130,7 @@ def test_paper_production_configs_use_deadline_sizing() -> None:
         assert config.selection.mode == spec["mode"]
         assert config.selection.libraries == spec["libraries"]
         assert config.selection.transform_set == "paper"
-        assert config.data.gcs_uri == "gs://imagenet_validation/imagenet/val.tar"
+        assert config.data.gcs_uri == "gs://example-bucket/datasets/imagenet/val.tar"
         assert config.data.num_items == spec["num_items"]
         assert config.data.num_channels == spec.get("num_channels", 3)
         assert config.execution.num_runs == 1
