@@ -97,6 +97,7 @@ def test_paper_production_configs_use_deadline_sizing() -> None:
             "machine_type": "g2-standard-16",
             "pipeline_scope": "memory_dataloader_augment",
             "disk_size_gb": 200,
+            "slow_preflight_items": 256,
         },
         "prod_g2_9ch_micro_gpu.yaml": {
             "scenario": "image-9ch",
@@ -145,6 +146,7 @@ def test_paper_production_configs_use_deadline_sizing() -> None:
             assert config.execution.workers == 8
             assert config.execution.min_time == 0
             assert config.execution.thread_policy == "pipeline-default"
+            assert config.execution.slow_preflight_items == spec.get("slow_preflight_items")
 
 
 def test_rejects_image_cuda_for_albumentations() -> None:

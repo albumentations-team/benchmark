@@ -371,9 +371,9 @@ class PipelineBenchmarkRunner:
             preflight_items=self.slow_preflight_items,
         )
 
-    def _preflight_items(self, paths: list[Path], preloaded: list[Any] | None) -> list[Any]:
+    def _preflight_items(self, paths: list[Path], preloaded: list[Any] | None, *, min_items: int = 1) -> list[Any]:
         _, preflight_items, _ = self._slow_skip_config()
-        limit = max(1, min(preflight_items, len(paths)))
+        limit = max(1, min(max(preflight_items, min_items), len(paths)))
         if preloaded is not None:
             return preloaded[:limit]
         return [self._load_item(path) for path in paths[:limit]]
@@ -390,12 +390,14 @@ class PipelineBenchmarkRunner:
             return None
 
         threshold, _, max_preflight_secs = self._slow_skip_config()
-        items = self._preflight_items(paths, preloaded)
+        uses_gpu_batch = self._uses_gpu_image_batch_transform()
+        min_preflight_items = self.batch_size if uses_gpu_batch else 1
+        items = self._preflight_items(paths, preloaded, min_items=min_preflight_items)
         if not items:
             return None
 
         start = time.perf_counter()
-        if self._uses_gpu_image_batch_transform():
+        if uses_gpu_batch:
             dataset_transform, batch_transform = self._split_gpu_image_transform(transform)
             loader = self._loader(paths[: len(items)], dataset_transform, items if preloaded is not None else None)
             processed, _ = self._run_loader_once(
