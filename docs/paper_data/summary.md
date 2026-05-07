@@ -1,6 +1,6 @@
 # Generated Paper Data
 
-Generated from local `gcp_runs/prod-*` artifacts. Throughput units are images/second.
+Generated from committed `results/published/*` snapshots plus local `gcp_runs/prod-*` artifacts that have not yet been published. Throughput units are images/second.
 
 ## Coverage Summary
 

@@ -63,7 +63,7 @@ additional repeats.
 
 <!-- PAPER_FIGURES_START -->
 
-The paper figures below are regenerated from `docs/paper_data/all_results.csv` by `python scripts/paper/generate_figures_and_insights.py`.
+The paper figures below are regenerated from `docs/paper_data/all_results.csv` by `python _internal/paper/scripts/generate_figures_and_insights.py`.
 
 ### Figure 1. Open production DataLoader category
 
