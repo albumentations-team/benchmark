@@ -1,0 +1,113 @@
+{
+  "destination_dir": "results/published/paper-rgb-micro-gpu-g2-standard-16-2026-05-04",
+  "entries": [
+    {
+      "benchmark_params": {
+        "device": "cuda",
+        "device_option": "cuda",
+        "gpu_memory_peak_measured": false,
+        "gpu_memory_peak_measurement": "not available for pyperf worker-process timing",
+        "includes_host_to_device_transfer": false,
+        "num_channels": 3,
+        "num_images": 2000,
+        "num_runs": 3,
+        "slow_preflight_items": 10,
+        "slow_skip_enabled": true,
+        "slow_threshold_sec_per_item": 0.05,
+        "timer_backend": "pyperf",
+        "transform_on_device": true
+      },
+      "file": "kornia_micro_dev-cuda_results.json",
+      "library": "kornia",
+      "library_versions": {
+        "av": "not installed",
+        "decord": "not installed",
+        "kornia": "0.8.2",
+        "numpy": "2.4.4",
+        "opencv-python": "not installed",
+        "opencv-python-headless": "4.13.0.92",
+        "pillow": "12.2.0",
+        "torch": "2.11.0",
+        "torchcodec": "not installed",
+        "torchvision": "0.26.0"
+      },
+      "num_results": 50,
+      "system_info": {
+        "cpu_count": "16",
+        "machine": "x86_64",
+        "memory_total_bytes": "67418894336",
+        "platform": "Linux-6.17.0-1012-gcp-x86_64-with-glibc2.39",
+        "processor": "x86_64",
+        "python_executable": "<external-path>",
+        "python_version": "3.13.13 (main, Apr 14 2026, 14:28:56) [Clang 22.1.3 ]",
+        "system": "Linux",
+        "timestamp": "2026-05-03T13:07:13.120116+00:00"
+      }
+    },
+    {
+      "benchmark_params": {
+        "device": "cuda",
+        "device_option": "cuda",
+        "gpu_memory_peak_measured": false,
+        "gpu_memory_peak_measurement": "not available for pyperf worker-process timing",
+        "includes_host_to_device_transfer": false,
+        "num_channels": 3,
+        "num_images": 2000,
+        "num_runs": 3,
+        "slow_preflight_items": 10,
+        "slow_skip_enabled": true,
+        "slow_threshold_sec_per_item": 0.05,
+        "timer_backend": "pyperf",
+        "transform_on_device": true
+      },
+      "file": "torchvision_micro_dev-cuda_results.json",
+      "library": "torchvision",
+      "library_versions": {
+        "av": "not installed",
+        "decord": "not installed",
+        "numpy": "2.4.4",
+        "opencv-python": "not installed",
+        "opencv-python-headless": "4.13.0.92",
+        "pillow": "12.2.0",
+        "torch": "2.11.0",
+        "torchcodec": "not installed",
+        "torchvision": "0.26.0"
+      },
+      "num_results": 25,
+      "system_info": {
+        "cpu_count": "16",
+        "machine": "x86_64",
+        "memory_total_bytes": "67418894336",
+        "platform": "Linux-6.17.0-1012-gcp-x86_64-with-glibc2.39",
+        "processor": "x86_64",
+        "python_executable": "<external-path>",
+        "python_version": "3.13.13 (main, Apr 14 2026, 14:28:56) [Clang 22.1.3 ]",
+        "system": "Linux",
+        "timestamp": "2026-05-03T12:54:54.195388+00:00"
+      }
+    }
+  ],
+  "files": [
+    "kornia_micro_dev-cuda_results.json",
+    "torchvision_micro_dev-cuda_results.json"
+  ],
+  "git": {
+    "branch": "codex/fix-public-paper-regeneration",
+    "commit": "f89a72a1f6458a14693e2fadf8af5b60a77fd29a",
+    "dirty": true
+  },
+  "libraries": [
+    "kornia",
+    "torchvision"
+  ],
+  "library_versions": {
+    "kornia": "0.8.2",
+    "torchvision": "0.26.0"
+  },
+  "machine": "g2-standard-16-l4",
+  "notes": "TorchVision and Kornia RGB GPU microbenchmark snapshot for paper figures.",
+  "published_at_utc": "2026-05-07T02:36:37.989433+00:00",
+  "purpose": "paper-rgb-micro-gpu",
+  "schema_version": 1,
+  "source_dir": "gcp_runs/prod-g2-standard-16-rgb-micro-gpu-r3/results/image-rgb/micro"
+}

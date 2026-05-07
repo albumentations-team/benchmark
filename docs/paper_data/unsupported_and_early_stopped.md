@@ -4,7 +4,7 @@ This supplement table preserves the full unsupported and slow-row detail used by
 
 | Regime | Library | Transform | Status | Reason |
 |---|---|---|---|---|
-| CPU DataLoader | pillow | RandomCrop224+Resize+Normalize+ToTensor | early_stopped | RandomCrop224+Resize+Normalize+ToTensor slower than threshold: 0.253 sec/image >= 0.050; RandomCrop224+Resize+Normalize+ToTensor slower than threshold: 0.257 sec/image >= 0.050 |
+| CPU DataLoader | pillow | RandomCrop224+Resize+Normalize+ToTensor | early_stopped | RandomCrop224+Resize+Normalize+ToTensor slower than threshold: 0.257 sec/image >= 0.050; RandomCrop224+Resize+Normalize+ToTensor slower than threshold: 0.253 sec/image >= 0.050 |
 | GPU DataLoader | dali | RandomCrop224+AutoContrast+Normalize+ToTensor | unsupported | DALI image pipeline does not implement transform 'AutoContrast' |
 | GPU DataLoader | dali | RandomCrop224+Blur+Normalize+ToTensor | unsupported | DALI image pipeline does not implement transform 'Blur' |
 | GPU DataLoader | dali | RandomCrop224+ChannelDropout+Normalize+ToTensor | unsupported | DALI image pipeline does not implement transform 'ChannelDropout' |
