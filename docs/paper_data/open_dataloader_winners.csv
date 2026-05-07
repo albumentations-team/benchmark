@@ -38,7 +38,7 @@ RandomCrop224+PlasmaShadow+Normalize+ToTensor,PlasmaShadow,rgb_dataloader_cpu,CP
 RandomCrop224+Posterize+Normalize+ToTensor,Posterize,rgb_dataloader_cpu,CPU DataLoader,albumentationsx,AlbumentationsX CPU,5318.989423072557
 RandomCrop224+RGBShift+Normalize+ToTensor,RGBShift,rgb_dataloader_cpu,CPU DataLoader,albumentationsx,AlbumentationsX CPU,4830.704378265731
 RandomCrop224+Rain+Normalize+ToTensor,Rain,rgb_dataloader_cpu,CPU DataLoader,albumentationsx,AlbumentationsX CPU,4528.476287471207
-RandomCrop224+Normalize+ToTensor,RandomCrop224,rgb_dataloader_cpu,CPU DataLoader,albumentationsx,AlbumentationsX CPU,5084.525347676295
+RandomCrop224+Normalize+ToTensor,RandomCrop224,rgb_dataloader_gpu,GPU DataLoader,torchvision,TorchVision GPU,6252.6494195069445
 RandomCrop224+RandomGamma+Normalize+ToTensor,RandomGamma,rgb_dataloader_cpu,CPU DataLoader,albumentationsx,AlbumentationsX CPU,5251.25801342494
 RandomCrop224+RandomJigsaw+Normalize+ToTensor,RandomJigsaw,rgb_dataloader_cpu,CPU DataLoader,albumentationsx,AlbumentationsX CPU,4868.344803782538
 RandomResizedCrop+Normalize+ToTensor,RandomResizedCrop,rgb_dataloader_cpu,CPU DataLoader,albumentationsx,AlbumentationsX CPU,5056.20900585008

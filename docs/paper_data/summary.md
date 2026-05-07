@@ -16,8 +16,8 @@ Generated from local `gcp_runs/prod-*` artifacts. Throughput units are images/se
 | CPU DataLoader | torchvision | 26 | 26 | 0 | 0 | 3322.6 |
 | CPU DataLoader | kornia | 51 | 51 | 0 | 0 | 1441.0 |
 | CPU DataLoader | pillow | 26 | 25 | 1 | 0 | 3241.2 |
-| GPU DataLoader | torchvision | 25 | 25 | 0 | 0 | 2020.3 |
-| GPU DataLoader | kornia | 50 | 48 | 0 | 2 | 657.6 |
+| GPU DataLoader | torchvision | 25 | 25 | 0 | 0 | 2561.9 |
+| GPU DataLoader | kornia | 50 | 49 | 0 | 1 | 632.3 |
 | GPU DataLoader | dali | 57 | 22 | 0 | 35 | 3785.2 |
 
 ## Absolute/Open Production DataLoader Category
@@ -26,15 +26,15 @@ This is the open production DataLoader category: CPU and GPU DataLoader rows com
 
 | Implementation | Regime | Full measured / 57 | Median measured-row throughput (img/s) | Open-category wins |
 |---|---|---:|---:|---:|
-| AlbumentationsX CPU | CPU DataLoader | 57/57 | 4614.8 | 53 |
+| AlbumentationsX CPU | CPU DataLoader | 57/57 | 4614.8 | 52 |
 | DALI GPU | GPU DataLoader | 22/57 | 3785.2 | 3 |
 | TorchVision CPU | CPU DataLoader | 26/57 | 3322.6 | 0 |
 | Pillow CPU | CPU DataLoader | 25/57 | 3241.2 | 0 |
-| TorchVision GPU | GPU DataLoader | 25/57 | 2020.3 | 0 |
+| TorchVision GPU | GPU DataLoader | 25/57 | 2561.9 | 1 |
 | Kornia CPU | CPU DataLoader | 51/57 | 1441.0 | 1 |
-| Kornia GPU | GPU DataLoader | 48/57 | 657.6 | 0 |
+| Kornia GPU | GPU DataLoader | 49/57 | 632.3 | 0 |
 
-Open-category exception rows: DALI GPU wins CLAHE, GaussianNoise, and Resize; Kornia CPU wins ThinPlateSpline.
+Open-category exception rows: DALI GPU wins CLAHE, GaussianNoise, and Resize; Kornia CPU wins ThinPlateSpline; TorchVision GPU wins RandomCrop224.
 
 ## Winner Counts
 
@@ -107,76 +107,76 @@ Measured winner counts for GPU DataLoader:
 
 | Library | Wins |
 |---|---:|
-| dali | 21 |
-| torchvision | 8 |
+| dali | 16 |
+| torchvision | 13 |
 | kornia | 1 |
 
 Largest measured winner gaps:
 
 | Transform | Winner | Gap over second | Second |
 |---|---|---:|---|
-| RandomCrop224+CLAHE+Normalize+ToTensor | dali | 22.8x | kornia |
-| RandomCrop224+SaltAndPepper+Normalize+ToTensor | dali | 9.9x | kornia |
-| RandomCrop224+Saturation+Normalize+ToTensor | dali | 6.1x | kornia |
-| RandomCrop224+JpegCompression+Normalize+ToTensor | dali | 6.0x | kornia |
-| RandomCrop224+ColorJitter+Normalize+ToTensor | dali | 6.0x | torchvision |
-| RandomCrop224+ColorJiggle+Normalize+ToTensor | dali | 5.9x | torchvision |
-| RandomCrop224+GaussianNoise+Normalize+ToTensor | dali | 5.5x | kornia |
-| RandomCrop224+Hue+Normalize+ToTensor | dali | 5.3x | kornia |
-| RandomCrop224+Posterize+Normalize+ToTensor | torchvision | 3.7x | kornia |
-| RandomCrop224+ChannelShuffle+Normalize+ToTensor | torchvision | 3.2x | kornia |
+| RandomCrop224+CLAHE+Normalize+ToTensor | dali | 22.5x | kornia |
+| RandomCrop224+SaltAndPepper+Normalize+ToTensor | dali | 10.2x | kornia |
+| RandomCrop224+Posterize+Normalize+ToTensor | torchvision | 8.4x | kornia |
+| RandomCrop224+Invert+Normalize+ToTensor | torchvision | 7.4x | kornia |
+| RandomCrop224+Hue+Normalize+ToTensor | dali | 6.5x | kornia |
+| RandomCrop224+Saturation+Normalize+ToTensor | dali | 6.5x | kornia |
+| RandomCrop224+JpegCompression+Normalize+ToTensor | dali | 6.4x | kornia |
+| RandomCrop224+Solarize+Normalize+ToTensor | torchvision | 6.4x | kornia |
+| RandomCrop224+ColorJitter+Normalize+ToTensor | dali | 6.1x | torchvision |
+| RandomCrop224+Grayscale+Normalize+ToTensor | torchvision | 6.0x | kornia |
 
 ## CPU DataLoader vs GPU DataLoader
 
 | Library | Compared rows | GPU faster | CPU faster/equal | Median GPU/CPU ratio |
 |---|---:|---:|---:|---:|
-| torchvision | 25 | 3 | 22 | 0.56x |
-| kornia | 48 | 4 | 44 | 0.44x |
+| torchvision | 25 | 13 | 12 | 1.00x |
+| kornia | 49 | 4 | 45 | 0.42x |
 | dali | 0 | 0 | 0 | -x |
 
 Largest GPU wins:
 
 | Library | Transform | CPU img/s | GPU img/s | GPU/CPU |
 |---|---|---:|---:|---:|
-| kornia | RandomCrop224+MedianBlur+Normalize+ToTensor | 87.6 | 342.2 | 3.91x |
-| kornia | RandomCrop224+Elastic+Normalize+ToTensor | 102.6 | 330.5 | 3.22x |
-| torchvision | RandomCrop224+Resize+Normalize+ToTensor | 1225.1 | 2050.4 | 1.67x |
-| torchvision | RandomCrop224+Sharpen+Normalize+ToTensor | 1401.0 | 1943.8 | 1.39x |
-| kornia | RandomCrop224+PlasmaBrightness+Normalize+ToTensor | 439.7 | 587.5 | 1.34x |
-| kornia | RandomCrop224+PlasmaContrast+Normalize+ToTensor | 437.9 | 583.8 | 1.33x |
-| torchvision | RandomCrop224+GaussianBlur+Normalize+ToTensor | 1458.1 | 1870.9 | 1.28x |
-| torchvision | RandomCrop224+AutoContrast+Normalize+ToTensor | 2330.4 | 2044.5 | 0.88x |
-| kornia | RandomCrop224+JpegCompression+Normalize+ToTensor | 729.0 | 626.0 | 0.86x |
-| kornia | RandomCrop224+ThinPlateSpline+Normalize+ToTensor | 753.2 | 624.4 | 0.83x |
+| kornia | RandomCrop224+MedianBlur+Normalize+ToTensor | 87.6 | 327.0 | 3.73x |
+| kornia | RandomCrop224+Elastic+Normalize+ToTensor | 102.6 | 316.3 | 3.08x |
+| torchvision | RandomCrop224+Resize+Normalize+ToTensor | 1225.1 | 2829.3 | 2.31x |
+| torchvision | RandomCrop224+Sharpen+Normalize+ToTensor | 1401.0 | 2303.8 | 1.64x |
+| torchvision | RandomCrop224+Normalize+ToTensor | 3939.9 | 6252.6 | 1.59x |
+| torchvision | RandomCrop224+HorizontalFlip+Normalize+ToTensor | 3760.4 | 5050.4 | 1.34x |
+| torchvision | RandomCrop224+GaussianBlur+Normalize+ToTensor | 1458.1 | 1957.2 | 1.34x |
+| torchvision | RandomCrop224+VerticalFlip+Normalize+ToTensor | 3828.0 | 5020.2 | 1.31x |
+| torchvision | RandomCrop224+Invert+Normalize+ToTensor | 3794.0 | 4868.1 | 1.28x |
+| kornia | RandomCrop224+PlasmaBrightness+Normalize+ToTensor | 439.7 | 561.6 | 1.28x |
 
 Largest CPU wins:
 
 | Library | Transform | CPU img/s | GPU img/s | GPU/CPU |
 |---|---|---:|---:|---:|
-| kornia | RandomCrop224+Rain+Normalize+ToTensor | 1479.3 | 305.9 | 0.21x |
-| kornia | RandomCrop224+CLAHE+Normalize+ToTensor | 761.4 | 163.3 | 0.21x |
-| kornia | RandomCrop224+Equalize+Normalize+ToTensor | 1268.2 | 322.1 | 0.25x |
-| kornia | RandomCrop224+SaltAndPepper+Normalize+ToTensor | 1429.0 | 386.2 | 0.27x |
-| kornia | RandomCrop224+CornerIllumination+Normalize+ToTensor | 1441.0 | 411.5 | 0.29x |
-| kornia | RandomCrop224+LongestMaxSize+Normalize+ToTensor | 628.1 | 182.1 | 0.29x |
-| torchvision | RandomCrop224+Perspective+Normalize+ToTensor | 2549.8 | 795.1 | 0.31x |
-| kornia | RandomCrop224+LinearIllumination+Normalize+ToTensor | 1591.9 | 519.7 | 0.33x |
-| kornia | RandomCrop224+SmallestMaxSize+Normalize+ToTensor | 553.6 | 182.5 | 0.33x |
-| kornia | RandomCrop224+Resize+Normalize+ToTensor | 538.3 | 185.8 | 0.35x |
+| kornia | RandomCrop224+Rain+Normalize+ToTensor | 1479.3 | 306.2 | 0.21x |
+| kornia | RandomCrop224+CLAHE+Normalize+ToTensor | 761.4 | 165.5 | 0.22x |
+| kornia | RandomCrop224+Equalize+Normalize+ToTensor | 1268.2 | 320.9 | 0.25x |
+| kornia | RandomCrop224+SaltAndPepper+Normalize+ToTensor | 1429.0 | 375.3 | 0.26x |
+| kornia | RandomCrop224+CornerIllumination+Normalize+ToTensor | 1441.0 | 394.7 | 0.27x |
+| kornia | RandomCrop224+LongestMaxSize+Normalize+ToTensor | 628.1 | 178.7 | 0.28x |
+| torchvision | RandomCrop224+Perspective+Normalize+ToTensor | 2549.8 | 792.1 | 0.31x |
+| kornia | RandomCrop224+LinearIllumination+Normalize+ToTensor | 1591.9 | 503.2 | 0.32x |
+| kornia | RandomCrop224+SmallestMaxSize+Normalize+ToTensor | 553.6 | 179.0 | 0.32x |
+| kornia | RandomCrop224+Resize+Normalize+ToTensor | 538.3 | 181.2 | 0.34x |
 
 ## AlbumentationsX CPU DataLoader vs GPU DataLoader
 
 | GPU library | Compared rows | GPU faster than AlbumentationsX CPU | AlbumentationsX CPU faster/equal | Median GPU/AlbumentationsX ratio |
 |---|---:|---:|---:|---:|
-| torchvision | 25 | 1 | 24 | 0.39x |
-| kornia | 48 | 0 | 48 | 0.14x |
+| torchvision | 25 | 2 | 23 | 0.55x |
+| kornia | 49 | 0 | 49 | 0.13x |
 | dali | 22 | 3 | 19 | 0.82x |
 
 ## GPU Memory
 
 | Library | Transform | Throughput img/s | Peak allocated MB | Peak reserved MB | Status |
 |---|---|---:|---:|---:|---|
-| kornia | RandomCrop224+MedianBlur+Normalize+ToTensor | 342.2 | 4281.4 | 7202.0 | ok |
+| kornia | RandomCrop224+MedianBlur+Normalize+ToTensor | 327.0 | 4281.4 | 7202.0 | ok |
 | dali | RandomCrop224+HorizontalFlip+Normalize+ToTensor | 3722.4 | 3112.0 | 3112.0 | ok |
 | dali | RandomCrop224+Rotate+Normalize+ToTensor | 3808.5 | 3112.0 | 3112.0 | ok |
 | dali | RandomCrop224+Shear+Normalize+ToTensor | 3771.7 | 3112.0 | 3112.0 | ok |
@@ -212,7 +212,7 @@ Largest CPU wins:
 | CPU DataLoader | kornia | 51 | 0 | 0 |
 | CPU DataLoader | pillow | 25 | 1 | 0 |
 | GPU DataLoader | torchvision | 25 | 0 | 0 |
-| GPU DataLoader | kornia | 48 | 0 | 2 |
+| GPU DataLoader | kornia | 49 | 0 | 1 |
 | GPU DataLoader | dali | 22 | 0 | 35 |
 
 Full row-level reasons are generated in the public paper-data supplement after figure generation.
