@@ -77,6 +77,19 @@ _REPO_EXCLUDE_PATTERNS = [
     ".git",
 ]
 
+_RESOLVE_GCLOUD_SH = r"""
+resolve_gcloud() {
+  local candidate
+  for candidate in "$(command -v gcloud 2>/dev/null || true)" /usr/bin/gcloud /usr/local/bin/gcloud /snap/bin/gcloud; do
+    if [[ -n "$candidate" && -x "$candidate" ]] && "$candidate" --version >/dev/null 2>&1; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+"""
+
 # Bootstrap: fetch job.json + repo, stage data from GCS, run benchmark, upload artifacts, optional self-delete.
 _BOOTSTRAP_SH = (
     r"""#!/bin/bash
@@ -100,19 +113,8 @@ REPODIR="""
     + r"""
 DATADIR="""
     + _VM_DATADIR
+    + _RESOLVE_GCLOUD_SH
     + r"""
-
-resolve_gcloud() {
-  local candidate
-  for candidate in "$(command -v gcloud 2>/dev/null || true)" /usr/bin/gcloud /usr/local/bin/gcloud /snap/bin/gcloud; do
-    if [[ -n "$candidate" && -x "$candidate" ]] && "$candidate" --version >/dev/null 2>&1; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-  done
-  return 1
-}
-
 GCLOUD_BIN="$(resolve_gcloud)" || {
   echo "ERROR: gcloud is required on the VM image, but no working executable was found." >&2
   exit 1
@@ -190,9 +192,10 @@ upload_terminal_artifacts() {
   gcs_describe_retry() {
     local label="$1"
     local uri="$2"
-    local attempt rc
+    local attempt describe_cmd rc
     for attempt in 1 2 3 4 5; do
-      terminal_log "confirm ${label} attempt ${attempt}/5: timeout 30s ${GCLOUD_BIN} storage describe ${uri}"
+      describe_cmd="${GCLOUD_BIN} --quiet storage objects describe ${uri}"
+      terminal_log "confirm ${label} attempt ${attempt}/5: timeout 30s ${describe_cmd}"
       set +e
       timeout 30s "$GCLOUD_BIN" --quiet storage objects describe "$uri" >/dev/null 2>&1
       rc=$?
@@ -456,32 +459,25 @@ exit "$RC"
 """
 )
 
-_STARTUP_INLINE = r"""#!/bin/bash
+_STARTUP_INLINE = (
+    r"""#!/bin/bash
 set -euo pipefail
 export PATH="/usr/local/bin:/usr/bin:/bin:/snap/bin:${PATH}"
 PREFIX=$(curl -s -f -H "Metadata-Flavor: Google" \
   "http://metadata.google.internal/computeMetadata/v1/instance/attributes/benchmark-run-prefix")
 TMP=/tmp/benchmark-gcp-bootstrap.sh
-
-resolve_gcloud() {
-  local candidate
-  for candidate in "$(command -v gcloud 2>/dev/null || true)" /usr/bin/gcloud /usr/local/bin/gcloud /snap/bin/gcloud; do
-    if [[ -n "$candidate" && -x "$candidate" ]] && "$candidate" --version >/dev/null 2>&1; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-  done
-  return 1
-}
-
+"""
+    + _RESOLVE_GCLOUD_SH
+    + r"""
 GCLOUD_BIN="$(resolve_gcloud)" || {
-  echo "ERROR: gcloud is required to fetch bootstrap.sh, but no working executable was found."
+  echo "ERROR: gcloud is required to fetch bootstrap.sh, but no working executable was found." >&2
   exit 1
 }
 "$GCLOUD_BIN" --quiet storage cp "${PREFIX}/bootstrap.sh" "$TMP"
 chmod +x "$TMP"
 exec "$TMP"
 """
+)
 
 
 def _run(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
