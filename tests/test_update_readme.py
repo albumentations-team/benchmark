@@ -4,7 +4,12 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from tools.update_readme import latest_results_dir, patch_readme
+from tools.update_readme import (
+    apply_dataloader_display_names,
+    dataloader_recipe_display_name,
+    latest_results_dir,
+    patch_readme,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -133,6 +138,59 @@ def test_latest_results_dir_uses_latest_matching_snapshot(tmp_path: Path) -> Non
     unrelated.mkdir()
 
     assert latest_results_dir(tmp_path, "paper-rgb-micro-*") == newer
+
+
+def test_dataloader_recipe_display_name_removes_boilerplate_steps() -> None:
+    assert dataloader_recipe_display_name("RandomCrop224+Affine+Normalize+ToTensor") == "Affine"
+    assert dataloader_recipe_display_name("RandomCrop224+Normalize+ToTensor") == "RandomCrop224"
+    assert dataloader_recipe_display_name("RandomResizedCrop+Normalize+ToTensor") == "RandomResizedCrop"
+
+
+def test_dataloader_recipe_display_name_requires_tensor_suffix() -> None:
+    with pytest.raises(ValueError, match="DataLoader recipe must end with"):
+        dataloader_recipe_display_name("RandomCrop224+Affine")
+
+
+def test_apply_dataloader_display_names_copies_result_keys() -> None:
+    loaded = {
+        "albumentationsx": {
+            "library": "albumentationsx",
+            "media": "image",
+            "metadata": {},
+            "results": {
+                "RandomCrop224+Affine+Normalize+ToTensor": {"supported": True},
+                "RandomCrop224+Normalize+ToTensor": {"supported": True},
+            },
+        },
+    }
+
+    display_loaded = apply_dataloader_display_names(loaded)
+
+    assert sorted(display_loaded["albumentationsx"]["results"]) == ["Affine", "RandomCrop224"]
+    assert "RandomCrop224+Affine+Normalize+ToTensor" in loaded["albumentationsx"]["results"]
+
+
+def test_apply_dataloader_display_names_reports_colliding_recipes() -> None:
+    loaded = {
+        "albumentationsx": {
+            "library": "albumentationsx",
+            "media": "image",
+            "metadata": {},
+            "results": {
+                "RandomCrop224+Affine+Normalize+ToTensor": {"supported": True},
+                "Affine+Normalize+ToTensor": {"supported": True},
+            },
+        },
+    }
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "DataLoader recipe display name collision for 'Affine' under key 'albumentationsx': "
+            "'RandomCrop224\\+Affine\\+Normalize\\+ToTensor' and 'Affine\\+Normalize\\+ToTensor'"
+        ),
+    ):
+        apply_dataloader_display_names(loaded)
 
 
 def test_patch_readme_reports_no_change_when_no_sections_requested(tmp_path: Path) -> None:
