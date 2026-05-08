@@ -13,12 +13,15 @@ import argparse
 import os
 import re
 from pathlib import Path
+from typing import Any
 
 from tools.compare import format_comparison_table, load_results_dir
 
 # Libraries to keep out of public docs (internal / historical reference only)
 _DOCS_EXCLUDED: frozenset[str] = frozenset({"albumentations_mit"})
 _DEFAULT_PUBLISHED_ROOT = Path("results/published")
+_DATALOADER_DEFAULT_CROP_PREFIX = "RandomCrop224+"
+_DATALOADER_TENSOR_SUFFIX = "+Normalize+ToTensor"
 
 
 def latest_results_dir(root: Path, pattern: str) -> Path | None:
@@ -27,6 +30,35 @@ def latest_results_dir(root: Path, pattern: str) -> Path | None:
         return None
     matches = sorted(path for path in root.glob(pattern) if path.is_dir())
     return matches[-1] if matches else None
+
+
+def dataloader_recipe_display_name(recipe: str) -> str:
+    """Return a compact README display name for a full DataLoader recipe."""
+    if not recipe.endswith(_DATALOADER_TENSOR_SUFFIX):
+        msg = f"DataLoader recipe must end with {_DATALOADER_TENSOR_SUFFIX!r}: {recipe!r}"
+        raise ValueError(msg)
+    display_name = recipe.removesuffix(_DATALOADER_TENSOR_SUFFIX)
+    return display_name.removeprefix(_DATALOADER_DEFAULT_CROP_PREFIX)
+
+
+def apply_dataloader_display_names(loaded: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Copy loaded DataLoader results with compact recipe names for README tables."""
+    display_loaded: dict[str, dict[str, Any]] = {}
+    for key, entry in loaded.items():
+        display_results: dict[str, Any] = {}
+        display_recipes: dict[str, str] = {}
+        for recipe, result in entry["results"].items():
+            display_name = dataloader_recipe_display_name(recipe)
+            if display_name in display_results:
+                msg = (
+                    f"DataLoader recipe display name collision for {display_name!r} "
+                    f"under key {key!r}: {display_recipes[display_name]!r} and {recipe!r}"
+                )
+                raise ValueError(msg)
+            display_results[display_name] = result
+            display_recipes[display_name] = recipe
+        display_loaded[key] = {**entry, "results": display_results}
+    return display_loaded
 
 
 def patch_readme(
@@ -181,7 +213,11 @@ def main() -> None:
         dataloader_loaded = _load(dataloader_results, "image", exclude_docs=True)
 
     image_table = format_comparison_table(image_loaded) if image_loaded else None
-    dataloader_table = format_comparison_table(dataloader_loaded, name_header="Recipe") if dataloader_loaded else None
+    dataloader_table = (
+        format_comparison_table(apply_dataloader_display_names(dataloader_loaded), name_header="Augmentation")
+        if dataloader_loaded
+        else None
+    )
 
     # Summary text for Performance Highlights
     image_summary = compute_summary_text(image_table, "RGB micro") if image_table else None
