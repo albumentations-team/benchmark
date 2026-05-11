@@ -80,7 +80,8 @@ def test_methodology_doc_references_core_policy_modules() -> None:
         assert module_path in doc
         assert (REPO_ROOT / module_path).exists()
 
-    assert not any(line.startswith("|") for line in doc.splitlines())
+    # The methodology doc is prose-only source material; tables belong in scope/result docs.
+    assert not any(line.lstrip().startswith("|") for line in doc.splitlines())
 
 
 def test_skills_document_centralized_policy_and_matrix() -> None:
