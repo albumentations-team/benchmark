@@ -28,8 +28,29 @@ REGIME_LABELS = {
     "rgb_micro_gpu": "GPU micro",
     "rgb_dataloader_cpu": "CPU DataLoader",
     "rgb_dataloader_gpu": "GPU DataLoader",
+    "image9ch_micro_cpu": "9ch CPU micro",
+    "image9ch_micro_gpu": "9ch GPU micro",
+    "image9ch_dataloader_cpu": "9ch CPU DataLoader",
+    "image9ch_dataloader_gpu": "9ch GPU DataLoader",
+    "video16f_micro_cpu": "Video CPU micro",
+    "video16f_micro_gpu": "Video GPU micro",
+    "video16f_dataloader_cpu": "Video CPU DataLoader",
+    "video16f_dataloader_gpu": "Video GPU DataLoader",
 }
-REGIME_ORDER = ["CPU micro", "CPU DataLoader", "GPU micro", "GPU DataLoader"]
+REGIME_ORDER = [
+    "CPU micro",
+    "CPU DataLoader",
+    "GPU micro",
+    "GPU DataLoader",
+    "9ch CPU micro",
+    "9ch CPU DataLoader",
+    "9ch GPU micro",
+    "9ch GPU DataLoader",
+    "Video CPU micro",
+    "Video CPU DataLoader",
+    "Video GPU micro",
+    "Video GPU DataLoader",
+]
 
 
 class MeasuredRow(Protocol):
@@ -53,7 +74,7 @@ def fmt_ratio(value: float) -> str:
 
 
 def implementation_label(regime: str, library: str) -> str:
-    device = "GPU" if regime == "rgb_dataloader_gpu" else "CPU"
+    device = "GPU" if regime.endswith("_gpu") else "CPU"
     return f"{LIBRARY_DISPLAY.get(library, library)} {device}"
 
 

@@ -870,7 +870,7 @@ def _write_insights(
         "- Main text figure source: `docs/paper_data/figure_elastic_row.csv` for the Elastic implementation drill-down.",
         "- Main text table: `docs/paper_data/summary.md` sections `Coverage Summary`, `AlbumentationsX CPU DataLoader vs GPU DataLoader`, and `GPU Memory`.",
         "- Appendix table: `docs/paper_data/production_support_matrix.md` for the 57-row production DataLoader support/performance matrix.",
-        "- Supporting pivot tables: `docs/paper_data/rgb_dataloader_cpu_pivot.csv` and `docs/paper_data/rgb_dataloader_gpu_pivot.csv`.",
+        "- Supporting pivot tables: `docs/paper_data/*_pivot.csv` for each generated RGB and 9-channel regime.",
         "- Reproducibility table: `docs/paper_data/all_results.csv` with source file provenance.",
         "",
         "## Current Data Summary",
@@ -1003,6 +1003,70 @@ def _figure_markdown(figures: list[dict[str, str]], prefix: str) -> str:
     return "\n".join(blocks).strip()
 
 
+README_SCENARIO_TABLES = [
+    (
+        "RGB benchmark table",
+        "rgb_",
+        ["rgb_micro_cpu", "rgb_dataloader_cpu", "rgb_micro_gpu", "rgb_dataloader_gpu"],
+    ),
+    (
+        "9-channel benchmark table",
+        "image9ch_",
+        ["image9ch_micro_cpu", "image9ch_dataloader_cpu", "image9ch_micro_gpu", "image9ch_dataloader_gpu"],
+    ),
+    (
+        "Video benchmark table",
+        "video16f_",
+        ["video16f_micro_cpu", "video16f_dataloader_cpu", "video16f_micro_gpu", "video16f_dataloader_gpu"],
+    ),
+]
+
+
+def _readme_transform_tables_markdown() -> str:
+    df = pd.read_csv(GENERATED / "all_results.csv")
+    blocks = [
+        "### Scenario benchmark tables",
+        "",
+        "Rows are transforms. Columns are benchmark regimes. Each cell shows the fastest full measured implementation for that transform and regime, formatted as `Library throughput`; `-` means no full measured row is available.",
+    ]
+    for title, regime_prefix, regimes in README_SCENARIO_TABLES:
+        subset = df[df["regime"].astype(str).str.startswith(regime_prefix)].copy()
+        blocks.extend(["", f"#### {title}", ""])
+        if subset.empty:
+            blocks.append("No published snapshots are available for this scenario yet.")
+            continue
+        subset["full"] = (
+            subset["supported"].astype(bool)
+            & ~subset["early_stopped"].astype(bool)
+            & (subset["num_successful_runs"].astype(int) > 0)
+        )
+        subset["display_transform"] = subset["transform"].astype(str).map(recipe_display_name)
+        headers = [
+            "Transform",
+            *[
+                str(subset.loc[subset["regime"] == regime, "regime_label"].iloc[0])
+                for regime in regimes
+                if (subset["regime"] == regime).any()
+            ],
+        ]
+        active_regimes = [regime for regime in regimes if (subset["regime"] == regime).any()]
+        blocks.append("| " + " | ".join(headers) + " |")
+        blocks.append("| " + " | ".join(["---", *["---:" for _ in active_regimes]]) + " |")
+        for transform in sorted(subset["display_transform"].unique()):
+            cells = [transform]
+            for regime in active_regimes:
+                candidates = subset[(subset["regime"] == regime) & (subset["display_transform"] == transform)]
+                measured = candidates[candidates["full"]].sort_values("median_throughput", ascending=False)
+                if measured.empty:
+                    cells.append("-")
+                    continue
+                best = measured.iloc[0]
+                library = LIBRARY_DISPLAY.get(str(best["library"]), str(best["library"]))
+                cells.append(f"{library} {float(best['median_throughput']):.1f}")
+            blocks.append("| " + " | ".join(cells) + " |")
+    return "\n".join(blocks)
+
+
 def _write_figure_markdown() -> None:
     readme_block = "\n".join(
         [
@@ -1011,6 +1075,8 @@ def _write_figure_markdown() -> None:
             _figure_markdown(MAIN_FIGURES, "docs/paper_figures/"),
             "",
             _figure_markdown(APPENDIX_FIGURES, "docs/paper_figures/"),
+            "",
+            _readme_transform_tables_markdown(),
         ],
     )
     _patch_between_markers(
@@ -1088,9 +1154,10 @@ def _sync_public_data() -> None:
         "production_support_matrix.md",
         "unsupported_and_early_stopped.csv",
         "unsupported_and_early_stopped.md",
-        "rgb_dataloader_cpu_pivot.csv",
-        "rgb_dataloader_gpu_pivot.csv",
     ]
+    names.extend(path.name for path in GENERATED.glob("*_pivot.csv"))
+    names.extend(path.name for path in GENERATED.glob("*_cpu.csv"))
+    names.extend(path.name for path in GENERATED.glob("*_gpu.csv"))
     for name in names:
         source = GENERATED / name
         if source.exists():

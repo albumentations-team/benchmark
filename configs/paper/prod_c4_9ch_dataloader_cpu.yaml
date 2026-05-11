@@ -2,7 +2,7 @@ version: 1
 selection:
   scenario: image-9ch
   mode: pipeline
-  libraries: [albumentationsx, torchvision, kornia]
+  libraries: [albumentationsx, torchvision]
   transform_set: paper
 data:
   data_dir: /tmp/unused
