@@ -21,6 +21,9 @@ from common import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from tools.compare import format_comparison_table, load_results_dir
+
 os.environ.setdefault("MPLCONFIGDIR", "/private/tmp/benchmark-matplotlib")
 os.environ.setdefault("XDG_CACHE_HOME", "/private/tmp/benchmark-cache")
 
@@ -34,6 +37,7 @@ PAPER_DIR = ROOT / "_internal" / "paper" / "neurips_2026_ed"
 PAPER_FIGURES = PAPER_DIR / "figures"
 README = ROOT / "README.md"
 DRAFT = ROOT / "_internal" / "paper" / "draft.md"
+VIDEO_RESULTS = ROOT / "output_videos"
 
 PAPER_UNIVERSE_REGIME = "rgb_dataloader_cpu"
 PAPER_UNIVERSE_LIBRARY = "albumentationsx"
@@ -93,7 +97,7 @@ MAIN_FIGURES = [
 APPENDIX_FIGURES = [
     {
         "path": "winner_counts.png",
-        "title": "Appendix Figure. Winner counts by benchmark regime",
+        "title": "Figure 5. Winner counts by benchmark regime",
         "caption": (
             "Measured winner counts among comparable measured transforms by regime. The conclusion changes when "
             "moving from augmentation-only microbenchmarks to production-style DataLoader measurements."
@@ -1005,7 +1009,7 @@ def _figure_markdown(figures: list[dict[str, str]], prefix: str) -> str:
 
 README_SCENARIO_TABLES = [
     (
-        "RGB benchmark table",
+        "RGB",
         "rgb_",
         [
             ("rgb_micro_cpu", "albumentationsx"),
@@ -1015,7 +1019,7 @@ README_SCENARIO_TABLES = [
         ],
     ),
     (
-        "9-channel benchmark table",
+        "9-Channel",
         "image9ch_",
         [
             ("image9ch_micro_cpu", "albumentationsx"),
@@ -1025,7 +1029,7 @@ README_SCENARIO_TABLES = [
         ],
     ),
     (
-        "Video benchmark table",
+        "Video",
         "video16f_",
         [
             ("video16f_micro_cpu", "albumentationsx"),
@@ -1037,18 +1041,34 @@ README_SCENARIO_TABLES = [
 ]
 
 
+def _readme_video_table_markdown() -> str | None:
+    if not VIDEO_RESULTS.exists():
+        return None
+    loaded = {
+        key: value
+        for key, value in load_results_dir(VIDEO_RESULTS).items()
+        if value["media"] == "video" and value["library"] != "albumentations_mit"
+    }
+    if not loaded:
+        return None
+    return format_comparison_table(loaded)
+
+
 def _readme_transform_tables_markdown() -> str:
     df = pd.read_csv(GENERATED / "all_results.csv")
     blocks = [
-        "### Scenario benchmark tables",
+        "### Result Tables",
         "",
-        "Rows are transforms. Columns are selected benchmark implementations. Each cell shows throughput in images/s for that implementation; `-` means no full measured row is available.",
+        "The tables below summarize the checked-in benchmark results for RGB images, 9-channel images, and video clips. Image tables report throughput in images/s; the video table reports clips/s. A dash means no full measured row is available.",
     ]
     for title, regime_prefix, columns in README_SCENARIO_TABLES:
         subset = df[df["regime"].astype(str).str.startswith(regime_prefix)].copy()
-        blocks.extend(["", f"#### {title}", ""])
+        blocks.extend(["", f"### {title}", ""])
         if subset.empty:
-            blocks.append("No published snapshots are available for this scenario yet.")
+            if title == "Video" and (video_table := _readme_video_table_markdown()) is not None:
+                blocks.append(video_table)
+            else:
+                blocks.append("No benchmark snapshot is available yet.")
             continue
         subset["full"] = (
             subset["supported"].astype(bool)
@@ -1090,7 +1110,7 @@ def _readme_transform_tables_markdown() -> str:
 def _write_figure_markdown() -> None:
     readme_block = "\n".join(
         [
-            "The paper figures below are generated from the checked-in data under `docs/paper_data/`.",
+            "The figures and tables below are generated from checked-in benchmark data.",
             "",
             _figure_markdown(MAIN_FIGURES, "docs/paper_figures/"),
             "",

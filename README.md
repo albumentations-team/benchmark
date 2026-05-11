@@ -12,14 +12,12 @@ A comprehensive benchmarking suite for comparing the performance of popular imag
   - [Overview](#overview)
   - [Benchmark Types](#benchmark-types)
     - [Image Benchmarks](#image-benchmarks)
-    - [RGB DataLoader Benchmarks](#rgb-dataloader-benchmarks)
-    - [Multi-Channel Image Benchmarks (9ch)](#multi-channel-image-benchmarks-9ch)
     - [Video Benchmarks](#video-benchmarks)
-  - [Paper Figures](#paper-figures)
-  - [Performance Highlights](#performance-highlights)
-    - [Image Augmentation Performance](#image-augmentation-performance)
-    - [RGB DataLoader Performance](#rgb-dataloader-performance)
-    - [Video Augmentation Performance](#video-augmentation-performance)
+  - [Benchmark Results](#benchmark-results)
+    - [Result Tables](#result-tables)
+    - [RGB](#rgb)
+    - [9-Channel](#9-channel)
+    - [Video](#video)
   - [Requirements](#requirements)
   - [Supported Libraries](#supported-libraries)
   - [Setup](#setup)
@@ -55,15 +53,21 @@ The image benchmarks compare the performance of various libraries on standard im
 - **Micro / profiler benchmarks** preload decoded images and time augmentation only. These runs use one internal CPU thread for every library to measure single-stream transform cost. For tensor-native image libraries (`torchvision`, `kornia`), `--device cuda|mps|auto` preloads tensors on the selected device and times device-resident augmentation.
 - **DataLoader benchmarks** use recipe-level training pipelines. `memory_dataloader_augment` preloads decoded samples and isolates worker/augmentation scaling; `decode_dataloader_augment` adds disk read/decode; `decode_dataloader_augment_batch_copy` additionally materializes the collated batch tensor and copies it to CUDA/MPS when requested. CPU image pipelines apply the full recipe inside the dataset path before collation. TorchVision and Kornia image GPU DataLoader rows split the recipe: workers use the same library on CPU for crop/pad shape preparation, then the collated batch is copied to GPU. Kornia runs the measured augmentation batched with `same_on_batch=False` plus normalization; TorchVision runs only the measured augmentation in a per-sample GPU loop to preserve per-image randomness, then applies normalization once to the whole batch. Pipeline recipes include `Normalize+ToTensor` in the library spec: AlbumentationsX uses `ToTensorV2`, Pillow uses `torchvision.transforms.PILToTensor` before normalization, and torchvision/Kornia already operate on tensors. All pipeline recipes return fixed-shape tensor outputs that PyTorch default collation can stack. These runs record worker counts, thread policy, device target, and whether decode/collate/device transfer were included.
 
-For the deadline-first paper pass, use `2,000` ImageNet validation images for micro benchmarks and `10,000` images for
-DataLoader/pipeline benchmarks. Run one measurement per row first, validate coverage, then top up important rows with
-additional repeats.
+The checked-in result tables use `2,000` ImageNet validation images for image micro benchmarks and `10,000` images for
+image DataLoader benchmarks. Full `50,000`-image ImageNet sweeps are optional when validating a specific production
+deployment.
 
-## Paper Figures
+### Video Benchmarks
+
+Video benchmarks use fixed-length clips from UCF101. AlbumentationsX receives clips as NumPy arrays with shape
+`(T, H, W, C)` and applies transforms through `transform(images=video)["images"]`, so parameters are sampled once per
+clip and shared across frames. This matches the training-style semantics used by Kornia's `same_on_batch=True` path.
+
+## Benchmark Results
 
 <!-- PAPER_FIGURES_START -->
 
-The paper figures below are generated from the checked-in data under `docs/paper_data/`.
+The figures and tables below are generated from checked-in benchmark data.
 
 ### Figure 1. Open production DataLoader category
 
@@ -89,17 +93,17 @@ Each point is a paired GPU DataLoader recipe divided by the AlbumentationsX CPU 
 
 GPU augmentation also consumes accelerator memory that would otherwise be available to model parameters, activations, optimizer state, or larger batches. Each point is a measured GPU DataLoader row with peak allocated memory recorded during the benchmark.
 
-### Appendix Figure. Winner counts by benchmark regime
+### Figure 5. Winner counts by benchmark regime
 
-![Appendix Figure. Winner counts by benchmark regime](docs/paper_figures/winner_counts.png)
+![Figure 5. Winner counts by benchmark regime](docs/paper_figures/winner_counts.png)
 
 Measured winner counts among comparable measured transforms by regime. The conclusion changes when moving from augmentation-only microbenchmarks to production-style DataLoader measurements.
 
-### Scenario benchmark tables
+### Result Tables
 
-Rows are transforms. Columns are selected benchmark implementations. Each cell shows throughput in images/s for that implementation; `-` means no full measured row is available.
+The tables below summarize the checked-in benchmark results for RGB images, 9-channel images, and video clips. Image tables report throughput in images/s; the video table reports clips/s. A dash means no full measured row is available.
 
-#### RGB benchmark table
+### RGB
 
 | Transform | AlbumentationsX<br>CPU micro | AlbumentationsX<br>CPU DataLoader | TorchVision<br>GPU micro | DALI<br>GPU DataLoader |
 | --- | ---: | ---: | ---: | ---: |
@@ -161,7 +165,7 @@ Rows are transforms. Columns are selected benchmark implementations. Each cell s
 | UnsharpMask | 906.1 | 4521.6 | - | - |
 | VerticalFlip | 14051.5 | 5301.7 | 16368.3 | 3766.2 |
 
-#### 9-channel benchmark table
+### 9-Channel
 
 | Transform | AlbumentationsX<br>9ch CPU micro | AlbumentationsX<br>9ch CPU DataLoader | TorchVision<br>9ch GPU micro | TorchVision<br>9ch GPU DataLoader |
 | --- | ---: | ---: | ---: | ---: |
@@ -207,207 +211,7 @@ Rows are transforms. Columns are selected benchmark implementations. Each cell s
 | ThinPlateSpline | 44.4 | 460.9 | - | - |
 | VerticalFlip | 4444.1 | 2021.4 | 23657.7 | 1560.0 |
 
-#### Video benchmark table
-
-No published snapshots are available for this scenario yet.
-
-<!-- PAPER_FIGURES_END -->
-
-<!-- IMAGE_BENCHMARK_TABLE_START -->
-
-| Transform            | AlbumentationsX 2.2.6 [img/s]   | kornia 0.8.2 [img/s]   | pillow 12.2.0 [img/s]   | torchvision 0.26.0 [img/s]   | Speedup (albx / fastest, +/-1sd)   |
-|:---------------------|:--------------------------------|:-----------------------|:------------------------|:-----------------------------|:-----------------------------------|
-| Affine               | **872 ± 8**                     | 402 ± 3                | 264 ± 2                 | 240 ± 1                      | 2.17x (2.13-2.20x)                 |
-| AutoContrast         | **1243 ± 19**                   | 231 ± 1                | 899 ± 4                 | 159 ± 0                      | 1.38x (1.36-1.41x)                 |
-| Blur                 | **4449 ± 17**                   | 57 ± 0                 | 409 ± 3                 | -                            | 10.87x (10.76-10.98x)              |
-| Brightness           | **6912 ± 13**                   | 766 ± 7                | 609 ± 4                 | 804 ± 15                     | 8.60x (8.43-8.77x)                 |
-| CLAHE                | **283 ± 1**                     | 62 ± 0                 | -                       | -                            | 4.59x (4.57-4.62x)                 |
-| ChannelDropout       | **6810 ± 65**                   | 828 ± 6                | -                       | -                            | 8.23x (8.09-8.37x)                 |
-| ChannelShuffle       | **4337 ± 13**                   | 487 ± 2                | -                       | 1866 ± 72                    | 2.32x (2.23-2.43x)                 |
-| ColorJiggle          | **639 ± 5**                     | 34 ± 0                 | -                       | 47 ± 0                       | 13.52x (13.37-13.68x)              |
-| ColorJitter          | **641 ± 1**                     | 52 ± 1                 | -                       | 47 ± 0                       | 12.40x (12.25-12.56x)              |
-| Contrast             | **6933 ± 30**                   | 771 ± 9                | 443 ± 1                 | 475 ± 7                      | 9.00x (8.85-9.15x)                 |
-| CornerIllumination   | **425 ± 2**                     | 157 ± 0                | -                       | -                            | 2.71x (2.69-2.73x)                 |
-| Elastic              | **191 ± 0**                     | ≤20 img/s              | -                       | ≤20 img/s                    | N/A                                |
-| EnhanceDetail        | **2148 ± 13**                   | -                      | 275 ± 1                 | -                            | 7.80x (7.72-7.89x)                 |
-| EnhanceEdge          | **1373 ± 16**                   | -                      | 219 ± 0                 | -                            | 6.27x (6.19-6.36x)                 |
-| Equalize             | 807 ± 3                         | 128 ± 0                | **882 ± 12**            | 313 ± 1                      | 0.92x (0.90-0.93x)                 |
-| Erasing              | **9511 ± 74**                   | 298 ± 1                | -                       | 1872 ± 71                    | 5.08x (4.86-5.32x)                 |
-| GaussianBlur         | **2343 ± 4**                    | 57 ± 0                 | 169 ± 1                 | 86 ± 0                       | 13.85x (13.78-13.92x)              |
-| GaussianIllumination | **388 ± 1**                     | 188 ± 0                | -                       | -                            | 2.07x (2.06-2.07x)                 |
-| GaussianNoise        | **225 ± 0**                     | 49 ± 0                 | -                       | -                            | 4.63x                              |
-| Grayscale            | **5194 ± 1**                    | 418 ± 1                | 1591 ± 15               | 1198 ± 32                    | 3.27x (3.23-3.30x)                 |
-| HorizontalFlip       | **8416 ± 19**                   | 920 ± 10               | 2612 ± 21               | 1999 ± 82                    | 3.22x (3.19-3.25x)                 |
-| Hue                  | **967 ± 1**                     | 66 ± 0                 | -                       | -                            | 14.75x (14.68-14.83x)              |
-| Invert               | **15095 ± 61**                  | 1015 ± 2               | 1974 ± 26               | 2619 ± 152                   | 5.76x (5.43-6.14x)                 |
-| JpegCompression      | **692 ± 7**                     | 43 ± 0                 | 515 ± 1                 | 512 ± 4                      | 1.34x (1.33-1.36x)                 |
-| LinearIllumination   | **521 ± 1**                     | 327 ± 3                | -                       | -                            | 1.59x (1.57-1.61x)                 |
-| LongestMaxSize       | **2825 ± 42**                   | 330 ± 1                | -                       | -                            | 8.55x (8.39-8.72x)                 |
-| MedianBlur           | **843 ± 4**                     | ≤20 img/s              | ≤20 img/s               | -                            | N/A                                |
-| MotionBlur           | **1953 ± 21**                   | 81 ± 1                 | -                       | -                            | 24.07x (23.54-24.62x)              |
-| OpticalDistortion    | **274 ± 1**                     | 201 ± 1                | -                       | -                            | 1.36x (1.35-1.37x)                 |
-| Pad                  | **13181 ± 118**                 | -                      | 3167 ± 37               | 2420 ± 122                   | 4.16x (4.08-4.25x)                 |
-| Perspective          | **559 ± 2**                     | 181 ± 1                | -                       | 202 ± 2                      | 2.77x (2.73-2.81x)                 |
-| PhotoMetricDistort   | **581 ± 4**                     | -                      | -                       | 45 ± 0                       | 12.84x (12.72-12.95x)              |
-| PlankianJitter       | **2253 ± 17**                   | 580 ± 2                | -                       | -                            | 3.88x (3.84-3.92x)                 |
-| PlasmaBrightness     | **267 ± 1**                     | ≤20 img/s              | -                       | -                            | N/A                                |
-| PlasmaContrast       | **143 ± 0**                     | ≤20 img/s              | -                       | -                            | N/A                                |
-| PlasmaShadow         | **420 ± 3**                     | 53 ± 0                 | -                       | -                            | 7.94x (7.89-8.00x)                 |
-| Posterize            | **14399 ± 58**                  | 290 ± 9                | 1977 ± 7                | 2598 ± 137                   | 5.54x (5.24-5.87x)                 |
-| RGBShift             | **2292 ± 3**                    | 597 ± 3                | -                       | -                            | 3.84x (3.81-3.86x)                 |
-| Rain                 | **1259 ± 2**                    | 527 ± 5                | -                       | -                            | 2.39x (2.36-2.41x)                 |
-| RandomCrop224        | **38380 ± 192**                 | 981 ± 5                | -                       | 8492 ± 1207                  | 4.52x (3.94-5.29x)                 |
-| RandomGamma          | **9938 ± 46**                   | 308 ± 2                | -                       | -                            | 32.28x (31.91-32.65x)              |
-| RandomJigsaw         | **5172 ± 16**                   | 219 ± 2                | -                       | -                            | 23.67x (23.40-23.94x)              |
-| RandomResizedCrop    | **7150 ± 19**                   | 622 ± 3                | -                       | 2823 ± 172                   | 2.53x (2.38-2.70x)                 |
-| RandomRotate90       | **5990 ± 85**                   | 333 ± 4                | -                       | -                            | 17.96x (17.52-18.42x)              |
-| Resize               | **2463 ± 37**                   | 271 ± 1                | 396 ± 4                 | 979 ± 23                     | 2.52x (2.42-2.61x)                 |
-| Rotate               | **1408 ± 40**                   | 325 ± 2                | 1045 ± 13               | 223 ± 1                      | 1.35x (1.29-1.40x)                 |
-| SaltAndPepper        | **738 ± 10**                    | 154 ± 1                | -                       | -                            | 4.79x (4.71-4.88x)                 |
-| Saturation           | **847 ± 17**                    | 67 ± 0                 | 500 ± 3                 | -                            | 1.69x (1.65-1.74x)                 |
-| Sharpen              | **1388 ± 5**                    | 58 ± 0                 | -                       | 75 ± 0                       | 18.51x (18.36-18.65x)              |
-| Shear                | **784 ± 6**                     | 403 ± 1                | 217 ± 0                 | -                            | 1.95x (1.93-1.96x)                 |
-| SmallestMaxSize      | **2017 ± 25**                   | 214 ± 1                | -                       | -                            | 9.42x (9.27-9.57x)                 |
-| Snow                 | **489 ± 3**                     | 62 ± 0                 | -                       | -                            | 7.86x (7.80-7.91x)                 |
-| Solarize             | **9760 ± 34**                   | 214 ± 1                | 1966 ± 6                | 545 ± 10                     | 4.96x (4.93-5.00x)                 |
-| ThinPlateSpline      | **52 ± 0**                      | 36 ± 0                 | -                       | -                            | 1.43x                              |
-| Transpose            | **4627 ± 26**                   | -                      | 1934 ± 35               | -                            | 2.39x (2.34-2.45x)                 |
-| UnsharpMask          | **906 ± 2**                     | -                      | 134 ± 0                 | -                            | 6.76x (6.73-6.78x)                 |
-| VerticalFlip         | **14051 ± 55**                  | 1067 ± 2               | 3670 ± 21               | 2490 ± 149                   | 3.83x (3.79-3.87x)                 |
-
-<!-- IMAGE_BENCHMARK_TABLE_END -->
-
-### RGB DataLoader Benchmarks
-
-DataLoader benchmarks measure full training-style recipes, including collation and worker behavior. Rows are displayed by
-augmentation to keep the table compact: non-crop rows run `RandomCrop224 + augmentation + Normalize + ToTensor`, while
-crop rows (`RandomCrop224`, `RandomResizedCrop`) run the listed crop followed by `Normalize + ToTensor`. The table below
-is generated from a published `paper-rgb-dataloader-*` snapshot by `tools/update_readme.py`.
-
-<!-- DATALOADER_BENCHMARK_TABLE_START -->
-
-| Augmentation         | AlbumentationsX 2.2.6 [img/s]   | kornia 0.8.2 [img/s]   | pillow 12.2.0 [img/s]   | torchvision 0.26.0 [img/s]   | Speedup (albx / fastest, +/-1sd)   |
-|:---------------------|:--------------------------------|:-----------------------|:------------------------|:-----------------------------|:-----------------------------------|
-| Affine               | **4533 ± 39**                   | 1501 ± 21              | 2616 ± 88               | 2843 ± 21                    | 1.59x (1.57-1.62x)                 |
-| AutoContrast         | **4594 ± 104**                  | 1604 ± 21              | 3268 ± 6                | 2275 ± 78                    | 1.41x (1.37-1.44x)                 |
-| Blur                 | **5222 ± 75**                   | 1228 ± 30              | 3011 ± 60               | -                            | 1.73x (1.68-1.79x)                 |
-| Brightness           | **5043 ± 265**                  | 1696 ± 38              | 3255 ± 7                | 3480 ± 16                    | 1.45x (1.37-1.53x)                 |
-| CLAHE                | **3277 ± 152**                  | 758 ± 5                | -                       | -                            | 4.32x (4.10-4.55x)                 |
-| ChannelDropout       | **5393 ± 109**                  | 1734 ± 8               | -                       | -                            | 3.11x (3.03-3.19x)                 |
-| ChannelShuffle       | **5083 ± 5**                    | 1687 ± 69              | -                       | 4061 ± 6                     | 1.25x (1.25-1.25x)                 |
-| ColorJiggle          | **4218 ± 79**                   | 767 ± 4                | -                       | 1217 ± 25                    | 3.46x (3.33-3.60x)                 |
-| ColorJitter          | **4046 ± 253**                  | 960 ± 12               | -                       | 1209 ± 56                    | 3.35x (3.00-3.73x)                 |
-| Contrast             | **5205 ± 76**                   | 1720 ± 12              | 2925 ± 60               | 3092 ± 150                   | 1.68x (1.58-1.79x)                 |
-| CornerIllumination   | **3823 ± 1**                    | 1421 ± 29              | -                       | -                            | 2.69x (2.64-2.75x)                 |
-| Elastic              | **2974 ± 28**                   | 102 ± 0                | -                       | 232 ± 1                      | 12.79x (12.64-12.95x)              |
-| EnhanceDetail        | **5017 ± 78**                   | -                      | 2646 ± 87               | -                            | 1.90x (1.81-1.99x)                 |
-| EnhanceEdge          | **4888 ± 137**                  | -                      | 2515 ± 5                | -                            | 1.94x (1.88-2.00x)                 |
-| Equalize             | **4298 ± 9**                    | 1232 ± 52              | 3230 ± 16               | 2857 ± 148                   | 1.33x (1.32-1.34x)                 |
-| Erasing              | **5006 ± 159**                  | 1425 ± 49              | -                       | 3639 ± 84                    | 1.38x (1.30-1.45x)                 |
-| GaussianBlur         | **4952 ± 117**                  | 1220 ± 8               | 2280 ± 42               | 1450 ± 12                    | 2.17x (2.08-2.26x)                 |
-| GaussianIllumination | **3674 ± 58**                   | 1380 ± 41              | -                       | -                            | 2.66x (2.54-2.79x)                 |
-| GaussianNoise        | **3312 ± 13**                   | 1492 ± 92              | -                       | -                            | 2.22x (2.08-2.37x)                 |
-| Grayscale            | **5245 ± 26**                   | 1692 ± 44              | 3535 ± 9                | 3922 ± 34                    | 1.34x (1.32-1.36x)                 |
-| HorizontalFlip       | **5247 ± 40**                   | 1818 ± 1               | 3589 ± 34               | 3749 ± 17                    | 1.40x (1.38-1.42x)                 |
-| Hue                  | **4664 ± 48**                   | 1093 ± 3               | -                       | -                            | 4.27x (4.21-4.32x)                 |
-| Invert               | **5437 ± 78**                   | 1761 ± 27              | 3467 ± 141              | 3791 ± 4                     | 1.43x (1.41-1.46x)                 |
-| JpegCompression      | **4036 ± 100**                  | 728 ± 2                | 2969 ± 4                | 3450 ± 49                    | 1.17x (1.13-1.22x)                 |
-| LinearIllumination   | **4048 ± 39**                   | 1580 ± 18              | -                       | -                            | 2.56x (2.51-2.62x)                 |
-| LongestMaxSize       | **1314 ± 5**                    | 629 ± 1                | -                       | -                            | 2.09x (2.08-2.10x)                 |
-| MedianBlur           | **4086 ± 136**                  | 88 ± 0                 | 164 ± 1                 | -                            | 24.86x (23.94-25.78x)              |
-| MotionBlur           | **4583 ± 45**                   | 1159 ± 21              | -                       | -                            | 3.95x (3.84-4.07x)                 |
-| OpticalDistortion    | **3509 ± 67**                   | 1378 ± 44              | -                       | -                            | 2.55x (2.42-2.68x)                 |
-| Pad                  | **4855 ± 16**                   | -                      | 3296 ± 108              | 3631 ± 108                   | 1.34x (1.29-1.38x)                 |
-| Perspective          | **3946 ± 65**                   | 1259 ± 5               | -                       | 2543 ± 10                    | 1.55x (1.52-1.58x)                 |
-| PhotoMetricDistort   | **4118 ± 44**                   | -                      | -                       | 1176 ± 21                    | 3.50x (3.40-3.60x)                 |
-| PlankianJitter       | **4864 ± 50**                   | 1662 ± 59              | -                       | -                            | 2.93x (2.80-3.07x)                 |
-| PlasmaBrightness     | **2642 ± 42**                   | 439 ± 0                | -                       | -                            | 6.01x (5.91-6.11x)                 |
-| PlasmaContrast       | **2145 ± 15**                   | 436 ± 3                | -                       | -                            | 4.92x (4.86-4.99x)                 |
-| PlasmaShadow         | **2762 ± 47**                   | 903 ± 0                | -                       | -                            | 3.06x (3.01-3.11x)                 |
-| Posterize            | **5318 ± 1**                    | 1553 ± 47              | 3430 ± 97               | 3687 ± 22                    | 1.44x (1.43-1.45x)                 |
-| RGBShift             | **4789 ± 58**                   | 1708 ± 12              | -                       | -                            | 2.80x (2.75-2.86x)                 |
-| Rain                 | **4542 ± 20**                   | 1474 ± 7               | -                       | -                            | 3.08x (3.05-3.11x)                 |
-| RandomCrop224        | **5004 ± 114**                  | 1873 ± 51              | 3692 ± 25               | 3917 ± 33                    | 1.28x (1.24-1.32x)                 |
-| RandomGamma          | **5221 ± 43**                   | 1542 ± 27              | -                       | -                            | 3.39x (3.30-3.47x)                 |
-| RandomJigsaw         | **4891 ± 32**                   | 1522 ± 59              | -                       | -                            | 3.21x (3.07-3.36x)                 |
-| RandomResizedCrop    | **4985 ± 170**                  | 1537 ± 6               | 2779 ± 37               | 3754 ± 48                    | 1.33x (1.27-1.39x)                 |
-| RandomRotate90       | **5091 ± 61**                   | 1455 ± 0               | -                       | -                            | 3.50x (3.46-3.54x)                 |
-| Resize               | **1328 ± 8**                    | 541 ± 10               | ≤20 img/s               | 1219 ± 8                     | 1.09x (1.08-1.10x)                 |
-| Rotate               | **4704 ± 111**                  | 1454 ± 7               | 3517 ± 22               | 2927 ± 85                    | 1.34x (1.30-1.38x)                 |
-| SaltAndPepper        | **4443 ± 23**                   | 1404 ± 35              | -                       | -                            | 3.16x (3.07-3.26x)                 |
-| Saturation           | **4518 ± 90**                   | 1095 ± 9               | 3122 ± 48               | -                            | 1.45x (1.40-1.50x)                 |
-| Sharpen              | **4776 ± 64**                   | 1200 ± 11              | -                       | 1398 ± 4                     | 3.42x (3.36-3.47x)                 |
-| Shear                | **4274 ± 19**                   | 1476 ± 18              | 2508 ± 22               | -                            | 1.70x (1.68-1.73x)                 |
-| SmallestMaxSize      | **1312 ± 23**                   | 552 ± 3                | -                       | -                            | 2.38x (2.32-2.43x)                 |
-| Snow                 | **4017 ± 191**                  | 1041 ± 5               | -                       | -                            | 3.86x (3.66-4.06x)                 |
-| Solarize             | **5309 ± 42**                   | 1505 ± 34              | 3576 ± 39               | 3495 ± 72                    | 1.48x (1.46-1.51x)                 |
-| ThinPlateSpline      | 677 ± 63                        | **750 ± 4**            | -                       | -                            | 0.90x (0.81-0.99x)                 |
-| Transpose            | **5169 ± 87**                   | -                      | 3543 ± 90               | -                            | 1.46x (1.40-1.52x)                 |
-| UnsharpMask          | **4516 ± 8**                    | -                      | 2079 ± 5                | -                            | 2.17x (2.16-2.18x)                 |
-| VerticalFlip         | **5266 ± 50**                   | 1794 ± 34              | 3694 ± 62               | 3808 ± 28                    | 1.38x (1.36-1.41x)                 |
-
-<!-- DATALOADER_BENCHMARK_TABLE_END -->
-
-### Multi-Channel Image Benchmarks (9ch)
-
-Benchmarks on 9-channel images (3x stacked RGB) to test OpenCV chunking and library support for >4 channels.
-
-<!-- MULTICHANNEL_BENCHMARK_TABLE_START -->
-
-| Transform            | AlbumentationsX 2.2.6 [img/s]   | kornia 0.8.2 [img/s]   | torchvision 0.26.0 [img/s]   | Speedup (albx / fastest, +/-1sd)   |
-|:---------------------|:--------------------------------|:-----------------------|:-----------------------------|:-----------------------------------|
-| Affine               | **670 ± 11**                    | 260 ± 0                | 198 ± 2                      | 2.58x (2.53-2.62x)                 |
-| AutoContrast         | 437 ± 15                        | 540 ± 1                | **780 ± 2**                  | 0.56x (0.54-0.58x)                 |
-| Blur                 | **2567 ± 100**                  | 292 ± 0                | -                            | 8.79x (8.43-9.15x)                 |
-| Brightness           | **3013 ± 284**                  | 2906 ± 6               | 985 ± 3                      | 1.04x (0.94-1.14x)                 |
-| CenterCrop128        | **51003 ± 217**                 | 4628 ± 21              | 36610 ± 143                  | 1.39x (1.38-1.40x)                 |
-| ChannelDropout       | **9472 ± 959**                  | 3840 ± 4               | -                            | 2.47x (2.21-2.72x)                 |
-| ChannelShuffle       | **2641 ± 106**                  | 1411 ± 2               | 1892 ± 6                     | 1.40x (1.34-1.46x)                 |
-| Contrast             | **3052 ± 99**                   | 2898 ± 4               | 572 ± 4                      | 1.05x (1.02-1.09x)                 |
-| CornerIllumination   | 289 ± 16                        | **302 ± 0**            | -                            | 0.96x (0.91-1.01x)                 |
-| Elastic              | **335 ± 3**                     | ≤10 img/s              | ≤10 img/s                    | N/A                                |
-| Erasing              | **19946 ± 4338**                | 593 ± 1                | 6362 ± 227                   | 3.14x (2.37-3.96x)                 |
-| GaussianBlur         | **802 ± 12**                    | 299 ± 0                | 121 ± 1                      | 2.69x (2.64-2.73x)                 |
-| GaussianIllumination | 295 ± 9                         | **362 ± 1**            | -                            | 0.81x (0.79-0.84x)                 |
-| GaussianNoise        | **109 ± 3**                     | 72 ± 0                 | -                            | 1.51x (1.47-1.56x)                 |
-| Grayscale            | 392 ± 3                         | 1241 ± 5               | **1491 ± 7**                 | 0.26x (0.26-0.27x)                 |
-| HorizontalFlip       | 2630 ± 73                       | 4069 ± 9               | **18238 ± 318**              | 0.14x (0.14-0.15x)                 |
-| Invert               | 16207 ± 3388                    | 5325 ± 28              | **23672 ± 108**              | 0.68x (0.54-0.83x)                 |
-| JpegCompression      | 160 ± 0                         | 73 ± 0                 | **258 ± 1**                  | 0.62x (0.62-0.62x)                 |
-| LinearIllumination   | 206 ± 3                         | **1009 ± 3**           | -                            | 0.20x (0.20-0.21x)                 |
-| LongestMaxSize       | **858 ± 16**                    | 410 ± 0                | -                            | 2.10x (2.05-2.14x)                 |
-| MedianBlur           | **419 ± 5**                     | ≤10 img/s              | -                            | N/A                                |
-| MotionBlur           | **1342 ± 65**                   | 126 ± 0                | -                            | 10.66x (10.11-11.20x)              |
-| Normalize            | 1311 ± 54                       | **2957 ± 4**           | 1375 ± 1                     | 0.44x (0.42-0.46x)                 |
-| OpticalDistortion    | **290 ± 7**                     | 193 ± 0                | -                            | 1.50x (1.46-1.54x)                 |
-| Pad                  | 8066 ± 88                       | -                      | **15071 ± 103**              | 0.54x (0.53-0.54x)                 |
-| Perspective          | **602 ± 17**                    | 172 ± 0                | 176 ± 0                      | 3.41x (3.31-3.52x)                 |
-| PlasmaBrightness     | **151 ± 3**                     | 40 ± 0                 | -                            | 3.77x (3.69-3.86x)                 |
-| PlasmaContrast       | **85 ± 0**                      | 42 ± 0                 | -                            | 2.02x (2.00-2.03x)                 |
-| PlasmaShadow         | 253 ± 4                         | **288 ± 2**            | -                            | 0.88x (0.86-0.90x)                 |
-| Posterize            | **23588 ± 5135**                | 487 ± 9                | 23074 ± 276                  | 1.02x (0.79-1.26x)                 |
-| RandomCrop128        | **47302 ± 2384**                | 2929 ± 88              | 29917 ± 1842                 | 1.58x (1.41-1.77x)                 |
-| RandomGamma          | **5465 ± 672**                  | 97 ± 0                 | -                            | 56.63x (49.57-63.71x)              |
-| RandomJigsaw         | **5609 ± 44**                   | 302 ± 2                | -                            | 18.58x (18.32-18.84x)              |
-| RandomResizedCrop    | **986 ± 22**                    | 335 ± 2                | 335 ± 2                      | 2.95x (2.87-3.03x)                 |
-| RandomRotate90       | **1478 ± 24**                   | 259 ± 2                | -                            | 5.71x (5.57-5.86x)                 |
-| Rotate               | **1772 ± 31**                   | 249 ± 1                | 246 ± 2                      | 7.11x (6.97-7.26x)                 |
-| Sharpen              | **770 ± 11**                    | 202 ± 1                | 286 ± 4                      | 2.69x (2.62-2.77x)                 |
-| Shear                | **662 ± 7**                     | 300 ± 0                | -                            | 2.21x (2.18-2.23x)                 |
-| SmallestMaxSize      | **603 ± 18**                    | 250 ± 1                | -                            | 2.41x (2.34-2.49x)                 |
-| Solarize             | **5615 ± 502**                  | 503 ± 1                | 567 ± 2                      | 9.91x (8.99-10.84x)                |
-| ThinPlateSpline      | **85 ± 1**                      | 70 ± 0                 | -                            | 1.21x (1.20-1.22x)                 |
-| VerticalFlip         | 9190 ± 2941                     | 3810 ± 14              | **19143 ± 130**              | 0.48x (0.32-0.64x)                 |
-
-<!-- MULTICHANNEL_BENCHMARK_TABLE_END -->
-
-### Video Benchmarks
-
-The video benchmarks compare CPU-based processing (AlbumentationsX) with GPU-accelerated processing (Kornia) for video transformations. The benchmarks use the [UCF101 dataset](https://www.crcv.ucf.edu/data/UCF101.php), which contains realistic videos from 101 action categories.
-
-For AlbumentationsX, each clip is a NumPy array `(T, H, W, C)`. The built-in spec files apply augmentations with `transform(images=video)["images"]`—Albumentations’ batch video API—so parameters are drawn once per clip and shared across frames, in line with typical video training and with Kornia’s `same_on_batch=True` for a fair comparison.
-
-<!-- VIDEO_BENCHMARK_TABLE_START -->
+### Video
 
 | Transform                | AlbumentationsX (video) 2.1.1 [vid/s]   | kornia (video) 0.8.0 [vid/s]   | torchvision (video) 0.21.0 [vid/s]   | Speedup (albx / fastest, +/-1sd)   |
 |:-------------------------|:----------------------------------------|:-------------------------------|:-------------------------------------|:-----------------------------------|
@@ -431,6 +235,7 @@ For AlbumentationsX, each clip is a NumPy array `(T, H, W, C)`. The built-in spe
 | CornerIllumination       | **10 ± 0**                              | 3 ± 0                          | -                                    | 3.96x (3.79-4.13x)                 |
 | CropAndPad               | **42 ± 2**                              | -                              | -                                    | N/A                                |
 | Defocus                  | **2 ± 0**                               | -                              | -                                    | N/A                                |
+| Dithering                | slow-skipped                            | -                              | -                                    | N/A                                |
 | Downscale                | **83 ± 1**                              | -                              | -                                    | N/A                                |
 | Elastic                  | 26 ± 0                                  | -                              | **127 ± 1**                          | 0.21x (0.20-0.21x)                 |
 | Emboss                   | **47 ± 1**                              | -                              | -                                    | N/A                                |
@@ -512,33 +317,7 @@ For AlbumentationsX, each clip is a NumPy array `(T, H, W, C)`. The built-in spe
 | WaterRefraction          | **22 ± 0**                              | -                              | -                                    | N/A                                |
 | ZoomBlur                 | **4 ± 0**                               | -                              | -                                    | N/A                                |
 
-<!-- VIDEO_BENCHMARK_TABLE_END -->
-
-## Performance Highlights
-
-### Image Augmentation Performance
-
-<!-- IMAGE_SPEEDUP_SUMMARY_START -->
-
-See the full benchmark table above for RGB micro results.
-
-<!-- IMAGE_SPEEDUP_SUMMARY_END -->
-
-### RGB DataLoader Performance
-
-<!-- DATALOADER_SPEEDUP_SUMMARY_START -->
-
-See the full benchmark table above for RGB DataLoader results.
-
-<!-- DATALOADER_SPEEDUP_SUMMARY_END -->
-
-### Video Augmentation Performance
-
-<!-- VIDEO_SPEEDUP_SUMMARY_START -->
-
-See the full benchmark table above for video results.
-
-<!-- VIDEO_SPEEDUP_SUMMARY_END -->
+<!-- PAPER_FIGURES_END -->
 
 ## Requirements
 
@@ -615,7 +394,7 @@ gcloud storage objects describe gs://imagenet_validation/ucf101/ucf101.tar \
 tar -tf /tmp/ucf101.tar | rg '(^__MACOSX/|/\.DS_Store$|^\.DS_Store$|/\._|^\._)'
 ```
 
-The paper video cloud runs use `gs://imagenet_validation/ucf101/ucf101.tar`; the uploaded object was verified at
+The video cloud benchmark runs use `gs://imagenet_validation/ucf101/ucf101.tar`; the uploaded object was verified at
 `14136559616` bytes.
 
 ### Using Your Own Data
@@ -630,45 +409,31 @@ This will give you more relevant performance metrics for your specific use case.
 
 ## Running Benchmarks
 
-All benchmarks use the unified CLI: `python -m benchmark.cli run`. Prefer checked-in YAML configs for paper and cloud
+All benchmarks use the unified CLI: `python -m benchmark.cli run`. Prefer checked-in YAML configs for benchmark and cloud
 runs; CLI flags are override knobs for an existing config, not a second source of truth. Config files are validated with
 Pydantic before work starts.
-Named transform sets such as `paper` are expanded to concrete transform names, and the resolved config is written to
+Named transform sets are expanded to concrete transform names, and the resolved config is written to
 `resolved_config.yaml` in the output directory.
 
 ```bash
 python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml
-python -m benchmark.cli plan --config configs/paper/prod_g2_rgb_dataloader_gpu.yaml
-python -m benchmark.cli run --config configs/paper/prod_g2_rgb_dataloader_gpu.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/gcp_g2_rgb_dataloader_gpu_smoke.yaml --num-items 25
+python -m benchmark.cli plan --config configs/examples/local_rgb_dataloader_cpu.yaml
+python -m benchmark.cli run --config configs/examples/local_rgb_dataloader_cpu.yaml --num-items 25
 ```
 
 Use `benchmark plan --config ...` or `benchmark run --config ... --dry-run` to print the resolved config, generated jobs,
 expected output files, and cloud VM settings without starting local measurements or creating a VM.
 
-Flag-only benchmark execution is intentionally unsupported. Start from a YAML file under `configs/examples/` or
-`configs/paper/`, then use supported overrides such as `--num-items`, `--num-runs`, `--device`, `--workers`,
+Flag-only benchmark execution is intentionally unsupported. Start from a checked-in YAML config, then use supported
+overrides such as `--num-items`, `--num-runs`, `--device`, `--workers`,
 `--batch-size`, and `--output` when you need quick local changes.
 
 The CLI creates joined virtual environments for compatible libraries, for example `.venv_albumentationsx` for AlbumentationsX and `.venv_torch_stack` for torchvision, Kornia, and Pillow image benchmarks. By default, each run refreshes `requirements/*.txt` from `requirements/*.in` with the latest compatible package versions, then installs dependencies only when the resolved requirement files changed. Pass `--no-refresh-requirements` for offline/debug reruns that should reuse the existing lock files and venv cache.
 
-For paper runs, pass `--transform-set paper` to use only transforms present in at least two selected libraries. The fixed sets live under `docs/paper_transform_sets/`.
+For production image runs, prefer the checked-in `prod_*` configs. The first benchmark pass uses one run per row so the
+full table can be covered quickly; top-up repeats can be merged later after coverage is validated.
 
-For production paper image runs, prefer the checked-in `prod_*` configs. The first paper pass uses one run per row so
-the full table can be covered quickly; top-up repeats can be merged later after coverage is validated.
-
-```bash
-python -m benchmark.cli run --config configs/paper/prod_c4_rgb_micro_cpu.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/prod_c4_rgb_dataloader_cpu.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/prod_c4_9ch_micro_cpu.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/prod_c4_9ch_dataloader_cpu.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/prod_g2_rgb_micro_gpu.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/prod_g2_rgb_dataloader_gpu.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/prod_g2_9ch_micro_gpu.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/prod_g2_9ch_dataloader_gpu.yaml --gcp-dry-run
-```
-
-Smoke configs remain under `configs/paper/gcp_*_smoke.yaml` for path checks and fast reruns.
+Smoke configs remain available for path checks and fast reruns.
 
 Pipeline result filenames include the key sweep parameters, for example
 `albumentationsx_memory_dataloader_augment_n2000_r5_w8_b64_results.json` or
@@ -683,7 +448,7 @@ Treat RGB micro results as an implementation profiler: preloaded decoded inputs,
 library thread, augmentation only. They are useful for checking algorithmic implementation quality and regressions,
 but they are intentionally artificial because they measure one CPU core instead of a production input pipeline.
 
-The paper hardware set should focus on CPUs that resemble machines used to feed model training, not every available
+The benchmark hardware set should focus on CPUs that resemble machines used to feed model training, not every available
 cloud CPU family. For RGB micro/profiler runs, use a compact representative set:
 
 - Apple Silicon laptop, e.g. MacBook M4, for local macOS Arm behavior.
@@ -694,8 +459,8 @@ cloud CPU family. For RGB micro/profiler runs, use a compact representative set:
 - `a2-highgpu-1g` for the host CPU used with A100 training.
 
 Older/general-purpose machines such as `n2-standard-16` and `n2d-standard-16` are useful as historical baselines, but
-they should not drive the main paper claims. The more important paper benchmarks are production-style DataLoader runs
-for images, GPU image sanity checks for TorchVision/Kornia, and GPU video augmentation, especially torchvision video
+they should not drive the headline benchmark claims. The more important benchmark rows are production-style DataLoader
+runs for images, GPU image sanity checks for TorchVision/Kornia, and GPU video augmentation, especially torchvision video
 paths on GPU.
 
 Skip dependency lock refresh when you intentionally want the fastest local rerun from existing locks:
@@ -707,7 +472,7 @@ python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml -
 ### Benchmark execution policy
 
 - The benchmark matrix lives in `benchmark/matrix.py`. Add scenario/library/mode support there first so spec files,
-  requirement groups, paper transform sets, device support, pipeline scopes, and backend selection stay aligned.
+  requirement groups, transform sets, device support, pipeline scopes, and backend selection stay aligned.
 - Shared image/video defaults live in `benchmark/policy.py`. Do not duplicate slow-skip thresholds, warmup item counts, or
   item labels separately in micro and pipeline runners.
 - Command construction lives in `benchmark/jobs.py`, and backend dispatch lives in `benchmark/orchestrator.py`. The CLI
@@ -717,7 +482,7 @@ python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml -
 - Micro benchmarks measure only the named transform in each library's native layout, then force the returned object into contiguous memory before timing stops. Do not add `Normalize`, `ToTensor`, axis conversion, or DataLoader collation work to micro specs.
 - GPU image micro benchmarks are device-resident transform profilers for `torchvision` and `kornia`: samples and transforms are moved to CUDA/MPS before timing, and the timed loop synchronizes the selected device. They do not include host-to-device transfer.
 - Kornia image GPU rows exclude `Shear` in micro and DataLoader modes because Kornia's current CUDA shear parameter
-  generator can fail with mixed CPU/CUDA tensors when moved to GPU. Keep `Shear` in the paper transform sets: it still
+  generator can fail with mixed CPU/CUDA tensors when moved to GPU. Keep `Shear` in the image transform sets: it still
   runs for AlbumentationsX, Pillow, torchvision where supported, and Kornia CPU rows.
 - Kornia 9-channel image GPU rows also exclude `MedianBlur`. On the L4 9-channel GPU micro run, Kornia's median-blur
   path requested a multi-GB temporary allocation after device-resident preload and OOMed. Keep `MedianBlur` in RGB GPU,
@@ -731,9 +496,9 @@ python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml -
 - Compatible libraries share joined environments to avoid redundant dependency setup. Image benchmarks group torchvision, Kornia, and Pillow into the `torch_stack` environment; video benchmarks group torchvision and Kornia into `torch_video`.
 - Environment setup is cached by resolved requirement files, Python version, media type, and environment group. Detached GCP runs can additionally reuse the GCS venv cache unless `--gcp-no-venv-cache` or `--gcp-force-venv-cache-rebuild` is set.
 - Requirement lock refresh is expected once per library or joined-environment launch when refresh is enabled. Do not add extra cross-library refresh orchestration unless it removes real work without changing dependency freshness semantics; use `--no-refresh-requirements` for repeated local runs with fixed locks.
-- Slow transforms are preflighted before exhaustive micro or DataLoader pipeline measurement. If an image transform is slower than the practical floor (`>=0.05 sec/image`, `<=20 img/s`), record an early-stop result instead of spending the full run budget. This prevents paper sweeps from getting stuck on transforms that are too slow for practical training use.
+- Slow transforms are preflighted before exhaustive micro or DataLoader pipeline measurement. If an image transform is slower than the practical floor (`>=0.05 sec/image`, `<=20 img/s`), record an early-stop result instead of spending the full run budget. This prevents benchmark sweeps from getting stuck on transforms that are too slow for practical training use.
 - Keep benchmark data local to the machine doing the timing. GCP runs should not benchmark against mounted buckets or network paths.
-- Preserve single-thread micro timing for fair augmentation-only comparisons. Pipeline benchmarks use an explicit `--thread-policy`; the main paper path is `pipeline-default`, and controlled appendix runs can use `pipeline-single-worker`.
+- Preserve single-thread micro timing for fair augmentation-only comparisons. Pipeline benchmarks use an explicit `--thread-policy`; the main production path is `pipeline-default`, and controlled comparison runs can use `pipeline-single-worker`.
 - Pipeline specs, not `pipeline_runner.py`, own recipe-level tensor conversion. The runner should receive fixed-shape outputs and use PyTorch default collation; it should not repair channel layouts with benchmark-side heuristics.
 - GPU image pipeline benchmarks are separate from CPU pipeline rows. For TorchVision and Kornia, `--device cuda|mps|auto` keeps decode/load and library-native crop/pad shape preparation in DataLoader workers on CPU, copies each fixed-shape collated batch to the selected device, applies the measured augmentation plus normalization on GPU, and includes synchronization in timing. Kornia uses batched augmentation with `same_on_batch=False`; TorchVision applies the measured augmentation in a per-sample GPU loop and then normalizes the whole batch because TorchVision v2 lacks a `same_on_batch=False` equivalent for batched transforms. AlbumentationsX and Pillow remain CPU-only for image benchmarks.
 - TorchVision `JpegCompression` maps to `torchvision.transforms.v2.JPEG`, which requires `uint8` CPU input and is excluded from TorchVision GPU image rows. Keep it in CPU TorchVision rows and in other libraries that support it. Treat this as a JPEG-compression augmentation constraint when describing methodology.
@@ -763,9 +528,9 @@ Detached runs carry a typed `run_config` in `job.json`; the VM writes that confi
 `--resolved-config`. Point the real dataset at GCS in the YAML config:
 
 ```bash
-python -m benchmark.cli plan --config configs/paper/prod_c4_rgb_micro_cpu.yaml
-python -m benchmark.cli run --config configs/paper/prod_c4_rgb_micro_cpu.yaml --gcp-dry-run
-python -m benchmark.cli run --config configs/paper/prod_c4_rgb_micro_cpu.yaml
+python -m benchmark.cli plan --config configs/your_gcp_config.yaml
+python -m benchmark.cli run --config configs/your_gcp_config.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/your_gcp_config.yaml
 ```
 
 After submission, open `./gcp_runs/gcp_last_run.json` for `run_prefix`, `instance_name`, and a suggested `gcloud storage cp` command to pull `results/` when the run finishes.
@@ -773,13 +538,13 @@ After submission, open `./gcp_runs/gcp_last_run.json` for `run_prefix`, `instanc
 **Dry run (no upload, no VM)**
 
 ```bash
-python -m benchmark.cli run --config configs/paper/prod_g2_rgb_dataloader_gpu.yaml --gcp-dry-run
+python -m benchmark.cli run --config configs/your_gcp_config.yaml --gcp-dry-run
 ```
 
 If a GPU zone is stocked out, keep the config fixed and override only the zone that GCP suggests:
 
 ```bash
-python -m benchmark.cli run --config configs/paper/prod_g2_rgb_micro_gpu.yaml --gcp-zone us-central1-a
+python -m benchmark.cli run --config configs/your_gcp_config.yaml --gcp-zone us-central1-a
 ```
 
 **Attached / SSH mode (debug)**
@@ -787,7 +552,7 @@ python -m benchmark.cli run --config configs/paper/prod_g2_rgb_micro_gpu.yaml --
 Creates the VM, waits for SSH, uploads the repo, runs the benchmark in a live session, downloads results to `--output`, then deletes the VM. Requires a dataset path **on the VM** (you must stage data yourself):
 
 ```bash
-python -m benchmark.cli run --config configs/paper/gcp_g2_video_smoke.yaml --gcp-attached --gcp-remote-data-dir /data/benchmark/videos
+python -m benchmark.cli run --config configs/your_gcp_config.yaml --gcp-attached --gcp-remote-data-dir /data/benchmark/videos
 ```
 
 **Cost note:** GCS storage for a subset and JSON results is usually small compared to **GPU/CPU VM uptime**; the expensive mistake is leaving instances running. Detached runs terminate the VM by default after uploading artifacts.
@@ -916,7 +681,7 @@ The benchmark methodology is designed to ensure fair and reproducible comparison
 
 1. **Measurement scope**: Micro benchmarks measure primitive augmentation-only cost from preloaded data. GPU image micro rows are device-resident and exclude host-to-device transfer. DataLoader benchmarks split memory-only worker scaling, disk/decode pipelines, and optional tensor batch/device-copy pipelines; GPU image DataLoader rows include CPU crop/pad shape preparation, batch copy, and GPU augmentation plus normalization. TorchVision GPU image DataLoader rows also include a per-sample GPU loop to preserve correct random augmentation semantics.
 2. **Threading policy**: Micro benchmarks force one internal thread through runner-level policy. Pipeline benchmarks use explicit thread policies and record both dataloader workers and library thread settings.
-3. **Dataset size**: Deadline-first paper image configs use `2,000` ImageNet validation images for micro rows and
+3. **Dataset size**: The checked-in image benchmark configs use `2,000` ImageNet validation images for micro rows and
    `10,000` images for DataLoader rows. Full `50,000`-image ImageNet sweeps are optional top-ups once the one-run table
    is complete and validated.
 4. **Slow-transform guard**: Micro and DataLoader pipeline runs preflight transforms and early-stop impractically slow operations (`<=20 img/s` for images) instead of letting one unusable transform dominate runtime.
