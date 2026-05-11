@@ -101,115 +101,115 @@ Measured winner counts among comparable measured transforms by regime. The concl
 
 ### Result Tables
 
-The tables below summarize the checked-in benchmark results for RGB images, 9-channel images, and video clips. Image tables report throughput in images/s; the video table reports clips/s. A dash means no full measured row is available.
+The tables below summarize the checked-in benchmark results for RGB images, 9-channel images, and video clips. Image table values are medians with 95% confidence intervals when available; the video fallback table reports its own uncertainty in the column headers. Image tables report throughput in images/s; the video table reports clips/s. A dash means no full measured row is available.
 
 ### RGB
 
 | Transform | AlbumentationsX<br>CPU micro | AlbumentationsX<br>CPU DataLoader | TorchVision<br>GPU micro | DALI<br>GPU DataLoader |
 | --- | ---: | ---: | ---: | ---: |
-| Affine | 871.8 | 4527.7 | 1316.9 | 3806.0 |
-| AutoContrast | 1242.7 | 4645.6 | 3942.2 | - |
-| Blur | 4448.7 | 5274.9 | - | - |
-| Brightness | 6912.2 | 5230.9 | 5706.8 | 3797.8 |
-| CLAHE | 282.9 | 3384.5 | - | 3730.6 |
-| ChannelDropout | 6810.1 | 5316.5 | - | - |
-| ChannelShuffle | 4337.4 | 5086.6 | 9557.4 | - |
-| ColorJiggle | 639.3 | 4255.1 | 680.0 | 3742.5 |
-| ColorJitter | 641.4 | 4224.7 | 687.0 | 3817.8 |
-| Contrast | 6932.8 | 5258.2 | 3274.0 | 3759.3 |
-| CornerIllumination | 424.6 | 3824.1 | - | - |
-| Elastic | 191.0 | 2954.0 | - | - |
-| EnhanceDetail | 2148.3 | 5033.1 | - | - |
-| EnhanceEdge | 1373.3 | 4923.4 | - | - |
-| Equalize | 807.4 | 4304.4 | 2015.9 | 3823.9 |
-| Erasing | 9510.6 | 5118.2 | 2242.0 | 3791.4 |
-| GaussianBlur | 2342.8 | 5029.0 | 2803.2 | 3700.9 |
-| GaussianIllumination | 388.1 | 3655.9 | - | - |
-| GaussianNoise | 225.1 | 3321.3 | - | 3820.0 |
-| Grayscale | 5193.9 | 5263.2 | 8863.8 | - |
-| HorizontalFlip | 8416.0 | 5218.1 | 16083.8 | 3722.4 |
-| Hue | 966.9 | 4698.0 | - | 3784.2 |
-| Invert | 15094.9 | 5491.9 | 15936.1 | - |
-| JpegCompression | 692.0 | 4106.2 | - | 3786.2 |
-| LinearIllumination | 520.7 | 4076.3 | - | - |
-| LongestMaxSize | 2824.5 | 1316.9 | - | - |
-| MedianBlur | 843.3 | 4038.1 | - | - |
-| MotionBlur | 1952.5 | 4614.8 | - | - |
-| OpticalDistortion | 274.4 | 3556.4 | - | - |
-| Pad | 13181.0 | 4866.6 | 16609.6 | 3756.1 |
-| Perspective | 559.4 | 3992.0 | 760.6 | - |
-| PhotoMetricDistort | 580.9 | 4149.0 | 619.4 | - |
-| PlankianJitter | 2253.1 | 4899.4 | - | - |
-| PlasmaBrightness | 267.0 | 2672.0 | - | - |
-| PlasmaContrast | 142.8 | 2155.6 | - | - |
-| PlasmaShadow | 419.8 | 2795.5 | - | - |
-| Posterize | 14398.5 | 5319.0 | 15122.0 | - |
-| RGBShift | 2292.1 | 4830.7 | - | - |
-| Rain | 1258.8 | 4528.5 | - | - |
-| RandomCrop224 | 38380.3 | 5084.5 | 15008.3 | 3589.1 |
-| RandomGamma | 9937.7 | 5251.3 | - | - |
-| RandomJigsaw | 5172.0 | 4868.3 | - | - |
-| RandomResizedCrop | 7150.4 | 5056.2 | 3886.9 | 3898.1 |
-| RandomRotate90 | 5990.0 | 5086.5 | - | - |
-| Resize | 2462.7 | 1333.8 | 6472.7 | 3523.1 |
-| Rotate | 1407.6 | 4782.3 | 1363.9 | 3808.5 |
-| SaltAndPepper | 737.7 | 4459.7 | - | 3824.4 |
-| Saturation | 846.6 | 4581.7 | - | 3792.5 |
-| Sharpen | 1387.6 | 4821.7 | 3332.5 | - |
-| Shear | 784.4 | 4261.2 | - | 3771.7 |
-| SmallestMaxSize | 2017.5 | 1328.7 | - | - |
-| Snow | 489.3 | 4135.0 | - | - |
-| Solarize | 9759.5 | 5338.8 | 10111.6 | - |
-| ThinPlateSpline | 51.7 | 721.0 | - | - |
-| Transpose | 4626.8 | 5230.6 | - | - |
-| UnsharpMask | 906.1 | 4521.6 | - | - |
-| VerticalFlip | 14051.5 | 5301.7 | 16368.3 | 3766.2 |
+| Affine | 871.8 ± 9.1 | **4527.7 ± 31.8** | 1316.9 ± 76.9 | 3806.0 ± 90.1 |
+| AutoContrast | 1242.7 ± 21.7 | **4645.6 ± 90.1** | 3942.2 ± 531.8 | - |
+| Blur | 4448.7 ± 19.5 | **5274.9 ± 195.9** | - | - |
+| Brightness | **6912.2 ± 14.4** | 5230.9 ± 274.5 | 5706.8 ± 956.3 | 3797.8 ± 38.0 |
+| CLAHE | 282.9 ± 1.3 | 3384.5 ± 192.0 | - | **3730.6 ± 158.7** |
+| ChannelDropout | **6810.1 ± 73.5** | 5316.5 ± 101.4 | - | - |
+| ChannelShuffle | 4337.4 ± 14.5 | 5086.6 ± 250.8 | **9557.4 ± 2514.8** | - |
+| ColorJiggle | 639.3 ± 5.5 | **4255.1 ± 68.1** | 680.0 ± 18.7 | 3742.5 ± 38.5 |
+| ColorJitter | 641.4 ± 0.8 | **4224.7 ± 261.0** | 687.0 ± 23.4 | 3817.8 ± 113.7 |
+| Contrast | **6932.8 ± 34.1** | 5258.2 ± 162.6 | 3274.0 ± 360.2 | 3759.3 ± 83.0 |
+| CornerIllumination | 424.6 ± 2.7 | **3824.1 ± 95.3** | - | - |
+| Elastic | 191.0 ± 0.4 | **2954.0 ± 65.9** | - | - |
+| EnhanceDetail | 2148.3 ± 14.5 | **5033.1 ± 63.7** | - | - |
+| EnhanceEdge | 1373.3 ± 17.6 | **4923.4 ± 112.2** | - | - |
+| Equalize | 807.4 ± 3.2 | **4304.4 ± 139.7** | 2015.9 ± 149.1 | 3823.9 ± 56.3 |
+| Erasing | **9510.6 ± 83.9** | 5118.2 ± 296.1 | 2242.0 ± 183.9 | 3791.4 ± 50.9 |
+| GaussianBlur | 2342.8 ± 4.3 | **5029.0 ± 106.1** | 2803.2 ± 279.1 | 3700.9 ± 94.7 |
+| GaussianIllumination | 388.1 ± 1.4 | **3655.9 ± 47.9** | - | - |
+| GaussianNoise | 225.1 ± 0.5 | 3321.3 ± 68.1 | - | **3820.0 ± 67.6** |
+| Grayscale | 5193.9 ± 1.5 | 5263.2 ± 89.8 | **8863.8 ± 2122.0** | - |
+| HorizontalFlip | 8416.0 ± 21.4 | 5218.1 ± 163.2 | **16083.8 ± 5064.7** | 3722.4 ± 86.3 |
+| Hue | 966.9 ± 0.9 | **4698.0 ± 54.0** | - | 3784.2 ± 6.0 |
+| Invert | 15094.9 ± 69.6 | 5491.9 ± 106.5 | **15936.1 ± 5092.4** | - |
+| JpegCompression | 692.0 ± 7.5 | **4106.2 ± 170.9** | - | 3786.2 ± 26.7 |
+| LinearIllumination | 520.7 ± 1.2 | **4076.3 ± 91.2** | - | - |
+| LongestMaxSize | **2824.5 ± 47.9** | 1316.9 ± 32.7 | - | - |
+| MedianBlur | 843.3 ± 4.2 | **4038.1 ± 113.5** | - | - |
+| MotionBlur | 1952.5 ± 23.3 | **4614.8 ± 136.8** | - | - |
+| OpticalDistortion | 274.4 ± 1.2 | **3556.4 ± 70.4** | - | - |
+| Pad | 13181.0 ± 134.1 | 4866.6 ± 92.5 | **16609.6 ± 5327.4** | 3756.1 ± 88.2 |
+| Perspective | 559.4 ± 2.0 | **3992.0 ± 131.9** | 760.6 ± 22.8 | - |
+| PhotoMetricDistort | 580.9 ± 5.1 | **4149.0 ± 105.1** | 619.4 ± 15.7 | - |
+| PlankianJitter | 2253.1 ± 19.2 | **4899.4 ± 85.3** | - | - |
+| PlasmaBrightness | 267.0 ± 0.8 | **2672.0 ± 64.8** | - | - |
+| PlasmaContrast | 142.8 ± 0.5 | **2155.6 ± 96.2** | - | - |
+| PlasmaShadow | 419.8 ± 2.9 | **2795.5 ± 44.2** | - | - |
+| Posterize | 14398.5 ± 65.3 | 5319.0 ± 73.7 | **15122.0 ± 4628.1** | - |
+| RGBShift | 2292.1 ± 3.2 | **4830.7 ± 131.1** | - | - |
+| Rain | 1258.8 ± 2.4 | **4528.5 ± 225.5** | - | - |
+| RandomCrop224 | **38380.3 ± 217.1** | 5084.5 ± 122.8 | 15008.3 ± 4670.8 | 3589.1 ± 82.9 |
+| RandomGamma | **9937.7 ± 51.6** | 5251.3 ± 153.4 | - | - |
+| RandomJigsaw | **5172.0 ± 17.8** | 4868.3 ± 31.1 | - | - |
+| RandomResizedCrop | **7150.4 ± 21.0** | 5056.2 ± 143.9 | 3886.9 ± 481.3 | 3898.1 ± 116.7 |
+| RandomRotate90 | **5990.0 ± 95.9** | 5086.5 ± 48.6 | - | - |
+| Resize | 2462.7 ± 41.7 | 1333.8 ± 15.7 | **6472.7 ± 1160.8** | 3523.1 ± 69.2 |
+| Rotate | 1407.6 ± 45.8 | **4782.3 ± 137.3** | 1363.9 ± 59.6 | 3808.5 ± 71.7 |
+| SaltAndPepper | 737.7 ± 11.3 | **4459.7 ± 45.9** | - | 3824.4 ± 85.8 |
+| Saturation | 846.6 ± 19.1 | **4581.7 ± 110.3** | - | 3792.5 ± 33.6 |
+| Sharpen | 1387.6 ± 5.2 | **4821.7 ± 141.8** | 3332.5 ± 389.0 | - |
+| Shear | 784.4 ± 6.3 | **4261.2 ± 88.1** | - | 3771.7 ± 61.0 |
+| SmallestMaxSize | **2017.5 ± 27.8** | 1328.7 ± 42.2 | - | - |
+| Snow | 489.3 ± 3.3 | **4135.0 ± 171.2** | - | - |
+| Solarize | 9759.5 ± 38.8 | 5338.8 ± 71.7 | **10111.6 ± 2582.8** | - |
+| ThinPlateSpline | 51.7 ± 0.1 | **721.0 ± 66.3** | - | - |
+| Transpose | 4626.8 ± 29.6 | **5230.6 ± 130.3** | - | - |
+| UnsharpMask | 906.1 ± 2.2 | **4521.6 ± 78.0** | - | - |
+| VerticalFlip | 14051.5 ± 61.9 | 5301.7 ± 165.5 | **16368.3 ± 5461.5** | 3766.2 ± 133.8 |
 
 ### 9-Channel
 
 | Transform | AlbumentationsX<br>9ch CPU micro | AlbumentationsX<br>9ch CPU DataLoader | TorchVision<br>9ch GPU micro | TorchVision<br>9ch GPU DataLoader |
 | --- | ---: | ---: | ---: | ---: |
-| Affine | 229.8 | 1617.5 | 1187.5 | 1085.2 |
-| AutoContrast | 316.6 | 1749.3 | 1329.1 | 1024.6 |
-| Blur | 1385.1 | 1998.8 | - | - |
-| Brightness | 2477.1 | 2041.0 | 1952.7 | 1271.8 |
-| ChannelDropout | 3335.5 | 2027.3 | - | - |
-| ChannelShuffle | 1447.9 | 1946.7 | 10344.1 | 1341.8 |
-| Contrast | 2482.3 | 2113.2 | 1162.8 | 920.2 |
-| CornerIllumination | 195.8 | 1627.4 | - | - |
-| Elastic | 121.0 | 1404.3 | - | 99.3 |
-| Erasing | 3658.7 | 2024.1 | 1438.0 | 1323.0 |
-| GaussianBlur | 747.5 | 1952.9 | 3044.7 | 1259.0 |
-| GaussianIllumination | 189.4 | 1583.1 | - | - |
-| GaussianNoise | 75.8 | 1249.8 | - | - |
-| Grayscale | 177.7 | 1559.5 | 3042.9 | 1275.9 |
-| HorizontalFlip | 837.3 | 1801.2 | 20436.0 | 1482.7 |
-| Invert | 4622.5 | 2026.3 | 24578.9 | 1524.5 |
-| JpegCompression | 103.5 | 1287.1 | - | - |
-| LinearIllumination | 163.1 | 1585.7 | - | - |
-| LongestMaxSize | 612.5 | 469.9 | - | - |
-| MedianBlur | 290.1 | 1542.1 | - | - |
-| MotionBlur | 776.7 | 1854.2 | - | - |
-| OpticalDistortion | 140.0 | 1491.5 | - | - |
-| Pad | 4373.1 | 1797.5 | 17954.9 | 1443.3 |
-| Perspective | 208.6 | 1580.8 | 718.0 | 759.7 |
-| PlasmaBrightness | 114.3 | 1308.6 | - | - |
-| PlasmaContrast | 46.0 | 873.9 | - | - |
-| PlasmaShadow | 235.5 | 1391.6 | - | - |
-| Posterize | 4533.0 | 2012.5 | 20756.5 | 1554.5 |
-| RandomCrop224 | 18067.7 | 2004.5 | 15069.7 | 1577.2 |
-| RandomGamma | 3439.2 | 2003.2 | - | - |
-| RandomJigsaw | 2852.1 | 1952.4 | - | - |
-| RandomResizedCrop | 1870.7 | 1782.6 | 4337.0 | 628.2 |
-| RandomRotate90 | 687.7 | 1862.5 | - | - |
-| Resize | 543.3 | 468.6 | 4727.3 | 1394.3 |
-| Rotate | 645.4 | 1883.7 | 1253.4 | 1115.8 |
-| Sharpen | 479.0 | 1831.2 | 1204.8 | 905.9 |
-| Shear | 181.0 | 1576.7 | - | - |
-| SmallestMaxSize | 435.4 | 467.1 | - | - |
-| Solarize | 3364.3 | 2082.8 | 12677.5 | 1527.0 |
-| ThinPlateSpline | 44.4 | 460.9 | - | - |
-| VerticalFlip | 4444.1 | 2021.4 | 23657.7 | 1560.0 |
+| Affine | 229.8 ± 0.0 | **1617.5 ± 0.0** | 1187.5 ± 0.0 | 1085.2 ± 0.0 |
+| AutoContrast | 316.6 ± 0.0 | **1749.3 ± 0.0** | 1329.1 ± 0.0 | 1024.6 ± 0.0 |
+| Blur | 1385.1 ± 0.0 | **1998.8 ± 0.0** | - | - |
+| Brightness | **2477.1 ± 0.0** | 2041.0 ± 0.0 | 1952.7 ± 0.0 | 1271.8 ± 0.0 |
+| ChannelDropout | **3335.5 ± 0.0** | 2027.3 ± 0.0 | - | - |
+| ChannelShuffle | 1447.9 ± 0.0 | 1946.7 ± 0.0 | **10344.1 ± 0.0** | 1341.8 ± 0.0 |
+| Contrast | **2482.3 ± 0.0** | 2113.2 ± 0.0 | 1162.8 ± 0.0 | 920.2 ± 0.0 |
+| CornerIllumination | 195.8 ± 0.0 | **1627.4 ± 0.0** | - | - |
+| Elastic | 121.0 ± 0.0 | **1404.3 ± 0.0** | - | 99.3 ± 0.0 |
+| Erasing | **3658.7 ± 0.0** | 2024.1 ± 0.0 | 1438.0 ± 0.0 | 1323.0 ± 0.0 |
+| GaussianBlur | 747.5 ± 0.0 | 1952.9 ± 0.0 | **3044.7 ± 0.0** | 1259.0 ± 0.0 |
+| GaussianIllumination | 189.4 ± 0.0 | **1583.1 ± 0.0** | - | - |
+| GaussianNoise | 75.8 ± 0.0 | **1249.8 ± 0.0** | - | - |
+| Grayscale | 177.7 ± 0.0 | 1559.5 ± 0.0 | **3042.9 ± 0.0** | 1275.9 ± 0.0 |
+| HorizontalFlip | 837.3 ± 0.0 | 1801.2 ± 0.0 | **20436.0 ± 0.0** | 1482.7 ± 0.0 |
+| Invert | 4622.5 ± 0.0 | 2026.3 ± 0.0 | **24578.9 ± 0.0** | 1524.5 ± 0.0 |
+| JpegCompression | 103.5 ± 0.0 | **1287.1 ± 0.0** | - | - |
+| LinearIllumination | 163.1 ± 0.0 | **1585.7 ± 0.0** | - | - |
+| LongestMaxSize | **612.5 ± 0.0** | 469.9 ± 0.0 | - | - |
+| MedianBlur | 290.1 ± 0.0 | **1542.1 ± 0.0** | - | - |
+| MotionBlur | 776.7 ± 0.0 | **1854.2 ± 0.0** | - | - |
+| OpticalDistortion | 140.0 ± 0.0 | **1491.5 ± 0.0** | - | - |
+| Pad | 4373.1 ± 0.0 | 1797.5 ± 0.0 | **17954.9 ± 0.0** | 1443.3 ± 0.0 |
+| Perspective | 208.6 ± 0.0 | **1580.8 ± 0.0** | 718.0 ± 0.0 | 759.7 ± 0.0 |
+| PlasmaBrightness | 114.3 ± 0.0 | **1308.6 ± 0.0** | - | - |
+| PlasmaContrast | 46.0 ± 0.0 | **873.9 ± 0.0** | - | - |
+| PlasmaShadow | 235.5 ± 0.0 | **1391.6 ± 0.0** | - | - |
+| Posterize | 4533.0 ± 0.0 | 2012.5 ± 0.0 | **20756.5 ± 0.0** | 1554.5 ± 0.0 |
+| RandomCrop224 | **18067.7 ± 0.0** | 2004.5 ± 0.0 | 15069.7 ± 0.0 | 1577.2 ± 0.0 |
+| RandomGamma | **3439.2 ± 0.0** | 2003.2 ± 0.0 | - | - |
+| RandomJigsaw | **2852.1 ± 0.0** | 1952.4 ± 0.0 | - | - |
+| RandomResizedCrop | 1870.7 ± 0.0 | 1782.6 ± 0.0 | **4337.0 ± 0.0** | 628.2 ± 0.0 |
+| RandomRotate90 | 687.7 ± 0.0 | **1862.5 ± 0.0** | - | - |
+| Resize | 543.3 ± 0.0 | 468.6 ± 0.0 | **4727.3 ± 0.0** | 1394.3 ± 0.0 |
+| Rotate | 645.4 ± 0.0 | **1883.7 ± 0.0** | 1253.4 ± 0.0 | 1115.8 ± 0.0 |
+| Sharpen | 479.0 ± 0.0 | **1831.2 ± 0.0** | 1204.8 ± 0.0 | 905.9 ± 0.0 |
+| Shear | 181.0 ± 0.0 | **1576.7 ± 0.0** | - | - |
+| SmallestMaxSize | 435.4 ± 0.0 | **467.1 ± 0.0** | - | - |
+| Solarize | 3364.3 ± 0.0 | 2082.8 ± 0.0 | **12677.5 ± 0.0** | 1527.0 ± 0.0 |
+| ThinPlateSpline | 44.4 ± 0.0 | **460.9 ± 0.0** | - | - |
+| VerticalFlip | 4444.1 ± 0.0 | 2021.4 ± 0.0 | **23657.7 ± 0.0** | 1560.0 ± 0.0 |
 
 ### Video
 

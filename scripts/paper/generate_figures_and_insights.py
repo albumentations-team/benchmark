@@ -1054,12 +1054,22 @@ def _readme_video_table_markdown() -> str | None:
     return format_comparison_table(loaded)
 
 
+def _readme_result_cell(row: pd.Series, *, bold: bool = False) -> str:
+    median = float(row["median_throughput"])
+    if "ci95" in row and pd.notna(row["ci95"]):
+        ci95 = float(row["ci95"])
+        cell = f"{median:.1f} ± {ci95:.1f}"
+    else:
+        cell = f"{median:.1f}"
+    return f"**{cell}**" if bold else cell
+
+
 def _readme_transform_tables_markdown() -> str:
     df = pd.read_csv(GENERATED / "all_results.csv")
     blocks = [
         "### Result Tables",
         "",
-        "The tables below summarize the checked-in benchmark results for RGB images, 9-channel images, and video clips. Image tables report throughput in images/s; the video table reports clips/s. A dash means no full measured row is available.",
+        "The tables below summarize the checked-in benchmark results for RGB images, 9-channel images, and video clips. Image table values are medians with 95% confidence intervals when available; the video fallback table reports its own uncertainty in the column headers. Image tables report throughput in images/s; the video table reports clips/s. A dash means no full measured row is available.",
     ]
     for title, regime_prefix, columns in README_SCENARIO_TABLES:
         subset = df[df["regime"].astype(str).str.startswith(regime_prefix)].copy()
@@ -1092,6 +1102,7 @@ def _readme_transform_tables_markdown() -> str:
         blocks.append("| " + " | ".join(["---", *["---:" for _ in active_columns]]) + " |")
         for transform in sorted(subset["display_transform"].unique()):
             cells = [transform]
+            measured_by_column: dict[tuple[str, str], pd.Series] = {}
             for regime, library in active_columns:
                 candidates = subset[
                     (subset["regime"] == regime)
@@ -1099,10 +1110,24 @@ def _readme_transform_tables_markdown() -> str:
                     & (subset["display_transform"] == transform)
                 ]
                 measured = candidates[candidates["full"]].sort_values("median_throughput", ascending=False)
-                if measured.empty:
+                if not measured.empty:
+                    measured_by_column[(regime, library)] = measured.iloc[0]
+            winning_column = (
+                max(measured_by_column, key=lambda column: float(measured_by_column[column]["median_throughput"]))
+                if measured_by_column
+                else None
+            )
+            for regime, library in active_columns:
+                measured_row = measured_by_column.get((regime, library))
+                if measured_row is None:
                     cells.append("-")
                     continue
-                cells.append(f"{float(measured.iloc[0]['median_throughput']):.1f}")
+                cells.append(
+                    _readme_result_cell(
+                        measured_row,
+                        bold=(regime, library) == winning_column,
+                    ),
+                )
             blocks.append("| " + " | ".join(cells) + " |")
     return "\n".join(blocks)
 
