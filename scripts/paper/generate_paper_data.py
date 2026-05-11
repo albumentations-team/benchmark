@@ -833,6 +833,7 @@ def _headline_metrics(rows: list[AggregateResult]) -> dict[str, Any]:
 
 
 def _write_markdown(path: Path, rows: list[AggregateResult]) -> str:
+    regimes_with_rows = [regime for regime in REGIME_LABELS if any(row.regime == regime for row in rows)]
     sections = [
         "# Generated Paper Data",
         "",
@@ -848,7 +849,7 @@ def _write_markdown(path: Path, rows: list[AggregateResult]) -> str:
         "",
         "## Winner Counts",
         "",
-        *(section for regime in REGIME_LABELS for section in (_best_library_table(rows, regime), "")),
+        *(section for regime in regimes_with_rows for section in (_best_library_table(rows, regime), "")),
         "",
         "## CPU DataLoader vs GPU DataLoader",
         "",

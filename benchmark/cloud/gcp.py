@@ -262,6 +262,11 @@ PY
     gcs_rsync_retry "results" 300 "$WORKDIR/results" "${run_prefix}/results/" || terminal_ok=0
   fi
 
+  if [[ "$terminal_ok" != "1" ]]; then
+    terminal_log "ERROR: terminal artifact upload was not confirmed for ${run_prefix}; keeping VM for triage."
+    return 1
+  fi
+
   local marker_name marker_path
   if [[ "$status" == "success" ]]; then
     marker_name="DONE"
@@ -276,7 +281,7 @@ PY
   gcs_cp_retry "$marker_name" 60 "$marker_path" "${run_prefix}/${marker_name}" || terminal_ok=0
   gcs_describe_retry "$marker_name" "${run_prefix}/${marker_name}" || terminal_ok=0
   if [[ "$terminal_ok" != "1" ]]; then
-    terminal_log "ERROR: terminal artifact upload was not confirmed for ${run_prefix}; keeping VM for triage."
+    terminal_log "ERROR: terminal marker upload was not confirmed for ${run_prefix}; keeping VM for triage."
     return 1
   fi
 

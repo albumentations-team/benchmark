@@ -74,7 +74,7 @@ def fmt_ratio(value: float) -> str:
 
 
 def implementation_label(regime: str, library: str) -> str:
-    device = "GPU" if regime.endswith("_dataloader_gpu") else "CPU"
+    device = "GPU" if regime.endswith("_gpu") else "CPU"
     return f"{LIBRARY_DISPLAY.get(library, library)} {device}"
 
 

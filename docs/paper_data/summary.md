@@ -224,46 +224,6 @@ Largest measured winner gaps:
 | RandomCrop224+Grayscale+Normalize+ToTensor | torchvision | 4.7x | kornia |
 | RandomCrop224+Brightness+Normalize+ToTensor | torchvision | 4.6x | kornia |
 
-Measured winner counts for Video CPU micro:
-
-| Library | Wins |
-|---|---:|
-
-Largest measured winner gaps:
-
-| Transform | Winner | Gap over second | Second |
-|---|---|---:|---|
-
-Measured winner counts for Video GPU micro:
-
-| Library | Wins |
-|---|---:|
-
-Largest measured winner gaps:
-
-| Transform | Winner | Gap over second | Second |
-|---|---|---:|---|
-
-Measured winner counts for Video CPU DataLoader:
-
-| Library | Wins |
-|---|---:|
-
-Largest measured winner gaps:
-
-| Transform | Winner | Gap over second | Second |
-|---|---|---:|---|
-
-Measured winner counts for Video GPU DataLoader:
-
-| Library | Wins |
-|---|---:|
-
-Largest measured winner gaps:
-
-| Transform | Winner | Gap over second | Second |
-|---|---|---:|---|
-
 
 ## CPU DataLoader vs GPU DataLoader
 
