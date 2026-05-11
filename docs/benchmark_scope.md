@@ -48,6 +48,11 @@ DataLoader pipeline benchmarks measure training-style recipes, not isolated tran
 Micro benchmarks are different: they measure only the named transform in the library's native format and must not add
 `Normalize`, `ToTensor`, axis conversion, or DataLoader collation work.
 
+The fixed recipe steps are part of the DataLoader measurement. For every DataLoader recipe, the benchmark includes crop
+shape preparation, normalization, and tensor conversion in addition to the measured augmentation. These steps are not
+subtracted from throughput and are why DataLoader rows should be read as recipe throughput rather than primitive
+transform throughput.
+
 For non-crop transforms, the recipe shape is:
 
 ```text

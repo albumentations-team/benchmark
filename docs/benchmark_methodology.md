@@ -136,6 +136,22 @@ fixed random crop. Video pipeline specs follow the same idea with clip-shaped da
 tensor conversion so the runner receives fixed-shape outputs that PyTorch default collation can stack without
 benchmark-side layout guesses.
 
+These fixed recipe steps are not optional bookkeeping around the benchmark. They are part of the measured DataLoader
+recipe. `benchmark/transforms/image_recipe_specs.py` and `benchmark/transforms/video_recipe_specs.py` name non-crop
+recipes as `RandomCrop224+<Transform>+Normalize+ToTensor` and crop recipes as `<Crop>+Normalize+ToTensor`. They also
+exclude `Normalize` as a standalone recipe augmentation because normalization is already present in every pipeline row.
+This means a DataLoader throughput number includes the fixed crop for non-crop transforms, the measured transform,
+normalization, tensor conversion, default collation, and any scope-specific decode or device-transfer work.
+
+The exact implementation of the fixed steps is library-specific but intentionally lives in the pipeline specs, not in the
+generic runner. AlbumentationsX uses `A.Compose([... , Normalize, ToTensorV2])`. TorchVision uses a compose path with
+`ToDtype(torch.float32, scale=True)` followed by `Normalize` for CPU rows, while its GPU batch path performs the measured
+augmentation per sample and then normalizes the batch. Kornia builds recipes from a CPU crop or crop-like preparation
+step plus a transform/normalization sequence, with per-image randomness forced where the module supports
+`same_on_batch`. Pillow crops in the recipe object, applies the Pillow augmentation when present, then converts with
+`PILToTensor` and normalizes manually. These differences are implementation details needed to preserve each library's
+native API and tensor layout, but the published recipe shape remains the same.
+
 The pipeline runner records batch size, worker count, minimum run time, minimum batches, thread policy, media type,
 scenario, device option, and pipeline scope. It warms the DataLoader path once before timed runs. Each timed run builds a
 fresh DataLoader, iterates until both the minimum time and minimum batch constraints are satisfied, materializes produced
