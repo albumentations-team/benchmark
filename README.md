@@ -677,17 +677,13 @@ See `docs/benchmark_architecture.md` for extension rules and the test files that
 
 ## Methodology
 
-The benchmark methodology is designed to ensure fair and reproducible comparisons:
+The detailed methodology source is [`docs/benchmark_methodology.md`](docs/benchmark_methodology.md). It describes the
+measurement scopes, transform-set policy, environment isolation, media loading, micro timing, DataLoader timing, GPU and
+DALI handling, slow-transform guard, result metadata, and cloud execution model.
 
-1. **Measurement scope**: Micro benchmarks measure primitive augmentation-only cost from preloaded data. GPU image micro rows are device-resident and exclude host-to-device transfer. DataLoader benchmarks split memory-only worker scaling, disk/decode pipelines, and optional tensor batch/device-copy pipelines; GPU image DataLoader rows include CPU crop/pad shape preparation, batch copy, and GPU augmentation plus normalization. TorchVision GPU image DataLoader rows also include a per-sample GPU loop to preserve correct random augmentation semantics.
-2. **Threading policy**: Micro benchmarks force one internal thread through runner-level policy. Pipeline benchmarks use explicit thread policies and record both dataloader workers and library thread settings.
-3. **Dataset size**: The checked-in image benchmark configs use `2,000` ImageNet validation images for micro rows and
-   `10,000` images for DataLoader rows. Full `50,000`-image ImageNet sweeps are optional top-ups once the one-run table
-   is complete and validated.
-4. **Slow-transform guard**: Micro and DataLoader pipeline runs preflight transforms and early-stop impractically slow operations (`<=20 img/s` for images) instead of letting one unusable transform dominate runtime.
-5. **Visual progress**: Long-running loops use tqdm with descriptive labels for library loops, media loading, micro transforms, pyperf subprocess transforms, and DataLoader pipeline transforms.
-6. **Warmup and statistics**: Runs report robust summary statistics, coefficient of variation, confidence intervals, and unstable-result flags.
-7. **Environment metadata**: Results record CPU/GPU metadata, package versions, git state, timing backend, dataset fingerprint, batch size, workers, and whether decode/collate/GPU transfer are included.
+In short: micro benchmarks are preloaded augmentation-only profilers, DataLoader benchmarks are production-style recipe
+measurements, GPU rows are labeled separately with transfer/synchronization semantics, and unsupported or early-stopped
+rows remain visible so coverage and throughput can be interpreted together.
 
 ## Contributing
 

@@ -59,6 +59,30 @@ def test_scope_and_readme_link_to_architecture_doc() -> None:
     assert "docs/benchmark_architecture.md" in _read("docs/benchmark_scope.md")
 
 
+def test_scope_and_readme_link_to_methodology_doc() -> None:
+    assert "docs/benchmark_methodology.md" in _read("README.md")
+    assert "docs/benchmark_methodology.md" in _read("docs/benchmark_scope.md")
+
+
+def test_methodology_doc_references_core_policy_modules() -> None:
+    doc = _read("docs/benchmark_methodology.md")
+    required_refs = (
+        "benchmark/matrix.py",
+        "benchmark/policy.py",
+        "benchmark/jobs.py",
+        "benchmark/pyperf_micro_runner.py",
+        "benchmark/pipeline_runner.py",
+        "benchmark/transform_filters.py",
+        "benchmark/cloud/stage_dataset.py",
+    )
+
+    for module_path in required_refs:
+        assert module_path in doc
+        assert (REPO_ROOT / module_path).exists()
+
+    assert not any(line.startswith("|") for line in doc.splitlines())
+
+
 def test_skills_document_centralized_policy_and_matrix() -> None:
     skill_paths = (
         ".cursor/skills/benchmark-runner/SKILL.md",
