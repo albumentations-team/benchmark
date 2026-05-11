@@ -1007,17 +1007,32 @@ README_SCENARIO_TABLES = [
     (
         "RGB benchmark table",
         "rgb_",
-        ["rgb_micro_cpu", "rgb_dataloader_cpu", "rgb_micro_gpu", "rgb_dataloader_gpu"],
+        [
+            ("rgb_micro_cpu", "albumentationsx"),
+            ("rgb_dataloader_cpu", "albumentationsx"),
+            ("rgb_micro_gpu", "torchvision"),
+            ("rgb_dataloader_gpu", "dali"),
+        ],
     ),
     (
         "9-channel benchmark table",
         "image9ch_",
-        ["image9ch_micro_cpu", "image9ch_dataloader_cpu", "image9ch_micro_gpu", "image9ch_dataloader_gpu"],
+        [
+            ("image9ch_micro_cpu", "albumentationsx"),
+            ("image9ch_dataloader_cpu", "albumentationsx"),
+            ("image9ch_micro_gpu", "torchvision"),
+            ("image9ch_dataloader_gpu", "torchvision"),
+        ],
     ),
     (
         "Video benchmark table",
         "video16f_",
-        ["video16f_micro_cpu", "video16f_dataloader_cpu", "video16f_micro_gpu", "video16f_dataloader_gpu"],
+        [
+            ("video16f_micro_cpu", "albumentationsx"),
+            ("video16f_dataloader_cpu", "albumentationsx"),
+            ("video16f_micro_gpu", "torchvision"),
+            ("video16f_dataloader_gpu", "torchvision"),
+        ],
     ),
 ]
 
@@ -1027,9 +1042,9 @@ def _readme_transform_tables_markdown() -> str:
     blocks = [
         "### Scenario benchmark tables",
         "",
-        "Rows are transforms. Columns are benchmark regimes. Each cell shows the fastest full measured implementation for that transform and regime, formatted as `Library throughput`; `-` means no full measured row is available.",
+        "Rows are transforms. Columns are selected benchmark implementations. Each cell shows throughput in images/s for that implementation; `-` means no full measured row is available.",
     ]
-    for title, regime_prefix, regimes in README_SCENARIO_TABLES:
+    for title, regime_prefix, columns in README_SCENARIO_TABLES:
         subset = df[df["regime"].astype(str).str.startswith(regime_prefix)].copy()
         blocks.extend(["", f"#### {title}", ""])
         if subset.empty:
@@ -1041,28 +1056,33 @@ def _readme_transform_tables_markdown() -> str:
             & (subset["num_successful_runs"].astype(int) > 0)
         )
         subset["display_transform"] = subset["transform"].astype(str).map(recipe_display_name)
+        active_columns = [
+            (regime, library)
+            for regime, library in columns
+            if ((subset["regime"] == regime) & (subset["library"] == library)).any()
+        ]
         headers = [
             "Transform",
             *[
-                str(subset.loc[subset["regime"] == regime, "regime_label"].iloc[0])
-                for regime in regimes
-                if (subset["regime"] == regime).any()
+                f"{LIBRARY_DISPLAY.get(library, library)}<br>{subset.loc[subset['regime'] == regime, 'regime_label'].iloc[0]}"
+                for regime, library in active_columns
             ],
         ]
-        active_regimes = [regime for regime in regimes if (subset["regime"] == regime).any()]
         blocks.append("| " + " | ".join(headers) + " |")
-        blocks.append("| " + " | ".join(["---", *["---:" for _ in active_regimes]]) + " |")
+        blocks.append("| " + " | ".join(["---", *["---:" for _ in active_columns]]) + " |")
         for transform in sorted(subset["display_transform"].unique()):
             cells = [transform]
-            for regime in active_regimes:
-                candidates = subset[(subset["regime"] == regime) & (subset["display_transform"] == transform)]
+            for regime, library in active_columns:
+                candidates = subset[
+                    (subset["regime"] == regime)
+                    & (subset["library"] == library)
+                    & (subset["display_transform"] == transform)
+                ]
                 measured = candidates[candidates["full"]].sort_values("median_throughput", ascending=False)
                 if measured.empty:
                     cells.append("-")
                     continue
-                best = measured.iloc[0]
-                library = LIBRARY_DISPLAY.get(str(best["library"]), str(best["library"]))
-                cells.append(f"{library} {float(best['median_throughput']):.1f}")
+                cells.append(f"{float(measured.iloc[0]['median_throughput']):.1f}")
             blocks.append("| " + " | ".join(cells) + " |")
     return "\n".join(blocks)
 
