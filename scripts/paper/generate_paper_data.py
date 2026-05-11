@@ -37,6 +37,10 @@ RUN_GROUP_PATTERNS = {
         ("paper-rgb-dataloader-gpu-memory-g2-*", "latest"),
         ("paper-rgb-dataloader-dali-g2-*", "latest"),
     ],
+    "image9ch_micro_cpu": [("paper-9ch-micro-c4-*", "latest")],
+    "image9ch_micro_gpu": [("paper-9ch-micro-gpu-g2-*", "latest")],
+    "image9ch_dataloader_cpu": [("paper-9ch-dataloader-memory-c4-*", "all")],
+    "image9ch_dataloader_gpu": [("paper-9ch-dataloader-gpu-decode-g2-*", "latest")],
 }
 
 REPLACED_RESULT_FILES: set[Path] = set()
@@ -840,13 +844,7 @@ def _write_markdown(path: Path, rows: list[AggregateResult]) -> str:
         "",
         "## Winner Counts",
         "",
-        _best_library_table(rows, "rgb_micro_cpu"),
-        "",
-        _best_library_table(rows, "rgb_dataloader_cpu"),
-        "",
-        _best_library_table(rows, "rgb_micro_gpu"),
-        "",
-        _best_library_table(rows, "rgb_dataloader_gpu"),
+        *(section for regime in REGIME_LABELS for section in (_best_library_table(rows, regime), "")),
         "",
         "## CPU DataLoader vs GPU DataLoader",
         "",

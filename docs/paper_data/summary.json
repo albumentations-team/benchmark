@@ -1,11 +1,15 @@
 {
-  "num_source_rows": 685,
-  "num_aggregate_rows": 525,
+  "num_source_rows": 1009,
+  "num_aggregate_rows": 849,
   "regimes": {
     "rgb_micro_cpu": 158,
     "rgb_micro_gpu": 75,
     "rgb_dataloader_cpu": 160,
-    "rgb_dataloader_gpu": 132
+    "rgb_dataloader_gpu": 132,
+    "image9ch_micro_cpu": 103,
+    "image9ch_micro_gpu": 59,
+    "image9ch_dataloader_cpu": 103,
+    "image9ch_dataloader_gpu": 59
   },
   "headlines": {
     "median_throughput": {
@@ -29,6 +33,23 @@
         "torchvision": 2561.893384972934,
         "kornia": 632.3004232768778,
         "dali": 3785.1916513893693
+      },
+      "image9ch_micro_cpu": {
+        "albumentationsx": 612.5480681246701,
+        "torchvision": 288.86058666882013
+      },
+      "image9ch_micro_gpu": {
+        "torchvision": 3690.85049987812,
+        "kornia": 281.36786152468574
+      },
+      "image9ch_dataloader_cpu": {
+        "albumentationsx": 1782.5656543721457,
+        "torchvision": 1388.2019879095274,
+        "kornia": 703.7389352858205
+      },
+      "image9ch_dataloader_gpu": {
+        "torchvision": 1275.8695722752775,
+        "kornia": 270.2177507409335
       }
     },
     "winner_counts": {
@@ -47,6 +68,22 @@
         "dali": 16,
         "kornia": 1,
         "torchvision": 13
+      },
+      "image9ch_micro_cpu": {
+        "albumentationsx": 18,
+        "torchvision": 3
+      },
+      "image9ch_micro_gpu": {
+        "torchvision": 17
+      },
+      "image9ch_dataloader_cpu": {
+        "albumentationsx": 39,
+        "kornia": 1,
+        "torchvision": 1
+      },
+      "image9ch_dataloader_gpu": {
+        "kornia": 1,
+        "torchvision": 19
       }
     },
     "gpu_vs_albumentationsx_cpu": {
@@ -741,6 +778,74 @@
           "full": 22,
           "early_stopped": 0,
           "unsupported": 35
+        }
+      },
+      "image9ch_micro_cpu": {
+        "albumentationsx": {
+          "rows": 41,
+          "full": 41,
+          "early_stopped": 0,
+          "unsupported": 0
+        },
+        "torchvision": {
+          "rows": 22,
+          "full": 21,
+          "early_stopped": 1,
+          "unsupported": 0
+        },
+        "kornia": {
+          "rows": 40,
+          "full": 0,
+          "early_stopped": 5,
+          "unsupported": 35
+        }
+      },
+      "image9ch_micro_gpu": {
+        "torchvision": {
+          "rows": 21,
+          "full": 20,
+          "early_stopped": 1,
+          "unsupported": 0
+        },
+        "kornia": {
+          "rows": 38,
+          "full": 30,
+          "early_stopped": 4,
+          "unsupported": 4
+        }
+      },
+      "image9ch_dataloader_cpu": {
+        "albumentationsx": {
+          "rows": 41,
+          "full": 41,
+          "early_stopped": 0,
+          "unsupported": 0
+        },
+        "torchvision": {
+          "rows": 22,
+          "full": 22,
+          "early_stopped": 0,
+          "unsupported": 0
+        },
+        "kornia": {
+          "rows": 40,
+          "full": 40,
+          "early_stopped": 0,
+          "unsupported": 0
+        }
+      },
+      "image9ch_dataloader_gpu": {
+        "torchvision": {
+          "rows": 21,
+          "full": 21,
+          "early_stopped": 0,
+          "unsupported": 0
+        },
+        "kornia": {
+          "rows": 38,
+          "full": 37,
+          "early_stopped": 0,
+          "unsupported": 1
         }
       }
     }

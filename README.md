@@ -95,6 +95,23 @@ GPU augmentation also consumes accelerator memory that would otherwise be availa
 
 Measured winner counts among comparable measured transforms by regime. The conclusion changes when moving from augmentation-only microbenchmarks to production-style DataLoader measurements.
 
+### 9-channel benchmark summary
+
+Generated from the 9-channel production snapshots in `results/published`. Median throughput is computed over full measured rows only.
+
+| Regime | Library | Full measured | Unsupported | Median measured-row throughput (img/s) |
+|---|---|---:|---:|---:|
+| 9ch CPU micro | AlbumentationsX | 41/41 | 0 | 612.5 |
+| 9ch CPU micro | TorchVision | 21/22 | 0 | 288.9 |
+| 9ch CPU micro | Kornia | 0/40 | 35 | - |
+| 9ch CPU DataLoader | AlbumentationsX | 41/41 | 0 | 1782.6 |
+| 9ch CPU DataLoader | TorchVision | 22/22 | 0 | 1388.2 |
+| 9ch CPU DataLoader | Kornia | 40/40 | 0 | 703.7 |
+| 9ch GPU micro | TorchVision | 20/21 | 0 | 3690.9 |
+| 9ch GPU micro | Kornia | 30/38 | 4 | 281.4 |
+| 9ch GPU DataLoader | TorchVision | 21/21 | 0 | 1275.9 |
+| 9ch GPU DataLoader | Kornia | 37/38 | 1 | 270.2 |
+
 <!-- PAPER_FIGURES_END -->
 
 <!-- IMAGE_BENCHMARK_TABLE_START -->

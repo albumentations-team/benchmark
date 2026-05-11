@@ -870,7 +870,7 @@ def _write_insights(
         "- Main text figure source: `docs/paper_data/figure_elastic_row.csv` for the Elastic implementation drill-down.",
         "- Main text table: `docs/paper_data/summary.md` sections `Coverage Summary`, `AlbumentationsX CPU DataLoader vs GPU DataLoader`, and `GPU Memory`.",
         "- Appendix table: `docs/paper_data/production_support_matrix.md` for the 57-row production DataLoader support/performance matrix.",
-        "- Supporting pivot tables: `docs/paper_data/rgb_dataloader_cpu_pivot.csv` and `docs/paper_data/rgb_dataloader_gpu_pivot.csv`.",
+        "- Supporting pivot tables: `docs/paper_data/*_pivot.csv` for each generated RGB and 9-channel regime.",
         "- Reproducibility table: `docs/paper_data/all_results.csv` with source file provenance.",
         "",
         "## Current Data Summary",
@@ -1003,6 +1003,50 @@ def _figure_markdown(figures: list[dict[str, str]], prefix: str) -> str:
     return "\n".join(blocks).strip()
 
 
+def _nine_channel_table_markdown() -> str:
+    df = pd.read_csv(GENERATED / "all_results.csv")
+    subset = df[df["regime"].astype(str).str.startswith("image9ch_")].copy()
+    if subset.empty:
+        return ""
+    subset["full"] = (
+        subset["supported"].astype(bool)
+        & ~subset["early_stopped"].astype(bool)
+        & (subset["num_successful_runs"].astype(int) > 0)
+    )
+    subset["measured_median_throughput"] = subset["median_throughput"].where(subset["full"])
+    summary = (
+        subset.groupby(["regime_label", "library"], observed=True)
+        .agg(
+            rows=("transform", "count"),
+            full=("full", "sum"),
+            unsupported=("supported", lambda values: int((~values.astype(bool)).sum())),
+            median=("measured_median_throughput", "median"),
+        )
+        .reset_index()
+    )
+    regime_rank = {label: index for index, label in enumerate(REGIME_ORDER)}
+    library_rank = {library: index for index, library in enumerate(LIBRARY_ORDER)}
+    summary["regime_rank"] = summary["regime_label"].map(regime_rank)
+    summary["library_rank"] = summary["library"].map(library_rank)
+    summary = summary.sort_values(["regime_rank", "library_rank"])
+
+    lines = [
+        "### 9-channel benchmark summary",
+        "",
+        "Generated from the 9-channel production snapshots in `results/published`. Median throughput is computed over full measured rows only.",
+        "",
+        "| Regime | Library | Full measured | Unsupported | Median measured-row throughput (img/s) |",
+        "|---|---|---:|---:|---:|",
+    ]
+    for row in summary.itertuples(index=False):
+        median = "-" if pd.isna(row.median) else f"{float(row.median):.1f}"
+        lines.append(
+            f"| {row.regime_label} | {LIBRARY_DISPLAY.get(str(row.library), row.library)} | "
+            f"{int(row.full)}/{int(row.rows)} | {int(row.unsupported)} | {median} |",
+        )
+    return "\n".join(lines)
+
+
 def _write_figure_markdown() -> None:
     readme_block = "\n".join(
         [
@@ -1011,6 +1055,8 @@ def _write_figure_markdown() -> None:
             _figure_markdown(MAIN_FIGURES, "docs/paper_figures/"),
             "",
             _figure_markdown(APPENDIX_FIGURES, "docs/paper_figures/"),
+            "",
+            _nine_channel_table_markdown(),
         ],
     )
     _patch_between_markers(
@@ -1088,9 +1134,10 @@ def _sync_public_data() -> None:
         "production_support_matrix.md",
         "unsupported_and_early_stopped.csv",
         "unsupported_and_early_stopped.md",
-        "rgb_dataloader_cpu_pivot.csv",
-        "rgb_dataloader_gpu_pivot.csv",
     ]
+    names.extend(path.name for path in GENERATED.glob("*_pivot.csv"))
+    names.extend(path.name for path in GENERATED.glob("*_cpu.csv"))
+    names.extend(path.name for path in GENERATED.glob("*_gpu.csv"))
     for name in names:
         source = GENERATED / name
         if source.exists():

@@ -19,6 +19,16 @@ Generated from committed `results/published/*` snapshots. Use `--extra-run-dir R
 | GPU DataLoader | torchvision | 25 | 25 | 0 | 0 | 2561.9 |
 | GPU DataLoader | kornia | 50 | 49 | 0 | 1 | 632.3 |
 | GPU DataLoader | dali | 57 | 22 | 0 | 35 | 3785.2 |
+| 9ch CPU micro | albumentationsx | 41 | 41 | 0 | 0 | 612.5 |
+| 9ch CPU micro | torchvision | 22 | 21 | 1 | 0 | 288.9 |
+| 9ch CPU micro | kornia | 40 | 0 | 5 | 35 | - |
+| 9ch GPU micro | torchvision | 21 | 20 | 1 | 0 | 3690.9 |
+| 9ch GPU micro | kornia | 38 | 30 | 4 | 4 | 281.4 |
+| 9ch CPU DataLoader | albumentationsx | 41 | 41 | 0 | 0 | 1782.6 |
+| 9ch CPU DataLoader | torchvision | 22 | 22 | 0 | 0 | 1388.2 |
+| 9ch CPU DataLoader | kornia | 40 | 40 | 0 | 0 | 703.7 |
+| 9ch GPU DataLoader | torchvision | 21 | 21 | 0 | 0 | 1275.9 |
+| 9ch GPU DataLoader | kornia | 38 | 37 | 0 | 1 | 270.2 |
 
 ## Absolute/Open Production DataLoader Category
 
@@ -60,6 +70,27 @@ Largest measured winner gaps:
 | PhotoMetricDistort | albumentationsx | 12.8x | torchvision |
 | ColorJitter | albumentationsx | 12.4x | kornia |
 
+Measured winner counts for GPU micro:
+
+| Library | Wins |
+|---|---:|
+| torchvision | 19 |
+
+Largest measured winner gaps:
+
+| Transform | Winner | Gap over second | Second |
+|---|---|---:|---|
+| RandomCrop224 | torchvision | 48.8x | kornia |
+| Posterize | torchvision | 26.8x | kornia |
+| Resize | torchvision | 23.7x | kornia |
+| Invert | torchvision | 20.6x | kornia |
+| VerticalFlip | torchvision | 19.2x | kornia |
+| HorizontalFlip | torchvision | 18.9x | kornia |
+| Solarize | torchvision | 18.4x | kornia |
+| ChannelShuffle | torchvision | 13.5x | kornia |
+| RandomResizedCrop | torchvision | 13.2x | kornia |
+| Grayscale | torchvision | 12.9x | kornia |
+
 Measured winner counts for CPU DataLoader:
 
 | Library | Wins |
@@ -81,27 +112,6 @@ Largest measured winner gaps:
 | RandomCrop224+MotionBlur+Normalize+ToTensor | albumentationsx | 3.9x | kornia |
 | RandomCrop224+RandomRotate90+Normalize+ToTensor | albumentationsx | 3.5x | kornia |
 | RandomCrop224+PhotoMetricDistort+Normalize+ToTensor | albumentationsx | 3.5x | torchvision |
-
-Measured winner counts for GPU micro:
-
-| Library | Wins |
-|---|---:|
-| torchvision | 19 |
-
-Largest measured winner gaps:
-
-| Transform | Winner | Gap over second | Second |
-|---|---|---:|---|
-| RandomCrop224 | torchvision | 48.8x | kornia |
-| Posterize | torchvision | 26.8x | kornia |
-| Resize | torchvision | 23.7x | kornia |
-| Invert | torchvision | 20.6x | kornia |
-| VerticalFlip | torchvision | 19.2x | kornia |
-| HorizontalFlip | torchvision | 18.9x | kornia |
-| Solarize | torchvision | 18.4x | kornia |
-| ChannelShuffle | torchvision | 13.5x | kornia |
-| RandomResizedCrop | torchvision | 13.2x | kornia |
-| Grayscale | torchvision | 12.9x | kornia |
 
 Measured winner counts for GPU DataLoader:
 
@@ -125,6 +135,95 @@ Largest measured winner gaps:
 | RandomCrop224+Solarize+Normalize+ToTensor | torchvision | 6.4x | kornia |
 | RandomCrop224+ColorJitter+Normalize+ToTensor | dali | 6.1x | torchvision |
 | RandomCrop224+Grayscale+Normalize+ToTensor | torchvision | 6.0x | kornia |
+
+Measured winner counts for 9ch CPU micro:
+
+| Library | Wins |
+|---|---:|
+| albumentationsx | 18 |
+| torchvision | 3 |
+
+Largest measured winner gaps:
+
+| Transform | Winner | Gap over second | Second |
+|---|---|---:|---|
+| Solarize | albumentationsx | 16.1x | torchvision |
+| GaussianBlur | albumentationsx | 12.5x | torchvision |
+| Contrast | albumentationsx | 11.9x | torchvision |
+| Sharpen | albumentationsx | 11.7x | torchvision |
+| Resize | albumentationsx | 8.1x | torchvision |
+| Brightness | albumentationsx | 7.5x | torchvision |
+| Rotate | albumentationsx | 7.0x | torchvision |
+| RandomResizedCrop | albumentationsx | 6.6x | torchvision |
+| Grayscale | torchvision | 3.6x | albumentationsx |
+| HorizontalFlip | torchvision | 3.5x | albumentationsx |
+
+Measured winner counts for 9ch GPU micro:
+
+| Library | Wins |
+|---|---:|
+| torchvision | 17 |
+
+Largest measured winner gaps:
+
+| Transform | Winner | Gap over second | Second |
+|---|---|---:|---|
+| Invert | torchvision | 69.1x | kornia |
+| Posterize | torchvision | 69.0x | kornia |
+| VerticalFlip | torchvision | 64.5x | kornia |
+| HorizontalFlip | torchvision | 54.9x | kornia |
+| RandomCrop224 | torchvision | 53.5x | kornia |
+| Solarize | torchvision | 42.6x | kornia |
+| ChannelShuffle | torchvision | 29.8x | kornia |
+| Resize | torchvision | 23.5x | kornia |
+| RandomResizedCrop | torchvision | 16.0x | kornia |
+| Grayscale | torchvision | 13.1x | kornia |
+
+Measured winner counts for 9ch CPU DataLoader:
+
+| Library | Wins |
+|---|---:|
+| albumentationsx | 39 |
+| kornia | 1 |
+| torchvision | 1 |
+
+Largest measured winner gaps:
+
+| Transform | Winner | Gap over second | Second |
+|---|---|---:|---|
+| RandomCrop224+MedianBlur+Normalize+ToTensor | albumentationsx | 58.3x | kornia |
+| RandomCrop224+PlasmaBrightness+Normalize+ToTensor | albumentationsx | 12.1x | kornia |
+| RandomCrop224+PlasmaContrast+Normalize+ToTensor | albumentationsx | 8.2x | kornia |
+| RandomCrop224+Elastic+Normalize+ToTensor | albumentationsx | 6.2x | torchvision |
+| RandomCrop224+Blur+Normalize+ToTensor | albumentationsx | 3.1x | kornia |
+| RandomCrop224+MotionBlur+Normalize+ToTensor | albumentationsx | 2.8x | kornia |
+| RandomCrop224+RandomGamma+Normalize+ToTensor | albumentationsx | 2.8x | kornia |
+| RandomCrop224+RandomJigsaw+Normalize+ToTensor | albumentationsx | 2.8x | kornia |
+| RandomCrop224+RandomRotate90+Normalize+ToTensor | albumentationsx | 2.7x | kornia |
+| RandomCrop224+PlasmaShadow+Normalize+ToTensor | albumentationsx | 2.6x | kornia |
+
+Measured winner counts for 9ch GPU DataLoader:
+
+| Library | Wins |
+|---|---:|
+| torchvision | 19 |
+| kornia | 1 |
+
+Largest measured winner gaps:
+
+| Transform | Winner | Gap over second | Second |
+|---|---|---:|---|
+| RandomCrop224+Resize+Normalize+ToTensor | torchvision | 21.7x | kornia |
+| RandomCrop224+Erasing+Normalize+ToTensor | torchvision | 6.4x | kornia |
+| RandomCrop224+Posterize+Normalize+ToTensor | torchvision | 6.0x | kornia |
+| RandomCrop224+VerticalFlip+Normalize+ToTensor | torchvision | 5.6x | kornia |
+| RandomCrop224+Solarize+Normalize+ToTensor | torchvision | 5.6x | kornia |
+| RandomCrop224+Invert+Normalize+ToTensor | torchvision | 5.5x | kornia |
+| RandomCrop224+HorizontalFlip+Normalize+ToTensor | torchvision | 5.3x | kornia |
+| RandomCrop224+ChannelShuffle+Normalize+ToTensor | torchvision | 4.9x | kornia |
+| RandomCrop224+Grayscale+Normalize+ToTensor | torchvision | 4.7x | kornia |
+| RandomCrop224+Brightness+Normalize+ToTensor | torchvision | 4.6x | kornia |
+
 
 ## CPU DataLoader vs GPU DataLoader
 
@@ -214,5 +313,15 @@ Largest CPU wins:
 | GPU DataLoader | torchvision | 25 | 0 | 0 |
 | GPU DataLoader | kornia | 49 | 0 | 1 |
 | GPU DataLoader | dali | 22 | 0 | 35 |
+| 9ch CPU micro | albumentationsx | 41 | 0 | 0 |
+| 9ch CPU micro | torchvision | 21 | 1 | 0 |
+| 9ch CPU micro | kornia | 0 | 5 | 35 |
+| 9ch GPU micro | torchvision | 20 | 1 | 0 |
+| 9ch GPU micro | kornia | 30 | 4 | 4 |
+| 9ch CPU DataLoader | albumentationsx | 41 | 0 | 0 |
+| 9ch CPU DataLoader | torchvision | 22 | 0 | 0 |
+| 9ch CPU DataLoader | kornia | 40 | 0 | 0 |
+| 9ch GPU DataLoader | torchvision | 21 | 0 | 0 |
+| 9ch GPU DataLoader | kornia | 37 | 0 | 1 |
 
 Full row-level reasons are generated in the public paper-data supplement after figure generation.
