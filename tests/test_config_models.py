@@ -70,10 +70,22 @@ def test_paper_production_configs_use_deadline_sizing() -> None:
         "prod_c4_9ch_dataloader_cpu.yaml": {
             "scenario": "image-9ch",
             "mode": "pipeline",
-            "libraries": ["albumentationsx", "torchvision", "kornia"],
+            "libraries": ["albumentationsx", "torchvision"],
             "num_items": 10000,
             "device": "none",
             "machine_type": "c4-standard-16",
+            "num_channels": 9,
+            "pipeline_scope": "memory_dataloader_augment",
+            "disk_size_gb": 100,
+            "batch_size": 128,
+        },
+        "prod_c4_highmem_9ch_dataloader_cpu_kornia.yaml": {
+            "scenario": "image-9ch",
+            "mode": "pipeline",
+            "libraries": ["kornia"],
+            "num_items": 10000,
+            "device": "none",
+            "machine_type": "c4-highmem-16",
             "num_channels": 9,
             "pipeline_scope": "memory_dataloader_augment",
             "disk_size_gb": 100,
@@ -121,6 +133,54 @@ def test_paper_production_configs_use_deadline_sizing() -> None:
             "disk_size_gb": 200,
             "batch_size": 128,
         },
+        "prod_c4_video_micro_cpu.yaml": {
+            "scenario": "video-16f",
+            "mode": "micro",
+            "libraries": ["albumentationsx", "torchvision", "kornia"],
+            "num_items": 2000,
+            "device": "none",
+            "machine_type": "c4-standard-16",
+            "gcs_uri": "gs://imagenet_validation/ucf101/ucf101.tar",
+            "clip_length": 16,
+            "disk_size_gb": 100,
+        },
+        "prod_c4_video_dataloader_cpu.yaml": {
+            "scenario": "video-16f",
+            "mode": "pipeline",
+            "libraries": ["albumentationsx", "torchvision", "kornia"],
+            "num_items": 10000,
+            "device": "none",
+            "machine_type": "c4-standard-16",
+            "gcs_uri": "gs://imagenet_validation/ucf101/ucf101.tar",
+            "clip_length": 16,
+            "pipeline_scope": "memory_dataloader_augment",
+            "disk_size_gb": 100,
+            "batch_size": 64,
+        },
+        "prod_g2_video_micro_gpu.yaml": {
+            "scenario": "video-16f",
+            "mode": "micro",
+            "libraries": ["torchvision", "kornia"],
+            "num_items": 1000,
+            "device": "cuda",
+            "machine_type": "g2-standard-16",
+            "gcs_uri": "gs://imagenet_validation/ucf101/ucf101.tar",
+            "clip_length": 16,
+            "disk_size_gb": 200,
+        },
+        "prod_g2_video_dataloader_gpu.yaml": {
+            "scenario": "video-16f",
+            "mode": "pipeline",
+            "libraries": ["torchvision", "kornia"],
+            "num_items": 10000,
+            "device": "cuda",
+            "machine_type": "g2-standard-16",
+            "gcs_uri": "gs://imagenet_validation/ucf101/ucf101.tar",
+            "clip_length": 16,
+            "pipeline_scope": "memory_dataloader_augment",
+            "disk_size_gb": 200,
+            "batch_size": 64,
+        },
     }
 
     for filename, spec in expected.items():
@@ -130,9 +190,10 @@ def test_paper_production_configs_use_deadline_sizing() -> None:
         assert config.selection.mode == spec["mode"]
         assert config.selection.libraries == spec["libraries"]
         assert config.selection.transform_set == "paper"
-        assert config.data.gcs_uri == "gs://imagenet_validation/imagenet/val.tar"
+        assert config.data.gcs_uri == spec.get("gcs_uri", "gs://imagenet_validation/imagenet/val.tar")
         assert config.data.num_items == spec["num_items"]
         assert config.data.num_channels == spec.get("num_channels", 3)
+        assert config.data.clip_length == spec.get("clip_length")
         assert config.execution.num_runs == 1
         assert config.execution.device == spec["device"]
         assert config.cloud is not None

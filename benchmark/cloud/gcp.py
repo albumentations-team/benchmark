@@ -35,6 +35,7 @@ Artifacts for run ``<run_id>`` live under ``<gcp-gcs-results-uri>/<run_id>/``:
     - ``vm.log`` — captured bootstrap + benchmark stdout/stderr
     - ``exit_code.txt`` — integer exit code of ``benchmark.cli run``
     - ``run_meta.json`` — exit code + instance metadata + end timestamp
+    - ``DONE`` or ``FAILED`` — terminal marker written after final result sync
 """
 
 from __future__ import annotations
@@ -211,6 +212,29 @@ upload_terminal_artifacts() {
     return 1
   }
 
+  gcs_rsync_retry() {
+    local label="$1"
+    local timeout_secs="$2"
+    local src="$3"
+    local dest="$4"
+    local attempt rc
+    for attempt in 1 2 3 4 5; do
+      terminal_log "sync ${label} attempt ${attempt}/5: timeout ${timeout_secs}s to ${dest}"
+      set +e
+      timeout "${timeout_secs}s" "$GCLOUD_BIN" --quiet storage rsync --recursive "$src" "$dest"
+      rc=$?
+      set -e
+      if [[ "$rc" == "0" ]]; then
+        terminal_log "sync ${label} succeeded"
+        return 0
+      fi
+      terminal_log "WARN: sync ${label} failed with rc=${rc}"
+      sleep 3
+    done
+    terminal_log "ERROR: sync ${label} failed after retries: timeout ${timeout_secs}s to ${dest}"
+    return 1
+  }
+
   BENCHMARK_TERMINAL_STATUS="$status" BENCHMARK_TERMINAL_RC="$rc" python3 << 'PY' || true
 import json
 import os
@@ -234,6 +258,10 @@ PY
   gcs_cp_retry "exit_code.txt" 60 "$WORKDIR/exit_code.txt" "${run_prefix}/exit_code.txt" || terminal_ok=0
   gcs_cp_retry "run_meta.json" 60 "$WORKDIR/run_meta.json" "${run_prefix}/run_meta.json" || terminal_ok=0
 
+  if [[ -d "$WORKDIR/results" ]]; then
+    gcs_rsync_retry "results" 300 "$WORKDIR/results" "${run_prefix}/results/" || terminal_ok=0
+  fi
+
   local marker_name marker_path
   if [[ "$status" == "success" ]]; then
     marker_name="DONE"
@@ -248,15 +276,10 @@ PY
   gcs_cp_retry "$marker_name" 60 "$marker_path" "${run_prefix}/${marker_name}" || terminal_ok=0
   gcs_describe_retry "$marker_name" "${run_prefix}/${marker_name}" || terminal_ok=0
   if [[ "$terminal_ok" != "1" ]]; then
-    terminal_log "ERROR: terminal marker upload was not confirmed for ${run_prefix}; keeping VM for triage."
+    terminal_log "ERROR: terminal artifact upload was not confirmed for ${run_prefix}; keeping VM for triage."
     return 1
   fi
 
-  if [[ -d "$WORKDIR/results" ]]; then
-    terminal_log "sync results to ${run_prefix}/results/"
-    timeout 300s "$GCLOUD_BIN" --quiet storage rsync --recursive "$WORKDIR/results" "${run_prefix}/results/" || \
-      terminal_log "WARN: result rsync failed after terminal marker confirmation"
-  fi
   gcs_cp_retry "vm.log" 60 "$RUN_LOG" "${run_prefix}/vm.log" || true
   return 0
 }

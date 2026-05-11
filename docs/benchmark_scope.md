@@ -248,6 +248,49 @@ CPU-only image rows should not be rerun on GPU machines for hardware symmetry. G
 TorchVision/Kornia/DALI sanity section and must be labeled with device, machine class, whether transfer is included, and
 whether TorchVision used the per-sample GPU loop or DALI used its own graph executor.
 
+### Remaining Supplement Plan
+
+Use this checklist for the post-submission 9-channel and video supplement. Keep PIL and DALI out of these main
+supplement tables. PIL is RGB-only in this benchmark, and DALI should remain a separately labeled native-pipeline
+comparison if we decide to include it.
+
+Current status as of 2026-05-11:
+
+| Area | Config | Status | Next action |
+| --- | --- | --- | --- |
+| 9-channel GPU micro | `configs/paper/prod_g2_9ch_micro_gpu.yaml` | Complete and fetched locally from GCS run `27218e63a7cf435bb72245f0048e9b50`. | Include in supplement aggregation. Kornia has 34 ok rows and 4 unsupported CUDA rows; TorchVision has 21 ok rows. |
+| 9-channel CPU micro | `configs/paper/prod_c4_9ch_micro_cpu.yaml` | GCS run `bd0b4a811a6d4b59b8af0ad0a811859c` completed, wrote `DONE`, and was fetched locally. AlbumentationsX has 41 ok rows and TorchVision has 22 ok rows. Kornia is not usable as a final comparable row: 35 of 40 rows are `SIGKILL`/exit `-9` failures, with only 5 ok rows. | Keep the fetched AlbumentationsX/TorchVision rows. Rerun only Kornia CPU micro, preferably on a higher-memory CPU VM or with a clearly labeled reduced-memory protocol if highmem quota blocks the run. |
+| 9-channel CPU DataLoader | `configs/paper/prod_c4_9ch_dataloader_cpu.yaml` | GCS run `b6548a5b153349b7bd47e9dc9defccc0` failed during Kornia with `SIGKILL`; AlbumentationsX and TorchVision outputs were fetched locally. | Keep the salvaged AlbumentationsX/TorchVision rows. Do not rerun the 3-library standard-C4 config. |
+| 9-channel CPU DataLoader Kornia | `configs/paper/prod_c4_highmem_9ch_dataloader_cpu_kornia.yaml` | Added after the standard C4 run killed Kornia while preloading 10k float32 9-channel tensors. | Run on `c4-highmem-16` to preserve the same `memory_dataloader_augment`, 10k-item protocol. If highmem quota is unavailable, run a reduced-n Kornia row and label it memory-limited/not same-n. |
+| 9-channel GPU DataLoader | `configs/paper/prod_g2_9ch_dataloader_gpu.yaml` | Not confirmed complete locally. | Run or locate the G2 job after the current 1-GPU queue is clear. |
+| Video CPU micro | `configs/paper/prod_c4_video_micro_cpu.yaml` | Config exists; not run. | Launch after current C4 jobs finish or if CPU quota permits. |
+| Video CPU DataLoader | `configs/paper/prod_c4_video_dataloader_cpu.yaml` | Config exists; not run. | Launch after current C4 jobs finish or if CPU quota permits. |
+| Video GPU micro | `configs/paper/prod_g2_video_micro_gpu.yaml` | Config exists; not run. | Run on `g2-standard-16` after 9-channel GPU DataLoader completes. |
+| Video GPU DataLoader | `configs/paper/prod_g2_video_dataloader_gpu.yaml` | Config exists; not run. | Run on `g2-standard-16` after video GPU micro. |
+
+Fetch completed detached runs with the `fetch_results_hint` in each `gcp_last_run.json`, for example:
+
+```bash
+gcloud storage cp -r 'gs://imagenet_validation/augmentation-results/<run-id>/results/*' gcp_runs/<local-run-dir>/
+```
+
+After fetching each run, summarize result status before plotting:
+
+```bash
+python - <<'PY'
+import json
+from pathlib import Path
+
+for path in sorted(Path("gcp_runs").glob("**/*_results.json")):
+    data = json.loads(path.read_text())
+    statuses = {}
+    for row in data.get("results", {}).values():
+        status = row.get("status", "ok") if isinstance(row, dict) else "unknown"
+        statuses[status] = statuses.get(status, 0) + 1
+    print(path, statuses)
+PY
+```
+
 ### Validation
 
 After pulling artifacts, validate coverage before producing tables:

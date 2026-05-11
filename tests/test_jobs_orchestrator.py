@@ -585,3 +585,14 @@ def test_detached_gcp_bootstrap_resolves_gcloud_executable(tmp_path: Path) -> No
         assert "resolve_gcloud()" in script
         assert '"$GCLOUD_BIN" --quiet storage' in script
         assert "gcloud --quiet storage" not in script
+
+
+def test_detached_gcp_bootstrap_syncs_results_before_done_marker() -> None:
+    from benchmark.cloud.gcp import _BOOTSTRAP_SH
+
+    sync_index = _BOOTSTRAP_SH.index('gcs_rsync_retry "results"')
+    marker_index = _BOOTSTRAP_SH.index('gcs_cp_retry "$marker_name"')
+    stale_warning = "result rsync failed after terminal marker confirmation"
+
+    assert sync_index < marker_index
+    assert stale_warning not in _BOOTSTRAP_SH
