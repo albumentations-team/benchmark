@@ -1,5 +1,8 @@
 # Benchmark Scope
 
+For the prose methodology used by the paper, website, and longer-form writing, see
+`docs/benchmark_methodology.md`. This scope document is the shorter operational reference.
+
 ## Library Sets
 
 RGB image benchmarks compare four libraries:
@@ -44,6 +47,11 @@ Each library still reports only transforms it supports directly. We do not recre
 DataLoader pipeline benchmarks measure training-style recipes, not isolated transforms.
 Micro benchmarks are different: they measure only the named transform in the library's native format and must not add
 `Normalize`, `ToTensor`, axis conversion, or DataLoader collation work.
+
+The fixed recipe steps are part of the DataLoader measurement. For every DataLoader recipe, the benchmark includes crop
+shape preparation, normalization, and tensor conversion in addition to the measured augmentation. These steps are not
+subtracted from throughput and are why DataLoader rows should be read as recipe throughput rather than primitive
+transform throughput.
 
 For non-crop transforms, the recipe shape is:
 
@@ -109,7 +117,8 @@ Benchmark policy is intentionally centralized:
 Do not add new benchmark matrix constants directly to `benchmark/cli.py`. Add them to `benchmark/matrix.py`, then extend
 tests in `tests/test_matrix.py` and `tests/test_jobs_orchestrator.py`.
 
-For a full module map, see `docs/benchmark_architecture.md`.
+For a full module map, see `docs/benchmark_architecture.md`. For the rationale behind the benchmark scopes and timing
+decisions, see `docs/benchmark_methodology.md`.
 
 ## Visual Progress
 
