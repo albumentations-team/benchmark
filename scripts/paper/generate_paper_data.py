@@ -41,6 +41,10 @@ RUN_GROUP_PATTERNS = {
     "image9ch_micro_gpu": [("paper-9ch-micro-gpu-g2-*", "latest")],
     "image9ch_dataloader_cpu": [("paper-9ch-dataloader-memory-c4-*", "all")],
     "image9ch_dataloader_gpu": [("paper-9ch-dataloader-gpu-decode-g2-*", "latest")],
+    "video16f_micro_cpu": [("paper-video-micro-c4-*", "latest")],
+    "video16f_micro_gpu": [("paper-video-micro-gpu-g2-*", "latest")],
+    "video16f_dataloader_cpu": [("paper-video-dataloader-memory-c4-*", "latest")],
+    "video16f_dataloader_gpu": [("paper-video-dataloader-gpu-g2-*", "latest")],
 }
 
 REPLACED_RESULT_FILES: set[Path] = set()

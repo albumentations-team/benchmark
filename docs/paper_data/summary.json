@@ -9,7 +9,11 @@
     "image9ch_micro_cpu": 103,
     "image9ch_micro_gpu": 59,
     "image9ch_dataloader_cpu": 103,
-    "image9ch_dataloader_gpu": 59
+    "image9ch_dataloader_gpu": 59,
+    "video16f_micro_cpu": 0,
+    "video16f_micro_gpu": 0,
+    "video16f_dataloader_cpu": 0,
+    "video16f_dataloader_gpu": 0
   },
   "headlines": {
     "median_throughput": {
@@ -50,7 +54,11 @@
       "image9ch_dataloader_gpu": {
         "torchvision": 1275.8695722752775,
         "kornia": 270.2177507409335
-      }
+      },
+      "video16f_micro_cpu": {},
+      "video16f_micro_gpu": {},
+      "video16f_dataloader_cpu": {},
+      "video16f_dataloader_gpu": {}
     },
     "winner_counts": {
       "rgb_micro_cpu": {
@@ -84,7 +92,11 @@
       "image9ch_dataloader_gpu": {
         "kornia": 1,
         "torchvision": 19
-      }
+      },
+      "video16f_micro_cpu": {},
+      "video16f_micro_gpu": {},
+      "video16f_dataloader_cpu": {},
+      "video16f_dataloader_gpu": {}
     },
     "gpu_vs_albumentationsx_cpu": {
       "torchvision": {
@@ -847,7 +859,11 @@
           "early_stopped": 0,
           "unsupported": 1
         }
-      }
+      },
+      "video16f_micro_cpu": {},
+      "video16f_micro_gpu": {},
+      "video16f_dataloader_cpu": {},
+      "video16f_dataloader_gpu": {}
     }
   }
 }

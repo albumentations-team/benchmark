@@ -32,6 +32,10 @@ REGIME_LABELS = {
     "image9ch_micro_gpu": "9ch GPU micro",
     "image9ch_dataloader_cpu": "9ch CPU DataLoader",
     "image9ch_dataloader_gpu": "9ch GPU DataLoader",
+    "video16f_micro_cpu": "Video CPU micro",
+    "video16f_micro_gpu": "Video GPU micro",
+    "video16f_dataloader_cpu": "Video CPU DataLoader",
+    "video16f_dataloader_gpu": "Video GPU DataLoader",
 }
 REGIME_ORDER = [
     "CPU micro",
@@ -42,6 +46,10 @@ REGIME_ORDER = [
     "9ch CPU DataLoader",
     "9ch GPU micro",
     "9ch GPU DataLoader",
+    "Video CPU micro",
+    "Video CPU DataLoader",
+    "Video GPU micro",
+    "Video GPU DataLoader",
 ]
 
 

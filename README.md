@@ -95,22 +95,121 @@ GPU augmentation also consumes accelerator memory that would otherwise be availa
 
 Measured winner counts among comparable measured transforms by regime. The conclusion changes when moving from augmentation-only microbenchmarks to production-style DataLoader measurements.
 
-### 9-channel benchmark summary
+### Scenario benchmark tables
 
-Generated from the 9-channel production snapshots in `results/published`. Median throughput is computed over full measured rows only.
+Rows are transforms. Columns are benchmark regimes. Each cell shows the fastest full measured implementation for that transform and regime, formatted as `Library throughput`; `-` means no full measured row is available.
 
-| Regime | Library | Full measured | Unsupported | Median measured-row throughput (img/s) |
-|---|---|---:|---:|---:|
-| 9ch CPU micro | AlbumentationsX | 41/41 | 0 | 612.5 |
-| 9ch CPU micro | TorchVision | 21/22 | 0 | 288.9 |
-| 9ch CPU micro | Kornia | 0/40 | 35 | - |
-| 9ch CPU DataLoader | AlbumentationsX | 41/41 | 0 | 1782.6 |
-| 9ch CPU DataLoader | TorchVision | 22/22 | 0 | 1388.2 |
-| 9ch CPU DataLoader | Kornia | 40/40 | 0 | 703.7 |
-| 9ch GPU micro | TorchVision | 20/21 | 0 | 3690.9 |
-| 9ch GPU micro | Kornia | 30/38 | 4 | 281.4 |
-| 9ch GPU DataLoader | TorchVision | 21/21 | 0 | 1275.9 |
-| 9ch GPU DataLoader | Kornia | 37/38 | 1 | 270.2 |
+#### RGB benchmark table
+
+| Transform | CPU micro | CPU DataLoader | GPU micro | GPU DataLoader |
+| --- | ---: | ---: | ---: | ---: |
+| Affine | AlbumentationsX 871.8 | AlbumentationsX 4527.7 | TorchVision 1316.9 | DALI 3806.0 |
+| AutoContrast | AlbumentationsX 1242.7 | AlbumentationsX 4645.6 | TorchVision 3942.2 | TorchVision 2561.9 |
+| Blur | AlbumentationsX 4448.7 | AlbumentationsX 5274.9 | Kornia 617.0 | Kornia 650.6 |
+| Brightness | AlbumentationsX 6912.2 | AlbumentationsX 5230.9 | TorchVision 5706.8 | DALI 3797.8 |
+| CLAHE | AlbumentationsX 282.9 | AlbumentationsX 3384.5 | Kornia 130.4 | DALI 3730.6 |
+| ChannelDropout | AlbumentationsX 6810.1 | AlbumentationsX 5316.5 | Kornia 613.4 | Kornia 659.6 |
+| ChannelShuffle | AlbumentationsX 4337.4 | AlbumentationsX 5086.6 | TorchVision 9557.4 | TorchVision 3630.9 |
+| ColorJiggle | AlbumentationsX 639.3 | AlbumentationsX 4255.1 | TorchVision 680.0 | DALI 3742.5 |
+| ColorJitter | AlbumentationsX 641.4 | AlbumentationsX 4224.7 | TorchVision 687.0 | DALI 3817.8 |
+| Contrast | AlbumentationsX 6932.8 | AlbumentationsX 5258.2 | TorchVision 3274.0 | DALI 3759.3 |
+| CornerIllumination | AlbumentationsX 424.6 | AlbumentationsX 3824.1 | - | Kornia 394.7 |
+| Elastic | AlbumentationsX 191.0 | AlbumentationsX 2954.0 | Kornia 202.6 | Kornia 316.3 |
+| EnhanceDetail | AlbumentationsX 2148.3 | AlbumentationsX 5033.1 | - | - |
+| EnhanceEdge | AlbumentationsX 1373.3 | AlbumentationsX 4923.4 | - | - |
+| Equalize | Pillow 881.7 | AlbumentationsX 4304.4 | TorchVision 2015.9 | DALI 3823.9 |
+| Erasing | AlbumentationsX 9510.6 | AlbumentationsX 5118.2 | TorchVision 2242.0 | DALI 3791.4 |
+| GaussianBlur | AlbumentationsX 2342.8 | AlbumentationsX 5029.0 | TorchVision 2803.2 | DALI 3700.9 |
+| GaussianIllumination | AlbumentationsX 388.1 | AlbumentationsX 3655.9 | Kornia 375.3 | - |
+| GaussianNoise | AlbumentationsX 225.1 | AlbumentationsX 3321.3 | Kornia 771.6 | DALI 3820.0 |
+| Grayscale | AlbumentationsX 5193.9 | AlbumentationsX 5263.2 | TorchVision 8863.8 | TorchVision 3960.3 |
+| HorizontalFlip | AlbumentationsX 8416.0 | AlbumentationsX 5218.1 | TorchVision 16083.8 | TorchVision 5050.4 |
+| Hue | AlbumentationsX 966.9 | AlbumentationsX 4698.0 | Kornia 410.2 | DALI 3784.2 |
+| Invert | AlbumentationsX 15094.9 | AlbumentationsX 5491.9 | TorchVision 15936.1 | TorchVision 4868.1 |
+| JpegCompression | AlbumentationsX 692.0 | AlbumentationsX 4106.2 | Kornia 102.6 | DALI 3786.2 |
+| LinearIllumination | AlbumentationsX 520.7 | AlbumentationsX 4076.3 | - | Kornia 503.2 |
+| LongestMaxSize | AlbumentationsX 2824.5 | AlbumentationsX 1316.9 | Kornia 282.5 | Kornia 178.7 |
+| MedianBlur | AlbumentationsX 843.3 | AlbumentationsX 4038.1 | Kornia 138.0 | Kornia 327.0 |
+| MotionBlur | AlbumentationsX 1952.5 | AlbumentationsX 4614.8 | Kornia 298.3 | Kornia 656.5 |
+| OpticalDistortion | AlbumentationsX 274.4 | AlbumentationsX 3556.4 | Kornia 265.5 | Kornia 641.1 |
+| Pad | AlbumentationsX 13181.0 | AlbumentationsX 4866.6 | TorchVision 16609.6 | TorchVision 4634.3 |
+| Perspective | AlbumentationsX 559.4 | AlbumentationsX 3992.0 | TorchVision 760.6 | TorchVision 792.1 |
+| PhotoMetricDistort | AlbumentationsX 580.9 | AlbumentationsX 4149.0 | TorchVision 619.4 | TorchVision 579.9 |
+| PlankianJitter | AlbumentationsX 2253.1 | AlbumentationsX 4899.4 | Kornia 607.4 | Kornia 653.8 |
+| PlasmaBrightness | AlbumentationsX 267.0 | AlbumentationsX 2672.0 | - | Kornia 561.6 |
+| PlasmaContrast | AlbumentationsX 142.8 | AlbumentationsX 2155.6 | - | Kornia 557.5 |
+| PlasmaShadow | AlbumentationsX 419.8 | AlbumentationsX 2795.5 | - | Kornia 612.2 |
+| Posterize | AlbumentationsX 14398.5 | AlbumentationsX 5319.0 | TorchVision 15122.0 | TorchVision 4725.7 |
+| RGBShift | AlbumentationsX 2292.1 | AlbumentationsX 4830.7 | Kornia 592.9 | Kornia 657.5 |
+| Rain | AlbumentationsX 1258.8 | AlbumentationsX 4528.5 | Kornia 284.1 | Kornia 306.2 |
+| RandomCrop224 | AlbumentationsX 38380.3 | AlbumentationsX 5084.5 | TorchVision 15008.3 | TorchVision 6252.6 |
+| RandomGamma | AlbumentationsX 9937.7 | AlbumentationsX 5251.3 | Kornia 576.4 | Kornia 653.2 |
+| RandomJigsaw | AlbumentationsX 5172.0 | AlbumentationsX 4868.3 | Kornia 620.8 | Kornia 636.3 |
+| RandomResizedCrop | AlbumentationsX 7150.4 | AlbumentationsX 5056.2 | TorchVision 3886.9 | TorchVision 4139.6 |
+| RandomRotate90 | AlbumentationsX 5990.0 | AlbumentationsX 5086.5 | Kornia 289.6 | Kornia 632.3 |
+| Resize | AlbumentationsX 2462.7 | AlbumentationsX 1333.8 | TorchVision 6472.7 | DALI 3523.1 |
+| Rotate | AlbumentationsX 1407.6 | AlbumentationsX 4782.3 | TorchVision 1363.9 | DALI 3808.5 |
+| SaltAndPepper | AlbumentationsX 737.7 | AlbumentationsX 4459.7 | Kornia 152.6 | DALI 3824.4 |
+| Saturation | AlbumentationsX 846.6 | AlbumentationsX 4581.7 | Kornia 414.0 | DALI 3792.5 |
+| Sharpen | AlbumentationsX 1387.6 | AlbumentationsX 4821.7 | TorchVision 3332.5 | TorchVision 2303.8 |
+| Shear | AlbumentationsX 784.4 | AlbumentationsX 4261.2 | - | DALI 3771.7 |
+| SmallestMaxSize | AlbumentationsX 2017.5 | AlbumentationsX 1328.7 | Kornia 258.4 | Kornia 179.0 |
+| Snow | AlbumentationsX 489.3 | AlbumentationsX 4135.0 | Kornia 367.2 | Kornia 595.5 |
+| Solarize | AlbumentationsX 9759.5 | AlbumentationsX 5338.8 | TorchVision 10111.6 | TorchVision 4130.2 |
+| ThinPlateSpline | AlbumentationsX 51.7 | Kornia 753.2 | Kornia 376.1 | Kornia 598.1 |
+| Transpose | AlbumentationsX 4626.8 | AlbumentationsX 5230.6 | - | - |
+| UnsharpMask | AlbumentationsX 906.1 | AlbumentationsX 4521.6 | - | - |
+| VerticalFlip | AlbumentationsX 14051.5 | AlbumentationsX 5301.7 | TorchVision 16368.3 | TorchVision 5020.2 |
+
+#### 9-channel benchmark table
+
+| Transform | 9ch CPU micro | 9ch CPU DataLoader | 9ch GPU micro | 9ch GPU DataLoader |
+| --- | ---: | ---: | ---: | ---: |
+| Affine | AlbumentationsX 229.8 | AlbumentationsX 1617.5 | TorchVision 1187.5 | TorchVision 1085.2 |
+| AutoContrast | AlbumentationsX 316.6 | AlbumentationsX 1749.3 | TorchVision 1329.1 | TorchVision 1024.6 |
+| Blur | AlbumentationsX 1385.1 | AlbumentationsX 1998.8 | Kornia 309.0 | Kornia 270.2 |
+| Brightness | AlbumentationsX 2477.1 | AlbumentationsX 2041.0 | TorchVision 1952.7 | TorchVision 1271.8 |
+| ChannelDropout | AlbumentationsX 3335.5 | AlbumentationsX 2027.3 | Kornia 318.4 | Kornia 275.0 |
+| ChannelShuffle | AlbumentationsX 1447.9 | AlbumentationsX 1946.7 | TorchVision 10344.1 | TorchVision 1341.8 |
+| Contrast | AlbumentationsX 2482.3 | AlbumentationsX 2113.2 | TorchVision 1162.8 | TorchVision 920.2 |
+| CornerIllumination | AlbumentationsX 195.8 | AlbumentationsX 1627.4 | - | Kornia 150.8 |
+| Elastic | AlbumentationsX 121.0 | AlbumentationsX 1404.3 | Kornia 155.0 | Kornia 195.1 |
+| Erasing | AlbumentationsX 3658.7 | AlbumentationsX 2024.1 | TorchVision 1438.0 | TorchVision 1323.0 |
+| GaussianBlur | AlbumentationsX 747.5 | AlbumentationsX 1952.9 | TorchVision 3044.7 | TorchVision 1259.0 |
+| GaussianIllumination | AlbumentationsX 189.4 | AlbumentationsX 1583.1 | Kornia 237.2 | - |
+| GaussianNoise | AlbumentationsX 75.8 | AlbumentationsX 1249.8 | Kornia 348.8 | Kornia 272.6 |
+| Grayscale | TorchVision 642.2 | TorchVision 1562.9 | TorchVision 3042.9 | TorchVision 1275.9 |
+| HorizontalFlip | TorchVision 2970.9 | AlbumentationsX 1801.2 | TorchVision 20436.0 | TorchVision 1482.7 |
+| Invert | AlbumentationsX 4622.5 | AlbumentationsX 2026.3 | TorchVision 24578.9 | TorchVision 1524.5 |
+| JpegCompression | TorchVision 126.9 | AlbumentationsX 1287.1 | - | Kornia 239.4 |
+| LinearIllumination | AlbumentationsX 163.1 | AlbumentationsX 1585.7 | - | Kornia 207.6 |
+| LongestMaxSize | AlbumentationsX 612.5 | AlbumentationsX 469.9 | Kornia 219.5 | Kornia 64.0 |
+| MedianBlur | AlbumentationsX 290.1 | AlbumentationsX 1542.1 | - | - |
+| MotionBlur | AlbumentationsX 776.7 | AlbumentationsX 1854.2 | Kornia 202.6 | Kornia 272.3 |
+| OpticalDistortion | AlbumentationsX 140.0 | AlbumentationsX 1491.5 | Kornia 184.0 | Kornia 269.0 |
+| Pad | AlbumentationsX 4373.1 | AlbumentationsX 1797.5 | TorchVision 17954.9 | TorchVision 1443.3 |
+| Perspective | AlbumentationsX 208.6 | AlbumentationsX 1580.8 | TorchVision 718.0 | TorchVision 759.7 |
+| PlasmaBrightness | AlbumentationsX 114.3 | AlbumentationsX 1308.6 | - | Kornia 220.7 |
+| PlasmaContrast | AlbumentationsX 46.0 | AlbumentationsX 873.9 | - | Kornia 227.5 |
+| PlasmaShadow | AlbumentationsX 235.5 | AlbumentationsX 1391.6 | - | Kornia 256.6 |
+| Posterize | AlbumentationsX 4533.0 | AlbumentationsX 2012.5 | TorchVision 20756.5 | TorchVision 1554.5 |
+| RandomCrop224 | AlbumentationsX 18067.7 | AlbumentationsX 2004.5 | TorchVision 15069.7 | TorchVision 1577.2 |
+| RandomGamma | AlbumentationsX 3439.2 | AlbumentationsX 2003.2 | Kornia 308.9 | Kornia 272.5 |
+| RandomJigsaw | AlbumentationsX 2852.1 | AlbumentationsX 1952.4 | Kornia 311.3 | Kornia 261.9 |
+| RandomResizedCrop | AlbumentationsX 1870.7 | AlbumentationsX 1782.6 | TorchVision 4337.0 | TorchVision 628.2 |
+| RandomRotate90 | AlbumentationsX 687.7 | AlbumentationsX 1862.5 | Kornia 196.2 | Kornia 265.1 |
+| Resize | AlbumentationsX 543.3 | AlbumentationsX 468.6 | TorchVision 4727.3 | TorchVision 1394.3 |
+| Rotate | AlbumentationsX 645.4 | AlbumentationsX 1883.7 | TorchVision 1253.4 | TorchVision 1115.8 |
+| Sharpen | AlbumentationsX 479.0 | AlbumentationsX 1831.2 | TorchVision 1204.8 | TorchVision 905.9 |
+| Shear | AlbumentationsX 181.0 | AlbumentationsX 1576.7 | - | - |
+| SmallestMaxSize | AlbumentationsX 435.4 | AlbumentationsX 467.1 | Kornia 181.3 | Kornia 63.4 |
+| Solarize | AlbumentationsX 3364.3 | AlbumentationsX 2082.8 | TorchVision 12677.5 | TorchVision 1527.0 |
+| ThinPlateSpline | AlbumentationsX 44.4 | Kornia 516.0 | Kornia 236.2 | Kornia 263.0 |
+| VerticalFlip | AlbumentationsX 4444.1 | AlbumentationsX 2021.4 | TorchVision 23657.7 | TorchVision 1560.0 |
+
+#### Video benchmark table
+
+No published snapshots are available for this scenario yet.
 
 <!-- PAPER_FIGURES_END -->
 
