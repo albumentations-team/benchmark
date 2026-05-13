@@ -423,8 +423,18 @@ UV_LINK_MODE=copy uv pip install --python "$CONTROL_PYTHON" -q -r requirements/r
 export CONTROL_PYTHON
 cd "$WORKDIR"
 
+BENCHMARK_TIMEOUT_SECONDS=$(
+  python3 -c 'import json; print(int(json.load(open("job.json")).get("timeout_seconds", 0) or 0))'
+)
+if [[ "$BENCHMARK_TIMEOUT_SECONDS" -gt 0 ]]; then
+  echo "Benchmark timeout: ${BENCHMARK_TIMEOUT_SECONDS}s"
+  BENCHMARK_PYTHON_CMD=(timeout "${BENCHMARK_TIMEOUT_SECONDS}s" python3)
+else
+  BENCHMARK_PYTHON_CMD=(python3)
+fi
+
 set +e
-python3 << 'PY'
+"${BENCHMARK_PYTHON_CMD[@]}" << 'PY'
 import json
 import os
 import subprocess
@@ -448,8 +458,13 @@ rc = subprocess.call(cmd, cwd=repo)
 (work / "benchmark_exit_code.txt").write_text(str(rc))
 sys.exit(0)
 PY
+BENCHMARK_WRAPPER_RC=$?
 set -e
 
+if [[ ! -f "$WORKDIR/benchmark_exit_code.txt" ]]; then
+  echo "Benchmark wrapper exited before writing benchmark_exit_code.txt (rc=${BENCHMARK_WRAPPER_RC})." >&2
+  printf '%s\n' "$BENCHMARK_WRAPPER_RC" > "$WORKDIR/benchmark_exit_code.txt"
+fi
 RC=$(cat "$WORKDIR/benchmark_exit_code.txt")
 terminal_uploaded=0
 if [[ "$RC" == "0" ]]; then
@@ -609,6 +624,10 @@ class GCPRunner:
 
         if cfg.tags:
             cmd += ["--tags", ",".join(cfg.tags)]
+
+        if cfg.labels:
+            labels_arg = ",".join(f"{key}={value}" for key, value in sorted(cfg.labels.items()))
+            cmd += ["--labels", labels_arg]
 
         if cfg.accelerator_type and cfg.accelerator_count > 0:
             cmd += [
@@ -940,6 +959,7 @@ def build_gcp_job_dict(
     keep_instance_on_failure: bool,
     venv_cache_uri: str,
     force_venv_cache_rebuild: bool,
+    timeout_seconds: int,
     submission: dict[str, Any],
     instance_meta: dict[str, Any],
 ) -> dict[str, Any]:
@@ -952,6 +972,7 @@ def build_gcp_job_dict(
         "keep_instance_on_failure": keep_instance_on_failure,
         "venv_cache_uri": _validate_gs_uri(venv_cache_uri, kind="--gcp-venv-cache-uri") if venv_cache_uri else "",
         "force_venv_cache_rebuild": force_venv_cache_rebuild,
+        "timeout_seconds": timeout_seconds,
         "run_config": run_config,
         "cloud_config": cloud_config,
         "submission": submission,

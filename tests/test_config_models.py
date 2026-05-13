@@ -148,7 +148,7 @@ def test_paper_production_configs_use_deadline_sizing() -> None:
             "scenario": "video-16f",
             "mode": "pipeline",
             "libraries": ["albumentationsx", "torchvision", "kornia"],
-            "num_items": 10000,
+            "num_items": 625,
             "device": "none",
             "machine_type": "c4-standard-16",
             "gcs_uri": "gs://imagenet_validation/ucf101/ucf101.tar",
@@ -172,14 +172,14 @@ def test_paper_production_configs_use_deadline_sizing() -> None:
             "scenario": "video-16f",
             "mode": "pipeline",
             "libraries": ["torchvision", "kornia"],
-            "num_items": 10000,
+            "num_items": 625,
             "device": "cuda",
             "machine_type": "g2-standard-16",
             "gcs_uri": "gs://imagenet_validation/ucf101/ucf101.tar",
             "clip_length": 16,
             "pipeline_scope": "memory_dataloader_augment",
             "disk_size_gb": 200,
-            "batch_size": 64,
+            "batch_size": 16,
         },
     }
 
@@ -249,6 +249,16 @@ def test_resolve_transform_set_records_concrete_names() -> None:
     assert "HorizontalFlip" in resolved.selection.transforms
 
 
+def test_resolve_video_pipeline_transform_set_records_recipe_names() -> None:
+    config = load_run_config(Path("configs/paper/prod_c4_video_dataloader_cpu.yaml"))
+
+    resolved = resolve_config_transform_set(config, Path.cwd())
+
+    assert resolved.selection.transforms
+    assert "RandomCrop224+HorizontalFlip+Normalize+ToTensor" in resolved.selection.transforms
+    assert "HorizontalFlip" not in resolved.selection.transforms
+
+
 def test_rejects_detached_cloud_without_gcs_data() -> None:
     with pytest.raises(ValidationError, match=r"data\.gcs_uri is required"):
         BenchmarkRunConfig.model_validate(
@@ -292,6 +302,7 @@ def test_cli_overrides_apply_after_yaml_config() -> None:
         gcp_keep_instance=True,
         gcp_keep_on_failure=True,
         gcp_preemptible=True,
+        gcp_timeout_hours=7.5,
         gcp_remote_repo_dir="~/bench-override",
         gcp_venv_cache_uri="gs://bucket/cache",
         gcp_no_venv_cache=False,
@@ -319,6 +330,7 @@ def test_cli_overrides_apply_after_yaml_config() -> None:
             "--gcp-keep-instance",
             "--gcp-keep-on-failure",
             "--gcp-preemptible",
+            "--gcp-timeout-hours",
             "--gcp-remote-repo-dir",
             "--gcp-venv-cache-uri",
             "--gcp-force-venv-cache-rebuild",
@@ -345,6 +357,7 @@ def test_cli_overrides_apply_after_yaml_config() -> None:
     assert resolved.cloud.keep_instance is True
     assert resolved.cloud.keep_on_failure is True
     assert resolved.cloud.preemptible is True
+    assert resolved.cloud.timeout_hours == pytest.approx(7.5)
     assert resolved.cloud.remote_repo_dir == "~/bench-override"
     assert resolved.cloud.venv_cache_uri == "gs://bucket/cache"
     assert resolved.cloud.force_venv_cache_rebuild is True

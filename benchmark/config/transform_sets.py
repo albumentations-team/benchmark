@@ -29,8 +29,14 @@ def read_markdown_text_block(path: Path) -> list[str]:
 def paper_transform_names(repo_root: Path, scenario_name: str, mode: str) -> list[str]:
     transform_set_path = repo_root / paper_transform_set_file(scenario_name)
     names = read_markdown_text_block(transform_set_path)
-    if mode == "pipeline" and scenario_name in {"image-rgb", "image-9ch"}:
+    if mode != "pipeline":
+        return names
+    if scenario_name in {"image-rgb", "image-9ch"}:
         from benchmark.transforms.image_recipe_specs import recipe_name, spec_by_name
+
+        return [recipe_name(spec_by_name(name)) for name in names if name != "Normalize"]
+    if scenario_name == "video-16f":
+        from benchmark.transforms.video_recipe_specs import recipe_name, spec_by_name
 
         return [recipe_name(spec_by_name(name)) for name in names if name != "Normalize"]
     return names

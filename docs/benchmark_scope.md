@@ -195,6 +195,11 @@ reduce only explicit sizing flags for cheaper iteration, for example
 `--num-items 1000 --batch-size 64 --workers 8 --num-runs 1 --min-time 0`. After one complete coverage pass, add repeat
 runs for important rows and aggregate them; do not block first coverage on 3- or 5-run sweeps.
 
+For 16-frame video DataLoader runs, size by frame budget rather than item budget: `625` clips equals `10,000` frames. The
+GPU video DataLoader batch is `16` clips because `16 clips * 16 frames = 256` frames, matching the intended image-scale GPU
+batch. Cached DataLoader data lives in CPU RAM for RGB, 9-channel, and video. GPU DataLoader rows include the CPU batch to
+GPU transfer and then run augmentation on the GPU; DALI remains separate because it owns its own input/decode pipeline.
+
 ### AMD Sanity Check
 
 Machine: `c4d-standard-16` or equivalent modern AMD CPU.
@@ -219,6 +224,9 @@ Run these for video/GPU tables:
   Kornia applies the measured augmentation with `same_on_batch=False` plus normalization. TorchVision applies the measured
   augmentation in a per-sample GPU loop, then normalizes the batch, because TorchVision v2 does not expose a
   `same_on_batch=False` equivalent for batched image transforms.
+  For video rows, Kornia uses `VideoSequential(data_format="BTCHW", same_on_frame=True)` and TorchVision applies v2
+  transforms per clip after the host-to-device copy, so both keep frame-consistent randomness within a clip without sharing
+  random parameters across the whole batch.
   TorchVision `JpegCompression` is excluded from TorchVision GPU image rows because `torchvision.transforms.v2.JPEG`
   requires `uint8` CPU input. Keep it in CPU TorchVision rows and in other libraries that support it.
   CUDA DataLoader rows also record per-transform peak GPU memory during timed runs. Use these fields when discussing the
@@ -240,6 +248,12 @@ Run these for video/GPU tables:
   benchmarking complexity.
 - GPU video micro benchmarks for GPU-capable libraries, especially `torchvision` and `kornia`. Micro video preload uses
   fixed-length clips from `--clip-length` (16 frames for `video-16f`), not full source videos.
+- Kornia CPU video micro excludes `Rotate` and `Elastic`. The May 11, 2026 C4 run reached Kornia after completing
+  AlbumentationsX and TorchVision, then crashed reproducibly in the pyperf child process for Kornia `Rotate` with
+  `SIGSEGV: 11`. The May 12, 2026 Kornia-only rerun excluded `Rotate` and then crashed the same way on `Elastic`.
+  These look like native-code crashes in Kornia's CPU video augmentation path, not VM memory pressure
+  (`SIGKILL`/OOM). Keep these as library/scenario exclusions rather than removing the transforms from the global video
+  transform set.
 - GPU video DataLoader/pipeline benchmarks for GPU-capable paths. These use dedicated video pipeline specs rather than
   micro specs, so AlbumentationsX, torchvision, and Kornia all run recipe-style clips through DataLoader collation.
 - Reduced G2 smoke has already succeeded on UCF101 for `torchvision kornia` video micro and for
@@ -272,16 +286,21 @@ Current status as of 2026-05-11:
 | 9-channel CPU DataLoader | `configs/paper/prod_c4_9ch_dataloader_cpu.yaml` | GCS run `b6548a5b153349b7bd47e9dc9defccc0` failed during Kornia with `SIGKILL`; AlbumentationsX and TorchVision outputs were fetched locally. | Keep the salvaged AlbumentationsX/TorchVision rows. Do not rerun the 3-library standard-C4 config. |
 | 9-channel CPU DataLoader Kornia | `configs/paper/prod_c4_highmem_9ch_dataloader_cpu_kornia.yaml` | Added after the standard C4 run killed Kornia while preloading 10k float32 9-channel tensors. | Run on `c4-highmem-16` to preserve the same `memory_dataloader_augment`, 10k-item protocol. If highmem quota is unavailable, run a reduced-n Kornia row and label it memory-limited/not same-n. |
 | 9-channel GPU DataLoader | `configs/paper/prod_g2_9ch_dataloader_gpu.yaml` | Not confirmed complete locally. | Run or locate the G2 job after the current 1-GPU queue is clear. |
-| Video CPU micro | `configs/paper/prod_c4_video_micro_cpu.yaml` | Config exists; not run. | Launch after current C4 jobs finish or if CPU quota permits. |
-| Video CPU DataLoader | `configs/paper/prod_c4_video_dataloader_cpu.yaml` | Config exists; not run. | Launch after current C4 jobs finish or if CPU quota permits. |
+| Video CPU micro | `configs/paper/prod_c4_video_micro_cpu.yaml` | GCS run `ca332e6f5dd949fd85b8435c5b56346d` failed during Kornia `Rotate` with `SIGSEGV: 11`; GCS run `132f29d9503b49fead76c45ba25a6851` excluded `Rotate` and then failed during Kornia `Elastic` with `SIGSEGV: 11`. AlbumentationsX and TorchVision outputs were fetched locally from the first run. | Keep AlbumentationsX/TorchVision. Rerun Kornia CPU micro with `Rotate` and `Elastic` excluded by the scenario filter. |
+| Video CPU DataLoader | `configs/paper/prod_c4_video_dataloader_cpu.yaml` | GCS run `561ceed0c7a44b42b13fa9d9cde58a1e` wrote `DONE`, but all result JSONs had empty `results` because video pipeline `paper` transforms resolved to micro names instead of recipe names. | Rerun after the video pipeline transform-set resolver fix. |
 | Video GPU micro | `configs/paper/prod_g2_video_micro_gpu.yaml` | Config exists; not run. | Run on `g2-standard-16` after 9-channel GPU DataLoader completes. |
-| Video GPU DataLoader | `configs/paper/prod_g2_video_dataloader_gpu.yaml` | Config exists; not run. | Run on `g2-standard-16` after video GPU micro. |
+| Video GPU DataLoader | `configs/paper/prod_g2_video_dataloader_gpu.yaml` | GCS run `5a50bff8adf64efeb1f682684eea4c3b` wrote `DONE`, but all result JSONs had empty `results` for the same video pipeline transform-name resolver bug. | Rerun after the video pipeline transform-set resolver fix. |
 
 Fetch completed detached runs with the `fetch_results_hint` in each `gcp_last_run.json`, for example:
 
 ```bash
 gcloud storage cp -r 'gs://imagenet_validation/augmentation-results/<run-id>/results/*' gcp_runs/<local-run-dir>/
 ```
+
+Detached GCP jobs now have a bootstrap hard timeout, defaulting to 6 hours for GPU VMs and 8 hours for CPU VMs. Override
+with `--gcp-timeout-hours` when a run legitimately needs longer. Self-delete still runs on normal `DONE` or `FAILED`, but
+it is not sufficient if the VM wedges before the delete command can execute. Use `scripts/gcp_cleanup_stale_benchmarks.sh`
+to list expired benchmark VMs, then rerun it with `--delete` after confirming the stale instances.
 
 After fetching each run, summarize result status before plotting:
 

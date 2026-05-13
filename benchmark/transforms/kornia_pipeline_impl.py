@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
 import kornia.augmentation as Kaug
 from torch import nn
@@ -12,6 +12,7 @@ from benchmark.transforms.image_recipe_specs import (
     repeated_stats,
     spec_by_name,
 )
+from benchmark.transforms.kornia_common import SplitRecipe, force_per_sample_randomness
 from benchmark.transforms.kornia_impl import create_transform
 
 LIBRARY = "kornia"
@@ -20,23 +21,6 @@ NUM_CHANNELS = 3
 
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
     return transform(image.unsqueeze(0)).squeeze(0)
-
-
-def _force_per_image_randomness(transform: nn.Module) -> nn.Module:
-    for module in transform.modules():
-        if hasattr(module, "same_on_batch"):
-            cast("Any", module).same_on_batch = False
-    return transform
-
-
-class _SplitRecipe(nn.Module):
-    def __init__(self, cpu_transform: nn.Module, gpu_transform: nn.Module) -> None:
-        super().__init__()
-        self.cpu_transform = cpu_transform
-        self.gpu_transform = gpu_transform
-
-    def forward(self, image: Any) -> Any:
-        return self.gpu_transform(self.cpu_transform(image))
 
 
 def _normalize() -> Kaug.Normalize:
@@ -51,8 +35,8 @@ def _random_crop() -> Kaug.RandomCrop:
 
 def _recipe(name: str, transforms: list[nn.Module]) -> dict[str, Any]:
     cpu_transform = transforms[0]
-    gpu_transform = _force_per_image_randomness(nn.Sequential(*transforms[1:], _normalize()))
-    return {"name": name, "transform": _SplitRecipe(cpu_transform, gpu_transform)}
+    gpu_transform = force_per_sample_randomness(nn.Sequential(*transforms[1:], _normalize()))
+    return {"name": name, "transform": SplitRecipe(cpu_transform, gpu_transform)}
 
 
 TRANSFORMS: list[dict[str, Any]] = []

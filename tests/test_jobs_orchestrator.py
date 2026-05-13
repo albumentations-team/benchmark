@@ -272,6 +272,35 @@ def test_torchvision_cpu_image_keeps_jpeg_compression(tmp_path: Path) -> None:
     assert job.transforms_filter == ("Resize", "JpegCompression")
 
 
+def test_kornia_cpu_video_micro_excludes_sigsegv_transforms(tmp_path: Path) -> None:
+    config = BenchmarkRunConfig.model_validate(
+        {
+            "selection": {
+                "scenario": "video-16f",
+                "mode": "micro",
+                "media": "video",
+                "libraries": ["kornia"],
+                "transforms": ["Resize", "Rotate", "Elastic", "HorizontalFlip"],
+            },
+            "data": {"data_dir": "/data", "clip_length": 16},
+            "output": {"output_dir": "/out"},
+            "execution": {"device": "none"},
+        },
+    )
+
+    job = BenchmarkJob.from_run_config(
+        library="kornia",
+        config=config,
+        data_dir=tmp_path / "data",
+        output_file=tmp_path / "out.json",
+        num_channels=3,
+        clip_length=16,
+        spec_file=tmp_path / "spec.py",
+    )
+
+    assert job.transforms_filter == ("Resize", "HorizontalFlip")
+
+
 def test_kornia_gpu_9ch_image_excludes_known_gpu_limitations(tmp_path: Path) -> None:
     config = BenchmarkRunConfig.model_validate(
         {
@@ -541,6 +570,27 @@ def test_g2_instance_create_uses_gpu_maintenance_policy_without_accelerator_flag
     assert "--accelerator" not in cmd
 
 
+def test_gcp_instance_create_applies_benchmark_labels() -> None:
+    from benchmark.cloud.gcp import GCPRunner
+    from benchmark.cloud.instance import GCPInstanceConfig
+
+    runner = GCPRunner(
+        GCPInstanceConfig(
+            project="p",
+            zone="z",
+            machine_type="c4-standard-16",
+            labels={"benchmark": "augmentation", "benchmark-expires": "123"},
+        ),
+    )
+
+    with patch("benchmark.cloud.gcp._run") as run:
+        runner.create_instance()
+
+    cmd = run.call_args.args[0]
+    assert "--labels" in cmd
+    assert cmd[cmd.index("--labels") + 1] == "benchmark=augmentation,benchmark-expires=123"
+
+
 def test_attached_gcp_run_deletes_instance_when_setup_fails(tmp_path: Path) -> None:
     from benchmark.cloud.gcp import GCPRunner
     from benchmark.cloud.instance import GCPInstanceConfig
@@ -590,6 +640,8 @@ def test_detached_gcp_bootstrap_resolves_gcloud_executable(tmp_path: Path) -> No
 def test_detached_gcp_bootstrap_syncs_results_before_done_marker() -> None:
     from benchmark.cloud.gcp import _BOOTSTRAP_SH
 
+    assert 'BENCHMARK_PYTHON_CMD=(timeout "${BENCHMARK_TIMEOUT_SECONDS}s" python3)' in _BOOTSTRAP_SH
+    assert "benchmark_exit_code.txt" in _BOOTSTRAP_SH
     sync_index = _BOOTSTRAP_SH.index('gcs_rsync_retry "results"')
     guard_index = _BOOTSTRAP_SH.index('if [[ "$terminal_ok" != "1" ]]')
     marker_index = _BOOTSTRAP_SH.index('gcs_cp_retry "$marker_name"')

@@ -148,6 +148,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Use a preemptible GCP VM. Default is a regular VM for benchmark stability and quota compatibility.",
     )
     run_p.add_argument(
+        "--gcp-timeout-hours",
+        type=float,
+        default=None,
+        metavar="HOURS",
+        help="Detached mode benchmark timeout before FAILED upload/self-delete (default: 6 GPU, 8 CPU).",
+    )
+    run_p.add_argument(
         "--gcp-venv-cache-uri",
         metavar="GS_URI",
         help="GCS prefix for reusable VM venv cache (default: sibling augmentation-cache bucket prefix).",

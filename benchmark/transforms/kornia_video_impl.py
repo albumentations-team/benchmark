@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+from benchmark.transforms.kornia_common import set_same_on_batch
 from benchmark.transforms.registry import build_transforms, register_library
 from benchmark.transforms.specs import TransformSpec
 
@@ -19,25 +20,41 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 LIBRARY = "kornia"
 
 
+class KorniaVideoSequential(torch.nn.Module):
+    def __init__(self, *transforms: torch.nn.Module) -> None:
+        super().__init__()
+        self.video = Kaug.VideoSequential(
+            *transforms,
+            data_format="BTCHW",
+            same_on_frame=True,
+        )
+
+    def forward(self, video: torch.Tensor) -> torch.Tensor:
+        if len(video.shape) == 4:
+            return self.video(video.unsqueeze(0)).squeeze(0)
+        if len(video.shape) == 5:
+            return self.video(video)
+        msg = f"Kornia video transform expects T,C,H,W or B,T,C,H,W input, got shape {tuple(video.shape)}"
+        raise TypeError(msg)
+
+
+def wrap_video_transform(transform: torch.nn.Module) -> KorniaVideoSequential:
+    set_same_on_batch(transform, False)
+    return KorniaVideoSequential(transform).to(device)
+
+
 # Required: Define how to apply transforms to videos
 def __call__(transform: Any, video: Any) -> Any:  # noqa: N807
-    """Apply kornia transform to video tensor
+    """Apply kornia transform to video tensor.
 
     Args:
-        transform: Kornia augmentation instance
+        transform: Kornia VideoSequential-backed augmentation instance
         video: torch.Tensor of shape (T, C, H, W)
 
     Returns:
         Transformed video as torch.Tensor
     """
-    # Treat time dimension (T) as batch dimension
-    # video shape is already (T, C, H, W) which is what Kornia expects for batched images
-    # Apply transform directly to the video tensor
-    # This will apply the same transform to all frames due to same_on_batch=True
     video = video.to(device)
-    # Ensure video is in float16 format if on GPU
-    if device.type == "cuda":
-        video = video.half()
     return transform(video)
 
 
@@ -384,7 +401,14 @@ def create_transform(spec: TransformSpec) -> Any | None:
 
 
 # Register with the central registry
-register_library(LIBRARY, create_video_fn=create_transform)
+def create_video_transform(spec: TransformSpec) -> Any | None:
+    transform = create_transform(spec)
+    if transform is None:
+        return None
+    return wrap_video_transform(transform)
+
+
+register_library(LIBRARY, create_video_fn=create_video_transform)
 
 # Required: Transform definitions from specs
 TRANSFORMS = build_transforms(LIBRARY, media="video")

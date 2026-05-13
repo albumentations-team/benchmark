@@ -112,7 +112,7 @@ def test_gpu_image_loader_path_splits_cpu_prep_and_gpu_batch_transform(
         return 2
 
     monkeypatch.setattr(runner, "_loader", capture_loader)
-    monkeypatch.setattr(runner, "_materialize_gpu_image_batch", capture_batch)
+    monkeypatch.setattr(runner, "_materialize_gpu_batch", capture_batch)
 
     result = runner._run_transform({"name": "Identity", "transform": transform}, paths)
 
@@ -153,7 +153,7 @@ def test_torchvision_gpu_image_pipeline_uses_split_recipe(tmp_path: Path) -> Non
         device="cuda",
     )
 
-    dataset_transform, batch_transform = runner._split_gpu_image_transform(transform)
+    dataset_transform, batch_transform = runner._split_gpu_transform(transform)
     batch = torch.ones((2, 3, 6, 6), dtype=torch.float32)
 
     assert dataset_transform is not None
@@ -629,3 +629,209 @@ def test_video_clip_loader_keeps_torchvision_uint8_for_pipeline(
 
     assert tuple(tensor.shape) == (4, 3, 5, 6)
     assert tensor.dtype == torch.uint8
+
+
+def test_video_gpu_preload_keeps_clips_on_cpu(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    torch = pytest.importorskip("torch")
+    from benchmark import pipeline_runner
+
+    class FakeDecodedClip:
+        frames = np.zeros((4, 5, 6, 3), dtype=np.uint8)
+
+    monkeypatch.setattr(pipeline_runner, "decode_video", lambda *_args, **_kwargs: FakeDecodedClip())
+    runner = PipelineBenchmarkRunner(
+        library="kornia",
+        data_dir=tmp_path,
+        output_file=tmp_path / "pipeline.json",
+        transforms=[],
+        call_fn=lambda transform_arg, item: transform_arg(item),
+        media="video",
+        scenario="video-16f",
+        device="cuda",
+        clip_length=4,
+        pipeline_scope="memory_dataloader_augment",
+    )
+
+    clips = runner._preload_items([tmp_path / "video.mp4"])
+
+    assert len(clips) == 1
+    assert isinstance(clips[0], torch.Tensor)
+    assert clips[0].device.type == "cpu"
+
+
+def test_video_gpu_loader_moves_collated_batch_not_preloaded_clips(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    torch = pytest.importorskip("torch")
+    paths = [tmp_path / "a.mp4", tmp_path / "b.mp4"]
+    loader_transforms: list[object | None] = []
+    moved_shapes: list[tuple[int, ...]] = []
+    transform_shapes: list[tuple[int, ...]] = []
+
+    class Identity:
+        def __call__(self, batch: object) -> object:
+            transform_shapes.append(tuple(cast("Any", batch).shape))
+            return batch
+
+    transform = Identity()
+    runner = PipelineBenchmarkRunner(
+        library="torchvision",
+        data_dir=tmp_path,
+        output_file=tmp_path / "pipeline.json",
+        transforms=[{"name": "Identity", "transform": transform}],
+        call_fn=lambda transform_arg, item: transform_arg(item),
+        media="video",
+        scenario="video-16f",
+        num_items=2,
+        num_runs=1,
+        batch_size=2,
+        workers=0,
+        min_time=0.0,
+        min_batches=1,
+        pipeline_scope="memory_dataloader_augment",
+        device="cuda",
+        clip_length=4,
+    )
+    preloaded = [torch.zeros((4, 3, 5, 6), dtype=torch.uint8) for _ in paths]
+    assert all(clip.device.type == "cpu" for clip in preloaded)
+
+    def fake_resolved_device() -> str:
+        runner._last_device = "cuda"
+        return "cuda"
+
+    original_loader = runner._loader
+
+    def capture_loader(
+        paths_arg: list[Path],
+        transform_arg: object | None,
+        preloaded_arg: list[object] | None = None,
+    ) -> object:
+        loader_transforms.append(transform_arg)
+        return original_loader(paths_arg, transform_arg, preloaded_arg)
+
+    def capture_move(batch: object, scale_uint8: bool = True) -> object:
+        _ = scale_uint8
+        moved_shapes.append(tuple(cast("Any", batch).shape))
+        return batch
+
+    monkeypatch.setattr(runner, "_paths", lambda: paths)
+    monkeypatch.setattr(runner, "_preload_items", lambda _paths: preloaded)
+    monkeypatch.setattr(runner, "_preflight_slow_transform", lambda **_kwargs: None)
+    monkeypatch.setattr(runner, "_warm_loader_once", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(runner, "_resolved_device", fake_resolved_device)
+    monkeypatch.setattr(runner, "_loader", capture_loader)
+    monkeypatch.setattr(runner, "_move_batch_to_resolved_device", capture_move)
+
+    result = runner._run_transform({"name": "Identity", "transform": transform}, paths)
+
+    assert result["supported"] is True
+    assert loader_transforms == [None, None]
+    assert moved_shapes == [(2, 4, 3, 5, 6)]
+    assert transform_shapes == [(4, 3, 5, 6), (4, 3, 5, 6)]
+
+
+def test_kornia_video_gpu_batch_transform_keeps_documented_video_shape(tmp_path: Path) -> None:
+    torch = pytest.importorskip("torch")
+    input_shapes: list[tuple[int, ...]] = []
+
+    class RecordShape:
+        def __call__(self, batch: object) -> object:
+            tensor = cast("Any", batch)
+            input_shapes.append(tuple(tensor.shape))
+            return tensor + 1
+
+    runner = PipelineBenchmarkRunner(
+        library="kornia",
+        data_dir=tmp_path,
+        output_file=tmp_path / "pipeline.json",
+        transforms=[],
+        call_fn=lambda transform_arg, item: transform_arg(item),
+        media="video",
+        scenario="video-16f",
+        device="cuda",
+    )
+    batch = torch.zeros((2, 4, 3, 5, 6), dtype=torch.float32)
+
+    output = runner._apply_gpu_batch_transform(batch, RecordShape())
+
+    assert input_shapes == [(2, 4, 3, 5, 6)]
+    assert tuple(output.shape) == (2, 4, 3, 5, 6)
+
+
+def test_video_gpu_dataloader_metadata_marks_host_to_device_transfer(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("torch.utils.data")
+    from benchmark import pipeline_runner
+
+    paths = [tmp_path / "a.mp4", tmp_path / "b.mp4"]
+
+    class Identity:
+        def __call__(self, batch: object) -> object:
+            return batch
+
+    runner = PipelineBenchmarkRunner(
+        library="kornia",
+        data_dir=tmp_path,
+        output_file=tmp_path / "pipeline.json",
+        transforms=[{"name": "Identity", "transform": Identity()}],
+        call_fn=lambda transform_arg, item: transform_arg(item),
+        media="video",
+        scenario="video-16f",
+        num_items=2,
+        num_runs=1,
+        batch_size=2,
+        workers=0,
+        min_time=0.0,
+        min_batches=1,
+        pipeline_scope="memory_dataloader_augment",
+        device="cuda",
+        clip_length=4,
+    )
+
+    def fake_resolved_device() -> str:
+        runner._last_device = "cuda"
+        return "cuda"
+
+    monkeypatch.setattr(runner, "_paths", lambda: paths)
+    monkeypatch.setattr(
+        runner,
+        "_preload_items",
+        lambda _paths: [torch.zeros((4, 3, 5, 6), dtype=torch.float32) for _ in paths],
+    )
+    monkeypatch.setattr(runner, "_preflight_slow_transform", lambda **_kwargs: None)
+    monkeypatch.setattr(runner, "_warm_loader_once", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(runner, "_resolved_device", fake_resolved_device)
+
+    def fake_move(batch: object, scale_uint8: bool = True) -> object:
+        _ = scale_uint8
+        return batch
+
+    monkeypatch.setattr(runner, "_move_batch_to_resolved_device", fake_move)
+    monkeypatch.setattr(pipeline_runner, "_torch_synchronize", lambda _device=None: None)
+    monkeypatch.setattr(pipeline_runner, "cuda_memory_allocated", lambda _device: 0)
+    monkeypatch.setattr(pipeline_runner, "reset_peak_memory_stats", lambda _device: None)
+    monkeypatch.setattr(
+        pipeline_runner,
+        "cuda_memory_stats",
+        lambda _device: {
+            "gpu_memory_allocated_before_bytes": 0,
+            "gpu_memory_allocated_after_bytes": 0,
+            "gpu_peak_memory_allocated_bytes": 0,
+            "gpu_peak_memory_reserved_bytes": 0,
+        },
+    )
+
+    payload = runner.run()
+
+    assert payload["metadata"]["timing"]["data_source"] == "memory"
+    params = payload["metadata"]["benchmark_params"]
+    assert params["includes_host_to_device_transfer"] is True
+    assert params["transform_on_device"] is True
+    assert params["video_randomness_scope"] == "per_clip_same_on_frames"

@@ -522,6 +522,7 @@ def main() -> None:
     transforms = filter_transform_dicts_for_library_device(
         transforms,
         scenario=args.scenario,
+        mode="micro",
         library=library,
         media=args.media,
         device=args.device,

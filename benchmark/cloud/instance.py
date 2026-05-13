@@ -43,6 +43,7 @@ class GCPInstanceConfig:
     accelerator_count: int = 0
     preemptible: bool = False
     tags: list[str] = field(default_factory=lambda: ["benchmark"])
+    labels: dict[str, str] = field(default_factory=dict)
     scopes: list[str] = field(default_factory=lambda: ["https://www.googleapis.com/auth/cloud-platform"])
     instance_name_override: str | None = None
 

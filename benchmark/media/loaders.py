@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -94,15 +93,6 @@ class BenchmarkMediaLoader:
         return images
 
     def _load_videos(self) -> list[Any]:
-        torch_module: Any | None = None
-        try:
-            torch_module = import_module("torch")
-            device = torch_module.device("cuda" if torch_module.cuda.is_available() else "cpu")
-            gpu_available = torch_module.cuda.is_available()
-        except ImportError:
-            device = None
-            gpu_available = False
-
         video_paths: list[Path] = []
         for ext in ["mp4", "avi", "mov"]:
             video_paths.extend(self.data_dir.rglob(f"*.{ext}"))
@@ -115,8 +105,6 @@ class BenchmarkMediaLoader:
             for path in pbar:
                 try:
                     video = self._load_video_clip(path)
-                    if torch_module and isinstance(video, torch_module.Tensor) and gpu_available:
-                        video = video.to(device, non_blocking=True) if self.library == "kornia" else video.to(device)
                     videos.append(video)
 
                     if len(videos) >= self.num_items:
@@ -139,11 +127,6 @@ class BenchmarkMediaLoader:
 
         logger.info("Loaded %d videos", len(videos))
 
-        if torch_module and gpu_available:
-            allocated = torch_module.cuda.memory_allocated() / (1024**3)
-            total = torch_module.cuda.get_device_properties(torch_module.cuda.current_device()).total_memory / (1024**3)
-            logger.info("GPU memory: %.2fGB / %.2fGB", allocated, total)
-
         return videos
 
     def _load_video_clip(self, path: Path) -> Any:
@@ -163,7 +146,7 @@ class BenchmarkMediaLoader:
             tensor = torch.from_numpy(clip).permute(0, 3, 1, 2)
             if self.library == "torchvision":
                 return tensor.contiguous()
-            return (tensor.float() / 255.0).half()
+            return tensor.float() / 255.0
 
         try:
             clip = decode_video("opencv", path, self.clip_length).frames

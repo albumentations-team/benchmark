@@ -5,7 +5,8 @@ from typing import Any
 import kornia.augmentation as Kaug
 from torch import nn
 
-from benchmark.transforms.kornia_video_impl import create_transform, device
+from benchmark.transforms.kornia_common import set_same_on_batch
+from benchmark.transforms.kornia_video_impl import KorniaVideoSequential, create_transform, device
 from benchmark.transforms.video_recipe_specs import (
     is_crop_recipe_spec,
     is_supported_by_library,
@@ -29,11 +30,25 @@ def _normalize() -> Kaug.Normalize:
 
 def _random_crop() -> Kaug.RandomCrop:
     params = spec_by_name("RandomCrop224").params
-    return Kaug.RandomCrop(size=(params["height"], params["width"]), pad_if_needed=True, p=1, same_on_batch=True)
+    return Kaug.RandomCrop(size=(params["height"], params["width"]), pad_if_needed=True, p=1, same_on_batch=False)
+
+
+class _KorniaVideoRecipe(nn.Module):
+    def __init__(self, transforms: list[nn.Module]) -> None:
+        super().__init__()
+        self.video = KorniaVideoSequential(
+            *transforms,
+            _normalize(),
+        )
+
+    def forward(self, video: Any) -> Any:
+        return self.video(video)
 
 
 def _recipe(name: str, transforms: list[nn.Module]) -> dict[str, Any]:
-    return {"name": name, "transform": nn.Sequential(*transforms, _normalize()).to(device)}
+    for transform in transforms:
+        set_same_on_batch(transform, False)
+    return {"name": name, "transform": _KorniaVideoRecipe(transforms).to(device)}
 
 
 TRANSFORMS: list[dict[str, Any]] = []

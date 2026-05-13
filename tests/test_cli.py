@@ -210,6 +210,8 @@ class TestBuildParser:
                 "--gcp-dry-run",
                 "--gcp-venv-cache-uri",
                 "gs://b/cache",
+                "--gcp-timeout-hours",
+                "1.5",
                 "--gcp-force-venv-cache-rebuild",
             ],
         )
@@ -218,6 +220,7 @@ class TestBuildParser:
         assert args.gcp_disk_size_gb == 200
         assert args.gcp_dry_run is True
         assert args.gcp_venv_cache_uri == "gs://b/cache"
+        assert args.gcp_timeout_hours == pytest.approx(1.5)
         assert args.gcp_force_venv_cache_rebuild is True
         assert args.gcp_attached is False
         assert args.gcp_preemptible is False
@@ -345,6 +348,12 @@ class TestCmdRunGcp:
         _, kwargs = mock_runner.run_detached.call_args
         assert kwargs["dry_run"] is True
         assert kwargs["job"]["venv_cache_uri"] == "gs://b/augmentation-cache"
+        assert kwargs["job"]["timeout_seconds"] == 21600
+        labels = mock_config.call_args.kwargs["labels"]
+        assert labels["benchmark"] == "augmentation"
+        assert labels["benchmark-run-id"] == "testrunid"
+        assert labels["benchmark-ttl-hours"] == "6"
+        assert int(labels["benchmark-expires"]) > 0
         mock_runner.create_instance.assert_not_called()
 
     def test_g2_machine_uses_gpu_image_without_explicit_accelerator(self, tmp_path: Path) -> None:
@@ -373,6 +382,28 @@ class TestCmdRunGcp:
         assert mock_config.call_args.kwargs["image_project"] == "deeplearning-platform-release"
         assert mock_config.call_args.kwargs["image_family"] == "pytorch-2-9-cu129-ubuntu-2404-nvidia-580"
 
+    def test_cpu_detached_default_timeout_is_eight_hours(self, tmp_path: Path) -> None:
+        data = load_run_config(Path("configs/paper/prod_c4_video_dataloader_cpu.yaml")).model_dump()
+        data["cloud"]["dry_run"] = True
+        data["cloud"]["project"] = "proj"
+        config = BenchmarkRunConfig.model_validate(data)
+        args = argparse.Namespace(verbose=False)
+        mock_runner = MagicMock()
+        mock_runner.run_detached.return_value = "gs://b/r/dryrunid"
+
+        with (
+            patch("benchmark.cloud.gcp.GCPRunner", return_value=mock_runner),
+            patch("benchmark.cloud.instance.GCPInstanceConfig") as mock_config,
+            patch("benchmark.cloud.gcp.new_run_id", return_value="testrunid"),
+        ):
+            from benchmark.cli import _cmd_run_gcp
+
+            _cmd_run_gcp(args, tmp_path, tmp_path, run_config=config)
+
+        _, kwargs = mock_runner.run_detached.call_args
+        assert kwargs["job"]["timeout_seconds"] == 28800
+        assert mock_config.call_args.kwargs["labels"]["benchmark-ttl-hours"] == "8"
+
     def test_detached_writes_metadata_json(self, tmp_path: Path) -> None:
         out_dir = tmp_path / "out"
         out_dir.mkdir()
@@ -399,6 +430,9 @@ class TestCmdRunGcp:
         meta = json.loads((out_dir / "gcp_last_run.json").read_text())
         assert meta["run_id"] == "abc123"
         assert meta["run_prefix"] == "gs://b/runs/abc123"
+        assert meta["timeout_hours"] == pytest.approx(6.0)
+        assert meta["timeout_seconds"] == 21600
+        assert int(meta["expires_unix"]) > 0
         assert "fetch_results_hint" in meta
 
     def test_detached_typed_job_payload_uses_vm_paths(self, tmp_path: Path) -> None:
@@ -500,12 +534,14 @@ def test_gcp_job_dict_can_carry_typed_config() -> None:
         keep_instance_on_failure=False,
         venv_cache_uri="",
         force_venv_cache_rebuild=False,
+        timeout_seconds=123,
         submission={},
         instance_meta={},
     )
 
     assert job["run_config"] == {"selection": {"scenario": "image-rgb"}}
     assert job["cloud_config"] == {"provider": "gcp", "project": "p"}
+    assert job["timeout_seconds"] == 123
     assert "benchmark_cli_args" not in job
 
 

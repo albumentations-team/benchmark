@@ -92,16 +92,25 @@ DataLoader overhead, and batch collation. A micro transform row must not reread 
 convert to tensor, or repair channel layouts unless that work is part of the named library transform itself.
 
 Pipeline mode uses a different data model. In `decode_dataloader_augment`, the dataset stores paths and loads or decodes
-inside the DataLoader path. In `memory_dataloader_augment`, decoded samples are preloaded once and the DataLoader path
-measures worker scheduling, augmentation, collation, and recipe execution without disk/decode cost. In
-`decode_dataloader_augment_batch_copy`, the benchmark additionally materializes the collated batch tensor and copies it to
-CUDA or MPS when a device is requested. These scopes are separate because they answer separate production questions.
+inside the DataLoader path. In `memory_dataloader_augment`, decoded samples are preloaded once into CPU RAM and the
+DataLoader path measures worker scheduling, augmentation, collation, and recipe execution without disk/decode cost. GPU
+DataLoader rows still keep the cached samples in CPU RAM: the timed path collates a CPU batch, copies that batch to the
+selected device in the main process, then applies the GPU transform. In `decode_dataloader_augment_batch_copy`, the
+benchmark additionally materializes the collated batch tensor and copies it to CUDA or MPS when a device is requested.
+These scopes are separate because they answer separate production questions.
 
 Cloud runs stage datasets as one tarball on the VM's local disk before timing begins. The benchmark does not time against
 mounted buckets or network paths. `benchmark/cloud/stage_dataset.py` validates and extracts the tarball before the control
 environment exists, so it intentionally stays stdlib-only and avoids importing Pydantic or `benchmark.config`. This makes
 cloud bootstrap failures easier to diagnose and prevents dependency setup from becoming a prerequisite for dataset
 staging.
+
+Detached GCP runs wrap the benchmark command in a hard timeout: 6 hours by default for GPU machines and 8 hours by default
+for CPU machines, overridable with `--gcp-timeout-hours` or `cloud.timeout_hours`. On timeout, the VM bootstrap uploads the
+exit code, run metadata, terminal log, partial `results/`, and a `FAILED` marker before following the normal deletion path.
+Instances are also labeled with benchmark TTL/expiry metadata so an external cleanup command can find stale VMs. Self-delete
+is still useful on normal success or failure, but it cannot run if the guest OS, network, or metadata stack wedges; timeout
+plus TTL cleanup is the required detached-job safety net.
 
 ## Micro Timing
 
@@ -166,11 +175,15 @@ overhead around the measured transform.
 
 ## GPU Pipeline Timing
 
-GPU image pipeline rows are separate from CPU pipeline rows. For torchvision and Kornia, PyTorch DataLoader workers still
-prepare fixed-shape samples on CPU before collation. The collated batch is then copied to the selected device, the measured
-augmentation and normalization run on the accelerator, and the benchmark synchronizes before stopping the timer. This
-models the practical constraint that DataLoader workers cannot independently return GPU tensors for normal multi-worker
-training without changing the architecture of the input pipeline.
+GPU image and video pipeline rows are separate from CPU pipeline rows. For torchvision and Kornia, PyTorch DataLoader
+workers still prepare fixed-shape samples or clips on CPU before collation. The collated batch is then copied to the
+selected device, the measured augmentation and normalization run on the accelerator, and the benchmark synchronizes before
+stopping the timer. Kornia video micro and pipeline rows use Kornia's documented `VideoSequential` container with
+`data_format="BTCHW"` and `same_on_frame=True`, so random parameters are shared across frames within one clip but not
+forced to be shared across the whole DataLoader batch. TorchVision video GPU rows call the v2 recipe per clip after the
+host-to-device batch copy for the same per-clip randomness scope. This models the practical constraint that DataLoader
+workers cannot independently return GPU tensors for normal multi-worker training without changing the architecture of the
+input pipeline.
 
 Kornia can apply a batched augmentation with per-image random parameters using `same_on_batch=False`, so its GPU batch
 path uses the batched transform. TorchVision v2 does not expose an equivalent batched random-transform API for every

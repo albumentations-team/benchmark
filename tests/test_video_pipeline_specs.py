@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -57,6 +58,40 @@ def test_kornia_video_pipeline_shear_is_not_registered() -> None:
     assert "RandomCrop224+Shear+Normalize+ToTensor" not in names
 
 
+def test_kornia_video_pipeline_uses_per_clip_randomness() -> None:
+    pytest.importorskip("kornia")
+    from benchmark.transforms import kornia_video_pipeline_impl as impl
+
+    transform = _transform_by_name(impl.TRANSFORMS, "RandomCrop224+HorizontalFlip+Normalize+ToTensor")
+    same_on_batch_values = _random_same_on_batch_values(transform)
+
+    assert same_on_batch_values
+    assert same_on_batch_values == [False] * len(same_on_batch_values)
+
+
+def test_kornia_video_micro_uses_per_clip_randomness(monkeypatch) -> None:
+    monkeypatch.setenv("BENCHMARK_TRANSFORMS_FILTER", "HorizontalFlip")
+    pytest.importorskip("kornia")
+    from benchmark.transforms import kornia_video_impl as impl
+
+    transform = _transform_by_name(impl.build_transforms("kornia", media="video"), "HorizontalFlip")
+    same_on_batch_values = _random_same_on_batch_values(transform)
+
+    assert same_on_batch_values
+    assert same_on_batch_values == [False] * len(same_on_batch_values)
+
+
+def test_kornia_video_uses_official_video_sequential_api() -> None:
+    source = Path("benchmark/transforms/kornia_video_impl.py").read_text(encoding="utf-8")
+    pipeline_source = Path("benchmark/transforms/kornia_video_pipeline_impl.py").read_text(encoding="utf-8")
+
+    assert "Kaug.VideoSequential" in source
+    assert 'data_format="BTCHW"' in source
+    assert "same_on_frame=True" in source
+    assert "wrap_video_transform(transform)" in source
+    assert "KorniaVideoSequential" in pipeline_source
+
+
 def test_albumentationsx_video_pipeline_shear_is_not_registered() -> None:
     pytest.importorskip("albumentations")
     from benchmark.transforms import albumentationsx_video_pipeline_impl as impl
@@ -84,3 +119,13 @@ def _transform_by_name(transforms: list[dict[str, Any]], name: str) -> Any:
         if entry["name"] == name:
             return entry["transform"]
     raise AssertionError(f"Missing transform {name!r}")
+
+
+def _random_same_on_batch_values(transform: Any) -> list[bool]:
+    return [
+        module.same_on_batch
+        for module in transform.modules()
+        if hasattr(module, "same_on_batch")
+        and module.__class__.__name__ != "Normalize"
+        and module.same_on_batch is not None
+    ]
