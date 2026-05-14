@@ -1,6 +1,6 @@
 {
-  "num_source_rows": 1009,
-  "num_aggregate_rows": 849,
+  "num_source_rows": 1378,
+  "num_aggregate_rows": 1218,
   "regimes": {
     "rgb_micro_cpu": 158,
     "rgb_micro_gpu": 75,
@@ -10,10 +10,10 @@
     "image9ch_micro_gpu": 59,
     "image9ch_dataloader_cpu": 103,
     "image9ch_dataloader_gpu": 59,
-    "video16f_micro_cpu": 0,
-    "video16f_micro_gpu": 0,
-    "video16f_dataloader_cpu": 0,
-    "video16f_dataloader_gpu": 0
+    "video16f_micro_cpu": 125,
+    "video16f_micro_gpu": 75,
+    "video16f_dataloader_cpu": 106,
+    "video16f_dataloader_gpu": 63
   },
   "headlines": {
     "median_throughput": {
@@ -40,7 +40,8 @@
       },
       "image9ch_micro_cpu": {
         "albumentationsx": 612.5480681246701,
-        "torchvision": 288.86058666882013
+        "torchvision": 288.86058666882013,
+        "kornia": 144.64025233494255
       },
       "image9ch_micro_gpu": {
         "torchvision": 3690.85049987812,
@@ -55,10 +56,24 @@
         "torchvision": 1275.8695722752775,
         "kornia": 270.2177507409335
       },
-      "video16f_micro_cpu": {},
-      "video16f_micro_gpu": {},
-      "video16f_dataloader_cpu": {},
-      "video16f_dataloader_gpu": {}
+      "video16f_micro_cpu": {
+        "albumentationsx": 188.53823255863452,
+        "torchvision": 143.91171635703458,
+        "kornia": 60.91458366042893
+      },
+      "video16f_micro_gpu": {
+        "torchvision": 4353.274797110794,
+        "kornia": 95.53035311215388
+      },
+      "video16f_dataloader_cpu": {
+        "albumentationsx": 265.5823984652659,
+        "torchvision": 195.6217180882762,
+        "kornia": 123.63410277126471
+      },
+      "video16f_dataloader_gpu": {
+        "torchvision": 384.5794081595328,
+        "kornia": 61.834954177906944
+      }
     },
     "winner_counts": {
       "rgb_micro_cpu": {
@@ -78,7 +93,8 @@
         "torchvision": 13
       },
       "image9ch_micro_cpu": {
-        "albumentationsx": 18,
+        "albumentationsx": 31,
+        "kornia": 3,
         "torchvision": 3
       },
       "image9ch_micro_gpu": {
@@ -93,10 +109,20 @@
         "kornia": 1,
         "torchvision": 19
       },
-      "video16f_micro_cpu": {},
-      "video16f_micro_gpu": {},
-      "video16f_dataloader_cpu": {},
-      "video16f_dataloader_gpu": {}
+      "video16f_micro_cpu": {
+        "albumentationsx": 44,
+        "torchvision": 3
+      },
+      "video16f_micro_gpu": {
+        "kornia": 1,
+        "torchvision": 19
+      },
+      "video16f_dataloader_cpu": {
+        "albumentationsx": 42
+      },
+      "video16f_dataloader_gpu": {
+        "torchvision": 18
+      }
     },
     "gpu_vs_albumentationsx_cpu": {
       "torchvision": {
@@ -807,9 +833,9 @@
         },
         "kornia": {
           "rows": 40,
-          "full": 0,
-          "early_stopped": 5,
-          "unsupported": 35
+          "full": 36,
+          "early_stopped": 4,
+          "unsupported": 0
         }
       },
       "image9ch_micro_gpu": {
@@ -860,10 +886,74 @@
           "unsupported": 1
         }
       },
-      "video16f_micro_cpu": {},
-      "video16f_micro_gpu": {},
-      "video16f_dataloader_cpu": {},
-      "video16f_dataloader_gpu": {}
+      "video16f_micro_cpu": {
+        "albumentationsx": {
+          "rows": 51,
+          "full": 51,
+          "early_stopped": 0,
+          "unsupported": 0
+        },
+        "torchvision": {
+          "rows": 26,
+          "full": 26,
+          "early_stopped": 0,
+          "unsupported": 0
+        },
+        "kornia": {
+          "rows": 48,
+          "full": 40,
+          "early_stopped": 1,
+          "unsupported": 7
+        }
+      },
+      "video16f_micro_gpu": {
+        "torchvision": {
+          "rows": 26,
+          "full": 25,
+          "early_stopped": 0,
+          "unsupported": 1
+        },
+        "kornia": {
+          "rows": 49,
+          "full": 40,
+          "early_stopped": 0,
+          "unsupported": 9
+        }
+      },
+      "video16f_dataloader_cpu": {
+        "albumentationsx": {
+          "rows": 43,
+          "full": 43,
+          "early_stopped": 0,
+          "unsupported": 0
+        },
+        "torchvision": {
+          "rows": 25,
+          "full": 25,
+          "early_stopped": 0,
+          "unsupported": 0
+        },
+        "kornia": {
+          "rows": 38,
+          "full": 37,
+          "early_stopped": 0,
+          "unsupported": 1
+        }
+      },
+      "video16f_dataloader_gpu": {
+        "torchvision": {
+          "rows": 25,
+          "full": 24,
+          "early_stopped": 0,
+          "unsupported": 1
+        },
+        "kornia": {
+          "rows": 38,
+          "full": 36,
+          "early_stopped": 0,
+          "unsupported": 2
+        }
+      }
     }
   }
 }

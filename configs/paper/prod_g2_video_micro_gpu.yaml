@@ -8,7 +8,7 @@ selection:
 data:
   data_dir: /tmp/unused
   gcs_uri: gs://imagenet_validation/ucf101/ucf101.tar
-  num_items: 1000
+  num_items: 500
   clip_length: 16
 output:
   output_dir: gcp_runs/prod-g2-standard-16-video-micro-gpu

@@ -99,6 +99,13 @@ selected device in the main process, then applies the GPU transform. In `decode_
 benchmark additionally materializes the collated batch tensor and copies it to CUDA or MPS when a device is requested.
 These scopes are separate because they answer separate production questions.
 
+For CPU DataLoader rows, RGB images, 9-channel images, and video clips all follow the same execution boundary:
+`DataLoader` workers receive one sample at a time, apply the full library recipe in `Dataset.__getitem__`, and return a
+fixed-shape tensor sample. PyTorch default collation then only stacks those already-augmented samples into a batch. In
+other words, CPU augmentation happens in workers before collation, not later on the collated batch. The GPU TorchVision
+and Kornia rows are the deliberate exception: workers prepare CPU samples or clips, default collation builds a CPU batch,
+and the main process copies that batch to the device before running the GPU transform.
+
 Cloud runs stage datasets as one tarball on the VM's local disk before timing begins. The benchmark does not time against
 mounted buckets or network paths. `benchmark/cloud/stage_dataset.py` validates and extracts the tarball before the control
 environment exists, so it intentionally stays stdlib-only and avoids importing Pydantic or `benchmark.config`. This makes

@@ -5,46 +5,10 @@ This supplement table preserves the full unsupported and slow-row detail used by
 | Regime | Library | Transform | Status | Reason |
 |---|---|---|---|---|
 | 9ch GPU DataLoader | kornia | RandomCrop224+GaussianIllumination+Normalize+ToTensor | unsupported | RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! |
-| 9ch CPU micro | kornia | Affine | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | AutoContrast | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | Blur | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | Brightness | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | ChannelDropout | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | ChannelShuffle | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | Contrast | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | CornerIllumination | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | Elastic | early_stopped | Elastic slower than threshold: 0.288 sec/image >= 0.050 |
-| 9ch CPU micro | kornia | Erasing | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | GaussianBlur | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | GaussianIllumination | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | GaussianNoise | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | Grayscale | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | HorizontalFlip | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | Invert | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | JpegCompression | early_stopped | JpegCompression slower than threshold: 0.066 sec/image >= 0.050 |
-| 9ch CPU micro | kornia | LinearIllumination | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | LongestMaxSize | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | MedianBlur | early_stopped | MedianBlur slower than threshold: 1.183 sec/image >= 0.050 |
-| 9ch CPU micro | kornia | MotionBlur | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | OpticalDistortion | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | Perspective | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | PlasmaBrightness | early_stopped | PlasmaBrightness slower than threshold: 0.272 sec/image >= 0.050 |
-| 9ch CPU micro | kornia | PlasmaContrast | early_stopped | PlasmaContrast slower than threshold: 0.253 sec/image >= 0.050 |
-| 9ch CPU micro | kornia | PlasmaShadow | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | Posterize | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | RandomCrop224 | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | RandomGamma | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | RandomJigsaw | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | RandomResizedCrop | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | RandomRotate90 | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | Resize | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | Rotate | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | Sharpen | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | Shear | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | SmallestMaxSize | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | Solarize | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | ThinPlateSpline | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
-| 9ch CPU micro | kornia | VerticalFlip | unsupported | RuntimeError: /root/benchmark-work/repo/.venv_torch_stack/bin/python failed with exit code -9 |
+| 9ch CPU micro | kornia | Elastic | early_stopped | Elastic slower than threshold: 0.258 sec/image >= 0.050 |
+| 9ch CPU micro | kornia | MedianBlur | early_stopped | MedianBlur slower than threshold: 1.059 sec/image >= 0.050 |
+| 9ch CPU micro | kornia | PlasmaBrightness | early_stopped | PlasmaBrightness slower than threshold: 0.241 sec/image >= 0.050 |
+| 9ch CPU micro | kornia | PlasmaContrast | early_stopped | PlasmaContrast slower than threshold: 0.222 sec/image >= 0.050 |
 | 9ch CPU micro | torchvision | Elastic | early_stopped | Elastic slower than threshold: 0.124 sec/image >= 0.050 |
 | 9ch GPU micro | kornia | CornerIllumination | unsupported | RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! |
 | 9ch GPU micro | kornia | Erasing | unsupported | NotImplementedError: "check_uniform_bounds" not implemented for 'Long' |
@@ -107,3 +71,25 @@ This supplement table preserves the full unsupported and slow-row detail used by
 | GPU micro | kornia | PlasmaContrast | early_stopped | PlasmaContrast slower than threshold: 0.146 sec/image >= 0.050 |
 | GPU micro | kornia | PlasmaShadow | early_stopped | PlasmaShadow slower than threshold: 0.146 sec/image >= 0.050 |
 | GPU micro | torchvision | Elastic | early_stopped | Elastic slower than threshold: 0.181 sec/image >= 0.050 |
+| Video CPU DataLoader | kornia | RandomCrop224+Snow+Normalize+ToTensor | unsupported | NotImplementedError: "check_uniform_bounds" not implemented for 'Long' |
+| Video GPU DataLoader | kornia | RandomCrop224+Affine+Normalize+ToTensor | unsupported | RuntimeError: Expected tensor for argument #1 'input' to have the same type as tensor for argument #2 'grid'; but type torch.cuda.FloatTensor does not equal torch.cuda.HalfTenso... |
+| Video GPU DataLoader | kornia | RandomCrop224+Snow+Normalize+ToTensor | unsupported | NotImplementedError: "check_uniform_bounds" not implemented for 'Long' |
+| Video GPU DataLoader | torchvision | RandomCrop224+JpegCompression+Normalize+ToTensor | unsupported | ValueError: Input tensor must be a CPU tensor |
+| Video CPU micro | kornia | CLAHE | unsupported | NotImplementedError: "check_uniform_bounds" not implemented for 'Long' |
+| Video CPU micro | kornia | Erasing | unsupported | NotImplementedError: "check_uniform_bounds" not implemented for 'Long' |
+| Video CPU micro | kornia | GaussianBlur | unsupported | RuntimeError: view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead. |
+| Video CPU micro | kornia | MedianBlur | early_stopped | MedianBlur slower than threshold: 2.080 sec/video >= 2.000 |
+| Video CPU micro | kornia | MotionBlur | unsupported | RuntimeError: view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead. |
+| Video CPU micro | kornia | Perspective | unsupported | NotImplementedError: "check_uniform_bounds" not implemented for 'Long' |
+| Video CPU micro | kornia | Posterize | unsupported | NotImplementedError: "check_uniform_bounds" not implemented for 'Long' |
+| Video CPU micro | kornia | Snow | unsupported | NotImplementedError: "check_uniform_bounds" not implemented for 'Long' |
+| Video GPU micro | kornia | Affine | unsupported | RuntimeError: Expected tensor for argument #1 'input' to have the same type as tensor for argument #2 'grid'; but type torch.cuda.FloatTensor does not equal torch.cuda.HalfTenso... |
+| Video GPU micro | kornia | CLAHE | unsupported | NotImplementedError: "check_uniform_bounds" not implemented for 'Long' |
+| Video GPU micro | kornia | CornerIllumination | unsupported | RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! |
+| Video GPU micro | kornia | Erasing | unsupported | NotImplementedError: "check_uniform_bounds" not implemented for 'Long' |
+| Video GPU micro | kornia | LinearIllumination | unsupported | RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! |
+| Video GPU micro | kornia | MotionBlur | unsupported | RuntimeError: view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead. |
+| Video GPU micro | kornia | Perspective | unsupported | NotImplementedError: "check_uniform_bounds" not implemented for 'Long' |
+| Video GPU micro | kornia | Posterize | unsupported | NotImplementedError: "check_uniform_bounds" not implemented for 'Long' |
+| Video GPU micro | kornia | Snow | unsupported | NotImplementedError: "check_uniform_bounds" not implemented for 'Long' |
+| Video GPU micro | torchvision | JpegCompression | unsupported | ValueError: Input tensor must be a CPU tensor |

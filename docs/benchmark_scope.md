@@ -199,6 +199,10 @@ For 16-frame video DataLoader runs, size by frame budget rather than item budget
 GPU video DataLoader batch is `16` clips because `16 clips * 16 frames = 256` frames, matching the intended image-scale GPU
 batch. Cached DataLoader data lives in CPU RAM for RGB, 9-channel, and video. GPU DataLoader rows include the CPU batch to
 GPU transfer and then run augmentation on the GPU; DALI remains separate because it owns its own input/decode pipeline.
+For CPU DataLoader rows across RGB, 9-channel, and video, augmentation runs inside `DataLoader` workers before default
+collation. Collation only stacks fixed-shape, already-augmented samples into a batch. For TorchVision and Kornia GPU
+DataLoader rows, workers prepare CPU samples, collation builds the CPU batch, and the main process performs the
+host-to-device copy plus GPU augmentation.
 
 ### AMD Sanity Check
 
@@ -263,6 +267,15 @@ Run these for video/GPU tables:
   stability issues in that recipe path only. Kornia image GPU rows additionally exclude `Shear`; Kornia 9-channel image
   GPU rows additionally exclude `MedianBlur`. Kornia image CPU rows, 9-channel CPU rows, RGB GPU rows for `MedianBlur`,
   and video micro keep the global paper transform sets.
+- Kornia CPU video DataLoader/pipeline has repeatedly failed `RandomCrop224+Snow+Normalize+ToTensor` in the recipe path
+  with `NotImplementedError: "check_uniform_bounds" not implemented for 'Long'`. The May 13, 2026 C4 run
+  `d444860ec02b4c8da189dc5df893eee2` completed successfully overall, but recorded that transform as unsupported for
+  Kornia while keeping the other Kornia rows.
+- The May 13, 2026 G2 GPU video DataLoader run `e3e897517238436abb1359112d15b18f` completed successfully overall.
+  Kornia GPU video recorded `RandomCrop224+Affine+Normalize+ToTensor` as unsupported because `grid_sampler` received
+  mixed CUDA float/half tensors, and again recorded `RandomCrop224+Snow+Normalize+ToTensor` as unsupported with
+  `NotImplementedError: "check_uniform_bounds" not implemented for 'Long'`. TorchVision GPU video recorded
+  `RandomCrop224+JpegCompression+Normalize+ToTensor` as unsupported because the op requires a CPU tensor.
 - DALI pipeline benchmarks when DALI is available on the target image. Current DALI coverage is video pipeline plus RGB
   image GPU DataLoader-style pipeline; DALI image rows use the DALI-supported subset and report unsupported recipes
   explicitly.
@@ -277,7 +290,7 @@ Use this checklist for the post-submission 9-channel and video supplement. Keep 
 supplement tables. PIL is RGB-only in this benchmark, and DALI should remain a separately labeled native-pipeline
 comparison if we decide to include it.
 
-Current status as of 2026-05-11:
+Current status as of 2026-05-13:
 
 | Area | Config | Status | Next action |
 | --- | --- | --- | --- |
@@ -287,15 +300,27 @@ Current status as of 2026-05-11:
 | 9-channel CPU DataLoader Kornia | `configs/paper/prod_c4_highmem_9ch_dataloader_cpu_kornia.yaml` | Added after the standard C4 run killed Kornia while preloading 10k float32 9-channel tensors. | Run on `c4-highmem-16` to preserve the same `memory_dataloader_augment`, 10k-item protocol. If highmem quota is unavailable, run a reduced-n Kornia row and label it memory-limited/not same-n. |
 | 9-channel GPU DataLoader | `configs/paper/prod_g2_9ch_dataloader_gpu.yaml` | Not confirmed complete locally. | Run or locate the G2 job after the current 1-GPU queue is clear. |
 | Video CPU micro | `configs/paper/prod_c4_video_micro_cpu.yaml` | GCS run `ca332e6f5dd949fd85b8435c5b56346d` failed during Kornia `Rotate` with `SIGSEGV: 11`; GCS run `132f29d9503b49fead76c45ba25a6851` excluded `Rotate` and then failed during Kornia `Elastic` with `SIGSEGV: 11`. AlbumentationsX and TorchVision outputs were fetched locally from the first run. | Keep AlbumentationsX/TorchVision. Rerun Kornia CPU micro with `Rotate` and `Elastic` excluded by the scenario filter. |
-| Video CPU DataLoader | `configs/paper/prod_c4_video_dataloader_cpu.yaml` | GCS run `561ceed0c7a44b42b13fa9d9cde58a1e` wrote `DONE`, but all result JSONs had empty `results` because video pipeline `paper` transforms resolved to micro names instead of recipe names. | Rerun after the video pipeline transform-set resolver fix. |
+| Video CPU DataLoader | `configs/paper/prod_c4_video_dataloader_cpu.yaml` | GCS run `561ceed0c7a44b42b13fa9d9cde58a1e` wrote `DONE`, but all result JSONs had empty `results` because video pipeline `paper` transforms resolved to micro names instead of recipe names. After the resolver fix, GCS run `d444860ec02b4c8da189dc5df893eee2` completed with `DONE`, exit code `0`, and uploaded `vm.log`. It produced 43 AlbumentationsX ok rows, 25 TorchVision ok rows, and 37 Kornia ok rows plus one Kornia unsupported row: `RandomCrop224+Snow+Normalize+ToTensor` failed with `NotImplementedError: "check_uniform_bounds" not implemented for 'Long'`. | Keep the May 13 run as the CPU video DataLoader result set, with Kornia `Snow` documented as unsupported in this recipe path. |
 | Video GPU micro | `configs/paper/prod_g2_video_micro_gpu.yaml` | Config exists; not run. | Run on `g2-standard-16` after 9-channel GPU DataLoader completes. |
-| Video GPU DataLoader | `configs/paper/prod_g2_video_dataloader_gpu.yaml` | GCS run `5a50bff8adf64efeb1f682684eea4c3b` wrote `DONE`, but all result JSONs had empty `results` for the same video pipeline transform-name resolver bug. | Rerun after the video pipeline transform-set resolver fix. |
+| Video GPU DataLoader | `configs/paper/prod_g2_video_dataloader_gpu.yaml` | GCS run `5a50bff8adf64efeb1f682684eea4c3b` wrote `DONE`, but all result JSONs had empty `results` for the same video pipeline transform-name resolver bug. After the resolver fix, GCS run `e3e897517238436abb1359112d15b18f` completed with `DONE`, exit code `0`, and uploaded `vm.log`. It produced 24 TorchVision ok rows plus one TorchVision unsupported row (`JpegCompression` CPU-only), and 36 Kornia ok rows plus two Kornia unsupported rows (`Affine` mixed CUDA float/half grid sampler, `Snow` Long bounds error). | Keep the May 13 run as the GPU video DataLoader result set, with unsupported rows documented as library/device recipe limitations. |
 
 Fetch completed detached runs with the `fetch_results_hint` in each `gcp_last_run.json`, for example:
 
 ```bash
 gcloud storage cp -r 'gs://imagenet_validation/augmentation-results/<run-id>/results/*' gcp_runs/<local-run-dir>/
 ```
+
+For GPU configs, do not assume the zone in the YAML currently has capacity. We do not have usable G2/L4 capacity in every
+GCP zone, and stocked-out zones are common. Launch production GPU jobs through the zone-search helper so the config stays
+unchanged while the script tries known GPU-capable zones:
+
+```bash
+scripts/run_gcp_first_available_gpu_zone.sh configs/paper/prod_g2_video_dataloader_gpu.yaml
+```
+
+Extra `benchmark.cli run` overrides can follow the config path, for example `--libraries kornia` or
+`--gcp-timeout-hours 8`. Use a direct `python -m benchmark.cli run --config ... --gcp-zone ...` launch only when you have
+already confirmed that the chosen zone has the required GPU capacity.
 
 Detached GCP jobs now have a bootstrap hard timeout, defaulting to 6 hours for GPU VMs and 8 hours for CPU VMs. Override
 with `--gcp-timeout-hours` when a run legitimately needs longer. Self-delete still runs on normal `DONE` or `FAILED`, but

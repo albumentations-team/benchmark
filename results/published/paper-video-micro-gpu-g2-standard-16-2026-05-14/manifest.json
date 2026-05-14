@@ -1,0 +1,113 @@
+{
+  "destination_dir": "results/published/paper-video-micro-gpu-g2-standard-16-2026-05-14",
+  "entries": [
+    {
+      "benchmark_params": {
+        "device": "cuda",
+        "device_option": "cuda",
+        "gpu_memory_peak_measured": false,
+        "gpu_memory_peak_measurement": "not available for pyperf worker-process timing",
+        "includes_host_to_device_transfer": false,
+        "num_channels": 3,
+        "num_runs": 1,
+        "num_videos": 500,
+        "slow_preflight_items": 3,
+        "slow_skip_enabled": true,
+        "slow_threshold_sec_per_item": 2.0,
+        "timer_backend": "pyperf",
+        "transform_on_device": true
+      },
+      "file": "kornia_micro_dev-cuda_results.json",
+      "library": "kornia",
+      "library_versions": {
+        "av": "17.0.1",
+        "decord": "not installed",
+        "kornia": "0.8.2",
+        "numpy": "2.4.4",
+        "opencv-python": "not installed",
+        "opencv-python-headless": "4.13.0.92",
+        "pillow": "12.2.0",
+        "torch": "2.12.0",
+        "torchcodec": "not installed",
+        "torchvision": "0.27.0"
+      },
+      "num_results": 49,
+      "system_info": {
+        "cpu_count": "16",
+        "machine": "x86_64",
+        "memory_total_bytes": "67418890240",
+        "platform": "Linux-6.17.0-1012-gcp-x86_64-with-glibc2.39",
+        "processor": "x86_64",
+        "python_executable": "<external-path>",
+        "python_version": "3.13.13 (main, May 10 2026, 19:26:54) [Clang 22.1.3 ]",
+        "system": "Linux",
+        "timestamp": "2026-05-13T16:30:42.554387+00:00"
+      }
+    },
+    {
+      "benchmark_params": {
+        "device": "cuda",
+        "device_option": "cuda",
+        "gpu_memory_peak_measured": false,
+        "gpu_memory_peak_measurement": "not available for pyperf worker-process timing",
+        "includes_host_to_device_transfer": false,
+        "num_channels": 3,
+        "num_runs": 1,
+        "num_videos": 500,
+        "slow_preflight_items": 3,
+        "slow_skip_enabled": true,
+        "slow_threshold_sec_per_item": 2.0,
+        "timer_backend": "pyperf",
+        "transform_on_device": true
+      },
+      "file": "torchvision_micro_dev-cuda_results.json",
+      "library": "torchvision",
+      "library_versions": {
+        "av": "17.0.1",
+        "decord": "not installed",
+        "numpy": "2.4.4",
+        "opencv-python": "not installed",
+        "opencv-python-headless": "4.13.0.92",
+        "pillow": "12.2.0",
+        "torch": "2.12.0",
+        "torchcodec": "not installed",
+        "torchvision": "0.27.0"
+      },
+      "num_results": 26,
+      "system_info": {
+        "cpu_count": "16",
+        "machine": "x86_64",
+        "memory_total_bytes": "67418890240",
+        "platform": "Linux-6.17.0-1012-gcp-x86_64-with-glibc2.39",
+        "processor": "x86_64",
+        "python_executable": "<external-path>",
+        "python_version": "3.13.13 (main, May 10 2026, 19:26:54) [Clang 22.1.3 ]",
+        "system": "Linux",
+        "timestamp": "2026-05-13T16:15:33.050393+00:00"
+      }
+    }
+  ],
+  "files": [
+    "kornia_micro_dev-cuda_results.json",
+    "torchvision_micro_dev-cuda_results.json"
+  ],
+  "git": {
+    "branch": "codex/benchmark-methodology-doc",
+    "commit": "07924b73c812862b05aee07502997888ebcbb356",
+    "dirty": true
+  },
+  "libraries": [
+    "kornia",
+    "torchvision"
+  ],
+  "library_versions": {
+    "kornia": "0.8.2",
+    "torchvision": "0.27.0"
+  },
+  "machine": "g2-standard-16",
+  "notes": "Video 16-frame GPU micro paper snapshot on g2-standard-16/L4. Source GCS run gs://imagenet_validation/augmentation-results/d0b48b7a9b8c4b7eaf01b90edf4603ea. Uses 500 videos, CUDA device timing without host-to-device transfer in the timed region; unsupported rows are retained as library/device limitations.",
+  "published_at_utc": "2026-05-14T06:44:49.865067+00:00",
+  "purpose": "paper-video-micro-gpu",
+  "schema_version": 1,
+  "source_dir": "/private/tmp/benchmark-publish/video-micro-gpu"
+}

@@ -1,42 +1,42 @@
 transform,albumentationsx,torchvision,kornia
-Affine,229.8,107.3,unsupported
-AutoContrast,316.6,288.9,unsupported
-Blur,1385.1,-,unsupported
-Brightness,2477.1,330.4,unsupported
-ChannelDropout,3335.5,-,unsupported
-ChannelShuffle,1447.9,704.0,unsupported
-Contrast,2482.3,209.3,unsupported
-CornerIllumination,195.8,-,unsupported
-Elastic,121.0,≤20 img/s (8.0),≤20 img/s (3.5)
-Erasing,3658.7,1653.1,unsupported
-GaussianBlur,747.5,59.7,unsupported
-GaussianIllumination,189.4,-,unsupported
-GaussianNoise,75.8,-,unsupported
-Grayscale,177.7,642.2,unsupported
-HorizontalFlip,837.3,2970.9,unsupported
-Invert,4622.5,3398.7,unsupported
-JpegCompression,103.5,126.9,≤20 img/s (15.1)
-LinearIllumination,163.1,-,unsupported
-LongestMaxSize,612.5,-,unsupported
-MedianBlur,290.1,-,≤20 img/s (0.8)
-MotionBlur,776.7,-,unsupported
-OpticalDistortion,140.0,-,unsupported
+Affine,229.8,107.3,169.5
+AutoContrast,316.6,288.9,112.2
+Blur,1385.1,-,43.3
+Brightness,2477.1,330.4,417.8
+ChannelDropout,3335.5,-,702.2
+ChannelShuffle,1447.9,704.0,303.4
+Contrast,2482.3,209.3,427.5
+CornerIllumination,195.8,-,67.8
+Elastic,121.0,≤20 img/s (8.0),≤20 img/s (3.9)
+Erasing,3658.7,1653.1,141.3
+GaussianBlur,747.5,59.7,42.1
+GaussianIllumination,189.4,-,79.3
+GaussianNoise,75.8,-,117.0
+Grayscale,177.7,642.2,226.5
+HorizontalFlip,837.3,2970.9,792.2
+Invert,4622.5,3398.7,776.5
+JpegCompression,103.5,126.9,17.0
+LinearIllumination,163.1,-,169.0
+LongestMaxSize,612.5,-,280.7
+MedianBlur,290.1,-,≤20 img/s (0.9)
+MotionBlur,776.7,-,65.9
+OpticalDistortion,140.0,-,140.0
 Pad,4373.1,2357.0,-
-Perspective,208.6,100.6,unsupported
-PlasmaBrightness,114.3,-,≤20 img/s (3.7)
-PlasmaContrast,46.0,-,≤20 img/s (4.0)
-PlasmaShadow,235.5,-,unsupported
-Posterize,4533.0,3358.3,unsupported
-RandomCrop224,18067.7,11101.0,unsupported
-RandomGamma,3439.2,-,unsupported
-RandomJigsaw,2852.1,-,unsupported
-RandomResizedCrop,1870.7,284.0,unsupported
-RandomRotate90,687.7,-,unsupported
-Resize,543.3,67.2,unsupported
-Rotate,645.4,92.5,unsupported
-Sharpen,479.0,41.1,unsupported
-Shear,181.0,-,unsupported
-SmallestMaxSize,435.4,-,unsupported
-Solarize,3364.3,209.5,unsupported
-ThinPlateSpline,44.4,-,unsupported
-VerticalFlip,4444.1,3141.3,unsupported
+Perspective,208.6,100.6,129.8
+PlasmaBrightness,114.3,-,≤20 img/s (4.1)
+PlasmaContrast,46.0,-,≤20 img/s (4.5)
+PlasmaShadow,235.5,-,52.7
+Posterize,4533.0,3358.3,105.3
+RandomCrop224,18067.7,11101.0,878.4
+RandomGamma,3439.2,-,132.9
+RandomJigsaw,2852.1,-,89.7
+RandomResizedCrop,1870.7,284.0,486.8
+RandomRotate90,687.7,-,174.7
+Resize,543.3,67.2,217.3
+Rotate,645.4,92.5,148.0
+Sharpen,479.0,41.1,32.9
+Shear,181.0,-,261.9
+SmallestMaxSize,435.4,-,185.5
+Solarize,3364.3,209.5,100.2
+ThinPlateSpline,44.4,-,36.3
+VerticalFlip,4444.1,3141.3,771.0
