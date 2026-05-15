@@ -93,11 +93,29 @@ MAIN_FIGURES = [
             "DataLoader row with peak allocated memory recorded during the benchmark."
         ),
     },
+    {
+        "path": "image9ch_overview.png",
+        "title": "Figure 5. 9-channel image benchmark overview",
+        "caption": (
+            "The 9-channel scenario compares AlbumentationsX, TorchVision, and Kornia in CPU micro, CPU DataLoader, "
+            "GPU micro, and GPU DataLoader regimes. Dots show median throughput over fully measured rows on a log "
+            "scale; labels report throughput and full measured coverage for each library/regime pair."
+        ),
+    },
+    {
+        "path": "video16f_overview.png",
+        "title": "Figure 6. Video benchmark overview",
+        "caption": (
+            "The video scenario compares 16-frame clip throughput across CPU micro, CPU DataLoader, GPU micro, and GPU "
+            "DataLoader regimes, including Kornia wherever a measured or explicitly unsupported result exists. Dots show "
+            "median clips/s over fully measured rows on a log scale; labels report throughput and full measured coverage."
+        ),
+    },
 ]
 APPENDIX_FIGURES = [
     {
         "path": "winner_counts.png",
-        "title": "Figure 5. Winner counts by benchmark regime",
+        "title": "Figure 7. Winner counts by benchmark regime",
         "caption": (
             "Measured winner counts among comparable measured transforms by regime. The conclusion changes when "
             "moving from augmentation-only microbenchmarks to production-style DataLoader measurements."
@@ -699,6 +717,111 @@ def _gpu_memory_plot(df: pd.DataFrame) -> pd.DataFrame:
     return gpu_mem
 
 
+def _scenario_overview_plot(
+    df: pd.DataFrame,
+    *,
+    scenario_prefix: str,
+    output_stem: str,
+    item_unit: str,
+) -> pd.DataFrame:
+    scenario = df[df["regime"].astype(str).str.startswith(scenario_prefix)].copy()
+    if scenario.empty:
+        return pd.DataFrame()
+
+    rows: list[dict[str, object]] = []
+    for (regime, regime_label, library), group in scenario.groupby(
+        ["regime", "regime_label", "library"],
+        observed=True,
+        sort=False,
+    ):
+        measured = group[group["measured"]]
+        rows.append(
+            {
+                "regime": str(regime),
+                "regime_label": str(regime_label),
+                "library": str(library),
+                "full": int(measured["transform"].astype(str).nunique()),
+                "total_rows": int(group["transform"].astype(str).nunique()),
+                "median_throughput": float(measured["median_throughput"].median()) if not measured.empty else math.nan,
+            },
+        )
+
+    summary = pd.DataFrame(rows)
+    summary["regime_label"] = pd.Categorical(summary["regime_label"], categories=REGIME_ORDER, ordered=True)
+    summary["library"] = pd.Categorical(summary["library"], categories=LIBRARY_ORDER, ordered=True)
+    summary = summary.sort_values(["regime_label", "library"]).reset_index(drop=True)
+    summary.to_csv(GENERATED / f"figure_{output_stem}_overview.csv", index=False)
+
+    measured_summary = summary[summary["median_throughput"].notna()].copy()
+    if measured_summary.empty:
+        return summary
+
+    regimes = measured_summary["regime_label"].drop_duplicates().astype(str).tolist()
+    values = measured_summary["median_throughput"].astype(float)
+    x_min = max(float(values.min()) * 0.55, 0.5)
+    x_max = float(values.max()) * 2.6
+
+    ncols = 2
+    nrows = math.ceil(len(regimes) / ncols)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(9.2, 5.9), squeeze=False, sharex=True)
+    flat_axes = list(axes.flatten())
+
+    for ax, regime_label in zip(flat_axes, regimes, strict=False):
+        facet = measured_summary[measured_summary["regime_label"].astype(str) == regime_label].copy()
+        facet["library"] = facet["library"].astype(str)
+        libraries = [library for library in LIBRARY_ORDER if library in set(facet["library"])]
+        y_positions = list(range(len(libraries)))
+        for y_position, library in zip(y_positions, libraries, strict=True):
+            row = facet[facet["library"] == library].iloc[0]
+            throughput = float(row["median_throughput"])
+            ax.scatter(
+                throughput,
+                y_position,
+                s=78,
+                color=PALETTE.get(library, "#777777"),
+                edgecolor="#222222",
+                linewidth=0.45,
+                zorder=3,
+            )
+            ax.annotate(
+                f"{throughput:.0f} ({int(row['full'])}/{int(row['total_rows'])})",
+                xy=(throughput, y_position),
+                xytext=(7, 0),
+                textcoords="offset points",
+                va="center",
+                ha="left",
+                fontsize=7.4,
+                color="#222222",
+            )
+
+        ax.set_title(regime_label, fontsize=10.5)
+        ax.set_yticks(y_positions, [LIBRARY_DISPLAY.get(library, library) for library in libraries])
+        ax.set_xscale("log")
+        ax.set_xlim(x_min, x_max)
+        ax.grid(axis="x", color="#dddddd", linewidth=0.6, alpha=0.75, which="both")
+        ax.grid(axis="y", color="#eeeeee", linewidth=0.4, alpha=0.55)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.tick_params(axis="both", labelsize=8.4)
+
+    for ax in flat_axes[len(regimes) :]:
+        ax.axis("off")
+
+    fig.suptitle(f"{item_unit.capitalize()} throughput by regime and library", fontsize=13.5, y=0.98)
+    fig.supxlabel(f"Median measured-row throughput ({item_unit}/s, log scale)", fontsize=10.5, y=0.06)
+    fig.text(
+        0.5,
+        0.02,
+        "Point labels show median throughput; parentheses show full measured rows / result rows.",
+        ha="center",
+        fontsize=8.5,
+        color="#444444",
+    )
+    fig.subplots_adjust(left=0.13, right=0.98, top=0.88, bottom=0.18, hspace=0.42, wspace=0.34)
+    _savefig(FIGURES / f"{output_stem}_overview.png")
+    return summary
+
+
 def _abstract_claims_plot(
     df: pd.DataFrame,
     winners: pd.DataFrame,
@@ -1013,8 +1136,17 @@ README_SCENARIO_TABLES = [
         "rgb_",
         [
             ("rgb_micro_cpu", "albumentationsx"),
+            ("rgb_micro_cpu", "torchvision"),
+            ("rgb_micro_cpu", "kornia"),
+            ("rgb_micro_cpu", "pillow"),
             ("rgb_dataloader_cpu", "albumentationsx"),
+            ("rgb_dataloader_cpu", "torchvision"),
+            ("rgb_dataloader_cpu", "kornia"),
+            ("rgb_dataloader_cpu", "pillow"),
             ("rgb_micro_gpu", "torchvision"),
+            ("rgb_micro_gpu", "kornia"),
+            ("rgb_dataloader_gpu", "torchvision"),
+            ("rgb_dataloader_gpu", "kornia"),
             ("rgb_dataloader_gpu", "dali"),
         ],
     ),
@@ -1023,9 +1155,15 @@ README_SCENARIO_TABLES = [
         "image9ch_",
         [
             ("image9ch_micro_cpu", "albumentationsx"),
+            ("image9ch_micro_cpu", "torchvision"),
+            ("image9ch_micro_cpu", "kornia"),
             ("image9ch_dataloader_cpu", "albumentationsx"),
+            ("image9ch_dataloader_cpu", "torchvision"),
+            ("image9ch_dataloader_cpu", "kornia"),
             ("image9ch_micro_gpu", "torchvision"),
+            ("image9ch_micro_gpu", "kornia"),
             ("image9ch_dataloader_gpu", "torchvision"),
+            ("image9ch_dataloader_gpu", "kornia"),
         ],
     ),
     (
@@ -1033,9 +1171,17 @@ README_SCENARIO_TABLES = [
         "video16f_",
         [
             ("video16f_micro_cpu", "albumentationsx"),
+            ("video16f_micro_cpu", "torchvision"),
+            ("video16f_micro_cpu", "kornia"),
             ("video16f_dataloader_cpu", "albumentationsx"),
+            ("video16f_dataloader_cpu", "torchvision"),
+            ("video16f_dataloader_cpu", "kornia"),
             ("video16f_micro_gpu", "torchvision"),
+            ("video16f_micro_gpu", "kornia"),
             ("video16f_dataloader_gpu", "torchvision"),
+            ("video16f_dataloader_gpu", "kornia"),
+            ("video16f_dataloader_gpu", "dali"),
+            ("video16f_dataloader_gpu", "pytorchvideo"),
         ],
     ),
 ]
@@ -1216,6 +1362,8 @@ def _sync_public_data() -> None:
         "figure_elastic_row.csv",
         "figure_gpu_vs_albumentationsx_cpu.csv",
         "figure_gpu_memory_rows.csv",
+        "figure_image9ch_overview.csv",
+        "figure_video16f_overview.csv",
         "figure_winner_counts.csv",
         "figure_winner_rows.csv",
         "production_support_matrix.csv",
@@ -1314,6 +1462,8 @@ def main() -> None:
     gpu_vs_alb = _albumentations_vs_gpu(df)
     dataloader_medians = _dataloader_libraries(df)
     _gpu_memory_plot(df)
+    _scenario_overview_plot(df, scenario_prefix="image9ch_", output_stem="image9ch", item_unit="images")
+    _scenario_overview_plot(df, scenario_prefix="video16f_", output_stem="video16f", item_unit="clips")
     _sync_public_figures()
     _write_insights(df, winners, gpu_vs_alb, dataloader_medians, coverage, dataloader_coverage)
     _sync_public_data()
