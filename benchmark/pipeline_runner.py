@@ -748,8 +748,7 @@ def main() -> None:
     filter_env = os.environ.get("BENCHMARK_TRANSFORMS_FILTER", "").strip()
     if filter_env:
         filter_names = [name.strip() for name in filter_env.split(",") if name.strip()]
-        if library != "pytorchvideo" or "PyTorchVideoCanonical+Normalize+ToTensor" in filter_names:
-            transforms = BenchmarkRunner.filter_transforms(transforms, filter_names)
+        transforms = BenchmarkRunner.filter_transforms(transforms, filter_names)
     transforms = filter_transform_dicts_for_library_device(
         transforms,
         scenario=args.scenario,

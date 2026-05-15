@@ -297,7 +297,7 @@ def _write_csv(path: Path, rows: list[AggregateResult]) -> None:
         "source_files",
     ]
     with path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         for row in rows:
             writer.writerow(
@@ -328,7 +328,7 @@ def _write_pivot_csv(path: Path, rows: list[AggregateResult]) -> None:
     libraries = [lib for lib in LIBRARY_ORDER if any(row.library == lib for row in rows)]
     by_key = {(row.transform, row.library): row for row in rows}
     with path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
+        writer = csv.writer(f, lineterminator="\n")
         writer.writerow(["transform", *libraries])
         for transform in transforms:
             values = [
@@ -471,7 +471,7 @@ def _write_open_dataloader_files(output_dir: Path, rows: list[AggregateResult]) 
         "wins",
     ]
     with (output_dir / "open_dataloader_leaderboard.csv").open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=leaderboard_fieldnames)
+        writer = csv.DictWriter(f, fieldnames=leaderboard_fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(stats["leaderboard"])
     with (output_dir / "open_dataloader_winners.csv").open("w", newline="", encoding="utf-8") as f:
@@ -486,6 +486,7 @@ def _write_open_dataloader_files(output_dir: Path, rows: list[AggregateResult]) 
                 "implementation",
                 "median_throughput",
             ],
+            lineterminator="\n",
         )
         writer.writeheader()
         writer.writerows(stats["winner_rows"])
@@ -741,7 +742,7 @@ def _write_limitations_files(output_dir: Path, rows: list[AggregateResult]) -> N
     interesting = [row for row in rows if not row.supported or row.early_stopped]
     fieldnames = ["regime", "regime_label", "library", "transform", "status", "reason", "source_files"]
     with (output_dir / "unsupported_and_early_stopped.csv").open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         for row in sorted(interesting, key=lambda r: (r.regime, r.library, r.transform)):
             writer.writerow(

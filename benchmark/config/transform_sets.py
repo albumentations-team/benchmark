@@ -38,7 +38,10 @@ def paper_transform_names(repo_root: Path, scenario_name: str, mode: str) -> lis
     if scenario_name == "video-16f":
         from benchmark.transforms.video_recipe_specs import recipe_name, spec_by_name
 
-        return [recipe_name(spec_by_name(name)) for name in names if name != "Normalize"]
+        return [
+            *[recipe_name(spec_by_name(name)) for name in names if name != "Normalize"],
+            "PyTorchVideoCanonical+Normalize+ToTensor",
+        ]
     return names
 
 

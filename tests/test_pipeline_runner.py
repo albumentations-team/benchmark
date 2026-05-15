@@ -370,7 +370,7 @@ TRANSFORMS = [
     ]
 
 
-def test_pipeline_main_keeps_pytorchvideo_canonical_with_paper_filter(
+def test_pipeline_main_honors_explicit_pytorchvideo_filter(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -418,7 +418,7 @@ TRANSFORMS = [
 
     pipeline_runner.main()
 
-    assert [transform["name"] for transform in captured["transforms"]] == ["PyTorchVideoCanonical+Normalize+ToTensor"]
+    assert captured["transforms"] == []
 
 
 def test_pipeline_runner_resolves_none_device_without_torch(tmp_path: Path) -> None:

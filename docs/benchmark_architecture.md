@@ -83,7 +83,8 @@ features in these modules unless there is a strong reason to put logic directly 
   `benchmark/orchestrator.py` via `benchmark/dali_pipeline_worker.py`, not by CLI special cases. DALI image runs use
   `fn.readers.file` plus mixed image decode. Video `dali` runs use the stable public `fn.readers.video` API, while
   `dali_experimental` runs use `fn.experimental.readers.video`; both use native GPU recipe operators and record the
-  reader backend in result metadata.
+  reader backend in result metadata. DALI video rows use a decode-inclusive pipeline scope because the native reader is
+  part of the timed graph.
   Unsupported recipes are reported as unsupported results.
 - PyTorchVideo is a video pipeline-only baseline with a canonical per-clip training recipe. Batch-shared TorchVision
   video is intentionally not a matrix library because it can share random parameters across clips in one batch.

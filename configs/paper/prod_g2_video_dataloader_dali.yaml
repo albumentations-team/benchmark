@@ -14,7 +14,7 @@ output:
   output_dir: gcp_runs/prod-g2-standard-16-video-dataloader-dali
   gcs_results_uri: gs://imagenet_validation/augmentation-results
 execution:
-  pipeline_scope: memory_dataloader_augment
+  pipeline_scope: decode_dataloader_augment
   num_runs: 1
   batch_size: 16
   workers: 8

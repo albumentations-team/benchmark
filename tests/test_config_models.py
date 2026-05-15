@@ -190,7 +190,7 @@ def test_paper_production_configs_use_deadline_sizing() -> None:
             "machine_type": "g2-standard-16",
             "gcs_uri": "gs://imagenet_validation/ucf101/ucf101.tar",
             "clip_length": 16,
-            "pipeline_scope": "memory_dataloader_augment",
+            "pipeline_scope": "decode_dataloader_augment",
             "disk_size_gb": 200,
             "batch_size": 16,
         },
@@ -203,7 +203,7 @@ def test_paper_production_configs_use_deadline_sizing() -> None:
             "machine_type": "g2-standard-16",
             "gcs_uri": "gs://imagenet_validation/ucf101/ucf101.tar",
             "clip_length": 16,
-            "pipeline_scope": "memory_dataloader_augment",
+            "pipeline_scope": "decode_dataloader_augment",
             "disk_size_gb": 200,
             "batch_size": 16,
         },
@@ -282,6 +282,7 @@ def test_resolve_video_pipeline_transform_set_records_recipe_names() -> None:
 
     assert resolved.selection.transforms
     assert "RandomCrop224+HorizontalFlip+Normalize+ToTensor" in resolved.selection.transforms
+    assert "PyTorchVideoCanonical+Normalize+ToTensor" in resolved.selection.transforms
     assert "HorizontalFlip" not in resolved.selection.transforms
 
 

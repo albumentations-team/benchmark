@@ -80,11 +80,11 @@ def test_plan_lists_video_ecosystem_pipeline_jobs() -> None:
     assert all(job.media == "video" for job in plan.jobs)
     assert all(job.device == "cuda" for job in plan.jobs)
     assert any(
-        "dali_experimental_memory_dataloader_augment_n32_r1_w2_b8_dev-cuda_results.json" in output
+        "dali_experimental_decode_dataloader_augment_n32_r1_w2_b8_dev-cuda_results.json" in output
         for output in plan.expected_outputs
     )
     assert any(
-        "pytorchvideo_memory_dataloader_augment_n32_r1_w2_b8_dev-cuda_results.json" in output
+        "pytorchvideo_decode_dataloader_augment_n32_r1_w2_b8_dev-cuda_results.json" in output
         for output in plan.expected_outputs
     )
 

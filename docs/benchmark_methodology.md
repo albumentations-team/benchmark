@@ -227,7 +227,8 @@ When DALI is included, it must be labeled as a DALI pipeline row with its own su
 Video DALI rows use the same recipe names as other DataLoader rows where DALI has a native equivalent, and record
 unsupported rows for transforms without a meaningful native operator. The benchmark consumes produced batches and counts
 actual clips rather than padded batch slots so lazy graph scheduling or partial final batches are not mistaken for
-completed augmentation work.
+completed augmentation work. DALI video rows are labeled with `decode_dataloader_augment` because the native graph reads
+and decodes video files inside the timed `pipeline.run()` loop; they are not preloaded-memory DataLoader rows.
 
 DALI video reader choice is explicit in metadata. The `dali` benchmark library uses the stable public
 `fn.readers.video` API, even though current DALI sources route it through the legacy video loader implementation

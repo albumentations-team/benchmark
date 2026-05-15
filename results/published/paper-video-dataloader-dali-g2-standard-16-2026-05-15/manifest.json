@@ -7,7 +7,7 @@
         "batch_size": 16,
         "clip_length": 16,
         "dali_video_reader_backend": "readers.video",
-        "decode_included": false,
+        "decode_included": true,
         "decoder": "dali",
         "device": "cuda",
         "device_option": "cuda",
@@ -19,7 +19,7 @@
         "num_runs": 1,
         "num_videos": 625,
         "pipeline_backend": "dali_native",
-        "pipeline_scope": "memory_dataloader_augment",
+        "pipeline_scope": "decode_dataloader_augment",
         "slow_preflight_items": 3,
         "slow_skip_enabled": true,
         "slow_threshold_sec_per_item": 2.0,
@@ -27,7 +27,7 @@
         "transform_on_device": true,
         "workers": 8
       },
-      "file": "dali_memory_dataloader_augment_n625_r1_w8_b16_dev-cuda_results.json",
+      "file": "dali_decode_dataloader_augment_n625_r1_w8_b16_dev-cuda_results.json",
       "library": "dali",
       "library_versions": {
         "av": "not installed",
@@ -57,7 +57,7 @@
     }
   ],
   "files": [
-    "dali_memory_dataloader_augment_n625_r1_w8_b16_dev-cuda_results.json"
+    "dali_decode_dataloader_augment_n625_r1_w8_b16_dev-cuda_results.json"
   ],
   "git": {
     "branch": "codex/benchmark-methodology-doc",
@@ -71,7 +71,7 @@
     "dali": "2.1.0"
   },
   "machine": "g2-standard-16/L4",
-  "notes": "Source GCS run gs://imagenet_validation/augmentation-results/a22bac0b4a9946e3aaf25278fa206966. DALI native video GPU pipeline, 625 UCF101 videos, batch size 16, 8 workers, CUDA, memory_dataloader_augment. 21 supported rows, 29 unsupported rows.",
+  "notes": "Source GCS run gs://imagenet_validation/augmentation-results/a22bac0b4a9946e3aaf25278fa206966. DALI native video GPU pipeline, 625 UCF101 videos, batch size 16, 8 workers, CUDA, decode_dataloader_augment. 21 supported rows, 29 unsupported rows.",
   "published_at_utc": "2026-05-15T09:00:58.653119+00:00",
   "purpose": "Video 16-frame DALI GPU DataLoader paper snapshot",
   "schema_version": 1,
