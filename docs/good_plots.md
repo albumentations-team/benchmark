@@ -46,13 +46,13 @@ The generator writes manuscript-local copies under `_internal/paper/figures/` an
 
 | Figure | Role |
 |---|---|
-| `_internal/paper/figures/abstract_claims.png` | Main text overview figure tying the abstract claims to winner counts, CPU medians, GPU ratios, and coverage breadth. |
+| `_internal/paper/figures/open_dataloader_leaderboard.png` | Headline main-text figure for the open RGB production DataLoader category. CPU and GPU implementations compete over the same 57-recipe universe. |
 | `_internal/paper/figures/coverage_vs_throughput.png` | Main text figure for coverage breadth versus measured-row throughput. Missing or unsupported rows reduce coverage, not throughput. |
-| `_internal/paper/figures/winner_counts.png` | Main text figure for the claim that winners change by benchmark regime. |
-| `_internal/paper/figures/gpu_vs_albumentationsx_cpu_boxplot.png` | Main text figure for paired GPU-vs-CPU DataLoader competitiveness. |
-| `_internal/paper/figures/coverage_by_regime.png` | Main text or near-main figure to prevent overclaiming library coverage. |
-| `_internal/paper/figures/dataloader_library_medians.png` | Supporting high-level throughput summary; pair it with coverage and regime caveats. |
-| `_internal/paper/figures/gpu_memory_vs_throughput.png` | Appendix figure unless the manuscript makes memory an explicit operational-cost claim. |
+| `_internal/paper/figures/gpu_vs_albumentationsx_cpu_ratios.png` | Main text figure for paired GPU-vs-CPU DataLoader competitiveness. |
+| `_internal/paper/figures/gpu_memory_vs_throughput.png` | GPU operational-cost figure; use when discussing accelerator memory consumed by augmentation. |
+| `_internal/paper/figures/image9ch_overview.png` | README and supplement figure for 9-channel CPU/GPU micro and DataLoader results, including Kornia. |
+| `_internal/paper/figures/video16f_overview.png` | README and supplement figure for 16-frame video CPU/GPU micro and DataLoader results, including Kornia. |
+| `_internal/paper/figures/winner_counts.png` | Appendix figure for the claim that winners change by benchmark regime. |
 | `_internal/paper/generated/production_support_matrix.md` | Appendix table for transform-level production DataLoader support and throughput. |
 
 ## References

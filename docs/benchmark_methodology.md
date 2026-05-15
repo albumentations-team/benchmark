@@ -268,7 +268,9 @@ Website-facing row-level exports live in `docs/benchmark_data/`; website-facing 
 `docs/benchmark_figures/`. The `docs/benchmark_data/all_results.csv` file is the reproducibility table: every row records
 the regime, library, transform, status, measured throughput fields, reason for unsupported or early-stopped rows, and the
 published result JSON that produced it. `docs/benchmark_data/unsupported_and_early_stopped.csv` and `.md` preserve the
-limitations table used to interpret coverage gaps.
+limitations table used to interpret coverage gaps. README-facing figures are generated from the same CSVs by
+`scripts/paper/generate_figures_and_insights.py`; the RGB production figures are paired with scenario overview plots for
+9-channel images and 16-frame video clips so Kornia remains visible in all three public scenario families.
 
 ## Result Metadata And Statistics
 
