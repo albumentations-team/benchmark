@@ -141,7 +141,7 @@ class BenchmarkMediaLoader:
                 tensor = np.ascontiguousarray(clip.transpose(0, 3, 1, 2))
                 if self.library == "torchvision":
                     return tensor
-                return np.ascontiguousarray((tensor.astype(np.float32) / 255.0).astype(np.float16))
+                return np.ascontiguousarray(tensor.astype(np.float32) / 255.0)
 
             tensor = torch.from_numpy(clip).permute(0, 3, 1, 2)
             if self.library == "torchvision":
