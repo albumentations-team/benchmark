@@ -39,6 +39,7 @@ class GcpLaunchOptions:
     keep_instance: bool
     keep_on_failure: bool
     preemptible: bool
+    timeout_hours: float | None
     remote_repo_dir: str
     venv_cache_uri: str | None
     no_venv_cache: bool
@@ -61,6 +62,7 @@ def gcp_launch_options(args: argparse.Namespace, run_config: BenchmarkRunConfig 
         keep_instance=cloud.keep_instance if cloud else args.gcp_keep_instance,
         keep_on_failure=cloud.keep_on_failure if cloud else args.gcp_keep_on_failure,
         preemptible=cloud.preemptible if cloud else args.gcp_preemptible,
+        timeout_hours=cloud.timeout_hours if cloud else getattr(args, "gcp_timeout_hours", None),
         remote_repo_dir=cloud.remote_repo_dir if cloud else args.gcp_remote_repo_dir,
         venv_cache_uri=cloud.venv_cache_uri if cloud else args.gcp_venv_cache_uri,
         no_venv_cache=cloud.no_venv_cache if cloud else args.gcp_no_venv_cache,
@@ -93,6 +95,9 @@ def run_gcp(
         sys.exit(1)
 
     gpu_machine = bool(options.gpu_type) or is_gpu_machine_type(options.machine_type)
+    timeout_hours = options.timeout_hours if options.timeout_hours is not None else (6.0 if gpu_machine else 8.0)
+    timeout_seconds = int(timeout_hours * 3600)
+    expires_unix = int(time.time() + timeout_seconds)
     image_family = "pytorch-2-9-cu129-ubuntu-2404-nvidia-580" if gpu_machine else "ubuntu-2404-lts-amd64"
     image_project = "deeplearning-platform-release" if gpu_machine else "ubuntu-os-cloud"
 
@@ -174,9 +179,19 @@ def run_gcp(
         if options.no_venv_cache
         else options.venv_cache_uri or default_gcp_venv_cache_uri(options.gcs_results_uri),
         force_venv_cache_rebuild=options.force_venv_cache_rebuild,
+        timeout_seconds=timeout_seconds,
         submission=submission,
         instance_meta=instance_meta,
     )
+    timeout_hours_value = float(timeout_hours)
+    instance_labels = {
+        "benchmark": "augmentation",
+        "benchmark-run-id": run_id[:32],
+        "benchmark-ttl-hours": str(int(timeout_hours_value))
+        if timeout_hours_value.is_integer()
+        else str(timeout_hours_value).replace(".", "-"),
+        "benchmark-expires": str(expires_unix),
+    }
 
     config = GCPInstanceConfig(
         project=options.project,
@@ -188,6 +203,7 @@ def run_gcp(
         image_project=image_project,
         disk_size_gb=options.disk_size_gb,
         preemptible=options.preemptible,
+        labels=instance_labels,
         instance_name_override=instance_name,
     )
     runner = GCPRunner(config)
@@ -223,6 +239,9 @@ def run_gcp(
         "gcs_results_base_uri": options.gcs_results_uri.rstrip("/"),
         "terminate_instance": not options.keep_instance,
         "keep_instance_on_failure": options.keep_on_failure,
+        "timeout_hours": timeout_hours,
+        "timeout_seconds": timeout_seconds,
+        "expires_unix": expires_unix,
         "venv_cache_uri": job["venv_cache_uri"],
         "force_venv_cache_rebuild": options.force_venv_cache_rebuild,
         "fetch_results_hint": f"gcloud storage cp -r {run_prefix}/results/* {local_output_dir}/",

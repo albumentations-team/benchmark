@@ -1,14 +1,13 @@
 """Kornia implementations of transforms for videos in custom format."""
 
-from collections.abc import Sequence
 from typing import Any
 
 import kornia
 import kornia.augmentation as Kaug
-import numpy as np
 import torch
 import torch.nn.functional as F
 
+from benchmark.transforms.kornia_common import set_same_on_batch
 from benchmark.transforms.registry import build_transforms, register_library
 from benchmark.transforms.specs import TransformSpec
 
@@ -19,44 +18,51 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 LIBRARY = "kornia"
 
 
+class KorniaVideoSequential(torch.nn.Module):
+    def __init__(self, *transforms: torch.nn.Module) -> None:
+        super().__init__()
+        self.video = Kaug.VideoSequential(
+            *transforms,
+            data_format="BTCHW",
+            same_on_frame=True,
+        )
+
+    def forward(self, video: torch.Tensor) -> torch.Tensor:
+        video = video.contiguous()
+        if len(video.shape) == 4:
+            return self.video(video.unsqueeze(0)).squeeze(0).contiguous()
+        if len(video.shape) == 5:
+            return self.video(video).contiguous()
+        msg = f"Kornia video transform expects T,C,H,W or B,T,C,H,W input, got shape {tuple(video.shape)}"
+        raise TypeError(msg)
+
+
+def wrap_video_transform(transform: torch.nn.Module) -> KorniaVideoSequential:
+    set_same_on_batch(transform, False)
+    return KorniaVideoSequential(transform).to(device)
+
+
 # Required: Define how to apply transforms to videos
 def __call__(transform: Any, video: Any) -> Any:  # noqa: N807
-    """Apply kornia transform to video tensor
+    """Apply kornia transform to video tensor.
 
     Args:
-        transform: Kornia augmentation instance
+        transform: Kornia VideoSequential-backed augmentation instance
         video: torch.Tensor of shape (T, C, H, W)
 
     Returns:
         Transformed video as torch.Tensor
     """
-    # Treat time dimension (T) as batch dimension
-    # video shape is already (T, C, H, W) which is what Kornia expects for batched images
-    # Apply transform directly to the video tensor
-    # This will apply the same transform to all frames due to same_on_batch=True
-    video = video.to(device)
-    # Ensure video is in float16 format if on GPU
-    if device.type == "cuda":
-        video = video.half()
+    video = video.to(device).contiguous()
     return transform(video)
 
 
-# Helper function to create tensors with the correct dtype based on device
 def create_tensor(
-    data: np.ndarray | Sequence[float] | Sequence[Sequence[float]],
+    data: Any,
     device: torch.device = device,
 ) -> torch.Tensor:
-    """Create a tensor with the correct dtype based on device.
-
-    Args:
-        data: The data to convert to a tensor
-        device: The device to place the tensor on
-
-    Returns:
-        A tensor with dtype=float16 if on CUDA, otherwise float32
-    """
-    dtype = torch.float16 if device.type == "cuda" else torch.float32
-    return torch.tensor(data, device=device, dtype=dtype)
+    """Create float32 parameter tensors; Kornia grids must match float32 video inputs."""
+    return torch.tensor(data, device=device, dtype=torch.float32)
 
 
 class _RandomJigsawWithPad(torch.nn.Module):
@@ -72,7 +78,55 @@ class _RandomJigsawWithPad(torch.nn.Module):
         pad_width = (-width) % grid_w
         if pad_height or pad_width:
             video = F.pad(video, (0, pad_width, 0, pad_height))
-        return self.jigsaw(video)[..., :height, :width]
+        return self.jigsaw(video.contiguous())[..., :height, :width].contiguous()
+
+
+class _FixedAffine(torch.nn.Module):
+    def __init__(
+        self,
+        *,
+        angle_degrees: float,
+        translation: tuple[float, float],
+        scale_factor: float,
+        shear: tuple[float, float],
+    ) -> None:
+        super().__init__()
+        self.register_buffer("angle", torch.tensor([angle_degrees], dtype=torch.float32))
+        self.register_buffer("translation", torch.tensor([translation], dtype=torch.float32))
+        self.register_buffer("scale_factor", torch.tensor([[scale_factor, scale_factor]], dtype=torch.float32))
+        self.register_buffer("shear", torch.tensor([shear], dtype=torch.float32))
+
+    def forward(self, video: torch.Tensor) -> torch.Tensor:
+        original_shape = tuple(video.shape)
+        if len(original_shape) == 5:
+            batch, frames, channels, height, width = original_shape
+            video_4d = video.reshape(batch * frames, channels, height, width)
+        elif len(original_shape) == 4:
+            video_4d = video
+        else:
+            msg = f"Fixed Kornia affine expects 4D or 5D tensor, got {original_shape}"
+            raise TypeError(msg)
+
+        batch_size = int(video_4d.shape[0])
+        dtype = video_4d.dtype if video_4d.is_floating_point() else torch.float32
+        transform = kornia.geometry.transform.Affine(
+            angle=self.angle.to(device=video_4d.device, dtype=dtype).expand(batch_size),
+            translation=self.translation.to(device=video_4d.device, dtype=dtype).expand(batch_size, -1),
+            scale_factor=self.scale_factor.to(device=video_4d.device, dtype=dtype).expand(batch_size, -1),
+            shear=self.shear.to(device=video_4d.device, dtype=dtype).expand(batch_size, -1),
+            mode="bilinear",
+            padding_mode="zeros",
+            align_corners=True,
+        )
+        transformed = transform(video_4d.contiguous())
+        return transformed.reshape(original_shape).contiguous()
+
+
+def _float_pair(value: Any) -> tuple[float, float]:
+    if isinstance(value, (list, tuple)):
+        return (float(value[0]), float(value[1]))
+    item = float(value)
+    return (item, item)
 
 
 # Helper function to create transforms from specs
@@ -118,9 +172,10 @@ def create_transform(spec: TransformSpec) -> Any | None:
     if spec.name == "ChannelShuffle":
         return Kaug.RandomChannelShuffle(p=1, same_on_batch=True).to(device)
     if spec.name == "CLAHE":
+        clip = _float_pair(params["clip_limit"])
         return Kaug.RandomClahe(
             p=1,
-            clip_limit=params["clip_limit"],
+            clip_limit=clip,
             grid_size=params["tile_grid_size"],
             same_on_batch=True,
         ).to(device)
@@ -262,6 +317,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
     if spec.name == "Snow":
         return Kaug.RandomSnow(
             snow_coefficient=params["snow_point_range"],
+            brightness=(2.0, 2.0),
             p=1,
             same_on_batch=True,
         ).to(device)
@@ -272,25 +328,16 @@ def create_transform(spec: TransformSpec) -> Any | None:
             same_on_batch=True,
         ).to(device)
     if spec.name == "Affine":
-        # Create a simple affine transform with fixed parameters
-        # This avoids the device mismatch issue by not using random parameters
         angle_degrees = float(params["angle"])
-        translate = float(params["shift"][0]) / 255.0
+        tx, ty = float(params["shift"][0]), float(params["shift"][1])
         scale_factor = float(params["scale"])
         shear_value = float(params["shear"]) if isinstance(params["shear"], int | float) else 0.0
 
-        # Create a fixed affine transform instead of a random one
-        # Ensure all parameters have the same batch size and dtype
-        return kornia.geometry.transform.Affine(
-            angle=create_tensor([angle_degrees]),
-            translation=create_tensor([[translate, translate]]),
-            scale_factor=create_tensor([[scale_factor, scale_factor]]),
-            shear=create_tensor([[shear_value, shear_value]]),
-            # Explicitly set center to match batch size of other parameters
-            center=create_tensor([[160.0, 120.0]]),  # Assuming 128x128 images, center is (64, 64)
-            mode="bilinear",
-            padding_mode="zeros",
-            align_corners=True,
+        return _FixedAffine(
+            angle_degrees=angle_degrees,
+            translation=(tx, ty),
+            scale_factor=scale_factor,
+            shear=(shear_value, shear_value),
         ).to(device)
     if spec.name == "RandomCrop224":
         return Kaug.RandomCrop(
@@ -311,7 +358,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
             p=1,
             scale=params["scale"],
             ratio=params["ratio"],
-            value=params["fill"],
+            value=float(params["fill"]),
             same_on_batch=True,
         ).to(device)
     if spec.name == "OpticalDistortion":
@@ -375,7 +422,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
         ).to(device)
     if spec.name == "Posterize":
         return Kaug.RandomPosterize(
-            bits=params["bits"],
+            bits=float(params["bits"]),
             p=1,
             same_on_batch=True,
         ).to(device)
@@ -384,7 +431,14 @@ def create_transform(spec: TransformSpec) -> Any | None:
 
 
 # Register with the central registry
-register_library(LIBRARY, create_video_fn=create_transform)
+def create_video_transform(spec: TransformSpec) -> Any | None:
+    transform = create_transform(spec)
+    if transform is None:
+        return None
+    return wrap_video_transform(transform)
+
+
+register_library(LIBRARY, create_video_fn=create_video_transform)
 
 # Required: Transform definitions from specs
 TRANSFORMS = build_transforms(LIBRARY, media="video")

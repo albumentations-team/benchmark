@@ -1,6 +1,7 @@
 # Good Plots For Benchmark Papers
 
-This guide maps paper claims to figures for the augmentation benchmark. Use it when writing the manuscript, generating `_internal/paper/figures/*`, or deciding which plots belong in the main text versus the appendix.
+This guide maps public benchmark claims to figures for the augmentation benchmark. Use it when writing website copy,
+README summaries, the manuscript, or deciding which plots belong in a short result page versus deeper supporting docs.
 
 ## Source Principles
 
@@ -41,7 +42,7 @@ This guide maps paper claims to figures for the augmentation benchmark. Use it w
 ## Current Figure Roles
 
 The generator writes manuscript-local copies under `_internal/paper/figures/` and README-facing copies under
-`docs/paper_figures/`.
+`docs/benchmark_figures/`.
 
 | Figure | Role |
 |---|---|

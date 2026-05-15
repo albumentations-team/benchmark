@@ -130,7 +130,9 @@ def _run_scenario_library(
     verbose: bool,
 ) -> None:
     mode = run_config.resolved_mode()
-    backend: Literal["dali_pipeline"] | None = "dali_pipeline" if mode == "pipeline" and library == "dali" else None
+    backend: Literal["dali_pipeline"] | None = (
+        "dali_pipeline" if mode == "pipeline" and library in {"dali", "dali_experimental"} else None
+    )
     spec_file = None if backend == "dali_pipeline" else repo_root / spec_map[library]
     output_file = (
         pipeline_output_file(

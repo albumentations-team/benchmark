@@ -1,0 +1,25 @@
+regime_label,winner,wins
+9ch CPU DataLoader,albumentationsx,39
+9ch CPU DataLoader,kornia,1
+9ch CPU DataLoader,torchvision,1
+9ch CPU micro,albumentationsx,31
+9ch CPU micro,kornia,3
+9ch CPU micro,torchvision,3
+9ch GPU DataLoader,kornia,1
+9ch GPU DataLoader,torchvision,19
+9ch GPU micro,torchvision,17
+CPU DataLoader,albumentationsx,56
+CPU DataLoader,kornia,1
+CPU micro,albumentationsx,52
+CPU micro,pillow,1
+GPU DataLoader,dali,16
+GPU DataLoader,kornia,1
+GPU DataLoader,torchvision,13
+GPU micro,torchvision,19
+Video CPU DataLoader,albumentationsx,42
+Video CPU micro,albumentationsx,44
+Video CPU micro,torchvision,3
+Video GPU DataLoader,dali,5
+Video GPU DataLoader,torchvision,22
+Video GPU micro,kornia,1
+Video GPU micro,torchvision,19

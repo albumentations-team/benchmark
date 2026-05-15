@@ -31,8 +31,8 @@ import matplotlib.pyplot as plt
 
 GENERATED = ROOT / "_internal" / "paper" / "generated"
 FIGURES = ROOT / "_internal" / "paper" / "figures"
-PUBLIC_DATA = ROOT / "docs" / "paper_data"
-PUBLIC_FIGURES = ROOT / "docs" / "paper_figures"
+PUBLIC_DATA = ROOT / "docs" / "benchmark_data"
+PUBLIC_FIGURES = ROOT / "docs" / "benchmark_figures"
 PAPER_DIR = ROOT / "_internal" / "paper" / "neurips_2026_ed"
 PAPER_FIGURES = PAPER_DIR / "figures"
 README = ROOT / "README.md"
@@ -860,22 +860,22 @@ def _write_insights(
         f"- Kornia GPU measures {kornia_measured_dali_not} recipes that DALI does not measure. Broad GPU support can lower a measured-row throughput summary because it includes harder recipes; missing rows are coverage gaps, not zero-throughput speed failures.",
         "- DALI remains a useful specialized native graph backend on supported recipes, while AlbumentationsX remains the CPU DataLoader winner under the 57-recipe protocol.",
         "",
-        "## Figure Recommendations For NeurIPS",
+        "## Figure Recommendations",
         "",
         "1. Use a native LaTeX table, not a PNG figure, for the benchmarking pain points and protocol guardrails.",
-        "2. Use `docs/paper_figures/open_dataloader_leaderboard.png` as the headline empirical result: it shows the open production DataLoader category directly.",
-        "3. Use `docs/paper_figures/coverage_vs_throughput.png` as the coverage figure: it separates measured-row throughput from coverage over the same 57-recipe universe and includes the Elastic implementation drill-down.",
-        "4. Use `docs/paper_figures/gpu_vs_albumentationsx_cpu_ratios.png` to support the paired claim that GPU DataLoader pipelines rarely beat the AlbumentationsX CPU baseline.",
-        "5. Use `docs/paper_figures/gpu_memory_vs_throughput.png` in the main paper because GPU augmentation consumes memory that could otherwise be used by training.",
+        "2. Use `docs/benchmark_figures/open_dataloader_leaderboard.png` as the headline empirical result: it shows the open production DataLoader category directly.",
+        "3. Use `docs/benchmark_figures/coverage_vs_throughput.png` as the coverage figure: it separates measured-row throughput from coverage over the same 57-recipe universe and includes the Elastic implementation drill-down.",
+        "4. Use `docs/benchmark_figures/gpu_vs_albumentationsx_cpu_ratios.png` to support the paired claim that GPU DataLoader pipelines rarely beat the AlbumentationsX CPU baseline.",
+        "5. Use `docs/benchmark_figures/gpu_memory_vs_throughput.png` when discussing GPU augmentation because GPU augmentation consumes memory that could otherwise be used by training.",
         "",
-        "## Data Tables To Put In The Paper",
+        "## Website Data Tables",
         "",
-        "- Main text figure/table source: `docs/paper_data/open_dataloader_leaderboard.csv` / `figure_open_dataloader_leaderboard.csv` for the open production DataLoader category.",
-        "- Main text figure source: `docs/paper_data/figure_elastic_row.csv` for the Elastic implementation drill-down.",
-        "- Main text table: `docs/paper_data/summary.md` sections `Coverage Summary`, `AlbumentationsX CPU DataLoader vs GPU DataLoader`, and `GPU Memory`.",
-        "- Appendix table: `docs/paper_data/production_support_matrix.md` for the 57-row production DataLoader support/performance matrix.",
-        "- Supporting pivot tables: `docs/paper_data/*_pivot.csv` for each generated RGB and 9-channel regime.",
-        "- Reproducibility table: `docs/paper_data/all_results.csv` with source file provenance.",
+        "- Headline figure/table source: `docs/benchmark_data/open_dataloader_leaderboard.csv` / `figure_open_dataloader_leaderboard.csv` for the open production DataLoader category.",
+        "- Elastic drill-down source: `docs/benchmark_data/figure_elastic_row.csv`.",
+        "- Summary source: `docs/benchmark_data/summary.md` sections `Coverage Summary`, `AlbumentationsX CPU DataLoader vs GPU DataLoader`, and `GPU Memory`.",
+        "- Support matrix: `docs/benchmark_data/production_support_matrix.md` for the 57-row production DataLoader support/performance matrix.",
+        "- Supporting pivot tables: `docs/benchmark_data/*_pivot.csv` for each generated RGB and 9-channel regime.",
+        "- Reproducibility table: `docs/benchmark_data/all_results.csv` with source file provenance.",
         "",
         "## Current Data Summary",
         "",
@@ -1117,6 +1117,8 @@ def _readme_transform_tables_markdown() -> str:
                 if measured_by_column
                 else None
             )
+            if winning_column is None:
+                continue
             for regime, library in active_columns:
                 measured_row = measured_by_column.get((regime, library))
                 if measured_row is None:
@@ -1136,18 +1138,19 @@ def _write_figure_markdown() -> None:
     readme_block = "\n".join(
         [
             "The figures and tables below are generated from checked-in benchmark data.",
+            "Website-ready CSV/Markdown exports are in `docs/benchmark_data/`; reusable PNG/PDF figures are in `docs/benchmark_figures/`.",
             "",
-            _figure_markdown(MAIN_FIGURES, "docs/paper_figures/"),
+            _figure_markdown(MAIN_FIGURES, "docs/benchmark_figures/"),
             "",
-            _figure_markdown(APPENDIX_FIGURES, "docs/paper_figures/"),
+            _figure_markdown(APPENDIX_FIGURES, "docs/benchmark_figures/"),
             "",
             _readme_transform_tables_markdown(),
         ],
     )
     _patch_between_markers(
         README,
-        "<!-- PAPER_FIGURES_START -->",
-        "<!-- PAPER_FIGURES_END -->",
+        "<!-- BENCHMARK_RESULTS_START -->",
+        "<!-- BENCHMARK_RESULTS_END -->",
         readme_block,
     )
 
@@ -1261,7 +1264,7 @@ def _remove_stale_generated_files() -> None:
 def main() -> None:
     global DRAFT, FIGURES, GENERATED, PAPER_DIR, PAPER_FIGURES, PUBLIC_DATA, PUBLIC_FIGURES, README
 
-    parser = argparse.ArgumentParser(description="Regenerate paper figures and derived insight files.")
+    parser = argparse.ArgumentParser(description="Regenerate benchmark figures and derived insight files.")
     parser.add_argument("--data", type=Path, default=GENERATED, help="Directory containing/generated paper CSV data.")
     parser.add_argument("--output", type=Path, default=FIGURES, help="Directory for primary generated figures.")
     parser.add_argument("--public-data", type=Path, default=PUBLIC_DATA, help="Directory to sync public data CSVs.")

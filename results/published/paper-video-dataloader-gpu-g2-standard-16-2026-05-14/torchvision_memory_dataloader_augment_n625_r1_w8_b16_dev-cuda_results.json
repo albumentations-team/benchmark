@@ -1,0 +1,1150 @@
+{
+  "metadata": {
+    "system_info": {
+      "python_version": "3.13.13 (main, May 10 2026, 19:26:54) [Clang 22.1.3 ]",
+      "python_executable": "<external-path>",
+      "platform": "Linux-6.17.0-1012-gcp-x86_64-with-glibc2.39",
+      "system": "Linux",
+      "machine": "x86_64",
+      "processor": "x86_64",
+      "cpu_count": "16",
+      "memory_total_bytes": "67418890240",
+      "timestamp": "2026-05-13T12:15:40.225478+00:00"
+    },
+    "library_versions": {
+      "torchvision": "0.26.0",
+      "numpy": "2.4.4",
+      "pillow": "12.2.0",
+      "opencv-python-headless": "4.13.0.92",
+      "torch": "2.11.0",
+      "opencv-python": "not installed",
+      "av": "17.0.1",
+      "decord": "not installed",
+      "torchcodec": "not installed"
+    },
+    "thread_settings": {
+      "environment": "{'OMP_NUM_THREADS': 'None', 'OPENBLAS_NUM_THREADS': 'None', 'MKL_NUM_THREADS': 'None', 'VECLIB_MAXIMUM_THREADS': 'None', 'NUMEXPR_NUM_THREADS': 'None'}",
+      "opencv": "{'threads': 16, 'opencl': True}",
+      "pytorch": "{'threads': 8, 'gpu_available': True, 'gpu_device': 0, 'gpu_name': 'NVIDIA L4', 'gpu_memory_total': 22.0343017578125, 'gpu_memory_allocated': 0.0079345703125}",
+      "pillow": "{'threads': 'unknown', 'simd': False}"
+    },
+    "environment": {
+      "cwd": "<external-path>",
+      "python_executable": "<external-path>",
+      "python_prefix": "<external-path>",
+      "argv": [
+        "<external-path>",
+        "--specs-file",
+        "<external-path>",
+        "--data-dir",
+        "<external-path>",
+        "--output",
+        "<external-path>",
+        "--media",
+        "video",
+        "--scenario",
+        "video-16f",
+        "--num-runs",
+        "1",
+        "--batch-size",
+        "16",
+        "--workers",
+        "8",
+        "--min-time",
+        "0.0",
+        "--min-batches",
+        "1",
+        "--num-channels",
+        "3",
+        "--clip-length",
+        "16",
+        "--pipeline-scope",
+        "memory_dataloader_augment",
+        "--device",
+        "cuda",
+        "--thread-policy",
+        "pipeline-default",
+        "--num-items",
+        "625"
+      ],
+      "platform": {
+        "system": "Linux",
+        "release": "6.17.0-1012-gcp",
+        "machine": "x86_64",
+        "processor": "x86_64"
+      },
+      "thread_env": {},
+      "git": {
+        "dirty": false
+      }
+    },
+    "gpu": {
+      "torch_available": true,
+      "torch_version": "2.11.0+cu130",
+      "cuda_available": true,
+      "torch_cuda_version": "13.0",
+      "device_index": 0,
+      "device_name": "NVIDIA L4",
+      "total_memory_gb": 22.0343017578125,
+      "compute_capability": "8.9"
+    },
+    "dataset": {
+      "available": true,
+      "path": "<external-path>",
+      "media": "video",
+      "file_count": 13320,
+      "total_bytes": 7193326396,
+      "extensions": {
+        ".avi": 13320
+      },
+      "sample_paths": [
+        "ucf101/UCF-101/ApplyEyeMakeup/v_ApplyEyeMakeup_g01_c01.avi",
+        "ucf101/UCF-101/ApplyEyeMakeup/v_ApplyEyeMakeup_g01_c02.avi",
+        "ucf101/UCF-101/ApplyEyeMakeup/v_ApplyEyeMakeup_g01_c03.avi",
+        "ucf101/UCF-101/ApplyEyeMakeup/v_ApplyEyeMakeup_g01_c04.avi",
+        "ucf101/UCF-101/ApplyEyeMakeup/v_ApplyEyeMakeup_g01_c05.avi",
+        "ucf101/UCF-101/ApplyEyeMakeup/v_ApplyEyeMakeup_g01_c06.avi",
+        "ucf101/UCF-101/ApplyEyeMakeup/v_ApplyEyeMakeup_g02_c01.avi",
+        "ucf101/UCF-101/ApplyEyeMakeup/v_ApplyEyeMakeup_g02_c02.avi",
+        "ucf101/UCF-101/ApplyEyeMakeup/v_ApplyEyeMakeup_g02_c03.avi",
+        "ucf101/UCF-101/ApplyEyeMakeup/v_ApplyEyeMakeup_g02_c04.avi"
+      ]
+    },
+    "timing": {
+      "timing_backend": "perf_counter",
+      "measurement_scope": "memory_dataloader_augment",
+      "data_source": "memory",
+      "includes_decode": false,
+      "includes_collate": true,
+      "includes_gpu_transfer": true,
+      "includes_dataloader_workers": true
+    },
+    "scenario": "video-16f",
+    "mode": "pipeline",
+    "library": "torchvision",
+    "benchmark_params": {
+      "num_videos": 625,
+      "num_runs": 1,
+      "batch_size": 16,
+      "workers": 8,
+      "min_time": 0.0,
+      "min_batches": 1,
+      "num_channels": 3,
+      "clip_length": 16,
+      "pipeline_scope": "memory_dataloader_augment",
+      "decode_included": false,
+      "decoder": "opencv",
+      "device": "cuda",
+      "device_option": "cuda",
+      "transform_on_device": true,
+      "includes_host_to_device_transfer": true,
+      "video_randomness_scope": "per_clip_same_on_frames",
+      "gpu_memory_peak_measured": true,
+      "thread_policy": "pipeline-default",
+      "batch_collate": true,
+      "preload_time": 127.91434903699997,
+      "slow_skip_enabled": true,
+      "slow_threshold_sec_per_item": 2.0,
+      "slow_preflight_items": 3
+    },
+    "run_config": {
+      "version": 1,
+      "selection": {
+        "scenario": "video-16f",
+        "mode": "pipeline",
+        "media": "video",
+        "libraries": [
+          "torchvision",
+          "kornia"
+        ],
+        "transforms": [
+          "RandomCrop224+Affine+Normalize+ToTensor",
+          "RandomCrop224+AutoContrast+Normalize+ToTensor",
+          "RandomCrop224+Blur+Normalize+ToTensor",
+          "RandomCrop224+Brightness+Normalize+ToTensor",
+          "RandomCrop224+CLAHE+Normalize+ToTensor",
+          "RandomCrop224+ChannelDropout+Normalize+ToTensor",
+          "RandomCrop224+ChannelShuffle+Normalize+ToTensor",
+          "RandomCrop224+ColorJiggle+Normalize+ToTensor",
+          "RandomCrop224+ColorJitter+Normalize+ToTensor",
+          "RandomCrop224+Contrast+Normalize+ToTensor",
+          "RandomCrop224+CornerIllumination+Normalize+ToTensor",
+          "RandomCrop224+Elastic+Normalize+ToTensor",
+          "RandomCrop224+Equalize+Normalize+ToTensor",
+          "RandomCrop224+Erasing+Normalize+ToTensor",
+          "RandomCrop224+GaussianBlur+Normalize+ToTensor",
+          "RandomCrop224+GaussianIllumination+Normalize+ToTensor",
+          "RandomCrop224+GaussianNoise+Normalize+ToTensor",
+          "RandomCrop224+Grayscale+Normalize+ToTensor",
+          "RandomCrop224+HorizontalFlip+Normalize+ToTensor",
+          "RandomCrop224+Hue+Normalize+ToTensor",
+          "RandomCrop224+Invert+Normalize+ToTensor",
+          "RandomCrop224+JpegCompression+Normalize+ToTensor",
+          "RandomCrop224+LinearIllumination+Normalize+ToTensor",
+          "RandomCrop224+MedianBlur+Normalize+ToTensor",
+          "RandomCrop224+MotionBlur+Normalize+ToTensor",
+          "RandomCrop224+OpticalDistortion+Normalize+ToTensor",
+          "RandomCrop224+Pad+Normalize+ToTensor",
+          "RandomCrop224+Perspective+Normalize+ToTensor",
+          "RandomCrop224+PlankianJitter+Normalize+ToTensor",
+          "RandomCrop224+PlasmaBrightness+Normalize+ToTensor",
+          "RandomCrop224+PlasmaContrast+Normalize+ToTensor",
+          "RandomCrop224+PlasmaShadow+Normalize+ToTensor",
+          "RandomCrop224+Posterize+Normalize+ToTensor",
+          "RandomCrop224+RGBShift+Normalize+ToTensor",
+          "RandomCrop224+Rain+Normalize+ToTensor",
+          "RandomCrop224+Normalize+ToTensor",
+          "RandomCrop224+RandomGamma+Normalize+ToTensor",
+          "RandomCrop224+RandomJigsaw+Normalize+ToTensor",
+          "RandomResizedCrop+Normalize+ToTensor",
+          "RandomCrop224+RandomRotate90+Normalize+ToTensor",
+          "RandomCrop224+Resize+Normalize+ToTensor",
+          "RandomCrop224+Rotate+Normalize+ToTensor",
+          "RandomCrop224+SaltAndPepper+Normalize+ToTensor",
+          "RandomCrop224+Saturation+Normalize+ToTensor",
+          "RandomCrop224+Sharpen+Normalize+ToTensor",
+          "RandomCrop224+Shear+Normalize+ToTensor",
+          "RandomCrop224+Snow+Normalize+ToTensor",
+          "RandomCrop224+Solarize+Normalize+ToTensor",
+          "RandomCrop224+ThinPlateSpline+Normalize+ToTensor",
+          "RandomCrop224+VerticalFlip+Normalize+ToTensor"
+        ],
+        "transform_set": "paper",
+        "multichannel": false
+      },
+      "data": {
+        "data_dir": "<external-path>",
+        "gcs_uri": "gs://imagenet_validation/ucf101/ucf101.tar",
+        "num_items": 625,
+        "num_channels": 3,
+        "clip_length": 16
+      },
+      "execution": {
+        "num_runs": 1,
+        "batch_size": 16,
+        "workers": 8,
+        "min_time": 0.0,
+        "min_batches": 1,
+        "pipeline_scope": "memory_dataloader_augment",
+        "device": "cuda",
+        "thread_policy": "pipeline-default",
+        "refresh_requirements": true,
+        "disable_slow_skip": false
+      },
+      "output": {
+        "output_dir": "<external-path>",
+        "gcs_results_uri": "gs://imagenet_validation/augmentation-results"
+      }
+    }
+  },
+  "results": {
+    "RandomCrop224+Resize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        208.2857791211009
+      ],
+      "median_throughput": 208.2857791211009,
+      "mean_throughput": 208.2857791211009,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 208.2857791211009,
+      "p75_throughput": 208.2857791211009,
+      "p90_throughput": 208.2857791211009,
+      "p95_throughput": 208.2857791211009,
+      "times": [
+        3.000684937000017
+      ],
+      "mean_time": 3.000684937000017,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 0,
+            "gpu_memory_allocated_after_bytes": 0,
+            "gpu_peak_memory_allocated_bytes": 1669595136,
+            "gpu_peak_memory_reserved_bytes": 1744830464
+          }
+        ],
+        "peak_allocated_bytes": 1669595136,
+        "peak_reserved_bytes": 1744830464
+      }
+    },
+    "RandomCrop224+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        450.7610038277937
+      ],
+      "median_throughput": 450.7610038277937,
+      "mean_throughput": 450.7610038277937,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 450.7610038277937,
+      "p75_throughput": 450.7610038277937,
+      "p90_throughput": 450.7610038277937,
+      "p95_throughput": 450.7610038277937,
+      "times": [
+        1.3865440769999964
+      ],
+      "mean_time": 1.3865440769999964,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 0,
+            "gpu_memory_allocated_after_bytes": 0,
+            "gpu_peak_memory_allocated_bytes": 367263744,
+            "gpu_peak_memory_reserved_bytes": 1744830464
+          }
+        ],
+        "peak_allocated_bytes": 367263744,
+        "peak_reserved_bytes": 1744830464
+      }
+    },
+    "RandomResizedCrop+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        363.994346649469
+      ],
+      "median_throughput": 363.994346649469,
+      "mean_throughput": 363.994346649469,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 363.994346649469,
+      "p75_throughput": 363.994346649469,
+      "p90_throughput": 363.994346649469,
+      "p95_throughput": 363.994346649469,
+      "times": [
+        1.7170596349999983
+      ],
+      "mean_time": 1.7170596349999983,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 0,
+            "gpu_memory_allocated_after_bytes": 0,
+            "gpu_peak_memory_allocated_bytes": 367263744,
+            "gpu_peak_memory_reserved_bytes": 1744830464
+          }
+        ],
+        "peak_allocated_bytes": 367263744,
+        "peak_reserved_bytes": 1744830464
+      }
+    },
+    "RandomCrop224+HorizontalFlip+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        440.35724747571936
+      ],
+      "median_throughput": 440.35724747571936,
+      "mean_throughput": 440.35724747571936,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 440.35724747571936,
+      "p75_throughput": 440.35724747571936,
+      "p90_throughput": 440.35724747571936,
+      "p95_throughput": 440.35724747571936,
+      "times": [
+        1.4193021769999632
+      ],
+      "mean_time": 1.4193021769999632,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 0,
+            "gpu_memory_allocated_after_bytes": 0,
+            "gpu_peak_memory_allocated_bytes": 367263744,
+            "gpu_peak_memory_reserved_bytes": 1744830464
+          }
+        ],
+        "peak_allocated_bytes": 367263744,
+        "peak_reserved_bytes": 1744830464
+      }
+    },
+    "RandomCrop224+VerticalFlip+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        448.3307028204875
+      ],
+      "median_throughput": 448.3307028204875,
+      "mean_throughput": 448.3307028204875,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 448.3307028204875,
+      "p75_throughput": 448.3307028204875,
+      "p90_throughput": 448.3307028204875,
+      "p95_throughput": 448.3307028204875,
+      "times": [
+        1.3940602239999862
+      ],
+      "mean_time": 1.3940602239999862,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 0,
+            "gpu_memory_allocated_after_bytes": 0,
+            "gpu_peak_memory_allocated_bytes": 367263744,
+            "gpu_peak_memory_reserved_bytes": 1744830464
+          }
+        ],
+        "peak_allocated_bytes": 367263744,
+        "peak_reserved_bytes": 1744830464
+      }
+    },
+    "RandomCrop224+Pad+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        432.5584592982027
+      ],
+      "median_throughput": 432.5584592982027,
+      "mean_throughput": 432.5584592982027,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 432.5584592982027,
+      "p75_throughput": 432.5584592982027,
+      "p90_throughput": 432.5584592982027,
+      "p95_throughput": 432.5584592982027,
+      "times": [
+        1.4448914049999644
+      ],
+      "mean_time": 1.4448914049999644,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 0,
+            "gpu_memory_allocated_after_bytes": 0,
+            "gpu_peak_memory_allocated_bytes": 424771584,
+            "gpu_peak_memory_reserved_bytes": 1744830464
+          }
+        ],
+        "peak_allocated_bytes": 424771584,
+        "peak_reserved_bytes": 1744830464
+      }
+    },
+    "RandomCrop224+Rotate+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        346.20333772123405
+      ],
+      "median_throughput": 346.20333772123405,
+      "mean_throughput": 346.20333772123405,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 346.20333772123405,
+      "p75_throughput": 346.20333772123405,
+      "p90_throughput": 346.20333772123405,
+      "p95_throughput": 346.20333772123405,
+      "times": [
+        1.8052974419999828
+      ],
+      "mean_time": 1.8052974419999828,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1744830464
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1744830464
+      }
+    },
+    "RandomCrop224+Affine+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        351.2456387627466
+      ],
+      "median_throughput": 351.2456387627466,
+      "mean_throughput": 351.2456387627466,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 351.2456387627466,
+      "p75_throughput": 351.2456387627466,
+      "p90_throughput": 351.2456387627466,
+      "p95_throughput": 351.2456387627466,
+      "times": [
+        1.779381523999973
+      ],
+      "mean_time": 1.779381523999973,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1744830464
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1744830464
+      }
+    },
+    "RandomCrop224+Perspective+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        312.0550260717377
+      ],
+      "median_throughput": 312.0550260717377,
+      "mean_throughput": 312.0550260717377,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 312.0550260717377,
+      "p75_throughput": 312.0550260717377,
+      "p90_throughput": 312.0550260717377,
+      "p95_throughput": 312.0550260717377,
+      "times": [
+        2.0028518940000026
+      ],
+      "mean_time": 2.0028518940000026,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1744830464
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1744830464
+      }
+    },
+    "RandomCrop224+Elastic+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        86.71404803924626
+      ],
+      "median_throughput": 86.71404803924626,
+      "mean_throughput": 86.71404803924626,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 86.71404803924626,
+      "p75_throughput": 86.71404803924626,
+      "p90_throughput": 86.71404803924626,
+      "p95_throughput": 86.71404803924626,
+      "times": [
+        7.20759800899998
+      ],
+      "mean_time": 7.20759800899998,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1744830464
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1744830464
+      }
+    },
+    "RandomCrop224+ColorJitter+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        265.14478560009695
+      ],
+      "median_throughput": 265.14478560009695,
+      "mean_throughput": 265.14478560009695,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 265.14478560009695,
+      "p75_throughput": 265.14478560009695,
+      "p90_throughput": 265.14478560009695,
+      "p95_throughput": 265.14478560009695,
+      "times": [
+        2.3572026829999686
+      ],
+      "mean_time": 2.3572026829999686,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1746927616
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1746927616
+      }
+    },
+    "RandomCrop224+ChannelShuffle+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        420.57022396756105
+      ],
+      "median_throughput": 420.57022396756105,
+      "mean_throughput": 420.57022396756105,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 420.57022396756105,
+      "p75_throughput": 420.57022396756105,
+      "p90_throughput": 420.57022396756105,
+      "p95_throughput": 420.57022396756105,
+      "times": [
+        1.4860776259999966
+      ],
+      "mean_time": 1.4860776259999966,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1746927616
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1746927616
+      }
+    },
+    "RandomCrop224+Grayscale+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        425.5090603855391
+      ],
+      "median_throughput": 425.5090603855391,
+      "mean_throughput": 425.5090603855391,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 425.5090603855391,
+      "p75_throughput": 425.5090603855391,
+      "p90_throughput": 425.5090603855391,
+      "p95_throughput": 425.5090603855391,
+      "times": [
+        1.4688288879999618
+      ],
+      "mean_time": 1.4688288879999618,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1746927616
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1746927616
+      }
+    },
+    "RandomCrop224+GaussianBlur+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        377.65963755812766
+      ],
+      "median_throughput": 377.65963755812766,
+      "mean_throughput": 377.65963755812766,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 377.65963755812766,
+      "p75_throughput": 377.65963755812766,
+      "p90_throughput": 377.65963755812766,
+      "p95_throughput": 377.65963755812766,
+      "times": [
+        1.6549293010000383
+      ],
+      "mean_time": 1.6549293010000383,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1746927616
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1746927616
+      }
+    },
+    "RandomCrop224+Invert+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        430.1927065918796
+      ],
+      "median_throughput": 430.1927065918796,
+      "mean_throughput": 430.1927065918796,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 430.1927065918796,
+      "p75_throughput": 430.1927065918796,
+      "p90_throughput": 430.1927065918796,
+      "p95_throughput": 430.1927065918796,
+      "times": [
+        1.4528372759999684
+      ],
+      "mean_time": 1.4528372759999684,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1746927616
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1746927616
+      }
+    },
+    "RandomCrop224+Posterize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        425.6509902328613
+      ],
+      "median_throughput": 425.6509902328613,
+      "mean_throughput": 425.6509902328613,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 425.6509902328613,
+      "p75_throughput": 425.6509902328613,
+      "p90_throughput": 425.6509902328613,
+      "p95_throughput": 425.6509902328613,
+      "times": [
+        1.4683391190000066
+      ],
+      "mean_time": 1.4683391190000066,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1746927616
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1746927616
+      }
+    },
+    "RandomCrop224+Solarize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        398.014450465473
+      ],
+      "median_throughput": 398.014450465473,
+      "mean_throughput": 398.014450465473,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 398.014450465473,
+      "p75_throughput": 398.014450465473,
+      "p90_throughput": 398.014450465473,
+      "p95_throughput": 398.014450465473,
+      "times": [
+        1.5702947450000124
+      ],
+      "mean_time": 1.5702947450000124,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1746927616
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1746927616
+      }
+    },
+    "RandomCrop224+Sharpen+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        392.8278165995454
+      ],
+      "median_throughput": 392.8278165995454,
+      "mean_throughput": 392.8278165995454,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 392.8278165995454,
+      "p75_throughput": 392.8278165995454,
+      "p90_throughput": 392.8278165995454,
+      "p95_throughput": 392.8278165995454,
+      "times": [
+        1.5910278589999507
+      ],
+      "mean_time": 1.5910278589999507,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1746927616
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1746927616
+      }
+    },
+    "RandomCrop224+AutoContrast+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        391.499178760938
+      ],
+      "median_throughput": 391.499178760938,
+      "mean_throughput": 391.499178760938,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 391.499178760938,
+      "p75_throughput": 391.499178760938,
+      "p90_throughput": 391.499178760938,
+      "p95_throughput": 391.499178760938,
+      "times": [
+        1.5964273590000175
+      ],
+      "mean_time": 1.5964273590000175,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1746927616
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1746927616
+      }
+    },
+    "RandomCrop224+Equalize+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        343.918187016032
+      ],
+      "median_throughput": 343.918187016032,
+      "mean_throughput": 343.918187016032,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 343.918187016032,
+      "p75_throughput": 343.918187016032,
+      "p90_throughput": 343.918187016032,
+      "p95_throughput": 343.918187016032,
+      "times": [
+        1.8172926689999827
+      ],
+      "mean_time": 1.8172926689999827,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1746927616
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1746927616
+      }
+    },
+    "RandomCrop224+Erasing+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        344.4062869647285
+      ],
+      "median_throughput": 344.4062869647285,
+      "mean_throughput": 344.4062869647285,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 344.4062869647285,
+      "p75_throughput": 344.4062869647285,
+      "p90_throughput": 344.4062869647285,
+      "p95_throughput": 344.4062869647285,
+      "times": [
+        1.8147171630000116
+      ],
+      "mean_time": 1.8147171630000116,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1746927616
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1746927616
+      }
+    },
+    "RandomCrop224+JpegCompression+Normalize+ToTensor": {
+      "status": "unsupported",
+      "supported": false,
+      "reason": "ValueError: Input tensor must be a CPU tensor",
+      "throughputs": [],
+      "median_throughput": 0.0,
+      "mean_throughput": 0.0,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 0.0,
+      "p75_throughput": 0.0,
+      "p90_throughput": 0.0,
+      "p95_throughput": 0.0,
+      "times": [],
+      "mean_time": 0.0,
+      "std_time": 0.0,
+      "num_successful_runs": 0,
+      "unstable": false
+    },
+    "RandomCrop224+Brightness+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        396.9369976154613
+      ],
+      "median_throughput": 396.9369976154613,
+      "mean_throughput": 396.9369976154613,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 396.9369976154613,
+      "p75_throughput": 396.9369976154613,
+      "p90_throughput": 396.9369976154613,
+      "p95_throughput": 396.9369976154613,
+      "times": [
+        1.5745571809999888
+      ],
+      "mean_time": 1.5745571809999888,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1746927616
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1746927616
+      }
+    },
+    "RandomCrop224+Contrast+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        375.2486893894614
+      ],
+      "median_throughput": 375.2486893894614,
+      "mean_throughput": 375.2486893894614,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 375.2486893894614,
+      "p75_throughput": 375.2486893894614,
+      "p90_throughput": 375.2486893894614,
+      "p95_throughput": 375.2486893894614,
+      "times": [
+        1.6655621130000213
+      ],
+      "mean_time": 1.6655621130000213,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1746927616
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1746927616
+      }
+    },
+    "RandomCrop224+ColorJiggle+Normalize+ToTensor": {
+      "status": "ok",
+      "supported": true,
+      "throughputs": [
+        265.92426059238676
+      ],
+      "median_throughput": 265.92426059238676,
+      "mean_throughput": 265.92426059238676,
+      "std_throughput": 0.0,
+      "cv_throughput": 0.0,
+      "throughput_ci95": 0.0,
+      "p50_throughput": 265.92426059238676,
+      "p75_throughput": 265.92426059238676,
+      "p90_throughput": 265.92426059238676,
+      "p95_throughput": 265.92426059238676,
+      "times": [
+        2.350293269999952
+      ],
+      "mean_time": 2.350293269999952,
+      "std_time": 0.0,
+      "num_successful_runs": 1,
+      "unstable": false,
+      "gpu_memory": {
+        "device": "cuda",
+        "measured": true,
+        "runs": [
+          {
+            "gpu_memory_allocated_before_bytes": 8519680,
+            "gpu_memory_allocated_after_bytes": 8519680,
+            "gpu_peak_memory_allocated_bytes": 375783424,
+            "gpu_peak_memory_reserved_bytes": 1746927616
+          }
+        ],
+        "peak_allocated_bytes": 375783424,
+        "peak_reserved_bytes": 1746927616
+      }
+    }
+  }
+}

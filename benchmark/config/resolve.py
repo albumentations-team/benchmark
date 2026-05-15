@@ -121,6 +121,8 @@ def apply_cli_overrides(config: BenchmarkRunConfig, args: argparse.Namespace) ->
         _ensure_cloud(data)["keep_on_failure"] = args.gcp_keep_on_failure
     if _provided(args, "--gcp-preemptible"):
         _ensure_cloud(data)["preemptible"] = args.gcp_preemptible
+    if _provided(args, "--gcp-timeout-hours"):
+        _ensure_cloud(data)["timeout_hours"] = args.gcp_timeout_hours
     if _provided(args, "--gcp-remote-repo-dir"):
         _ensure_cloud(data)["remote_repo_dir"] = args.gcp_remote_repo_dir
     if _provided(args, "--gcp-venv-cache-uri"):

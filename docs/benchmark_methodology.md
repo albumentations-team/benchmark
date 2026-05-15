@@ -19,7 +19,7 @@ resolved config into the output directory. This gives each run a concrete, inspe
 The resolved config is expanded into immutable jobs by `benchmark/config/plan.py` and `benchmark/jobs.py`. A job contains
 the library, scenario, mode, media type, transform filter, data directory, output file, worker settings, batch size,
 thread policy, device option, slow-transform policy, and backend. The important design decision is that the CLI does not
-decide backend behavior ad hoc. Scenario support, library support, device support, requirement groups, paper transform-set
+decide backend behavior ad hoc. Scenario support, library support, device support, requirement groups, canonical transform-set
 files, pipeline scopes, and backend names are centralized in `benchmark/matrix.py`.
 
 Once jobs exist, `benchmark/orchestrator.py` dispatches them to the appropriate timing engine. Production micro jobs run
@@ -44,11 +44,11 @@ path with collation and, when requested, decode and device transfer?"
 
 ## Transform Selection
 
-The shared transform catalog lives in `benchmark/transforms/specs.py`. Paper transform sets are fixed markdown files under
-`docs/paper_transform_sets/`, one for each scenario. The named transform set is expanded before execution and stored in
+The shared transform catalog lives in `benchmark/transforms/specs.py`. Canonical transform sets are fixed markdown files
+under `docs/paper_transform_sets/`, one for each scenario. The named transform set is expanded before execution and stored in
 run metadata, so a result can be traced back to the exact transform universe used for that run.
 
-The eligibility rule is intentionally conservative. A transform belongs in a scenario-level paper set only when it exists
+The eligibility rule is intentionally conservative. A transform belongs in a scenario-level canonical set only when it exists
 in at least two selected libraries for that scenario. This avoids turning the benchmark into a catalogue-size contest
 where one library is penalized for implementing operations that no other competitor exposes. At the same time, each
 library reports only the transforms it supports directly. Missing support is recorded as unsupported or absent coverage;
@@ -57,9 +57,11 @@ it is not treated as fast.
 The benchmark does not recreate missing library features with large benchmark-side compatibility implementations simply
 to fill a table cell. That decision matters because substantial helper code can dominate the measured path and make a
 library look slow for reasons unrelated to the library itself. Library-specific transform specs should map explicit
-library APIs to the canonical catalog by behavior and parameters, not only by name. When a known device-specific issue
-exists after transform-set expansion, the narrow exclusion belongs in `benchmark/transform_filters.py` rather than in the
-global paper transform set. This keeps CPU rows, other-library rows, and unaffected scenarios intact.
+library APIs to the canonical catalog by behavior and parameters, not only by name. When a device-specific issue exists
+after transform-set expansion, prefer attempting the row and recording an explicit unsupported result with the runtime
+reason. A narrow exclusion belongs in `benchmark/transform_filters.py` only when the row is proven to crash the worker
+process or poison the CUDA context. This keeps CPU rows, other-library rows, and unaffected scenarios intact without
+hiding fixable adapter mistakes.
 
 ## Environment Isolation
 
@@ -92,16 +94,32 @@ DataLoader overhead, and batch collation. A micro transform row must not reread 
 convert to tensor, or repair channel layouts unless that work is part of the named library transform itself.
 
 Pipeline mode uses a different data model. In `decode_dataloader_augment`, the dataset stores paths and loads or decodes
-inside the DataLoader path. In `memory_dataloader_augment`, decoded samples are preloaded once and the DataLoader path
-measures worker scheduling, augmentation, collation, and recipe execution without disk/decode cost. In
-`decode_dataloader_augment_batch_copy`, the benchmark additionally materializes the collated batch tensor and copies it to
-CUDA or MPS when a device is requested. These scopes are separate because they answer separate production questions.
+inside the DataLoader path. In `memory_dataloader_augment`, decoded samples are preloaded once into CPU RAM and the
+DataLoader path measures worker scheduling, augmentation, collation, and recipe execution without disk/decode cost. GPU
+DataLoader rows still keep the cached samples in CPU RAM: the timed path collates a CPU batch, copies that batch to the
+selected device in the main process, then applies the GPU transform. In `decode_dataloader_augment_batch_copy`, the
+benchmark additionally materializes the collated batch tensor and copies it to CUDA or MPS when a device is requested.
+These scopes are separate because they answer separate production questions.
+
+For CPU DataLoader rows, RGB images, 9-channel images, and video clips all follow the same execution boundary:
+`DataLoader` workers receive one sample at a time, apply the full library recipe in `Dataset.__getitem__`, and return a
+fixed-shape tensor sample. PyTorch default collation then only stacks those already-augmented samples into a batch. In
+other words, CPU augmentation happens in workers before collation, not later on the collated batch. The GPU TorchVision
+and Kornia rows are the deliberate exception: workers prepare CPU samples or clips, default collation builds a CPU batch,
+and the main process copies that batch to the device before running the GPU transform.
 
 Cloud runs stage datasets as one tarball on the VM's local disk before timing begins. The benchmark does not time against
 mounted buckets or network paths. `benchmark/cloud/stage_dataset.py` validates and extracts the tarball before the control
 environment exists, so it intentionally stays stdlib-only and avoids importing Pydantic or `benchmark.config`. This makes
 cloud bootstrap failures easier to diagnose and prevents dependency setup from becoming a prerequisite for dataset
 staging.
+
+Detached GCP runs wrap the benchmark command in a hard timeout: 6 hours by default for GPU machines and 8 hours by default
+for CPU machines, overridable with `--gcp-timeout-hours` or `cloud.timeout_hours`. On timeout, the VM bootstrap uploads the
+exit code, run metadata, terminal log, partial `results/`, and a `FAILED` marker before following the normal deletion path.
+Instances are also labeled with benchmark TTL/expiry metadata so an external cleanup command can find stale VMs. Self-delete
+is still useful on normal success or failure, but it cannot run if the guest OS, network, or metadata stack wedges; timeout
+plus TTL cleanup is the required detached-job safety net.
 
 ## Micro Timing
 
@@ -166,11 +184,21 @@ overhead around the measured transform.
 
 ## GPU Pipeline Timing
 
-GPU image pipeline rows are separate from CPU pipeline rows. For torchvision and Kornia, PyTorch DataLoader workers still
-prepare fixed-shape samples on CPU before collation. The collated batch is then copied to the selected device, the measured
-augmentation and normalization run on the accelerator, and the benchmark synchronizes before stopping the timer. This
-models the practical constraint that DataLoader workers cannot independently return GPU tensors for normal multi-worker
-training without changing the architecture of the input pipeline.
+GPU image and video pipeline rows are separate from CPU pipeline rows. For torchvision and Kornia, PyTorch DataLoader
+workers still prepare fixed-shape samples or clips on CPU before collation. The collated batch is then copied to the
+selected device, the measured augmentation and normalization run on the accelerator, and the benchmark synchronizes before
+stopping the timer. Kornia video micro and pipeline rows use Kornia's documented `VideoSequential` container with
+`data_format="BTCHW"` and `same_on_frame=True`, so random parameters are shared across frames within one clip but not
+forced to be shared across the whole DataLoader batch. TorchVision video GPU rows call the v2 recipe per clip after the
+host-to-device batch copy for the same per-clip randomness scope. This models the practical constraint that DataLoader
+workers cannot independently return GPU tensors for normal multi-worker training without changing the architecture of the
+input pipeline.
+
+Batch-shared TorchVision video rows are intentionally excluded from the benchmark matrix. Applying the same v2 recipe
+once to a `B,T,C,H,W` batch can share random parameters across all clips in that batch, which is useful as a speed
+diagnostic but does not match normal per-sample training augmentation. PyTorchVideo rows are canonical training-pipeline
+baselines using a per-clip transform stack; they are not micro rows and are not part of the 2+ per-transform eligibility
+universe.
 
 Kornia can apply a batched augmentation with per-image random parameters using `same_on_batch=False`, so its GPU batch
 path uses the batched transform. TorchVision v2 does not expose an equivalent batched random-transform API for every
@@ -196,7 +224,17 @@ runs through `benchmark/dali_pipeline_worker.py` and DALI-specific adapters.
 This design avoids comparing DALI against scopes it does not naturally implement. DALI graph execution, mixed decode,
 pipeline scheduling, and batch production are different from a Python function that transforms one already-decoded sample.
 When DALI is included, it must be labeled as a DALI pipeline row with its own supported subset and unsupported results.
-The benchmark consumes produced batches so lazy graph scheduling is not mistaken for completed augmentation work.
+Video DALI rows use the same recipe names as other DataLoader rows where DALI has a native equivalent, and record
+unsupported rows for transforms without a meaningful native operator. The benchmark consumes produced batches and counts
+actual clips rather than padded batch slots so lazy graph scheduling or partial final batches are not mistaken for
+completed augmentation work. DALI video rows are labeled with `decode_dataloader_augment` because the native graph reads
+and decodes video files inside the timed `pipeline.run()` loop; they are not preloaded-memory DataLoader rows.
+
+DALI video reader choice is explicit in metadata. The `dali` benchmark library uses the stable public
+`fn.readers.video` API, even though current DALI sources route it through the legacy video loader implementation
+internally. The separate `dali_experimental` benchmark library uses `fn.experimental.readers.video` for smoke and
+diagnostic runs. Do not merge those rows under one library name; the experimental reader should be promoted only after it
+is stable for the production recipe set.
 
 ## Slow-Transform Guard
 
@@ -222,9 +260,15 @@ recorded as unsupported results with reasons rather than hidden by changing the 
 
 Coverage and throughput must be interpreted together. A library that implements fewer transforms can appear fast over its
 measured subset because difficult rows are missing. A library with broader coverage can expose more slow or hard cases.
-For this reason, paper figures and website summaries should not use one merged leaderboard across micro, CPU DataLoader,
-GPU DataLoader, and DALI regimes. They should report measured throughput alongside coverage, unsupported rows,
-early-stopped rows, and the denominator of the fixed transform set.
+For this reason, public figures and website summaries should not use one merged leaderboard across micro, CPU DataLoader,
+GPU DataLoader, DALI, and canonical video-pipeline regimes. They should report measured throughput alongside coverage,
+unsupported rows, early-stopped rows, and the denominator of the fixed transform set.
+
+Website-facing row-level exports live in `docs/benchmark_data/`; website-facing figures live in
+`docs/benchmark_figures/`. The `docs/benchmark_data/all_results.csv` file is the reproducibility table: every row records
+the regime, library, transform, status, measured throughput fields, reason for unsupported or early-stopped rows, and the
+published result JSON that produced it. `docs/benchmark_data/unsupported_and_early_stopped.csv` and `.md` preserve the
+limitations table used to interpret coverage gaps.
 
 ## Result Metadata And Statistics
 
@@ -242,7 +286,7 @@ reason.
 
 The purpose of this metadata is reproducibility and interpretation. A throughput number without measurement scope,
 device, worker count, batch size, dependency versions, thread policy, and dataset fingerprint is not enough to support a
-paper claim. The benchmark records those facts at execution time so downstream figure generation and narrative writing can
+public claim. The benchmark records those facts at execution time so downstream figure generation and narrative writing can
 defend the comparison.
 
 ## Cloud Execution

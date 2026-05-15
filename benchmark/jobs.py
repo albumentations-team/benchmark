@@ -61,6 +61,7 @@ class BenchmarkJob:
         transforms_filter = filter_transforms_for_library_device(
             tuple(config.selection.transforms or ()),
             scenario=config.selection.scenario,
+            mode=mode,
             library=library,
             media=media,
             device=config.execution.device,

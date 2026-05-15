@@ -38,7 +38,9 @@ def test_video_micro_loader_decodes_fixed_length_tensor_clips(tmp_path: Path, mo
 
     assert seen == {"decoder": "opencv", "path": video_path, "clip_length": 4}
     assert tuple(clip.shape) == (4, 3, 5, 6)
-    assert str(clip.dtype).endswith("float16")
+    assert str(clip.dtype).endswith("float32")
+    device = getattr(clip, "device", None)
+    assert getattr(device, "type", device) == "cpu"
 
 
 def test_torchvision_video_micro_loader_keeps_uint8_clips(tmp_path: Path, monkeypatch: Any) -> None:

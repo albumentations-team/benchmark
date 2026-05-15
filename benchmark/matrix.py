@@ -69,6 +69,7 @@ VIDEO_PIPELINE_SPECS: dict[str, str] = {
     "albumentationsx": "benchmark/transforms/albumentationsx_video_pipeline_impl.py",
     "torchvision": "benchmark/transforms/torchvision_video_pipeline_impl.py",
     "kornia": "benchmark/transforms/kornia_video_pipeline_impl.py",
+    "pytorchvideo": "benchmark/transforms/pytorchvideo_pipeline_impl.py",
 }
 
 IMAGE_REQUIREMENTS: dict[str, str] = {
@@ -85,7 +86,9 @@ VIDEO_REQUIREMENTS: dict[str, str] = {
     "albumentations_mit": "requirements/albumentations_mit.txt",
     "torchvision": "requirements/torchvision-video.txt",
     "kornia": "requirements/kornia-video.txt",
+    "pytorchvideo": "requirements/pytorchvideo-video.txt",
     "dali": "requirements/dali-video.txt",
+    "dali_experimental": "requirements/dali-video.txt",
 }
 
 ENV_GROUPS: dict[MediaName, dict[str, tuple[str, ...]]] = {
@@ -99,7 +102,8 @@ ENV_GROUPS: dict[MediaName, dict[str, tuple[str, ...]]] = {
         "albumentationsx_video": ("albumentationsx",),
         "albumentations_mit_video": ("albumentations_mit",),
         "torch_video": ("torchvision", "kornia"),
-        "dali_video": ("dali",),
+        "pytorchvideo_video": ("torchvision", "pytorchvideo"),
+        "dali_video": ("dali", "dali_experimental"),
     },
 }
 
@@ -209,6 +213,19 @@ def benchmark_matrix() -> tuple[LibraryScenarioConfig, ...]:
             spec_path=None,
             requirements_media="video",
             env_group=library_env_group("dali", "video"),
+            devices=("cuda", "auto"),
+            pipeline_scopes=PIPELINE_SCOPES,
+            backend="dali_pipeline",
+        ),
+    )
+    entries.append(
+        LibraryScenarioConfig(
+            scenario="video-16f",
+            mode="pipeline",
+            library="dali_experimental",
+            spec_path=None,
+            requirements_media="video",
+            env_group=library_env_group("dali_experimental", "video"),
             devices=("cuda", "auto"),
             pipeline_scopes=PIPELINE_SCOPES,
             backend="dali_pipeline",

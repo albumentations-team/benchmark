@@ -17,6 +17,10 @@ def test_dali_available_for_pipeline_libraries_only() -> None:
 
     assert "dali" not in resolve_libraries(video, "micro", None)
     assert "dali" in resolve_libraries(video, "pipeline", None)
+    assert "dali_experimental" not in resolve_libraries(video, "micro", None)
+    assert "dali_experimental" in resolve_libraries(video, "pipeline", None)
+    assert "pytorchvideo" not in resolve_libraries(video, "micro", None)
+    assert "pytorchvideo" in resolve_libraries(video, "pipeline", None)
     assert "dali" not in resolve_libraries(rgb, "micro", None)
     assert "dali" in resolve_libraries(rgb, "pipeline", None)
 

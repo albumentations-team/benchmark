@@ -44,7 +44,12 @@ RUN_GROUP_PATTERNS = {
     "video16f_micro_cpu": [("paper-video-micro-c4-*", "latest")],
     "video16f_micro_gpu": [("paper-video-micro-gpu-g2-*", "latest")],
     "video16f_dataloader_cpu": [("paper-video-dataloader-memory-c4-*", "latest")],
-    "video16f_dataloader_gpu": [("paper-video-dataloader-gpu-g2-*", "latest")],
+    "video16f_dataloader_gpu": [
+        ("paper-video-dataloader-gpu-g2-*", "latest"),
+        ("paper-video-dataloader-dali-g2-*", "latest"),
+        ("paper-video-dataloader-dali-experimental-g2-*", "latest"),
+        ("paper-video-dataloader-pytorchvideo-g2-*", "latest"),
+    ],
 }
 
 REPLACED_RESULT_FILES: set[Path] = set()
@@ -292,7 +297,7 @@ def _write_csv(path: Path, rows: list[AggregateResult]) -> None:
         "source_files",
     ]
     with path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         for row in rows:
             writer.writerow(
@@ -323,7 +328,7 @@ def _write_pivot_csv(path: Path, rows: list[AggregateResult]) -> None:
     libraries = [lib for lib in LIBRARY_ORDER if any(row.library == lib for row in rows)]
     by_key = {(row.transform, row.library): row for row in rows}
     with path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
+        writer = csv.writer(f, lineterminator="\n")
         writer.writerow(["transform", *libraries])
         for transform in transforms:
             values = [
@@ -466,7 +471,7 @@ def _write_open_dataloader_files(output_dir: Path, rows: list[AggregateResult]) 
         "wins",
     ]
     with (output_dir / "open_dataloader_leaderboard.csv").open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=leaderboard_fieldnames)
+        writer = csv.DictWriter(f, fieldnames=leaderboard_fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(stats["leaderboard"])
     with (output_dir / "open_dataloader_winners.csv").open("w", newline="", encoding="utf-8") as f:
@@ -481,6 +486,7 @@ def _write_open_dataloader_files(output_dir: Path, rows: list[AggregateResult]) 
                 "implementation",
                 "median_throughput",
             ],
+            lineterminator="\n",
         )
         writer.writeheader()
         writer.writerows(stats["winner_rows"])
@@ -514,7 +520,7 @@ def _write_open_dataloader_files(output_dir: Path, rows: list[AggregateResult]) 
 
 def _library_summary(rows: list[AggregateResult]) -> str:
     lines = [
-        "| Regime | Library | Rows | Full runs | Early-stopped | Unsupported | Median of measured rows (img/s) |",
+        "| Regime | Library | Rows | Full runs | Early-stopped | Unsupported | Median of measured rows |",
         "|---|---|---:|---:|---:|---:|---:|",
     ]
     for regime, regime_label in REGIME_LABELS.items():
@@ -736,7 +742,7 @@ def _write_limitations_files(output_dir: Path, rows: list[AggregateResult]) -> N
     interesting = [row for row in rows if not row.supported or row.early_stopped]
     fieldnames = ["regime", "regime_label", "library", "transform", "status", "reason", "source_files"]
     with (output_dir / "unsupported_and_early_stopped.csv").open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         for row in sorted(interesting, key=lambda r: (r.regime, r.library, r.transform)):
             writer.writerow(
@@ -755,7 +761,7 @@ def _write_limitations_files(output_dir: Path, rows: list[AggregateResult]) -> N
             [
                 "# Unsupported And Early-Stopped Rows",
                 "",
-                "This supplement table preserves the full unsupported and slow-row detail used by the paper.",
+                "This table preserves the full unsupported and slow-row detail used to interpret public benchmark results.",
                 "",
                 _limitations_table(rows),
                 "",
@@ -835,9 +841,9 @@ def _headline_metrics(rows: list[AggregateResult]) -> dict[str, Any]:
 def _write_markdown(path: Path, rows: list[AggregateResult]) -> str:
     regimes_with_rows = [regime for regime in REGIME_LABELS if any(row.regime == regime for row in rows)]
     sections = [
-        "# Generated Paper Data",
+        "# Generated Benchmark Data",
         "",
-        "Generated from committed `results/published/*` snapshots. Use `--extra-run-dir REGIME=PATH` to add local unpublished artifacts. Throughput units are images/second.",
+        "Generated from committed `results/published/*` snapshots. Use `--extra-run-dir REGIME=PATH` to add local unpublished artifacts. Throughput units are images/second for image regimes and clips/second for video regimes.",
         "",
         "## Coverage Summary",
         "",
@@ -867,7 +873,7 @@ def _write_markdown(path: Path, rows: list[AggregateResult]) -> str:
         "",
         _limitations_summary_table(rows),
         "",
-        "Full row-level reasons are generated in the public paper-data supplement after figure generation.",
+        "Full row-level reasons are generated in the public benchmark-data export after figure generation.",
         "",
     ]
     content = "\n".join(sections)
@@ -892,7 +898,7 @@ def _update_draft(draft_path: Path, generated_markdown: str) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate paper tables from production benchmark JSON artifacts.")
+    parser = argparse.ArgumentParser(description="Generate benchmark tables from production benchmark JSON artifacts.")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--draft", type=Path, default=DEFAULT_DRAFT)
     parser.add_argument("--update-draft", action="store_true")

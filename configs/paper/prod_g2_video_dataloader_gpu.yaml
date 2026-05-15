@@ -8,7 +8,7 @@ selection:
 data:
   data_dir: /tmp/unused
   gcs_uri: gs://imagenet_validation/ucf101/ucf101.tar
-  num_items: 10000
+  num_items: 625
   clip_length: 16
 output:
   output_dir: gcp_runs/prod-g2-standard-16-video-dataloader-gpu
@@ -16,7 +16,7 @@ output:
 execution:
   pipeline_scope: memory_dataloader_augment
   num_runs: 1
-  batch_size: 64
+  batch_size: 16
   workers: 8
   min_time: 0
   thread_policy: pipeline-default

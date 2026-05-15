@@ -7,7 +7,10 @@ the current RGB paper artifact.
 - `torchvision`
 - `kornia`
 
-Video pipeline benchmarks may also include `dali` when DALI is available. The DALI-supported subset is smaller, but it does not add any extra transforms to the 2+ library set below.
+Video pipeline benchmarks may also include `dali` when DALI is available. The DALI-supported subset is smaller, but it does not add any extra transforms to the 2+ library set below. `dali` uses stable public `fn.readers.video`; `dali_experimental` is a diagnostic variant for `fn.experimental.readers.video`.
+PyTorchVideo is reported as a canonical per-clip training-pipeline baseline. Batch-shared TorchVision video is excluded
+because sharing random parameters across all clips in a batch is a throughput diagnostic, not the realistic training
+semantics used for headline comparison.
 
 A transform is included only when it exists in at least two selected video libraries.
 

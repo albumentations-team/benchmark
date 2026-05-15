@@ -14,7 +14,8 @@ from typing import Any
 from benchmark.jobs import BenchmarkJob
 from benchmark.pipeline_runner import PipelineBenchmarkRunner
 from benchmark.transforms.image_recipe_specs import recipe_augmentation_specs, recipe_name
-from benchmark.transforms.specs import TRANSFORM_SPECS
+from benchmark.transforms.video_recipe_specs import recipe_augmentation_specs as video_recipe_augmentation_specs
+from benchmark.transforms.video_recipe_specs import recipe_name as video_recipe_name
 
 
 def _dali_transforms_from_specs(*, media: str, transforms_filter: tuple[str, ...] = ()) -> list[dict[str, object]]:
@@ -38,12 +39,22 @@ def _dali_transforms_from_specs(*, media: str, transforms_filter: tuple[str, ...
         return filtered
 
     video_transforms: list[dict[str, object]] = [
-        {"name": spec.name, "transform": spec.params} for spec in TRANSFORM_SPECS
+        {
+            "name": video_recipe_name(spec),
+            "transform": {"name": spec.name, "params": spec.params},
+        }
+        for spec in video_recipe_augmentation_specs()
     ]
     if not transforms_filter:
         return video_transforms
     allowed = set(transforms_filter)
-    return [transform for transform in video_transforms if str(transform["name"]) in allowed]
+    filtered = []
+    for transform in video_transforms:
+        transform_spec = transform["transform"]
+        spec_name = transform_spec["name"] if isinstance(transform_spec, dict) else ""
+        if str(transform["name"]) in allowed or str(spec_name) in allowed:
+            filtered.append(transform)
+    return filtered
 
 
 def run_dali_pipeline_job(job: BenchmarkJob) -> None:

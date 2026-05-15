@@ -51,6 +51,10 @@ def _torch_synchronize(device: str | None = None) -> None:
 
 def _video_clip_for_library(path: Path, library: str, clip_length: int) -> Any:
     clip = decode_video("opencv", path, clip_length).frames
+    if library == "pytorchvideo":
+        import torch
+
+        return torch.from_numpy(np.ascontiguousarray(clip)).permute(3, 0, 1, 2).contiguous()
     if library in {"torchvision", "kornia"}:
         import torch
 
@@ -279,12 +283,16 @@ class PipelineBenchmarkRunner:
         self._last_device = device
         return device
 
-    def _uses_gpu_image_batch_transform(self) -> bool:
+    def _uses_gpu_batch_transform(self) -> bool:
         return (
-            self.media == "image" and self.library in {"torchvision", "kornia"} and self._resolved_device() is not None
+            self.media in {"image", "video"}
+            and self.library in {"torchvision", "kornia"}
+            and self._resolved_device() is not None
         )
 
-    def _split_gpu_image_transform(self, transform: Any) -> tuple[Any | None, Any]:
+    def _split_gpu_transform(self, transform: Any) -> tuple[Any | None, Any]:
+        if self.media == "video":
+            return None, transform
         dataset_transform = getattr(transform, "cpu_transform", None)
         batch_transform = getattr(transform, "gpu_transform", transform)
         return dataset_transform, batch_transform
@@ -327,11 +335,18 @@ class PipelineBenchmarkRunner:
             return stacked.to("mps")
         return stacked
 
-    def _materialize_gpu_image_batch(self, batch: Any, transform: Any) -> int:
+    def _apply_gpu_batch_transform(self, batch: Any, transform: Any) -> Any:
+        if self.media == "video" and self.library == "torchvision":
+            import torch
+
+            return torch.stack([transform(clip) for clip in batch], dim=0)
+        return transform(batch)
+
+    def _materialize_gpu_batch(self, batch: Any, transform: Any) -> int:
         batch_size = _batch_size(batch)
         device_batch = self._move_batch_to_resolved_device(batch, scale_uint8=False)
         device_transform = move_transform_to_device(transform, self._last_device)
-        output = device_transform(device_batch)
+        output = self._apply_gpu_batch_transform(device_batch, device_transform)
         materialize_transform_output(output)
         _torch_synchronize(self._last_device)
         return batch_size
@@ -347,7 +362,7 @@ class PipelineBenchmarkRunner:
                 if transform is None:
                     processed += self._materialize_batch(batch)
                 else:
-                    processed += self._materialize_gpu_image_batch(batch, transform)
+                    processed += self._materialize_gpu_batch(batch, transform)
                 batches += 1
         finally:
             _shutdown_loader_iterator(iterator)
@@ -360,7 +375,7 @@ class PipelineBenchmarkRunner:
             if transform is None:
                 self._materialize_batch(batch)
             else:
-                self._materialize_gpu_image_batch(batch, transform)
+                self._materialize_gpu_batch(batch, transform)
         finally:
             _shutdown_loader_iterator(iterator)
 
@@ -395,7 +410,7 @@ class PipelineBenchmarkRunner:
             return None
 
         threshold, _, max_preflight_secs = self._slow_skip_config()
-        uses_gpu_batch = self._uses_gpu_image_batch_transform()
+        uses_gpu_batch = self._uses_gpu_batch_transform()
         item_limit = 0
         gpu_items: list[Any] | None = None
         cpu_items: list[Any] = []
@@ -411,7 +426,7 @@ class PipelineBenchmarkRunner:
 
         start = time.perf_counter()
         if uses_gpu_batch:
-            dataset_transform, batch_transform = self._split_gpu_image_transform(transform)
+            dataset_transform, batch_transform = self._split_gpu_transform(transform)
             loader = self._loader(paths[:item_limit], dataset_transform, gpu_items)
             processed, _ = self._run_loader_once(
                 loader,
@@ -466,7 +481,7 @@ class PipelineBenchmarkRunner:
         }
 
     def _run_transform(self, transform_dict: dict[str, Any], paths: list[Path]) -> dict[str, Any]:
-        if self.library == "dali":
+        if self.library in {"dali", "dali_experimental"}:
             from benchmark.decoders import DecoderUnavailableError
 
             self._last_device = "cuda" if self.device in {"cuda", "auto"} else None
@@ -497,6 +512,9 @@ class PipelineBenchmarkRunner:
                     workers=self.workers,
                     min_time=self.min_time,
                     min_batches=self.min_batches,
+                    reader_backend=(
+                        "experimental.readers.video" if self.library == "dali_experimental" else "readers.video"
+                    ),
                 )
             except DecoderUnavailableError as e:
                 return unsupported_result(str(e))
@@ -506,9 +524,9 @@ class PipelineBenchmarkRunner:
         times: list[float] = []
         gpu_memory_runs: list[dict[str, int | None]] = []
         preloaded = self._preload_items(paths)
-        gpu_batch_transform = self._uses_gpu_image_batch_transform()
+        gpu_batch_transform = self._uses_gpu_batch_transform()
         if gpu_batch_transform:
-            dataset_transform, batch_transform = self._split_gpu_image_transform(transform)
+            dataset_transform, batch_transform = self._split_gpu_transform(transform)
         else:
             dataset_transform = transform
             batch_transform = None
@@ -617,12 +635,24 @@ class PipelineBenchmarkRunner:
         includes_decode = self.pipeline_scope != "memory_dataloader_augment"
         includes_gpu_transfer = (
             self.pipeline_scope == "decode_dataloader_augment_batch_copy" and self._last_device is not None
-        ) or (self.media == "image" and self.library in {"torchvision", "kornia"} and self._last_device is not None)
-        transform_on_device = (
-            self.media == "image"
-            and self.library in {"torchvision", "kornia", "dali"}
+        ) or (
+            self.media in {"image", "video"}
+            and self.library in {"torchvision", "kornia"}
             and self._last_device is not None
         )
+        transform_on_device = (
+            self.media in {"image", "video"}
+            and self.library in {"torchvision", "kornia", "dali", "dali_experimental"}
+            and self._last_device is not None
+        )
+        dali_reader_backend = None
+        if self.media == "video" and self.library in {"dali", "dali_experimental"}:
+            dali_reader_backend = (
+                "experimental.readers.video" if self.library == "dali_experimental" else "readers.video"
+            )
+        video_randomness_scope = None
+        if self.media == "video" and self.library in {"torchvision", "kornia", "pytorchvideo"}:
+            video_randomness_scope = "per_clip_same_on_frames"
         payload = {
             "metadata": build_metadata(
                 scenario=self.scenario,
@@ -639,11 +669,23 @@ class PipelineBenchmarkRunner:
                     "clip_length": self.clip_length if self.media == "video" else None,
                     "pipeline_scope": self.pipeline_scope,
                     "decode_included": includes_decode,
-                    "decoder": "opencv" if self.media == "video" and self.library != "dali" else self.library,
+                    "decoder": (
+                        "dali"
+                        if self.media == "video" and self.library in {"dali", "dali_experimental"}
+                        else "opencv"
+                        if self.media == "video"
+                        else self.library
+                    ),
                     "device": self._last_device or "none",
                     "device_option": self.device,
                     "transform_on_device": transform_on_device,
                     "includes_host_to_device_transfer": includes_gpu_transfer,
+                    "randomness_scope": video_randomness_scope,
+                    "video_randomness_scope": video_randomness_scope,
+                    "pipeline_backend": (
+                        "dali_native" if self.library in {"dali", "dali_experimental"} else "torch_dataloader"
+                    ),
+                    "dali_video_reader_backend": dali_reader_backend,
                     "gpu_memory_peak_measured": self._last_device == "cuda",
                     "thread_policy": self.thread_policy,
                     "batch_collate": True,
@@ -652,7 +694,7 @@ class PipelineBenchmarkRunner:
                     "slow_threshold_sec_per_item": self._slow_skip_config()[0],
                     "slow_preflight_items": self._slow_skip_config()[1],
                 },
-                timing_backend="dali_pipeline" if self.library == "dali" else "perf_counter",
+                timing_backend="dali_pipeline" if self.library in {"dali", "dali_experimental"} else "perf_counter",
                 measurement_scope=self.pipeline_scope,
                 data_source="memory" if self.pipeline_scope == "memory_dataloader_augment" else "disk",
                 data_dir=self.data_dir,
@@ -710,6 +752,7 @@ def main() -> None:
     transforms = filter_transform_dicts_for_library_device(
         transforms,
         scenario=args.scenario,
+        mode="pipeline",
         library=library,
         media=args.media,
         device=args.device,

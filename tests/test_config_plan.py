@@ -66,6 +66,29 @@ def test_plan_lists_dali_rgb_pipeline_job() -> None:
     ) in plan.expected_outputs
 
 
+def test_plan_lists_video_ecosystem_pipeline_jobs() -> None:
+    config = load_run_config(Path("configs/paper/gcp_g2_video_dataloader_ecosystem_smoke.yaml"))
+
+    plan = build_run_plan(config, Path.cwd())
+
+    assert [job.library for job in plan.jobs] == [
+        "dali",
+        "dali_experimental",
+        "pytorchvideo",
+    ]
+    assert [job.backend for job in plan.jobs] == ["dali_pipeline", "dali_pipeline", "pipeline"]
+    assert all(job.media == "video" for job in plan.jobs)
+    assert all(job.device == "cuda" for job in plan.jobs)
+    assert any(
+        "dali_experimental_decode_dataloader_augment_n32_r1_w2_b8_dev-cuda_results.json" in output
+        for output in plan.expected_outputs
+    )
+    assert any(
+        "pytorchvideo_decode_dataloader_augment_n32_r1_w2_b8_dev-cuda_results.json" in output
+        for output in plan.expected_outputs
+    )
+
+
 def test_plan_lists_decode_sidecar_and_combined_outputs() -> None:
     data = load_run_config(Path("configs/paper/gcp_g2_video_smoke.yaml")).model_dump()
     data["selection"] = {"scenario": "video-decode-16f", "mode": "decode", "decoders": ["opencv", "pyav"]}

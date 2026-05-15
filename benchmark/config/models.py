@@ -80,6 +80,7 @@ class CloudConfig(StrictModel):
     keep_instance: bool = False
     keep_on_failure: bool = False
     preemptible: bool = False
+    timeout_hours: float | None = Field(default=None, gt=0.0)
     remote_repo_dir: str = "~/benchmark"
     venv_cache_uri: str | None = None
     no_venv_cache: bool = False
