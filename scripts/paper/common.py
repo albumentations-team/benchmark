@@ -14,6 +14,8 @@ PALETTE = {
     "kornia": "#8a4fb5",
     "pillow": "#c47a1b",
     "dali": "#5f6b2f",
+    "dali_experimental": "#87944d",
+    "pytorchvideo": "#6a6a6a",
 }
 LIBRARY_DISPLAY = {
     "albumentationsx": "AlbumentationsX",
@@ -21,8 +23,18 @@ LIBRARY_DISPLAY = {
     "kornia": "Kornia",
     "pillow": "Pillow",
     "dali": "DALI",
+    "dali_experimental": "DALI experimental reader",
+    "pytorchvideo": "PyTorchVideo",
 }
-LIBRARY_ORDER = ["albumentationsx", "torchvision", "kornia", "pillow", "dali"]
+LIBRARY_ORDER = [
+    "albumentationsx",
+    "torchvision",
+    "kornia",
+    "pillow",
+    "pytorchvideo",
+    "dali",
+    "dali_experimental",
+]
 REGIME_LABELS = {
     "rgb_micro_cpu": "CPU micro",
     "rgb_micro_gpu": "GPU micro",

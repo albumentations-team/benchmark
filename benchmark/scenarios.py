@@ -63,7 +63,14 @@ SCENARIOS: dict[str, Scenario] = {
         default_mode="micro",
         clip_length=16,
         micro_libraries=("albumentationsx", "torchvision", "kornia"),
-        pipeline_libraries=("albumentationsx", "torchvision", "kornia", "dali"),
+        pipeline_libraries=(
+            "albumentationsx",
+            "torchvision",
+            "kornia",
+            "pytorchvideo",
+            "dali",
+            "dali_experimental",
+        ),
     ),
 }
 

@@ -1,10 +1,10 @@
-# Generated Paper Data
+# Generated Benchmark Data
 
-Generated from committed `results/published/*` snapshots. Use `--extra-run-dir REGIME=PATH` to add local unpublished artifacts. Throughput units are images/second.
+Generated from committed `results/published/*` snapshots. Use `--extra-run-dir REGIME=PATH` to add local unpublished artifacts. Throughput units are images/second for image regimes and clips/second for video regimes.
 
 ## Coverage Summary
 
-| Regime | Library | Rows | Full runs | Early-stopped | Unsupported | Median of measured rows (img/s) |
+| Regime | Library | Rows | Full runs | Early-stopped | Unsupported | Median of measured rows |
 |---|---|---:|---:|---:|---:|---:|
 | CPU micro | albumentationsx | 57 | 57 | 0 | 0 | 1387.6 |
 | CPU micro | torchvision | 26 | 25 | 1 | 0 | 545.4 |
@@ -39,6 +39,8 @@ Generated from committed `results/published/*` snapshots. Use `--extra-run-dir R
 | Video CPU DataLoader | kornia | 38 | 37 | 0 | 1 | 123.6 |
 | Video GPU DataLoader | torchvision | 25 | 24 | 0 | 1 | 384.6 |
 | Video GPU DataLoader | kornia | 38 | 36 | 0 | 2 | 61.8 |
+| Video GPU DataLoader | pytorchvideo | 1 | 1 | 0 | 0 | 17.2 |
+| Video GPU DataLoader | dali | 50 | 21 | 0 | 29 | 120.3 |
 
 ## Absolute/Open Production DataLoader Category
 
@@ -304,22 +306,23 @@ Measured winner counts for Video GPU DataLoader:
 
 | Library | Wins |
 |---|---:|
-| torchvision | 18 |
+| torchvision | 22 |
+| dali | 5 |
 
 Largest measured winner gaps:
 
 | Transform | Winner | Gap over second | Second |
 |---|---|---:|---|
-| RandomCrop224+Equalize+Normalize+ToTensor | torchvision | 14.4x | kornia |
-| RandomCrop224+Resize+Normalize+ToTensor | torchvision | 10.3x | kornia |
-| RandomCrop224+Normalize+ToTensor | torchvision | 7.0x | kornia |
-| RandomCrop224+VerticalFlip+Normalize+ToTensor | torchvision | 6.9x | kornia |
 | RandomCrop224+ChannelShuffle+Normalize+ToTensor | torchvision | 6.9x | kornia |
-| RandomCrop224+HorizontalFlip+Normalize+ToTensor | torchvision | 6.8x | kornia |
 | RandomCrop224+Invert+Normalize+ToTensor | torchvision | 6.7x | kornia |
 | RandomCrop224+Sharpen+Normalize+ToTensor | torchvision | 6.7x | kornia |
 | RandomCrop224+Grayscale+Normalize+ToTensor | torchvision | 6.7x | kornia |
 | RandomCrop224+Solarize+Normalize+ToTensor | torchvision | 6.5x | kornia |
+| RandomCrop224+AutoContrast+Normalize+ToTensor | torchvision | 6.2x | kornia |
+| RandomCrop224+HorizontalFlip+Normalize+ToTensor | torchvision | 3.8x | dali |
+| RandomCrop224+Normalize+ToTensor | torchvision | 3.7x | dali |
+| RandomCrop224+VerticalFlip+Normalize+ToTensor | torchvision | 3.7x | dali |
+| RandomCrop224+Pad+Normalize+ToTensor | torchvision | 3.6x | dali |
 
 
 ## CPU DataLoader vs GPU DataLoader
@@ -430,5 +433,7 @@ Largest CPU wins:
 | Video CPU DataLoader | kornia | 37 | 0 | 1 |
 | Video GPU DataLoader | torchvision | 24 | 0 | 1 |
 | Video GPU DataLoader | kornia | 36 | 0 | 2 |
+| Video GPU DataLoader | pytorchvideo | 1 | 0 | 0 |
+| Video GPU DataLoader | dali | 21 | 0 | 29 |
 
-Full row-level reasons are generated in the public paper-data supplement after figure generation.
+Full row-level reasons are generated in the public benchmark-data export after figure generation.

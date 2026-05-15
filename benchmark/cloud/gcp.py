@@ -75,8 +75,11 @@ _REPO_EXCLUDE_PATTERNS = [
     "outputs",
     "output",
     "results",
+    "gcp_runs",
+    "_internal",
     ".git",
 ]
+_DEFAULT_MAX_REPO_TARBALL_BYTES = 50 * 1024 * 1024
 
 _RESOLVE_GCLOUD_SH = r"""
 resolve_gcloud() {
@@ -94,7 +97,7 @@ resolve_gcloud() {
 # Bootstrap: fetch job.json + repo, stage data from GCS, run benchmark, upload artifacts, optional self-delete.
 _BOOTSTRAP_SH = (
     r"""#!/bin/bash
-set -euo pipefail
+set -Eeuo pipefail
 export HOME="${HOME:-/root}"
 export PATH="${HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin:/snap/bin:${PATH}"
 RUN_LOG=/var/log/benchmark-gcp-run.log
@@ -409,6 +412,62 @@ else
   "$GCLOUD_BIN" --quiet storage rsync --recursive "$TAR_URI" "$DATADIR"
 fi
 
+configure_nvidia_video_decode() {
+  if ! command -v nvidia-smi >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "NVIDIA driver status:"
+  nvidia-smi || true
+
+  local driver_version driver_branch driver_major_minor
+  driver_version=$(
+    nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -n1 || true
+  )
+  driver_branch=$(
+    nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -n1 | cut -d. -f1 || true
+  )
+  driver_major_minor=$(printf '%s\n' "$driver_version" | awk -F. '{print $1"."$2}')
+
+  if ! ldconfig -p 2>/dev/null | grep -q 'libnvcuvid\.so'; then
+    echo "libnvcuvid.so not found in ldconfig cache; trying to install a matching NVIDIA decode library."
+    if [[ -n "$driver_branch" ]]; then
+      apt-get update || true
+      local decode_pkg decode_candidate
+      decode_pkg=""
+      for pkg in "libnvidia-decode-${driver_branch}-server" "libnvidia-decode-${driver_branch}"; do
+        decode_candidate=$(
+          apt-cache policy "$pkg" 2>/dev/null |
+            awk '/Candidate:/ && candidate == "" { candidate=$2 } END { print candidate }'
+        )
+        if [[ -n "$decode_candidate" && "$decode_candidate" == "$driver_major_minor"* ]]; then
+          decode_pkg="$pkg"
+          break
+        fi
+        echo "Skipping ${pkg}: candidate ${decode_candidate:-none} does not match driver ${driver_version}."
+      done
+      if [[ -n "$decode_pkg" ]]; then
+        DEBIAN_FRONTEND=noninteractive apt-get install -y "$decode_pkg" || \
+          echo "WARN: failed to install ${decode_pkg}; DALI video reader may be unsupported." >&2
+        ldconfig || true
+      else
+        echo "WARN: no NVIDIA decode package matched driver ${driver_version}; leaving driver stack unchanged." >&2
+      fi
+    else
+      echo "WARN: could not infer NVIDIA driver branch; skipping libnvidia-decode install." >&2
+    fi
+  fi
+
+  local decode_dirs
+  decode_dirs=$(find /usr /opt /lib -name 'libnvcuvid.so*' -printf '%h\n' 2>/dev/null | sort -u | paste -sd: - || true)
+  if [[ -n "$decode_dirs" ]]; then
+    export LD_LIBRARY_PATH="${decode_dirs}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+    echo "NVIDIA video decode library dirs: ${decode_dirs}"
+  fi
+  ldconfig -p 2>/dev/null | grep -E 'libnvcuvid|libcuda' || true
+}
+
+configure_nvidia_video_decode
+
 cd "$REPODIR"
 echo "Installing uv..."
 curl -Ls https://astral.sh/uv/install.sh | sh
@@ -504,7 +563,7 @@ exit "$RC"
 
 _STARTUP_INLINE = (
     r"""#!/bin/bash
-set -euo pipefail
+set -Eeuo pipefail
 export PATH="/usr/local/bin:/usr/bin:/bin:/snap/bin:${PATH}"
 PREFIX=$(curl -s -f -H "Metadata-Flavor: Google" \
   "http://metadata.google.internal/computeMetadata/v1/instance/attributes/benchmark-run-prefix")
@@ -558,7 +617,27 @@ def _validate_gs_uri(uri: str, *, kind: str) -> str:
 
 def _gcs_cp(local_path: Path, dest_uri: str) -> None:
     """Upload a file to GCS using ``gcloud storage cp``."""
-    _run([_GCLOUD, "storage", "cp", str(local_path), dest_uri], timeout=300)
+    timeout = int(os.environ.get("BENCHMARK_GCS_CP_TIMEOUT_SECS", "900"))
+    attempts = max(1, int(os.environ.get("BENCHMARK_GCS_CP_ATTEMPTS", "3")))
+    cmd = [_GCLOUD, "storage", "cp", str(local_path), dest_uri]
+
+    for attempt in range(1, attempts + 1):
+        try:
+            _run(cmd, timeout=timeout)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            if attempt == attempts:
+                raise
+            sleep_secs = min(30, 5 * attempt)
+            logger.warning(
+                "GCS upload failed on attempt %s/%s; retrying in %ss: %s",
+                attempt,
+                attempts,
+                sleep_secs,
+                shlex.join(cmd),
+            )
+            time.sleep(sleep_secs)
+        else:
+            return
 
 
 def _make_repo_tarball(repo_root: Path) -> Path:
@@ -574,6 +653,34 @@ def _make_repo_tarball(repo_root: Path) -> Path:
         env=env,
     )
     return archive_path
+
+
+def _max_repo_tarball_bytes() -> int:
+    raw = os.environ.get("BENCHMARK_MAX_REPO_TARBALL_BYTES")
+    if raw is None:
+        return _DEFAULT_MAX_REPO_TARBALL_BYTES
+    try:
+        return int(raw)
+    except ValueError as exc:
+        msg = f"BENCHMARK_MAX_REPO_TARBALL_BYTES must be an integer byte count, got {raw!r}"
+        raise ValueError(msg) from exc
+
+
+def _validate_repo_tarball_size(path: Path) -> None:
+    max_bytes = _max_repo_tarball_bytes()
+    size = path.stat().st_size
+    if max_bytes <= 0:
+        logger.info("Repo tarball size check disabled; archive is %.1f MiB", size / 1024 / 1024)
+        return
+    if size > max_bytes:
+        msg = (
+            f"Repo tarball is {size / 1024 / 1024:.1f} MiB, above the "
+            f"{max_bytes / 1024 / 1024:.1f} MiB limit. Check _REPO_EXCLUDE_PATTERNS "
+            "before uploading local run artifacts or virtualenvs; set "
+            "BENCHMARK_MAX_REPO_TARBALL_BYTES=0 to bypass intentionally."
+        )
+        raise RuntimeError(msg)
+    logger.info("Repo tarball size: %.1f MiB", size / 1024 / 1024)
 
 
 class GCPRunner:
@@ -858,6 +965,7 @@ class GCPRunner:
 
         tar_path = _make_repo_tarball(repo_root)
         try:
+            _validate_repo_tarball_size(tar_path)
             with tempfile.NamedTemporaryFile(mode="w", suffix="-bootstrap.sh", delete=False, encoding="utf-8") as f:
                 f.write(_BOOTSTRAP_SH)
                 bootstrap_path = Path(f.name)

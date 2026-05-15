@@ -279,7 +279,10 @@ def test_cuda_unavailable_records_unsupported_result(
     assert "CUDA is not available" in output["results"]["Resize"]["reason"]
 
 
-def test_pyperf_main_filters_torchvision_gpu_jpeg(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pyperf_main_keeps_torchvision_gpu_jpeg_for_runtime_classification(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from benchmark import pyperf_micro_runner
 
     spec_file = tmp_path / "spec.py"
@@ -321,13 +324,13 @@ TRANSFORMS = [
                 disable_slow_skip=False,
             )
 
-    def fake_run_filtered_transforms(**kwargs: Any) -> None:
+    def fake_run_transform_subprocesses(**kwargs: Any) -> None:
         captured.update(kwargs)
 
     pyperf_module = pytest.importorskip("pyperf")
     monkeypatch.setattr(pyperf_module, "Runner", FakeRunner)
-    monkeypatch.setattr(pyperf_micro_runner, "_run_filtered_transforms", fake_run_filtered_transforms)
+    monkeypatch.setattr(pyperf_micro_runner, "_run_transform_subprocesses", fake_run_transform_subprocesses)
 
     pyperf_micro_runner.main()
 
-    assert [transform["name"] for transform in captured["transforms"]] == ["Resize"]
+    assert [transform["name"] for transform in captured["transforms"]] == ["Resize", "JpegCompression"]

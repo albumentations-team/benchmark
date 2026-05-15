@@ -155,7 +155,7 @@ def _scenario_jobs(config: BenchmarkRunConfig, repo_root: Path, output_dir: Path
     for library in libraries:
         backend = (
             "dali_pipeline"
-            if mode == "pipeline" and library == "dali"
+            if mode == "pipeline" and library in {"dali", "dali_experimental"}
             else "pipeline"
             if mode == "pipeline"
             else "pyperf"

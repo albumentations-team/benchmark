@@ -51,6 +51,10 @@ def _torch_synchronize(device: str | None = None) -> None:
 
 def _video_clip_for_library(path: Path, library: str, clip_length: int) -> Any:
     clip = decode_video("opencv", path, clip_length).frames
+    if library == "pytorchvideo":
+        import torch
+
+        return torch.from_numpy(np.ascontiguousarray(clip)).permute(3, 0, 1, 2).contiguous()
     if library in {"torchvision", "kornia"}:
         import torch
 
@@ -477,7 +481,7 @@ class PipelineBenchmarkRunner:
         }
 
     def _run_transform(self, transform_dict: dict[str, Any], paths: list[Path]) -> dict[str, Any]:
-        if self.library == "dali":
+        if self.library in {"dali", "dali_experimental"}:
             from benchmark.decoders import DecoderUnavailableError
 
             self._last_device = "cuda" if self.device in {"cuda", "auto"} else None
@@ -508,6 +512,9 @@ class PipelineBenchmarkRunner:
                     workers=self.workers,
                     min_time=self.min_time,
                     min_batches=self.min_batches,
+                    reader_backend=(
+                        "experimental.readers.video" if self.library == "dali_experimental" else "readers.video"
+                    ),
                 )
             except DecoderUnavailableError as e:
                 return unsupported_result(str(e))
@@ -635,9 +642,17 @@ class PipelineBenchmarkRunner:
         )
         transform_on_device = (
             self.media in {"image", "video"}
-            and self.library in {"torchvision", "kornia", "dali"}
+            and self.library in {"torchvision", "kornia", "dali", "dali_experimental"}
             and self._last_device is not None
         )
+        dali_reader_backend = None
+        if self.media == "video" and self.library in {"dali", "dali_experimental"}:
+            dali_reader_backend = (
+                "experimental.readers.video" if self.library == "dali_experimental" else "readers.video"
+            )
+        video_randomness_scope = None
+        if self.media == "video" and self.library in {"torchvision", "kornia", "pytorchvideo"}:
+            video_randomness_scope = "per_clip_same_on_frames"
         payload = {
             "metadata": build_metadata(
                 scenario=self.scenario,
@@ -654,14 +669,23 @@ class PipelineBenchmarkRunner:
                     "clip_length": self.clip_length if self.media == "video" else None,
                     "pipeline_scope": self.pipeline_scope,
                     "decode_included": includes_decode,
-                    "decoder": "opencv" if self.media == "video" and self.library != "dali" else self.library,
+                    "decoder": (
+                        "dali"
+                        if self.media == "video" and self.library in {"dali", "dali_experimental"}
+                        else "opencv"
+                        if self.media == "video"
+                        else self.library
+                    ),
                     "device": self._last_device or "none",
                     "device_option": self.device,
                     "transform_on_device": transform_on_device,
                     "includes_host_to_device_transfer": includes_gpu_transfer,
-                    "video_randomness_scope": "per_clip_same_on_frames"
-                    if self.media == "video" and self.library in {"torchvision", "kornia"}
-                    else None,
+                    "randomness_scope": video_randomness_scope,
+                    "video_randomness_scope": video_randomness_scope,
+                    "pipeline_backend": (
+                        "dali_native" if self.library in {"dali", "dali_experimental"} else "torch_dataloader"
+                    ),
+                    "dali_video_reader_backend": dali_reader_backend,
                     "gpu_memory_peak_measured": self._last_device == "cuda",
                     "thread_policy": self.thread_policy,
                     "batch_collate": True,
@@ -670,7 +694,7 @@ class PipelineBenchmarkRunner:
                     "slow_threshold_sec_per_item": self._slow_skip_config()[0],
                     "slow_preflight_items": self._slow_skip_config()[1],
                 },
-                timing_backend="dali_pipeline" if self.library == "dali" else "perf_counter",
+                timing_backend="dali_pipeline" if self.library in {"dali", "dali_experimental"} else "perf_counter",
                 measurement_scope=self.pipeline_scope,
                 data_source="memory" if self.pipeline_scope == "memory_dataloader_augment" else "disk",
                 data_dir=self.data_dir,
@@ -724,7 +748,8 @@ def main() -> None:
     filter_env = os.environ.get("BENCHMARK_TRANSFORMS_FILTER", "").strip()
     if filter_env:
         filter_names = [name.strip() for name in filter_env.split(",") if name.strip()]
-        transforms = BenchmarkRunner.filter_transforms(transforms, filter_names)
+        if library != "pytorchvideo" or "PyTorchVideoCanonical+Normalize+ToTensor" in filter_names:
+            transforms = BenchmarkRunner.filter_transforms(transforms, filter_names)
     transforms = filter_transform_dicts_for_library_device(
         transforms,
         scenario=args.scenario,

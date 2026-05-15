@@ -19,6 +19,7 @@ GPU micro,torchvision,19
 Video CPU DataLoader,albumentationsx,42
 Video CPU micro,albumentationsx,44
 Video CPU micro,torchvision,3
-Video GPU DataLoader,torchvision,18
+Video GPU DataLoader,dali,5
+Video GPU DataLoader,torchvision,22
 Video GPU micro,kornia,1
 Video GPU micro,torchvision,19

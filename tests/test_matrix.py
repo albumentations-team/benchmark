@@ -28,7 +28,9 @@ def test_matrix_covers_rgb_9ch_video_and_dali_pipeline() -> None:
     assert ("image-rgb", "pipeline", "dali", "dali_pipeline") in keys
     assert ("image-9ch", "pipeline", "kornia", "pipeline") in keys
     assert ("video-16f", "micro", "torchvision", "pyperf") in keys
+    assert ("video-16f", "pipeline", "pytorchvideo", "pipeline") in keys
     assert ("video-16f", "pipeline", "dali", "dali_pipeline") in keys
+    assert ("video-16f", "pipeline", "dali_experimental", "dali_pipeline") in keys
 
 
 def test_spec_maps_are_scenario_and_mode_specific() -> None:
@@ -37,6 +39,9 @@ def test_spec_maps_are_scenario_and_mode_specific() -> None:
     assert spec_map_for_scenario("image-rgb", "pipeline")["kornia"].endswith("kornia_pipeline_impl.py")
     assert spec_map_for_scenario("video-16f", "micro")["kornia"].endswith("kornia_video_impl.py")
     assert spec_map_for_scenario("video-16f", "pipeline")["kornia"].endswith("kornia_video_pipeline_impl.py")
+    assert spec_map_for_scenario("video-16f", "pipeline")["pytorchvideo"].endswith(
+        "pytorchvideo_pipeline_impl.py",
+    )
 
 
 def test_paper_transform_sets_are_declared_in_matrix() -> None:
@@ -58,3 +63,5 @@ def test_pipeline_device_policy_includes_gpu_and_mps_where_applicable() -> None:
     assert entries[("image-rgb", "pipeline", "dali")].devices == ("cuda", "auto")
     assert entries[("image-rgb", "pipeline", "pillow")].devices == ("none",)
     assert entries[("video-16f", "pipeline", "dali")].devices == ("cuda", "auto")
+    assert entries[("video-16f", "pipeline", "dali_experimental")].devices == ("cuda", "auto")
+    assert entries[("video-16f", "pipeline", "pytorchvideo")].devices == ("none", "cuda", "mps", "auto")

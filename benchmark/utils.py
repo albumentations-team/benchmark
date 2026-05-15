@@ -301,6 +301,7 @@ def get_library_versions(library: str) -> dict[str, str]:
     _pkg_names: dict[str, list[str]] = {
         "albumentationsx": ["albumentationsx", "albumentations"],
         "albumentations_mit": ["albumentations"],
+        "dali_experimental": ["nvidia-dali-cuda120", "nvidia-dali-cuda110", "nvidia-dali"],
     }
     if library in _pkg_names:
         for pkg in _pkg_names[library]:
@@ -319,7 +320,9 @@ def get_library_versions(library: str) -> dict[str, str]:
         "decord": ["decord"],
         "torchcodec": ["torchcodec"],
         "torchvision": ["torchvision"],
+        "pytorchvideo": ["pytorchvideo"],
         "dali": ["nvidia-dali-cuda120", "nvidia-dali-cuda110", "nvidia-dali"],
+        "dali_experimental": ["nvidia-dali-cuda120", "nvidia-dali-cuda110", "nvidia-dali"],
     }
     if library in decoder_packages:
         for pkg in decoder_packages[library]:
@@ -334,6 +337,7 @@ def get_library_versions(library: str) -> dict[str, str]:
         "opencv-python-headless",
         "torch",
         "torchvision",
+        "pytorchvideo",
         "opencv-python",
         "av",
         "decord",

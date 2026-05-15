@@ -1,4 +1,4 @@
-r"""Update README.md with full RGB benchmark tables from result JSONs.
+r"""Update README.md with legacy RGB benchmark tables from result JSONs.
 
 Usage:
     python -m tools.update_readme
@@ -166,7 +166,10 @@ def main() -> None:
     )
     parser.add_argument(
         "--published-results-root",
-        default=os.environ.get("PAPER_RGB_RESULTS_ROOT", str(_DEFAULT_PUBLISHED_ROOT)),
+        default=os.environ.get(
+            "BENCHMARK_RESULTS_ROOT",
+            os.environ.get("PAPER_RGB_RESULTS_ROOT", str(_DEFAULT_PUBLISHED_ROOT)),
+        ),
         type=Path,
         help="Root used to discover latest paper-rgb-* snapshots when result directories are omitted.",
     )

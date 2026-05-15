@@ -1,0 +1,29 @@
+version: 1
+selection:
+  scenario: video-16f
+  mode: pipeline
+  media: video
+  libraries: [dali]
+  transform_set: paper
+data:
+  data_dir: /tmp/unused
+  gcs_uri: gs://imagenet_validation/ucf101/ucf101.tar
+  num_items: 625
+  clip_length: 16
+output:
+  output_dir: gcp_runs/prod-g2-standard-16-video-dataloader-dali
+  gcs_results_uri: gs://imagenet_validation/augmentation-results
+execution:
+  pipeline_scope: memory_dataloader_augment
+  num_runs: 1
+  batch_size: 16
+  workers: 8
+  min_time: 0
+  thread_policy: pipeline-default
+  device: cuda
+cloud:
+  provider: gcp
+  project: albumentations
+  zone: us-central1-a
+  machine_type: g2-standard-16
+  disk_size_gb: 200

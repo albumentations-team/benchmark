@@ -46,6 +46,47 @@ def test_pipeline_runner_executes_tiny_memory_pipeline(tmp_path: Path, monkeypat
     assert written["metadata"]["benchmark_params"]["num_images"] == 2
 
 
+def test_dali_experimental_video_runner_uses_experimental_reader(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from benchmark.adapters import dali_video
+
+    seen: dict[str, str] = {}
+
+    def fake_run_dali_video_transform(**kwargs: Any) -> dict[str, Any]:
+        seen["reader_backend"] = str(kwargs["reader_backend"])
+        return {"supported": True, "status": "ok"}
+
+    monkeypatch.setattr(dali_video, "run_dali_video_transform", fake_run_dali_video_transform)
+    runner = PipelineBenchmarkRunner(
+        library="dali_experimental",
+        data_dir=tmp_path,
+        output_file=tmp_path / "pipeline.json",
+        transforms=[{"name": "RandomCrop224+HorizontalFlip+Normalize+ToTensor", "transform": {}}],
+        call_fn=lambda _transform, item: item,
+        media="video",
+        scenario="video-16f",
+        num_items=1,
+        num_runs=1,
+        batch_size=1,
+        workers=1,
+        min_time=0.0,
+        min_batches=1,
+        pipeline_scope="memory_dataloader_augment",
+        device="cuda",
+        clip_length=16,
+    )
+
+    result = runner._run_transform(
+        {"name": "RandomCrop224+HorizontalFlip+Normalize+ToTensor", "transform": {}},
+        [tmp_path / "a.mp4"],
+    )
+
+    assert result["supported"] is True
+    assert seen["reader_backend"] == "experimental.readers.video"
+
+
 def test_gpu_image_loader_path_splits_cpu_prep_and_gpu_batch_transform(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -273,7 +314,7 @@ def test_torchvision_gpu_batch_recipe_keeps_uint8_until_measured_transform() -> 
     assert output.dtype == torch.float32
 
 
-def test_pipeline_main_filters_torchvision_gpu_jpeg(
+def test_pipeline_main_keeps_torchvision_gpu_jpeg_for_runtime_classification(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -325,7 +366,59 @@ TRANSFORMS = [
 
     assert [transform["name"] for transform in captured["transforms"]] == [
         "RandomCrop224+Resize+Normalize+ToTensor",
+        "RandomCrop224+JpegCompression+Normalize+ToTensor",
     ]
+
+
+def test_pipeline_main_keeps_pytorchvideo_canonical_with_paper_filter(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from benchmark import pipeline_runner
+
+    spec_file = tmp_path / "spec.py"
+    spec_file.write_text(
+        """
+LIBRARY = 'pytorchvideo'
+def __call__(transform, video):
+    return transform(video)
+TRANSFORMS = [
+    {'name': 'PyTorchVideoCanonical+Normalize+ToTensor', 'transform': object()},
+]
+""",
+        encoding="utf-8",
+    )
+    captured: dict[str, Any] = {}
+
+    class FakeRunner:
+        def __init__(self, **kwargs: Any) -> None:
+            captured.update(kwargs)
+
+        def run(self) -> None:
+            return None
+
+    monkeypatch.setenv("BENCHMARK_TRANSFORMS_FILTER", "RandomCrop224+HorizontalFlip+Normalize+ToTensor")
+    monkeypatch.setattr(pipeline_runner, "PipelineBenchmarkRunner", FakeRunner)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "pipeline_runner",
+            "--specs-file",
+            str(spec_file),
+            "--data-dir",
+            str(tmp_path),
+            "--output",
+            str(tmp_path / "out.json"),
+            "--media",
+            "video",
+            "--scenario",
+            "video-16f",
+        ],
+    )
+
+    pipeline_runner.main()
+
+    assert [transform["name"] for transform in captured["transforms"]] == ["PyTorchVideoCanonical+Normalize+ToTensor"]
 
 
 def test_pipeline_runner_resolves_none_device_without_torch(tmp_path: Path) -> None:
@@ -631,6 +724,24 @@ def test_video_clip_loader_keeps_torchvision_uint8_for_pipeline(
     assert tensor.dtype == torch.uint8
 
 
+def test_video_clip_loader_returns_pytorchvideo_cthw_layout(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    torch = pytest.importorskip("torch")
+    from benchmark import pipeline_runner
+
+    class FakeDecodedClip:
+        frames = np.zeros((4, 5, 6, 3), dtype=np.uint8)
+
+    monkeypatch.setattr(pipeline_runner, "decode_video", lambda *_args, **_kwargs: FakeDecodedClip())
+
+    tensor = pipeline_runner._video_clip_for_library(tmp_path / "video.mp4", "pytorchvideo", 4)
+
+    assert tuple(tensor.shape) == (3, 4, 5, 6)
+    assert tensor.dtype == torch.uint8
+
+
 def test_video_gpu_preload_keeps_clips_on_cpu(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -759,6 +870,34 @@ def test_kornia_video_gpu_batch_transform_keeps_documented_video_shape(tmp_path:
     output = runner._apply_gpu_batch_transform(batch, RecordShape())
 
     assert input_shapes == [(2, 4, 3, 5, 6)]
+    assert tuple(output.shape) == (2, 4, 3, 5, 6)
+
+
+def test_torchvision_video_transform_calls_once_per_clip(tmp_path: Path) -> None:
+    torch = pytest.importorskip("torch")
+    input_shapes: list[tuple[int, ...]] = []
+
+    class RecordShape:
+        def __call__(self, clip: object) -> object:
+            tensor = cast("Any", clip)
+            input_shapes.append(tuple(tensor.shape))
+            return tensor + 1
+
+    runner = PipelineBenchmarkRunner(
+        library="torchvision",
+        data_dir=tmp_path,
+        output_file=tmp_path / "pipeline.json",
+        transforms=[],
+        call_fn=lambda transform_arg, item: transform_arg(item),
+        media="video",
+        scenario="video-16f",
+        device="cuda",
+    )
+    batch = torch.zeros((2, 4, 3, 5, 6), dtype=torch.uint8)
+
+    output = runner._apply_gpu_batch_transform(batch, RecordShape())
+
+    assert input_shapes == [(4, 3, 5, 6), (4, 3, 5, 6)]
     assert tuple(output.shape) == (2, 4, 3, 5, 6)
 
 

@@ -181,6 +181,32 @@ def test_paper_production_configs_use_deadline_sizing() -> None:
             "disk_size_gb": 200,
             "batch_size": 16,
         },
+        "prod_g2_video_dataloader_dali.yaml": {
+            "scenario": "video-16f",
+            "mode": "pipeline",
+            "libraries": ["dali"],
+            "num_items": 625,
+            "device": "cuda",
+            "machine_type": "g2-standard-16",
+            "gcs_uri": "gs://imagenet_validation/ucf101/ucf101.tar",
+            "clip_length": 16,
+            "pipeline_scope": "memory_dataloader_augment",
+            "disk_size_gb": 200,
+            "batch_size": 16,
+        },
+        "prod_g2_video_dataloader_dali_experimental.yaml": {
+            "scenario": "video-16f",
+            "mode": "pipeline",
+            "libraries": ["dali_experimental"],
+            "num_items": 625,
+            "device": "cuda",
+            "machine_type": "g2-standard-16",
+            "gcs_uri": "gs://imagenet_validation/ucf101/ucf101.tar",
+            "clip_length": 16,
+            "pipeline_scope": "memory_dataloader_augment",
+            "disk_size_gb": 200,
+            "batch_size": 16,
+        },
     }
 
     for filename, spec in expected.items():

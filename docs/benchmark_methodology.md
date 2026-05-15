@@ -19,7 +19,7 @@ resolved config into the output directory. This gives each run a concrete, inspe
 The resolved config is expanded into immutable jobs by `benchmark/config/plan.py` and `benchmark/jobs.py`. A job contains
 the library, scenario, mode, media type, transform filter, data directory, output file, worker settings, batch size,
 thread policy, device option, slow-transform policy, and backend. The important design decision is that the CLI does not
-decide backend behavior ad hoc. Scenario support, library support, device support, requirement groups, paper transform-set
+decide backend behavior ad hoc. Scenario support, library support, device support, requirement groups, canonical transform-set
 files, pipeline scopes, and backend names are centralized in `benchmark/matrix.py`.
 
 Once jobs exist, `benchmark/orchestrator.py` dispatches them to the appropriate timing engine. Production micro jobs run
@@ -44,11 +44,11 @@ path with collation and, when requested, decode and device transfer?"
 
 ## Transform Selection
 
-The shared transform catalog lives in `benchmark/transforms/specs.py`. Paper transform sets are fixed markdown files under
-`docs/paper_transform_sets/`, one for each scenario. The named transform set is expanded before execution and stored in
+The shared transform catalog lives in `benchmark/transforms/specs.py`. Canonical transform sets are fixed markdown files
+under `docs/paper_transform_sets/`, one for each scenario. The named transform set is expanded before execution and stored in
 run metadata, so a result can be traced back to the exact transform universe used for that run.
 
-The eligibility rule is intentionally conservative. A transform belongs in a scenario-level paper set only when it exists
+The eligibility rule is intentionally conservative. A transform belongs in a scenario-level canonical set only when it exists
 in at least two selected libraries for that scenario. This avoids turning the benchmark into a catalogue-size contest
 where one library is penalized for implementing operations that no other competitor exposes. At the same time, each
 library reports only the transforms it supports directly. Missing support is recorded as unsupported or absent coverage;
@@ -57,9 +57,11 @@ it is not treated as fast.
 The benchmark does not recreate missing library features with large benchmark-side compatibility implementations simply
 to fill a table cell. That decision matters because substantial helper code can dominate the measured path and make a
 library look slow for reasons unrelated to the library itself. Library-specific transform specs should map explicit
-library APIs to the canonical catalog by behavior and parameters, not only by name. When a known device-specific issue
-exists after transform-set expansion, the narrow exclusion belongs in `benchmark/transform_filters.py` rather than in the
-global paper transform set. This keeps CPU rows, other-library rows, and unaffected scenarios intact.
+library APIs to the canonical catalog by behavior and parameters, not only by name. When a device-specific issue exists
+after transform-set expansion, prefer attempting the row and recording an explicit unsupported result with the runtime
+reason. A narrow exclusion belongs in `benchmark/transform_filters.py` only when the row is proven to crash the worker
+process or poison the CUDA context. This keeps CPU rows, other-library rows, and unaffected scenarios intact without
+hiding fixable adapter mistakes.
 
 ## Environment Isolation
 
@@ -192,6 +194,12 @@ host-to-device batch copy for the same per-clip randomness scope. This models th
 workers cannot independently return GPU tensors for normal multi-worker training without changing the architecture of the
 input pipeline.
 
+Batch-shared TorchVision video rows are intentionally excluded from the benchmark matrix. Applying the same v2 recipe
+once to a `B,T,C,H,W` batch can share random parameters across all clips in that batch, which is useful as a speed
+diagnostic but does not match normal per-sample training augmentation. PyTorchVideo rows are canonical training-pipeline
+baselines using a per-clip transform stack; they are not micro rows and are not part of the 2+ per-transform eligibility
+universe.
+
 Kornia can apply a batched augmentation with per-image random parameters using `same_on_batch=False`, so its GPU batch
 path uses the batched transform. TorchVision v2 does not expose an equivalent batched random-transform API for every
 operation in this benchmark, so the TorchVision GPU image path applies the measured augmentation in a per-sample loop and
@@ -216,7 +224,16 @@ runs through `benchmark/dali_pipeline_worker.py` and DALI-specific adapters.
 This design avoids comparing DALI against scopes it does not naturally implement. DALI graph execution, mixed decode,
 pipeline scheduling, and batch production are different from a Python function that transforms one already-decoded sample.
 When DALI is included, it must be labeled as a DALI pipeline row with its own supported subset and unsupported results.
-The benchmark consumes produced batches so lazy graph scheduling is not mistaken for completed augmentation work.
+Video DALI rows use the same recipe names as other DataLoader rows where DALI has a native equivalent, and record
+unsupported rows for transforms without a meaningful native operator. The benchmark consumes produced batches and counts
+actual clips rather than padded batch slots so lazy graph scheduling or partial final batches are not mistaken for
+completed augmentation work.
+
+DALI video reader choice is explicit in metadata. The `dali` benchmark library uses the stable public
+`fn.readers.video` API, even though current DALI sources route it through the legacy video loader implementation
+internally. The separate `dali_experimental` benchmark library uses `fn.experimental.readers.video` for smoke and
+diagnostic runs. Do not merge those rows under one library name; the experimental reader should be promoted only after it
+is stable for the production recipe set.
 
 ## Slow-Transform Guard
 
@@ -242,9 +259,15 @@ recorded as unsupported results with reasons rather than hidden by changing the 
 
 Coverage and throughput must be interpreted together. A library that implements fewer transforms can appear fast over its
 measured subset because difficult rows are missing. A library with broader coverage can expose more slow or hard cases.
-For this reason, paper figures and website summaries should not use one merged leaderboard across micro, CPU DataLoader,
-GPU DataLoader, and DALI regimes. They should report measured throughput alongside coverage, unsupported rows,
-early-stopped rows, and the denominator of the fixed transform set.
+For this reason, public figures and website summaries should not use one merged leaderboard across micro, CPU DataLoader,
+GPU DataLoader, DALI, and canonical video-pipeline regimes. They should report measured throughput alongside coverage,
+unsupported rows, early-stopped rows, and the denominator of the fixed transform set.
+
+Website-facing row-level exports live in `docs/benchmark_data/`; website-facing figures live in
+`docs/benchmark_figures/`. The `docs/benchmark_data/all_results.csv` file is the reproducibility table: every row records
+the regime, library, transform, status, measured throughput fields, reason for unsupported or early-stopped rows, and the
+published result JSON that produced it. `docs/benchmark_data/unsupported_and_early_stopped.csv` and `.md` preserve the
+limitations table used to interpret coverage gaps.
 
 ## Result Metadata And Statistics
 
@@ -262,7 +285,7 @@ reason.
 
 The purpose of this metadata is reproducibility and interpretation. A throughput number without measurement scope,
 device, worker count, batch size, dependency versions, thread policy, and dataset fingerprint is not enough to support a
-paper claim. The benchmark records those facts at execution time so downstream figure generation and narrative writing can
+public claim. The benchmark records those facts at execution time so downstream figure generation and narrative writing can
 defend the comparison.
 
 ## Cloud Execution

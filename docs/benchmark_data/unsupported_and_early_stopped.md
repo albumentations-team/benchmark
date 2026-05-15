@@ -1,6 +1,6 @@
 # Unsupported And Early-Stopped Rows
 
-This supplement table preserves the full unsupported and slow-row detail used by the paper.
+This table preserves the full unsupported and slow-row detail used to interpret public benchmark results.
 
 | Regime | Library | Transform | Status | Reason |
 |---|---|---|---|---|
@@ -72,6 +72,35 @@ This supplement table preserves the full unsupported and slow-row detail used by
 | GPU micro | kornia | PlasmaShadow | early_stopped | PlasmaShadow slower than threshold: 0.146 sec/image >= 0.050 |
 | GPU micro | torchvision | Elastic | early_stopped | Elastic slower than threshold: 0.181 sec/image >= 0.050 |
 | Video CPU DataLoader | kornia | RandomCrop224+Snow+Normalize+ToTensor | unsupported | NotImplementedError: "check_uniform_bounds" not implemented for 'Long' |
+| Video GPU DataLoader | dali | RandomCrop224+AutoContrast+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'AutoContrast' |
+| Video GPU DataLoader | dali | RandomCrop224+Blur+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'Blur' |
+| Video GPU DataLoader | dali | RandomCrop224+CLAHE+Normalize+ToTensor | unsupported | DALI video warmup failed: ValueError: Critical error in pipeline: Critical error in pipeline: Error in GPU operator `nvidia.dali.fn.clahe`, which was used in the pipeline defini... |
+| Video GPU DataLoader | dali | RandomCrop224+ChannelDropout+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'ChannelDropout' |
+| Video GPU DataLoader | dali | RandomCrop224+ChannelShuffle+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'ChannelShuffle' |
+| Video GPU DataLoader | dali | RandomCrop224+CornerIllumination+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'CornerIllumination' |
+| Video GPU DataLoader | dali | RandomCrop224+Elastic+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'Elastic' |
+| Video GPU DataLoader | dali | RandomCrop224+GaussianIllumination+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'GaussianIllumination' |
+| Video GPU DataLoader | dali | RandomCrop224+Grayscale+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'Grayscale' |
+| Video GPU DataLoader | dali | RandomCrop224+Invert+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'Invert' |
+| Video GPU DataLoader | dali | RandomCrop224+LinearIllumination+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'LinearIllumination' |
+| Video GPU DataLoader | dali | RandomCrop224+MedianBlur+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'MedianBlur' |
+| Video GPU DataLoader | dali | RandomCrop224+MotionBlur+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'MotionBlur' |
+| Video GPU DataLoader | dali | RandomCrop224+OpticalDistortion+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'OpticalDistortion' |
+| Video GPU DataLoader | dali | RandomCrop224+Perspective+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'Perspective' |
+| Video GPU DataLoader | dali | RandomCrop224+PlankianJitter+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'PlankianJitter' |
+| Video GPU DataLoader | dali | RandomCrop224+PlasmaBrightness+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'PlasmaBrightness' |
+| Video GPU DataLoader | dali | RandomCrop224+PlasmaContrast+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'PlasmaContrast' |
+| Video GPU DataLoader | dali | RandomCrop224+PlasmaShadow+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'PlasmaShadow' |
+| Video GPU DataLoader | dali | RandomCrop224+Posterize+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'Posterize' |
+| Video GPU DataLoader | dali | RandomCrop224+RGBShift+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'RGBShift' |
+| Video GPU DataLoader | dali | RandomCrop224+Rain+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'Rain' |
+| Video GPU DataLoader | dali | RandomCrop224+RandomGamma+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'RandomGamma' |
+| Video GPU DataLoader | dali | RandomCrop224+RandomJigsaw+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'RandomJigsaw' |
+| Video GPU DataLoader | dali | RandomCrop224+RandomRotate90+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'RandomRotate90' |
+| Video GPU DataLoader | dali | RandomCrop224+Sharpen+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'Sharpen' |
+| Video GPU DataLoader | dali | RandomCrop224+Snow+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'Snow' |
+| Video GPU DataLoader | dali | RandomCrop224+Solarize+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'Solarize' |
+| Video GPU DataLoader | dali | RandomCrop224+ThinPlateSpline+Normalize+ToTensor | unsupported | DALI video pipeline does not implement transform 'ThinPlateSpline' |
 | Video GPU DataLoader | kornia | RandomCrop224+Affine+Normalize+ToTensor | unsupported | RuntimeError: Expected tensor for argument #1 'input' to have the same type as tensor for argument #2 'grid'; but type torch.cuda.FloatTensor does not equal torch.cuda.HalfTenso... |
 | Video GPU DataLoader | kornia | RandomCrop224+Snow+Normalize+ToTensor | unsupported | NotImplementedError: "check_uniform_bounds" not implemented for 'Long' |
 | Video GPU DataLoader | torchvision | RandomCrop224+JpegCompression+Normalize+ToTensor | unsupported | ValueError: Input tensor must be a CPU tensor |

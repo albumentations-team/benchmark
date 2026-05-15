@@ -38,8 +38,9 @@ features in these modules unless there is a strong reason to put logic directly 
   slow-transform preflight defaults.
 - `benchmark/devices.py` owns CUDA/MPS device resolution, transform/sample movement, support validation, and
   synchronization helpers shared by micro and pipeline runners.
-- `benchmark/transform_filters.py` owns narrow library/device-specific exclusions after global transform-set expansion,
-  such as omitting Kornia image `Shear` on CUDA/MPS while keeping the transform in CPU and other-library rows.
+- `benchmark/transform_filters.py` owns narrow crash-only exclusions after global transform-set expansion. Prefer
+  attempting library/device rows and recording unsupported runtime results; only filter rows that reproducibly crash the
+  worker process or poison the CUDA context.
 
 ## Data And Spec Loading
 
@@ -72,15 +73,20 @@ features in these modules unless there is a strong reason to put logic directly 
   preparation transform used by DataLoader workers before default collation, and a GPU transform after host-to-device
   copy. Kornia applies the measured augmentation batched with per-image random parameters plus normalization; TorchVision
   applies the measured augmentation in a per-sample GPU loop to preserve per-image randomness, then normalizes the batch.
-  TorchVision `JpegCompression` is excluded from TorchVision GPU image rows because `torchvision.transforms.v2.JPEG`
-  requires `uint8` CPU input. It remains in CPU TorchVision rows and in other libraries that support JPEG compression.
+  TorchVision `JpegCompression` is kept in GPU row attempts; `torchvision.transforms.v2.JPEG` may report unsupported at
+  runtime because it requires `uint8` CPU input. It remains in CPU TorchVision rows and in other libraries that support
+  JPEG compression.
   CUDA DataLoader rows reset CUDA peak memory stats immediately before each timed run and store peak allocated/reserved
   bytes under each transform result. Pyperf micro rows do not expose peak memory because timing happens in pyperf worker
   processes.
 - DALI pipeline runs are represented as `BenchmarkJob(backend="dali_pipeline")` and dispatched by
   `benchmark/orchestrator.py` via `benchmark/dali_pipeline_worker.py`, not by CLI special cases. DALI image runs use
-  `fn.readers.file` plus mixed image decode and benchmark only the DALI-supported RGB recipe subset; unsupported recipes
-  are reported as unsupported results.
+  `fn.readers.file` plus mixed image decode. Video `dali` runs use the stable public `fn.readers.video` API, while
+  `dali_experimental` runs use `fn.experimental.readers.video`; both use native GPU recipe operators and record the
+  reader backend in result metadata.
+  Unsupported recipes are reported as unsupported results.
+- PyTorchVideo is a video pipeline-only baseline with a canonical per-clip training recipe. Batch-shared TorchVision
+  video is intentionally not a matrix library because it can share random parameters across clips in one batch.
 
 ## Scenario Flow
 

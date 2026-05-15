@@ -1,6 +1,6 @@
 {
-  "num_source_rows": 1378,
-  "num_aggregate_rows": 1218,
+  "num_source_rows": 1429,
+  "num_aggregate_rows": 1269,
   "regimes": {
     "rgb_micro_cpu": 158,
     "rgb_micro_gpu": 75,
@@ -13,7 +13,7 @@
     "video16f_micro_cpu": 125,
     "video16f_micro_gpu": 75,
     "video16f_dataloader_cpu": 106,
-    "video16f_dataloader_gpu": 63
+    "video16f_dataloader_gpu": 114
   },
   "headlines": {
     "median_throughput": {
@@ -72,7 +72,9 @@
       },
       "video16f_dataloader_gpu": {
         "torchvision": 384.5794081595328,
-        "kornia": 61.834954177906944
+        "kornia": 61.834954177906944,
+        "pytorchvideo": 17.202038592125405,
+        "dali": 120.28937374509994
       }
     },
     "winner_counts": {
@@ -121,7 +123,8 @@
         "albumentationsx": 42
       },
       "video16f_dataloader_gpu": {
-        "torchvision": 18
+        "dali": 5,
+        "torchvision": 22
       }
     },
     "gpu_vs_albumentationsx_cpu": {
@@ -952,6 +955,18 @@
           "full": 36,
           "early_stopped": 0,
           "unsupported": 2
+        },
+        "pytorchvideo": {
+          "rows": 1,
+          "full": 1,
+          "early_stopped": 0,
+          "unsupported": 0
+        },
+        "dali": {
+          "rows": 50,
+          "full": 21,
+          "early_stopped": 0,
+          "unsupported": 29
         }
       }
     }

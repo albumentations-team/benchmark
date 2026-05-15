@@ -51,7 +51,7 @@ This benchmark suite measures the throughput and performance characteristics of 
 The image benchmarks compare the performance of various libraries on standard image transformations. Interpret the tables by benchmark mode:
 
 - **Micro / profiler benchmarks** preload decoded images and time augmentation only. These runs use one internal CPU thread for every library to measure single-stream transform cost. For tensor-native image libraries (`torchvision`, `kornia`), `--device cuda|mps|auto` preloads tensors on the selected device and times device-resident augmentation.
-- **DataLoader benchmarks** use recipe-level training pipelines, not primitive transform-only timing. Every DataLoader recipe includes fixed crop shape preparation, the measured augmentation, normalization, tensor conversion, and default collation; those fixed steps are included in throughput. `memory_dataloader_augment` preloads decoded samples and isolates worker/augmentation scaling; `decode_dataloader_augment` adds disk read/decode; `decode_dataloader_augment_batch_copy` additionally materializes the collated batch tensor and copies it to CUDA/MPS when requested. CPU image pipelines apply the full recipe inside the dataset path before collation. TorchVision and Kornia image GPU DataLoader rows split the recipe: workers use the same library on CPU for crop/pad shape preparation, then the collated batch is copied to GPU. Kornia runs the measured augmentation batched with `same_on_batch=False` plus normalization; TorchVision runs only the measured augmentation in a per-sample GPU loop to preserve per-image randomness, then applies normalization once to the whole batch. Pipeline recipes include `Normalize+ToTensor` in the library spec: AlbumentationsX uses `ToTensorV2`, Pillow uses `torchvision.transforms.PILToTensor` before normalization, and torchvision/Kornia already operate on tensors. All pipeline recipes return fixed-shape tensor outputs that PyTorch default collation can stack. These runs record worker counts, thread policy, device target, and whether decode/collate/device transfer were included.
+- **DataLoader benchmarks** use recipe-level training pipelines, not primitive transform-only timing. Every DataLoader recipe includes fixed crop shape preparation, the measured augmentation, normalization, tensor conversion, and default collation; those fixed steps are included in throughput. `memory_dataloader_augment` preloads decoded samples and isolates worker/augmentation scaling; `decode_dataloader_augment` adds disk read/decode; `decode_dataloader_augment_batch_copy` additionally materializes the collated batch tensor and copies it to CUDA/MPS when requested. CPU image pipelines apply the full recipe inside the dataset path before collation. TorchVision and Kornia image GPU DataLoader rows split the recipe: workers use the same library on CPU for crop/pad shape preparation, then the collated batch is copied to GPU. Kornia runs the measured augmentation batched with `same_on_batch=False` plus normalization; TorchVision runs only the measured augmentation in a per-sample GPU loop to preserve per-image randomness, then applies normalization once to the whole batch. Video ecosystem rows also include DALI native GPU pipelines and a PyTorchVideo canonical training recipe. Pipeline recipes include `Normalize+ToTensor` in the library spec: AlbumentationsX uses `ToTensorV2`, Pillow uses `torchvision.transforms.PILToTensor` before normalization, and torchvision/Kornia already operate on tensors. All pipeline recipes return fixed-shape tensor outputs that PyTorch default collation can stack. These runs record worker counts, thread policy, device target, randomness scope, and whether decode/collate/device transfer were included.
 
 The checked-in result tables use `2,000` ImageNet validation images for image micro benchmarks and `10,000` images for
 image DataLoader benchmarks. Full `50,000`-image ImageNet sweeps are optional when validating a specific production
@@ -65,37 +65,38 @@ clip and shared across frames. This matches the training-style semantics used by
 
 ## Benchmark Results
 
-<!-- PAPER_FIGURES_START -->
+<!-- BENCHMARK_RESULTS_START -->
 
 The figures and tables below are generated from checked-in benchmark data.
+Website-ready CSV/Markdown exports are in `docs/benchmark_data/`; reusable PNG/PDF figures are in `docs/benchmark_figures/`.
 
 ### Figure 1. Open production DataLoader category
 
-![Figure 1. Open production DataLoader category](docs/paper_figures/open_dataloader_leaderboard.png)
+![Figure 1. Open production DataLoader category](docs/benchmark_figures/open_dataloader_leaderboard.png)
 
 CPU and GPU DataLoader implementations compete together over the same 57-recipe universe. Bars show median measured-row throughput; labels show full measured coverage and open-category wins. AlbumentationsX CPU wins 52 of 57 recipes and has the highest median throughput.
 
 ### Figure 2. Coverage breadth versus measured throughput
 
-![Figure 2. Coverage breadth versus measured throughput](docs/paper_figures/coverage_vs_throughput.png)
+![Figure 2. Coverage breadth versus measured throughput](docs/benchmark_figures/coverage_vs_throughput.png)
 
 DataLoader coverage and throughput are distinct benchmark axes. The x-axis is the count of full measured recipes over the canonical 57 CPU DataLoader recipes, and the y-axis is median throughput over measured rows only. The Elastic drill-down shows that GPU execution does not rescue a slow implementation of a hard transform.
 
 ### Figure 3. GPU DataLoader pipelines versus AlbumentationsX CPU
 
-![Figure 3. GPU DataLoader pipelines versus AlbumentationsX CPU](docs/paper_figures/gpu_vs_albumentationsx_cpu_ratios.png)
+![Figure 3. GPU DataLoader pipelines versus AlbumentationsX CPU](docs/benchmark_figures/gpu_vs_albumentationsx_cpu_ratios.png)
 
 Each point is a paired GPU DataLoader recipe divided by the AlbumentationsX CPU DataLoader throughput for the same recipe. The dashed line marks parity. Most GPU rows fall below parity once the full DataLoader path is measured.
 
 ### Figure 4. GPU memory consumed by augmentation pipelines
 
-![Figure 4. GPU memory consumed by augmentation pipelines](docs/paper_figures/gpu_memory_vs_throughput.png)
+![Figure 4. GPU memory consumed by augmentation pipelines](docs/benchmark_figures/gpu_memory_vs_throughput.png)
 
 GPU augmentation also consumes accelerator memory that would otherwise be available to model parameters, activations, optimizer state, or larger batches. Each point is a measured GPU DataLoader row with peak allocated memory recorded during the benchmark.
 
 ### Figure 5. Winner counts by benchmark regime
 
-![Figure 5. Winner counts by benchmark regime](docs/paper_figures/winner_counts.png)
+![Figure 5. Winner counts by benchmark regime](docs/benchmark_figures/winner_counts.png)
 
 Measured winner counts among comparable measured transforms by regime. The conclusion changes when moving from augmentation-only microbenchmarks to production-style DataLoader measurements.
 
@@ -267,7 +268,7 @@ The tables below summarize the checked-in benchmark results for RGB images, 9-ch
 | ThinPlateSpline | 74.7 ± 0.0 | **156.3 ± 0.0** | - | - |
 | VerticalFlip | 2895.2 ± 0.0 | 259.2 ± 0.0 | **34455.4 ± 0.0** | 448.3 ± 0.0 |
 
-<!-- PAPER_FIGURES_END -->
+<!-- BENCHMARK_RESULTS_END -->
 
 ## Requirements
 
@@ -394,6 +395,14 @@ torchvision, and Kornia, the recipe shape is `crop + transform + Normalize + ToT
 fixed-shape tensor clips. This keeps video pipeline semantics aligned with RGB pipeline benchmarks while micro remains a
 preloaded transform-only profiler.
 
+DALI video rows are native GPU pipeline rows, not micro-transform rows. The `dali` library key uses the stable public
+`fn.readers.video` API, which is still backed by DALI's legacy video loader internally; `dali_experimental` is a separate
+diagnostic key for `fn.experimental.readers.video` so the modern reader path can be smoked without changing published DALI
+artifact meanings. PyTorchVideo is reported as a canonical PyTorch video-training pipeline baseline.
+Batch-shared TorchVision video rows are intentionally excluded. Applying one random transform call to the full
+`B,T,C,H,W` batch can flip or crop every clip with the same sampled parameters, which is a speed diagnostic rather than
+the realistic per-sample training semantics used for headline comparison.
+
 Treat RGB micro results as an implementation profiler: preloaded decoded inputs, one process, one internal
 library thread, augmentation only. They are useful for checking algorithmic implementation quality and regressions,
 but they are intentionally artificial because they measure one CPU core instead of a production input pipeline.
@@ -431,15 +440,14 @@ python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml -
 - Micro benchmarks preload the requested number of images or videos once per library into that library's native in-memory representation. Per-transform timing must not reread or decode media from disk.
 - Micro benchmarks measure only the named transform in each library's native layout, then force the returned object into contiguous memory before timing stops. Do not add `Normalize`, `ToTensor`, axis conversion, or DataLoader collation work to micro specs.
 - GPU image micro benchmarks are device-resident transform profilers for `torchvision` and `kornia`: samples and transforms are moved to CUDA/MPS before timing, and the timed loop synchronizes the selected device. They do not include host-to-device transfer.
-- Kornia image GPU rows exclude `Shear` in micro and DataLoader modes because Kornia's current CUDA shear parameter
-  generator can fail with mixed CPU/CUDA tensors when moved to GPU. Keep `Shear` in the image transform sets: it still
-  runs for AlbumentationsX, Pillow, torchvision where supported, and Kornia CPU rows.
-- Kornia 9-channel image GPU rows also exclude `MedianBlur`. On the L4 9-channel GPU micro run, Kornia's median-blur
-  path requested a multi-GB temporary allocation after device-resident preload and OOMed. Keep `MedianBlur` in RGB GPU,
-  CPU, and other-library rows; treat the exclusion as a Kornia 9-channel GPU memory limitation.
-- Kornia RGB GPU DataLoader may record `GaussianIllumination` as unsupported because the current recipe path can hit a
-  mixed CPU/CUDA tensor error. Keep this as a library/device limitation in the methodology rather than removing
-  `GaussianIllumination` globally from CPU or other-library rows.
+- Kornia and TorchVision rows are not silently discarded for fixable adapter issues. After transform-set expansion,
+  library/device rows should be attempted and recorded as `unsupported` with the exact runtime reason unless a transform
+  is proven to crash the worker process or poison the CUDA context. Confirmed crash-only exclusions live in
+  `benchmark/transform_filters.py`; current Kornia CPU video micro excludes `Rotate` and `Elastic` for reproducible
+  native-code crashes.
+- Kornia RGB/9-channel GPU rows such as `Shear`, `MedianBlur`, and illumination transforms should remain visible in
+  run outputs. If they fail after dtype/device/layout adapter checks, treat the result as a Kornia library/device
+  limitation, not a global transform-set removal.
 - Pyperf micro runs isolate transform measurements in subprocesses, but those subprocesses reuse the per-library media cache and lazily construct only the transform being measured.
 - Libraries with lazy or partially lazy output objects must materialize their own result inside the timed call. Micro timing converts returned Pillow `Image.Image` objects to contiguous NumPy arrays and calls `.contiguous()` on tensor-like outputs so every measured transform produces realized contiguous output.
 - Libraries should only be listed for direct per-transform rows when they support the named transform directly. Do not recreate missing transforms with extensive benchmark-side helper code just to fill a table cell. For example, Pillow can benchmark direct `Image` / `ImageOps` / `ImageFilter` operations, but should skip Albumentations-style composites such as `RandomResizedCrop`, `PadIfNeeded`, `SafeRotate`, `ShiftScaleRotate`, `LongestMaxSize`, and `SmallestMaxSize` in direct transform listings. Pipeline recipe benchmarks are the exception: they may include maintained Pillow equivalents for composite recipes when the goal is end-to-end pipeline comparison rather than claiming direct single-op support. When Pillow has a direct equivalent for an AlbumentationsX transform, keep the parameters exact.
@@ -451,7 +459,9 @@ python -m benchmark.cli run --config configs/examples/local_rgb_micro_cpu.yaml -
 - Preserve single-thread micro timing for fair augmentation-only comparisons. Pipeline benchmarks use an explicit `--thread-policy`; the main production path is `pipeline-default`, and controlled comparison runs can use `pipeline-single-worker`.
 - Pipeline specs, not `pipeline_runner.py`, own recipe-level tensor conversion. The runner should receive fixed-shape outputs and use PyTorch default collation; it should not repair channel layouts with benchmark-side heuristics.
 - GPU image pipeline benchmarks are separate from CPU pipeline rows. For TorchVision and Kornia, `--device cuda|mps|auto` keeps decode/load and library-native crop/pad shape preparation in DataLoader workers on CPU, copies each fixed-shape collated batch to the selected device, applies the measured augmentation plus normalization on GPU, and includes synchronization in timing. Kornia uses batched augmentation with `same_on_batch=False`; TorchVision applies the measured augmentation in a per-sample GPU loop and then normalizes the whole batch because TorchVision v2 lacks a `same_on_batch=False` equivalent for batched transforms. AlbumentationsX and Pillow remain CPU-only for image benchmarks.
-- TorchVision `JpegCompression` maps to `torchvision.transforms.v2.JPEG`, which requires `uint8` CPU input and is excluded from TorchVision GPU image rows. Keep it in CPU TorchVision rows and in other libraries that support it. Treat this as a JPEG-compression augmentation constraint when describing methodology.
+- TorchVision `JpegCompression` maps to `torchvision.transforms.v2.JPEG`, which requires `uint8` CPU input. GPU rows
+  should attempt it and record an `unsupported` result when the op rejects CUDA tensors; keep it in CPU TorchVision rows
+  and in other libraries that support it.
 - CUDA DataLoader rows record per-transform peak GPU memory during timed runs under `results.<transform>.gpu_memory`, including peak allocated/reserved bytes and before/after allocation snapshots. Pyperf micro rows do not report peak memory because their timed loops run inside pyperf worker processes.
 - Benchmark code must be fair but fast: avoid repeated decode, loader construction, conversion, synchronization, checksums, materialization, or dependency work unless it is explicitly part of the named measurement scope or needed to make lazy work complete.
 
