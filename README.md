@@ -104,7 +104,7 @@ The 9-channel scenario compares AlbumentationsX, TorchVision, and Kornia in CPU 
 
 ![Figure 6. Video benchmark overview](docs/benchmark_figures/video16f_overview.png)
 
-The video scenario compares 16-frame clip throughput across CPU micro, CPU DataLoader, GPU micro, and GPU DataLoader regimes, including Kornia wherever a measured or explicitly unsupported result exists. Dots show median clips/s over fully measured rows on a log scale; labels report throughput and full measured coverage.
+The video scenario compares 16-frame clip throughput across CPU micro, CPU DataLoader, GPU micro, and GPU DataLoader regimes for libraries with fully measured results in each library/regime pair. Dots show median clips/s over fully measured rows on a log scale; labels report throughput and full measured coverage.
 
 ### Figure 7. Winner counts by benchmark regime
 
