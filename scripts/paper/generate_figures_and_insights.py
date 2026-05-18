@@ -107,8 +107,8 @@ MAIN_FIGURES = [
         "title": "Figure 6. Video benchmark overview",
         "caption": (
             "The video scenario compares 16-frame clip throughput across CPU micro, CPU DataLoader, GPU micro, and GPU "
-            "DataLoader regimes, including Kornia wherever a measured or explicitly unsupported result exists. Dots show "
-            "median clips/s over fully measured rows on a log scale; labels report throughput and full measured coverage."
+            "DataLoader regimes for libraries with fully measured results in each library/regime pair. Dots show median "
+            "clips/s over fully measured rows on a log scale; labels report throughput and full measured coverage."
         ),
     },
 ]
@@ -147,9 +147,18 @@ def _load_results() -> pd.DataFrame:
     df["supported"] = df["supported"].astype(bool)
     df["early_stopped"] = df["early_stopped"].astype(bool)
     df["measured"] = df["supported"] & ~df["early_stopped"] & (df["num_successful_runs"] > 0)
+    _validate_known_values(df["library"], LIBRARY_ORDER, "library")
+    _validate_known_values(df["regime_label"], REGIME_ORDER, "regime_label")
     df["library"] = pd.Categorical(df["library"], categories=LIBRARY_ORDER, ordered=True)
     df["regime_label"] = pd.Categorical(df["regime_label"], categories=REGIME_ORDER, ordered=True)
     return df
+
+
+def _validate_known_values(series: pd.Series, known_values: list[str], column_name: str) -> None:
+    unknown = sorted(set(series.dropna().astype(str)) - set(known_values))
+    if unknown:
+        formatted = ", ".join(unknown)
+        raise ValueError(f"Unexpected {column_name} values: {formatted}")
 
 
 def _savefig(path: Path, *, tight: bool = True) -> None:
@@ -728,25 +737,38 @@ def _scenario_overview_plot(
     if scenario.empty:
         return pd.DataFrame()
 
+    regime_transform_totals = {
+        str(regime): int(group["transform"].astype(str).nunique())
+        for regime, group in scenario.groupby("regime", observed=True, sort=False)
+    }
     rows: list[dict[str, object]] = []
-    for (regime, regime_label, library), group in scenario.groupby(
-        ["regime", "regime_label", "library"],
+    for (regime_label, library), group in scenario.groupby(
+        ["regime_label", "library"],
         observed=True,
         sort=False,
     ):
+        regimes = sorted(group["regime"].astype(str).unique())
+        if len(regimes) != 1:
+            raise ValueError(
+                "Scenario overview expects each (regime_label, library) pair to map to one regime; "
+                f"got {regimes} for ({regime_label}, {library})",
+            )
+        regime = regimes[0]
         measured = group[group["measured"]]
         rows.append(
             {
-                "regime": str(regime),
+                "regime": regime,
                 "regime_label": str(regime_label),
                 "library": str(library),
                 "full": int(measured["transform"].astype(str).nunique()),
-                "total_rows": int(group["transform"].astype(str).nunique()),
+                "total_rows": regime_transform_totals[regime],
                 "median_throughput": float(measured["median_throughput"].median()) if not measured.empty else math.nan,
             },
         )
 
     summary = pd.DataFrame(rows)
+    _validate_known_values(summary["regime_label"], REGIME_ORDER, "regime_label")
+    _validate_known_values(summary["library"], LIBRARY_ORDER, "library")
     summary["regime_label"] = pd.Categorical(summary["regime_label"], categories=REGIME_ORDER, ordered=True)
     summary["library"] = pd.Categorical(summary["library"], categories=LIBRARY_ORDER, ordered=True)
     summary = summary.sort_values(["regime_label", "library"]).reset_index(drop=True)
@@ -812,13 +834,13 @@ def _scenario_overview_plot(
     fig.text(
         0.5,
         0.02,
-        "Point labels show median throughput; parentheses show full measured rows / result rows.",
+        "Point labels show median throughput; parentheses show full measured transforms / regime transform universe.",
         ha="center",
         fontsize=8.5,
         color="#444444",
     )
     fig.subplots_adjust(left=0.13, right=0.98, top=0.88, bottom=0.18, hspace=0.42, wspace=0.34)
-    _savefig(FIGURES / f"{output_stem}_overview.png")
+    _savefig(FIGURES / f"{output_stem}_overview.png", tight=False)
     return summary
 
 
