@@ -32,7 +32,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
 
     if spec.name == "Resize":
         return tv_transforms.Resize(
-            size=params["target_size"],
+            size=(params["target_size"], params["target_size"]),
             interpolation=tv_transforms.InterpolationMode.BILINEAR
             if params["interpolation"] == "bilinear"
             else tv_transforms.InterpolationMode.NEAREST,

@@ -22,3 +22,11 @@ def test_shape_preparation_is_explicit_in_the_catalog() -> None:
     prefix, tail = collatable_prefix(by_id["LongestMaxSize+RandomCrop224+Normalize+ToTensor"])
     assert [stage.name for stage in prefix] == ["LongestMaxSize", "RandomCrop224"]
     assert tail == ()
+
+
+def test_torchvision_resize_matches_the_square_rgb_output_contract() -> None:
+    source = (Path(__file__).parents[1] / "src" / "augbench" / "implementations" / "torchvision_impl.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'size=(params["target_size"], params["target_size"])' in source
