@@ -51,7 +51,7 @@ def test_guest_rejects_a_cell_not_derived_from_its_run() -> None:
         select_pending_cells(request=request, cells=())
 
 
-def test_preflight_compiles_all_recipes_and_runs_one_batch_per_implementation() -> None:
+def test_preflight_compiles_each_implementation_and_runs_one_batch_per_recipe() -> None:
     request = _request(cell_ids=("0" * 64,))
     first = CellKey(
         run_id=request.run.run_id,
@@ -62,6 +62,7 @@ def test_preflight_compiles_all_recipes_and_runs_one_batch_per_implementation() 
     )
     second = first.model_copy(update={"recipe_id": "second", "seed": 138})
     third = first.model_copy(update={"implementation": "dali_gpu", "recipe_id": "third"})
+    duplicate = first.model_copy(update={"seed": 139})
     calls: list[tuple[str, str]] = []
 
     class Executor:
@@ -71,10 +72,11 @@ def test_preflight_compiles_all_recipes_and_runs_one_batch_per_implementation() 
         def preflight(self, cell: CellKey) -> None:
             calls.append(("batch", cell.implementation))
 
-    preflight_implementations(Executor(), (first, second, third))  # type: ignore[arg-type]
+    preflight_implementations(Executor(), (first, second, duplicate, third))  # type: ignore[arg-type]
 
     assert calls == [
         ("compile", "pillow_cpu"),
+        ("batch", "pillow_cpu"),
         ("batch", "pillow_cpu"),
         ("compile", "dali_gpu"),
         ("batch", "dali_gpu"),

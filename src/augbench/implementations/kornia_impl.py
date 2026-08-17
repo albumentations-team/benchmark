@@ -127,7 +127,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
         return Kaug.RandomClahe(
             p=1,
             clip_limit=clip_float,
-            grid_size=params["tile_grid_size"],
+            grid_size=tuple(params["tile_grid_size"]),
         )
     if spec.name == "Contrast":
         # Kornia contrast is multiplicative (1.0=no change). Convert additive offset to factor.
@@ -147,7 +147,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
         )
     if spec.name == "GaussianBlur":
         return Kaug.RandomGaussianBlur(
-            kernel_size=params["kernel_size"],
+            kernel_size=tuple(params["kernel_size"]),
             sigma=(params["sigma"], params["sigma"]),
             p=1,
         )
@@ -197,8 +197,8 @@ def create_transform(spec: TransformSpec) -> Any | None:
     if spec.name == "MotionBlur":
         return Kaug.RandomMotionBlur(
             kernel_size=params["kernel_size"],
-            angle=params["angle_range"],
-            direction=params["direction_range"],
+            angle=tuple(params["angle_range"]),
+            direction=tuple(params["direction_range"]),
             p=1,
         )
     if spec.name == "PlankianJitter":
@@ -295,8 +295,8 @@ def create_transform(spec: TransformSpec) -> Any | None:
         # Pass float value to avoid Kornia's internal Long-dtype sampling bug
         return Kaug.RandomErasing(
             p=1,
-            scale=params["scale"],
-            ratio=params["ratio"],
+            scale=tuple(params["scale"]),
+            ratio=tuple(params["ratio"]),
             value=float(params["fill"]),
         )
     if spec.name == "OpticalDistortion":
@@ -316,18 +316,18 @@ def create_transform(spec: TransformSpec) -> Any | None:
         )
     if spec.name == "RandomResizedCrop":
         return Kaug.RandomResizedCrop(
-            size=params["size"],
-            scale=params["scale"],
-            ratio=params["ratio"],
+            size=tuple(params["size"]),
+            scale=tuple(params["scale"]),
+            ratio=tuple(params["ratio"]),
             p=1,
         )
     if spec.name == "RandomRotate90":
         return Kaug.RandomRotation90(times=tuple(params["times"]), p=1)
     if spec.name == "RandomJigsaw":
-        return _RandomJigsawWithPad(grid=params["grid"])
+        return _RandomJigsawWithPad(grid=tuple(params["grid"]))
     if spec.name == "Rotate":
         return Kaug.RandomRotation(
-            degrees=params["angle_range"],
+            degrees=tuple(params["angle_range"]),
             p=1,
         )
     if spec.name == "Shear":

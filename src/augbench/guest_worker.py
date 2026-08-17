@@ -68,13 +68,17 @@ def select_pending_cells(*, request: GuestRequest, cells: Iterable[CellKey]) -> 
 
 
 def preflight_implementations(executor: RGBCellExecutor, cells: Iterable[CellKey]) -> None:
-    """Compile every recipe and execute one representative batch per implementation."""
-    seen: set[str] = set()
+    """Compile every implementation and execute one real batch per implementation-recipe pair."""
+    compiled: set[str] = set()
+    preflighted: set[tuple[str, str]] = set()
     for cell in cells:
-        if cell.implementation in seen:
+        if cell.implementation not in compiled:
+            compiled.add(cell.implementation)
+            executor.compile_implementation(cell.implementation)
+        pair = (cell.implementation, cell.recipe_id)
+        if pair in preflighted:
             continue
-        seen.add(cell.implementation)
-        executor.compile_implementation(cell.implementation)
+        preflighted.add(pair)
         executor.preflight(cell)
 
 

@@ -31,6 +31,15 @@ def test_kornia_factories_adapt_catalog_lists_to_kornia_ranges() -> None:
     assert 'salt_vs_pepper=tuple(params["salt_vs_pepper"])' in source
     assert 'snow_coefficient=tuple(params["snow_point_range"])' in source
     assert 'RandomRotation90(times=tuple(params["times"]), p=1)' in source
+    assert 'grid_size=tuple(params["tile_grid_size"])' in source
+    assert 'kernel_size=tuple(params["kernel_size"])' in source
+    assert 'angle=tuple(params["angle_range"])' in source
+    assert 'direction=tuple(params["direction_range"])' in source
+    assert 'scale=tuple(params["scale"])' in source
+    assert 'ratio=tuple(params["ratio"])' in source
+    assert 'size=tuple(params["size"])' in source
+    assert '_RandomJigsawWithPad(grid=tuple(params["grid"]))' in source
+    assert 'degrees=tuple(params["angle_range"])' in source
 
 
 def _factory_operations(path: Path) -> set[str]:
