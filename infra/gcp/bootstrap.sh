@@ -72,6 +72,7 @@ stage_environment() {
     rm -rf "$environment_root"
     mkdir -p "$environment_root"
     tar -xzf "$cache_archive" -C "$environment_root"
+    uv python install --no-bin "$python_version"
   fi
   repair_python_links "$environment_root" "$python_version"
 }
