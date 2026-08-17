@@ -65,7 +65,7 @@ stage_environment() {
     rm -rf "$environment_root"
     uv python install --no-bin "$python_version"
     uv venv --relocatable --managed-python --link-mode copy --python "$python_version" "$environment_root"
-    uv pip sync --python "$environment_root/bin/python" --require-hashes --link-mode copy "$lock_path"
+    uv pip sync --python "$environment_root/bin/python" --require-hashes --link-mode copy --torch-backend cu130 "$lock_path"
     tar --exclude='bin/python*' -czf "$cache_archive" -C "$environment_root" .
     gcloud storage cp --quiet --if-generation-match=0 "$cache_archive" "$cache_uri" || true
   else
