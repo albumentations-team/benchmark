@@ -12,6 +12,8 @@ def test_bootstrap_is_self_contained_and_has_valid_shell_syntax() -> None:
 
     assert "ensure_uv" in source
     assert 'source "$CODE_ROOT/infra/gcp/' not in source
+    assert 'exec > >(tee -a "$LOG_PATH") 2>&1' in source
+    assert "logs/bootstrap-${instance_id}.log" in source
     subprocess.run(["bash", "-n", str(script)], check=True)  # noqa: S603, S607 - fixed local script path.
 
 

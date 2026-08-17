@@ -77,7 +77,8 @@ JPEG имеют разные исходные размеры. Для каждо�
 4. иначе ищет все zones с `g2-standard-16` и L4, затем создаёт одну Standard VM;
 5. VM скачивает code, raw dataset и cached RGB environment один раз, извлекает первые 10 000 отсортированных `val/*.JPEG`, prewarms их, выполняет preflight и идёт по отсутствующим клеткам;
 6. после каждой клетки сразу создаётся immutable GCS object;
-7. после terminal VM следующий `launch-rgb` удаляет именно эту маркированную terminal VM и продолжает с отсутствующих клеток.
+7. при любом выходе bootstrap сохраняет stdout/stderr в `runs/<run_id>/logs/` до выключения VM;
+8. после terminal VM следующий `launch-rgb` удаляет именно эту маркированную terminal VM и продолжает с отсутствующих клеток.
 
 В VM один implementation job последовательно проходит все его recipes и seeds. Нет job на recipe, seed, duration или shard.
 

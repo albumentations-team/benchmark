@@ -55,6 +55,8 @@ matrix unless the user explicitly adds that research question.
    schema.
 4. Use `augbench launch-rgb`; it searches eligible zones, protects an active
    labelled VM from duplication, and resumes only validated missing cells.
+5. If the VM exits before a cell, inspect its `runs/<run_id>/logs/` bootstrap
+   log; do not retry blindly.
 
 If a required measurement is absent, repair the execution path and generate the
 smallest missing part of the production matrix. Never substitute prose for data.

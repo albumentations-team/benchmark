@@ -4,7 +4,9 @@ set -Eeuo pipefail
 
 readonly STATE_ROOT=/var/lib/augbench
 readonly REQUEST_PATH="$STATE_ROOT/request.json"
+readonly LOG_PATH="$STATE_ROOT/bootstrap.log"
 readonly METADATA_URL=http://metadata.google.internal/computeMetadata/v1/instance/attributes/augbench-request-uri
+readonly INSTANCE_ID_URL=http://metadata.google.internal/computeMetadata/v1/instance/id
 
 request_field() {
   python3 -c '
@@ -74,9 +76,21 @@ stage_environment() {
   repair_python_links "$environment_root" "$python_version"
 }
 
+publish_log() {
+  [[ -s "$LOG_PATH" && -f "$REQUEST_PATH" ]] || return 0
+  local gcs_base_uri run_id instance_id
+  gcs_base_uri="$(request_field gcs_base_uri)" || return 0
+  run_id="$(request_field run.run_id)" || return 0
+  instance_id="$(curl --fail --silent --show-error --header 'Metadata-Flavor: Google' "$INSTANCE_ID_URL" || hostname)"
+  gcloud storage cp --quiet --if-generation-match=0 "$LOG_PATH" \
+    "${gcs_base_uri%/}/runs/${run_id}/logs/bootstrap-${instance_id}.log" || true
+}
+
 finish() {
   local status=$?
   trap - EXIT
+  set +e
+  publish_log
   sync
   shutdown -h now || true
   exit "$status"
@@ -84,6 +98,8 @@ finish() {
 trap finish EXIT
 
 mkdir -p "$STATE_ROOT/downloads"
+exec > >(tee -a "$LOG_PATH") 2>&1
+
 ensure_uv
 request_uri="$(curl --fail --silent --show-error --header 'Metadata-Flavor: Google' "$METADATA_URL")"
 gcloud storage cp --quiet "$request_uri" "$REQUEST_PATH"
