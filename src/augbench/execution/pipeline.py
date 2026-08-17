@@ -116,7 +116,7 @@ class TorchDataLoaderSource:
             drop_last=self._drop_last,
             pin_memory=self._pin_memory,
             collate_fn=(
-                None
+                _collate_images
                 if self._host_batch_transform is None
                 else partial(_collate_then_transform, transform=self._host_batch_transform)
             ),
@@ -242,6 +242,18 @@ def _seed_worker(_worker_id: int) -> None:
 
 
 def _collate_then_transform(samples: Sequence[Any], *, transform: Callable[[Any], Any]) -> Any:
+    return transform(_collate_images(samples))
+
+
+def _collate_images(samples: Sequence[Any]) -> Any:
+    """Stack image samples into fresh storage before DataLoader transfers it."""
+    if not samples:
+        raise ValueError("cannot collate an empty image batch")
+
+    import torch
     from torch.utils.data._utils.collate import default_collate
 
-    return transform(default_collate(samples))
+    first = samples[0]
+    if isinstance(first, (np.ndarray, torch.Tensor)):
+        return torch.stack([torch.as_tensor(sample) for sample in samples])
+    return default_collate(samples)

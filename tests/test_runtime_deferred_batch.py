@@ -2,6 +2,7 @@ import sys
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, cast
 
+import numpy as np
 import pytest
 
 from augbench.adapters.runtime import PythonModuleAdapter
@@ -24,6 +25,16 @@ class _TensorDataset:
     def __getitem__(self, index: int) -> object:
         torch = pytest.importorskip("torch")
         return torch.full((3, 2, 2), index, dtype=torch.float32)
+
+
+class _NumpyBackedTensorDataset:
+    def __len__(self) -> int:
+        return 2
+
+    def __getitem__(self, index: int) -> object:
+        torch = pytest.importorskip("torch")
+        array = np.full((3, 2, 2), index, dtype=np.uint8)
+        return torch.from_numpy(array)
 
 
 class _CpuStage:
@@ -150,6 +161,26 @@ def test_loader_casts_the_collated_host_batch_before_pinning() -> None:
 
     assert observed_shapes == [(2, 3, 2, 2)]
     assert batch.dtype == torch.float16
+
+
+def test_loader_stacks_numpy_backed_tensors_in_worker_processes() -> None:
+    torch = pytest.importorskip("torch")
+    loader = TorchDataLoaderSource(
+        dataset=_NumpyBackedTensorDataset(),  # type: ignore[arg-type]
+        batch_size=2,
+        num_workers=1,
+        prefetch_factor=2,
+        persistent_workers=False,
+        pin_memory=False,
+        seed=137,
+    )
+    loader.open()
+    try:
+        batch = loader.next_batch()
+    finally:
+        loader.close()
+
+    assert torch.equal(batch, torch.tensor([0, 1], dtype=torch.uint8).view(2, 1, 1, 1).expand(2, 3, 2, 2))
 
 
 def test_cpu_adapter_keeps_an_ordinary_split_recipe_on_cpu(monkeypatch: pytest.MonkeyPatch) -> None:
