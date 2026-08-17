@@ -236,8 +236,8 @@ def create_transform(spec: TransformSpec) -> Any | None:
         )
     if spec.name == "SaltAndPepper":
         return Kaug.RandomSaltAndPepperNoise(
-            amount=params["amount"],
-            salt_vs_pepper=params["salt_vs_pepper"],
+            amount=tuple(params["amount"]),
+            salt_vs_pepper=tuple(params["salt_vs_pepper"]),
             p=1,
         )
     if spec.name == "Saturation":

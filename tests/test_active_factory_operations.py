@@ -27,6 +27,8 @@ def test_kornia_illumination_factories_adapt_catalog_lists_to_kornia_ranges() ->
     )
 
     assert source.count('gain=tuple(params["gain"])') == 3
+    assert 'amount=tuple(params["amount"])' in source
+    assert 'salt_vs_pepper=tuple(params["salt_vs_pepper"])' in source
 
 
 def _factory_operations(path: Path) -> set[str]:
