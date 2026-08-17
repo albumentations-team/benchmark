@@ -109,6 +109,49 @@ def test_controller_creates_one_labeled_vm_for_missing_cells(tmp_path: Path) -> 
     assert "--labels=augbench=1,augbench-family=rgb,augbench-run=" + request.run.run_id[:12] in create
 
 
+def test_controller_reclaims_only_terminal_augbench_instances(tmp_path: Path) -> None:
+    startup = tmp_path / "bootstrap.sh"
+    startup.write_text("#!/bin/bash\n", encoding="utf-8")
+    request = _request()
+    cell = _cell(request)
+    commands: list[list[str]] = []
+
+    def runner(command: list[str]) -> subprocess.CompletedProcess[bytes]:
+        commands.append(command)
+        if command[2:4] == ["instances", "list"]:
+            if "--filter=labels.augbench=1" in command:
+                return subprocess.CompletedProcess(
+                    command,
+                    0,
+                    stdout=b"old-terminal,us-central1-a,TERMINATED\nold-running,us-central1-b,RUNNING\n",
+                    stderr=b"",
+                )
+            return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+        if command[2:4] == ["instances", "describe"]:
+            return subprocess.CompletedProcess(command, 0, stdout=b"TERMINATED\n", stderr=b"")
+        if command[2:4] == ["instances", "delete"]:
+            return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+        if command[2:4] in (["accelerator-types", "list"], ["machine-types", "list"]):
+            return subprocess.CompletedProcess(command, 0, stdout=b"us-central1-a\n", stderr=b"")
+        if command[2:4] == ["instances", "create"]:
+            return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+        raise AssertionError(command)
+
+    start_or_resume(
+        cloud=_cloud(),
+        request=request,
+        cells=(cell,),
+        startup_script=startup,
+        remote=_Remote(),
+        runner=runner,
+        sleep=lambda _seconds: None,
+    )
+
+    deletes = [command for command in commands if command[2:4] == ["instances", "delete"]]
+    assert deletes[0][4] == "old-terminal"
+    assert all("old-running" not in command for command in deletes)
+
+
 def test_controller_never_launches_a_duplicate_active_vm(tmp_path: Path) -> None:
     startup = tmp_path / "bootstrap.sh"
     startup.write_text("#!/bin/bash\n", encoding="utf-8")

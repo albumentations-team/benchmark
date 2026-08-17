@@ -202,6 +202,11 @@ class GceInstance(BaseModel):
     def active(self) -> bool:
         return self.status.upper() not in {"TERMINATED", "STOPPING", "SUSPENDED", "SUSPENDING"}
 
+    @property
+    def reclaimable(self) -> bool:
+        """A stopped VM can retain its boot disk and consume regional quota."""
+        return self.status.upper() in {"TERMINATED", "SUSPENDED"}
+
 
 def list_labeled_instances(
     *,

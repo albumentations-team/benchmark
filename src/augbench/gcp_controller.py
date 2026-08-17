@@ -73,6 +73,7 @@ def start_or_resume(
     if not pending:
         return GcpLaunch(status="complete", run_id=request.run.run_id, pending_cell_ids=())
 
+    _delete_reclaimable_augbench_instances(cloud=cloud, executable=executable, runner=command_runner)
     label_value = request.run.run_id[:12]
     instances = list_labeled_instances(
         project=cloud.project,
@@ -143,6 +144,31 @@ def start_or_resume(
         instance_name=instance_name,
         zone=zone,
     )
+
+
+def _delete_reclaimable_augbench_instances(
+    *,
+    cloud: GcpRunConfig,
+    executable: str,
+    runner: InstanceCommandRunner,
+) -> None:
+    """Free only old terminal augbench disks before requesting a new L4 VM."""
+    instances = list_labeled_instances(
+        project=cloud.project,
+        label_key="augbench",
+        label_value="1",
+        executable=executable,
+        runner=runner,
+    )
+    for instance in instances:
+        if instance.reclaimable:
+            delete_instance(
+                project=cloud.project,
+                zone=instance.zone,
+                instance_name=instance.name,
+                executable=executable,
+                runner=runner,
+            )
 
 
 def _publish_immutable(remote: GcpControllerStore, key: str, payload: bytes) -> None:

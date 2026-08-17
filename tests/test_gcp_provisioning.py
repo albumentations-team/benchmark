@@ -36,3 +36,19 @@ def test_terminal_instance_is_not_active() -> None:
     )[0]
 
     assert not instance.active
+    assert instance.reclaimable
+
+
+def test_stopping_instance_is_not_reclaimable() -> None:
+    def runner(command: list[str]) -> subprocess.CompletedProcess[bytes]:
+        return subprocess.CompletedProcess(command, 0, stdout=b"augbench-rgb,us-central1-a,STOPPING\n", stderr=b"")
+
+    instance = list_labeled_instances(
+        project="albumentations",
+        label_key="augbench",
+        label_value="1",
+        executable="gcloud",
+        runner=runner,
+    )[0]
+
+    assert not instance.reclaimable

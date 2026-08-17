@@ -57,6 +57,8 @@ matrix unless the user explicitly adds that research question.
    labelled VM from duplication, and resumes only validated missing cells.
 5. If the VM exits before a cell, inspect its `runs/<run_id>/logs/` bootstrap
    log; do not retry blindly.
+6. A new run may reclaim only terminal or suspended `augbench` VMs; never
+   delete active VMs or GCS result artifacts.
 
 If a required measurement is absent, repair the execution path and generate the
 smallest missing part of the production matrix. Never substitute prose for data.
