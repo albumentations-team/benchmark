@@ -153,17 +153,17 @@ def create_transform(spec: TransformSpec) -> Any | None:
         )
     if spec.name == "LinearIllumination":
         return Kaug.RandomLinearIllumination(
-            gain=params["gain"],
+            gain=tuple(params["gain"]),
             p=1,
         )
     if spec.name == "CornerIllumination":
         return Kaug.RandomLinearCornerIllumination(
-            gain=params["gain"],
+            gain=tuple(params["gain"]),
             p=1,
         )
     if spec.name == "GaussianIllumination":
         return Kaug.RandomGaussianIllumination(
-            gain=params["gain"],
+            gain=tuple(params["gain"]),
             p=1,
         )
     if spec.name == "GaussianNoise":

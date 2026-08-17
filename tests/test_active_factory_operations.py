@@ -21,6 +21,14 @@ def test_recipe_factories_contain_only_current_rgb_operations() -> None:
         assert factory_operations <= catalog_operations, filename
 
 
+def test_kornia_illumination_factories_adapt_catalog_lists_to_kornia_ranges() -> None:
+    source = (Path(__file__).parents[1] / "src" / "augbench" / "implementations" / "kornia_impl.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert source.count('gain=tuple(params["gain"])') == 3
+
+
 def _factory_operations(path: Path) -> set[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"))
     names: set[str] = set()
