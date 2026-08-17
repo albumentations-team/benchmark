@@ -257,7 +257,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
     if spec.name == "Snow":
         # Pass explicit float brightness to avoid Kornia's internal Long-dtype sampling bug
         return Kaug.RandomSnow(
-            snow_coefficient=params["snow_point_range"],
+            snow_coefficient=tuple(params["snow_point_range"]),
             brightness=(2.0, 2.0),
             p=1,
         )
@@ -322,7 +322,7 @@ def create_transform(spec: TransformSpec) -> Any | None:
             p=1,
         )
     if spec.name == "RandomRotate90":
-        return Kaug.RandomRotation90(times=params["times"], p=1)
+        return Kaug.RandomRotation90(times=tuple(params["times"]), p=1)
     if spec.name == "RandomJigsaw":
         return _RandomJigsawWithPad(grid=params["grid"])
     if spec.name == "Rotate":

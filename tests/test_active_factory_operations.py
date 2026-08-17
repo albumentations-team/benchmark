@@ -21,7 +21,7 @@ def test_recipe_factories_contain_only_current_rgb_operations() -> None:
         assert factory_operations <= catalog_operations, filename
 
 
-def test_kornia_illumination_factories_adapt_catalog_lists_to_kornia_ranges() -> None:
+def test_kornia_factories_adapt_catalog_lists_to_kornia_ranges() -> None:
     source = (Path(__file__).parents[1] / "src" / "augbench" / "implementations" / "kornia_impl.py").read_text(
         encoding="utf-8"
     )
@@ -29,6 +29,8 @@ def test_kornia_illumination_factories_adapt_catalog_lists_to_kornia_ranges() ->
     assert source.count('gain=tuple(params["gain"])') == 3
     assert 'amount=tuple(params["amount"])' in source
     assert 'salt_vs_pepper=tuple(params["salt_vs_pepper"])' in source
+    assert 'snow_coefficient=tuple(params["snow_point_range"])' in source
+    assert 'RandomRotation90(times=tuple(params["times"]), p=1)' in source
 
 
 def _factory_operations(path: Path) -> set[str]:
