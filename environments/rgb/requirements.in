@@ -1,0 +1,17 @@
+# One cached, exact Linux environment for the active RGB production matrix.
+albucore
+albumentationsx[headless]
+kornia
+kornia-rs
+numkong
+numpy
+nvidia-dali-cuda120
+nvidia-ml-py
+opencv-python-headless
+pillow
+pydantic
+PyYAML
+simplejpeg
+stringzilla
+torch
+torchvision

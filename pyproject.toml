@@ -4,28 +4,19 @@ requires = [ "setuptools>=61" ]
 
 [project]
 name = "image-augmentation-benchmark"
-version = "0.0.1"
-description = "Benchmark for image augmentation libraries"
+version = "2.0.0"
+description = "Reproducible RGB JPEG-to-GPU augmentation benchmark"
 readme = "README.md"
 keywords = [
   "benchmark",
   "computer vision",
-  "deep learning",
-  "fast augmentation",
   "image augmentation",
-  "image classification",
-  "image processing",
-  "image transformation",
-  "instance segmentation",
-  "keras",
-  "keypoint detection",
-  "machine learning",
-  "object detection",
   "pytorch",
-  "semantic segmentation",
-  "tensorflow",
+  "data loading",
+  "gpu",
+  "rgb",
 ]
-license = { file = "LICENSE" }
+license = "MIT"
 maintainers = [ { name = "Vladimir Iglovikov" } ]
 authors = [ { name = "Vladimir Iglovikov" } ]
 requires-python = ">=3.13"
@@ -33,7 +24,6 @@ classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3 :: Only",
@@ -45,12 +35,33 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Typing :: Typed",
 ]
-urls.Homepage = "https://albumentations.ai/docs/benchmarking_results/"
+dependencies = [
+  "numpy>=2.4,<3",
+  "pydantic>=2.13,<3",
+  "pyyaml>=6,<7",
+]
+urls.Source = "https://github.com/albumentations-team/benchmark"
+scripts.augbench = "augbench.cli:main"
+
+[dependency-groups]
+dev = [
+  "mypy>=1.17,<2",
+  "opencv-python-headless>=4.13,<6",
+  "pillow>=12,<13",
+  "pre-commit>=4.6.2",
+  "pytest>=9,<10",
+  "pytest-randomly>=4,<5",
+  "pytest-sugar>=1.1,<2",
+  "pytest-timeout>=2.4,<3",
+  "ruff>=0.12,<1",
+  "types-pyyaml>=6,<7",
+]
 
 [tool.setuptools]
 include-package-data = false
-packages.find.include = [ "benchmark*", "tools*" ]
-packages.find.exclude = [ "output*", "output_videos*", ".venv*", "tests*" ]
+packages.find.where = [ "src" ]
+packages.find.include = [ "augbench*" ]
+packages.find.exclude = [ ".venv*", "tests*" ]
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
@@ -104,6 +115,8 @@ lint.ignore = [
   "ARG004",
   "BLE001",
   "C901",
+  "COM812",  # Conflicts with the Ruff formatter.
+  "CPY001",  # The repository-level MIT LICENSE applies; per-file headers are not used.
   "D100",
   "D101",
   "D102",
@@ -130,25 +143,15 @@ lint.ignore = [
 ]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 lint.explicit-preview-rules = true
-lint.per-file-ignores."benchmark/cli.py" = [
-  "S603",
-  "S607",
-  "T201"
-]  # CLI: print output + subprocess with known commands
-lint.per-file-ignores."benchmark/cloud/gcp.py" = [
-  "S603",
-  "S607",
-  "S608",
-]  # Cloud: subprocess/gcloud; embedded bootstrap shell (not SQL)
-lint.per-file-ignores."benchmark/transforms/pillow_impl.py" = [
-  "NPY002", # legacy np.random API is fine for benchmark transforms
+lint.per-file-ignores."src/augbench/cli.py" = [ "T201" ]  # CLI reports progress and machine-readable JSON.
+lint.per-file-ignores."src/augbench/implementations/pillow_impl.py" = [
+  "NPY002", # np.random is used only to sample augmentation parameters
   "S311",   # random is fine for augmentation — not cryptographic
 ]
 lint.per-file-ignores."tests/**/*.py" = [
   "S101",   # allow assert in tests
   "SLF001", # allow private member access in tests
 ]
-lint.per-file-ignores."tools/*.py" = [ "T201" ]  # Allow print statements in CLI tools
 lint.fixable = [ "ALL" ]
 lint.unfixable = []
 # Allow unused variables when underscore-prefixed.
@@ -174,8 +177,7 @@ pythonVersion = "3.13"
 venvPath = "."
 venv = ".venv"
 executionEnvironments = [ { root = ".", pythonVersion = "3.13" } ]
-# Include benchmark and tools directories for analysis
-include = [ "benchmark", "tools" ]
+include = [ "src/augbench" ]
 # Exclude common directories and virtual envs
 exclude = [ "**/node_modules", "**/__pycache__", ".git", ".venv" ]
 # Disable the missing imports report
@@ -186,6 +188,7 @@ reportMissingModuleSource = false
 ini_options.testpaths = [ "tests" ]
 ini_options.addopts = "-v --tb=short -p randomly"
 ini_options.timeout = 30
+ini_options.pythonpath = [ "src" ]
 
 [tool.pydantic-mypy]
 init_forbid_extra = true

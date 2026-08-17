@@ -1,14 +1,6 @@
-ci:
-  autofix_commit_msg: |
-    [pre-commit.ci] auto fixes from pre-commit.com hooks
-
-    for more information, see https://pre-commit.ci
-  autofix_prs: true
-  autoupdate_branch: ''
-  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
-  autoupdate_schedule: weekly
-  skip: [ ]
-  submodules: false
+minimum_pre_commit_version: "4.0.0"
+default_language_version:
+  python: python3.13
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -16,87 +8,16 @@ repos:
     hooks:
       - id: check-added-large-files
       - id: check-ast
-      - id: check-builtin-literals
-      - id: check-case-conflict
-      - id: check-docstring-first
-      - id: check-executables-have-shebangs
-      - id: check-shebang-scripts-are-executable
+      - id: check-json
       - id: check-merge-conflict
-      - id: check-symlinks
       - id: check-toml
-      - id: check-xml
       - id: check-yaml
       - id: detect-private-key
-      - id: forbid-new-submodules
-      - id: forbid-submodules
-      - id: mixed-line-ending
-      - id: destroyed-symlinks
-      - id: fix-byte-order-marker
-      - id: check-json
-      - id: debug-statements
       - id: end-of-file-fixer
-        exclude: \.json$
-      - id: no-commit-to-branch
-        args: [--branch, main]
       - id: trailing-whitespace
-      - id: requirements-txt-fixer
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ruff version.
-    rev: v0.15.12
+    rev: v0.16.3
     hooks:
-      # Run the linter.
       - id: ruff-check
-        args: [ --fix ]
-      # Run the formatter.
+        args: [--fix]
       - id: ruff-format
-  - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.10.0
-    hooks:
-      - id: python-check-mock-methods
-      - id: python-use-type-annotations
-      - id: python-check-blanket-noqa
-      - id: text-unicode-replacement-char
-  - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.11.0.1
-    hooks:
-      - id: shellcheck
-  - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.13.1-1
-    hooks:
-      - id: shfmt
-        args: ["-w", "-i", "2"]
-  - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.2
-    hooks:
-      - id: codespell
-        additional_dependencies: ["tomli"]
-  - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: "v2.21.2"
-    hooks:
-      - id: pyproject-fmt
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.1.0
-    hooks:
-      - id: mypy
-        files: ^(benchmark|tools)/
-        additional_dependencies: [types-PyYAML]
-        args:
-          - "--config-file=pyproject.toml"
-  - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.409 # Specify a version or use the latest tag
-    hooks:
-      - id: pyright
-        # Optional: specify files/directories to check, defaults to project root
-        files: ^(benchmark|tools)/
-        additional_dependencies: [.]
-        # Tell pyright to use the project config
-        args: ["--project=pyproject.toml"]
-  - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.25
-    hooks:
-      - id: validate-pyproject
-  - repo: https://github.com/pypa/pip-audit
-    rev: v2.10.0
-    hooks:
-      - id: pip-audit
-        args: [--requirement, requirements/requirements.txt]
