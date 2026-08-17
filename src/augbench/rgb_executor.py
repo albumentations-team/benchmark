@@ -290,7 +290,13 @@ def _runtime_metadata(adapter: AugmentationAdapter) -> dict[str, str]:
     import importlib.metadata
 
     package = adapter.implementation_id.split("_")[0]
-    package_names = {"albumentationsx": "albumentations", "pillow": "pillow"}
+    package_names = {
+        "albumentationsx": "albumentationsx",
+        "dali": "nvidia-dali-cuda120",
+        "kornia": "kornia",
+        "pillow": "pillow",
+        "torchvision": "torchvision",
+    }
     try:
         version = importlib.metadata.version(package_names.get(package, package))
     except importlib.metadata.PackageNotFoundError:
