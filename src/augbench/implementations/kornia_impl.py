@@ -50,11 +50,15 @@ class _FixedAffine(torch.nn.Module):
 
     def forward(self, image: torch.Tensor) -> torch.Tensor:
         batch_size = int(image.shape[0])
+        angle = self.angle.to(image)
+        translation = self.translation.to(image)
+        scale_factor = self.scale_factor.to(image)
+        shear = self.shear.to(image)
         transform = kornia.geometry.transform.Affine(
-            angle=self.angle.expand(batch_size),
-            translation=self.translation.expand(batch_size, -1),
-            scale_factor=self.scale_factor.expand(batch_size, -1),
-            shear=self.shear.expand(batch_size, -1),
+            angle=angle.expand(batch_size),
+            translation=translation.expand(batch_size, -1),
+            scale_factor=scale_factor.expand(batch_size, -1),
+            shear=shear.expand(batch_size, -1),
             mode="bilinear",
             padding_mode="zeros",
             align_corners=True,

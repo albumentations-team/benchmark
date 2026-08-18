@@ -45,7 +45,8 @@ matrix unless the user explicitly adds that research question.
   recipe, seed, or arbitrary shard.
 - The current runner exposes only RGB. 9ch, video, and volume become runnable
   only after each has its own data format, config, recipes, GPU-only Normalize
-  implementation, and one-batch L4 preflight per implementation-recipe pair.
+  implementation, and one-batch L4 preflight per implementation-recipe pair:
+  non-DALI uses one temporary DataLoader worker and DALI uses its native graph.
 
 ## Before a production launch
 

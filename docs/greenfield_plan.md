@@ -109,7 +109,7 @@ library-specific reader, decoder и recipe pipeline.
    seeds и timing window;
 2. компактное правило отбора данных, recipe catalog и support matrix;
 3. implementations с GPU-only Normalize и output validation;
-4. один L4 preflight batch для каждой пары implementation–recipe;
+4. один L4 preflight batch для каждой пары implementation–recipe; non-DALI path использует один временный DataLoader worker, DALI — native graph;
 5. новый immutable run и полный matrix.
 
 RGB batch size, sources, recipes и results не переносятся в новую family по

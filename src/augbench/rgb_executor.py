@@ -166,9 +166,9 @@ class RGBCellExecutor:
         loader = TorchDataLoaderSource(
             dataset=dataset,
             batch_size=self._config.execution.batch_size,
-            num_workers=self._config.execution.num_workers,
-            prefetch_factor=self._config.execution.prefetch_factor,
-            persistent_workers=self._config.execution.persistent_workers,
+            num_workers=1,
+            prefetch_factor=1,
+            persistent_workers=False,
             pin_memory=True,
             seed=0,
             host_batch_transform=runtime.host_batch_transform,

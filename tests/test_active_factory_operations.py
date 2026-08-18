@@ -40,6 +40,10 @@ def test_kornia_factories_adapt_catalog_lists_to_kornia_ranges() -> None:
     assert 'size=tuple(params["size"])' in source
     assert '_RandomJigsawWithPad(grid=tuple(params["grid"]))' in source
     assert 'degrees=tuple(params["angle_range"])' in source
+    assert "angle = self.angle.to(image)" in source
+    assert "translation = self.translation.to(image)" in source
+    assert "scale_factor = self.scale_factor.to(image)" in source
+    assert "shear = self.shear.to(image)" in source
 
 
 def _factory_operations(path: Path) -> set[str]:

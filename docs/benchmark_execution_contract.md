@@ -75,7 +75,7 @@ JPEG имеют разные исходные размеры. Для каждо�
 2. валидирует каждую найденную клетку по содержимому и identity;
 3. не создаёт VM, если существует активная VM с тем же `augbench-run` label;
 4. иначе ищет все zones с `g2-standard-16` и L4, затем создаёт одну Standard VM;
-5. VM скачивает code, raw dataset и cached RGB environment один раз, извлекает первые 10 000 отсортированных `val/*.JPEG`, prewarms их, выполняет одну полную preflight-batch для каждой пары `(implementation, recipe)` и идёт по отсутствующим клеткам;
+5. VM скачивает code, raw dataset и cached RGB environment один раз, извлекает первые 10 000 отсортированных `val/*.JPEG`, prewarms их, затем для каждой пары `(implementation, recipe)` выполняет одну неизмеряемую batch до CUDA output: non-DALI path использует один временный DataLoader worker, DALI — native graph; после этого идут отсутствующие клетки с зафиксированными 15 workers;
 6. после каждой клетки сразу создаётся immutable GCS object;
 7. при любом выходе bootstrap сохраняет stdout/stderr в `runs/<run_id>/logs/` до выключения VM;
 8. перед новой VM `launch-rgb` удаляет только terminal или suspended `augbench` VM, чтобы их boot disks не удерживали quota; active VM и GCS artifacts не затрагиваются.
@@ -96,7 +96,7 @@ JPEG имеют разные исходные размеры. Для каждо�
 2. family config с output shape, dtype, batch size, seeds и units throughput;
 3. recipe catalog и support matrix;
 4. implementations с GPU-only Normalize и output validation;
-5. one-batch preflight на L4 для каждой пары implementation–recipe;
+5. one-batch preflight на L4 для каждой пары implementation–recipe; non-DALI path использует один временный DataLoader worker, DALI — native graph;
 6. новый run и complete matrix.
 
 RGB recipes, batch size, data format и результаты не переносятся в новую family по умолчанию.
