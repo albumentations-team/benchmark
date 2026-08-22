@@ -1,8 +1,4 @@
-"""Kornia implementations of transforms for images in custom format.
-
-Param conversions (additive->multiplicative, degrees->fraction, etc.) follow rules
-documented in augbench.implementations.specs module docstring.
-"""
+"""Kornia transform factories for the active RGB recipe catalog."""
 
 from typing import Any
 
@@ -13,7 +9,6 @@ import torch.nn.functional as torch_functional
 
 from augbench.implementations.specs import TransformSpec
 
-# Required: Library name for dependency installation
 LIBRARY = "kornia"
 
 
@@ -66,24 +61,11 @@ class _FixedAffine(torch.nn.Module):
         return transform(image)
 
 
-# Required: Define how to apply transforms to images
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
-    """Apply kornia transform to a single image
-
-    Args:
-        transform: Kornia augmentation instance
-        image: torch.Tensor of shape (C, H, W)
-
-    Returns:
-        Transformed image as torch.Tensor
-    """
     return transform(image.unsqueeze(0)).squeeze(0)
 
 
-# Helper function to create transforms from specs
 def create_transform(spec: TransformSpec) -> Any | None:
-    """Create a Kornia transform from a TransformSpec."""
-
     builder = _TRANSFORM_BUILDERS.get(spec.name)
     return builder(spec.params) if builder is not None else None
 
@@ -478,8 +460,6 @@ def _build_smallest_max_size(params: dict[str, Any]) -> Any | None:
         p=1,
     )
 
-
-# Skip transforms not supported by kornia
 
 _TRANSFORM_BUILDERS = {
     "ColorJitter": _build_color_jitter,

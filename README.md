@@ -6,7 +6,7 @@ Each successful new production cell records two primary results in the same pass
 
 The current RGB run uses the first 10,000 lexicographically sorted `val/*.JPEG` members of a SHA-256-verified ImageNet-validation archive. All rows use batches of 256 on one Standard `g2-standard-16` VM with an NVIDIA L4. The timed boundary is native read and decode → recipe → DataLoader and collation → pinned host-to-device copy → GPU normalization → synchronized `float16` BCHW batch. Normalize never runs on CPU. For GPU-tail paths, the CPU runs only the explicit recipe prefix required to form collatable samples; no hidden crop is added.
 
-AlbumentationsX decodes with SimpleJPEG; Pillow decodes with Pillow; TorchVision and Kornia decode with `torchvision.io`; DALI uses its native file reader and mixed decoder. The operation parameters are manually matched recipe by recipe. The current run records speed and process-wide peak GPU memory together for every `(family, implementation, recipe, seed)` cell.
+AlbumentationsX decodes with SimpleJPEG; Pillow decodes with Pillow; TorchVision and Kornia decode with `torchvision.io`; DALI uses its native file reader and mixed decoder. The operation parameters are manually matched recipe by recipe.
 
 The benchmark does not measure model-training speed. Microbenchmarks, memory-only paths, isolated H2D runs, and capacity sweeps are outside the current study.
 

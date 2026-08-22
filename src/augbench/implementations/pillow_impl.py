@@ -50,7 +50,6 @@ def _affine_coeffs(angle_deg: float, tx: float, ty: float, scale: float, shear_d
 def create_transform(spec: TransformSpec) -> Any | None:
     """Create a Pillow callable, or None when Pillow has no direct analogue."""
 
-    # Geometry: direct Image methods only. Random crop/resize composites are unsupported.
     builder = _TRANSFORM_BUILDERS.get(spec.name)
     return builder(spec.params) if builder is not None else None
 
@@ -109,9 +108,6 @@ def _build_shear(params: dict[str, Any]) -> Any | None:
     )
 
 
-# Color and point operations with direct ImageOps/ImageEnhance equivalents.
-
-
 def _build_brightness(params: dict[str, Any]) -> Any | None:
     limit = params["brightness_limit"]
     factor = 1.0 + float(limit[0] if isinstance(limit, (list, tuple)) else limit)
@@ -150,9 +146,6 @@ def _build_posterize(params: dict[str, Any]) -> Any | None:
 
 def _build_solarize(params: dict[str, Any]) -> Any | None:
     return lambda img: ImageOps.solarize(img, int(params["threshold"] * 255))
-
-
-# Direct ImageFilter equivalents.
 
 
 def _build_gaussian_blur(params: dict[str, Any]) -> Any | None:

@@ -7,7 +7,6 @@ import cv2
 
 from augbench.implementations.specs import TransformSpec
 
-# Required: Library name for dependency installation
 LIBRARY = "albumentationsx"
 
 
@@ -36,8 +35,6 @@ def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
 
 
 def create_transform(spec: TransformSpec) -> Any:
-    """Create an AlbumentationsX transform from a TransformSpec."""
-
     builder = _TRANSFORM_BUILDERS.get(spec.name)
     if builder is None:
         raise ValueError(f"Unknown transform: {spec.name}")

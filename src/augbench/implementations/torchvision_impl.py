@@ -1,4 +1,4 @@
-"""Torchvision implementations of transforms for images in custom format."""
+"""TorchVision transform factories for the active RGB recipe catalog."""
 
 from typing import Any
 
@@ -6,29 +6,14 @@ import torchvision.transforms.v2 as tv_transforms
 
 from augbench.implementations.specs import TransformSpec
 
-# Required: Library name for dependency installation
 LIBRARY = "torchvision"
 
 
-# Required: Define how to apply transforms to images
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
-    """Apply torchvision transform to a single image
-
-    Args:
-        transform: TorchVision transform instance
-        image: torch.Tensor of shape (C, H, W)
-
-    Returns:
-        Transformed image as torch.Tensor
-    """
-    # Apply transform directly - let PyTorch handle memory layout
     return transform(image)
 
 
-# Helper function to create transforms from specs
 def create_transform(spec: TransformSpec) -> Any | None:
-    """Create a Torchvision transform from a TransformSpec."""
-
     builder = _TRANSFORM_BUILDERS.get(spec.name)
     return builder(spec.params) if builder is not None else None
 
@@ -100,8 +85,9 @@ def _build_affine(params: dict[str, Any]) -> Any | None:
 
 
 def _build_perspective(params: dict[str, Any]) -> Any | None:
+    maximum_distortion = params["scale"][1]
     return tv_transforms.RandomPerspective(
-        distortion_scale=params["scale"][1],  # Using max scale
+        distortion_scale=maximum_distortion,
         interpolation=tv_transforms.InterpolationMode.BILINEAR
         if params["interpolation"] == "bilinear"
         else tv_transforms.InterpolationMode.NEAREST,
@@ -217,8 +203,6 @@ def _build_photo_metric_distort(params: dict[str, Any]) -> Any | None:
         p=1,
     )
 
-
-# Skip transforms not supported by torchvision
 
 _TRANSFORM_BUILDERS = {
     "Resize": _build_resize,
