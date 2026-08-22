@@ -16,8 +16,13 @@ repos:
       - id: end-of-file-fixer
       - id: trailing-whitespace
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.3
+    rev: v0.16.4
     hooks:
       - id: ruff-check
         args: [--fix]
       - id: ruff-format
+  - repo: https://github.com/ternaus/ruff-policy-hooks
+    rev: v0.4.0
+    hooks:
+      - id: check-ruff-suppressions
+        args: [--protect=C901,PLR,ANN001,ANN201,ANN204,ARG,BLE001,FBT,F,I,PERF,RET,RUF,SIM,UP]

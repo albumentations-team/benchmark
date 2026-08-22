@@ -9,12 +9,13 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 type Uint8Array = NDArray[np.uint8]
+_HWC_DIMENSIONS = 3
 
 
 def _validate_uint8_hwc(sample: NDArray[np.generic], *, channels: int, source: Path) -> Uint8Array:
     if sample.dtype != np.uint8:
         raise ValueError(f"{source} must contain uint8 data, got {sample.dtype}")
-    if sample.ndim != 3 or sample.shape[-1] != channels:
+    if sample.ndim != _HWC_DIMENSIONS or sample.shape[-1] != channels:
         raise ValueError(f"{source} must have HWC shape with {channels} channels, got {sample.shape}")
     return cast("Uint8Array", np.ascontiguousarray(sample, dtype=np.uint8))
 

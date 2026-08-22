@@ -40,20 +40,9 @@ class RunRecord(_Record):
 def build_run_record(
     *,
     family_config: dict[str, Any],
-    git_commit: str,
-    code_archive_sha256: str,
-    dataset_archive_sha256: str,
-    recipe_catalog_sha256: str,
-    environment_lock_sha256: dict[str, str],
+    inputs: RunInputs,
     hardware: dict[str, str],
 ) -> RunRecord:
-    inputs = RunInputs(
-        git_commit=git_commit,
-        code_archive_sha256=code_archive_sha256,
-        dataset_archive_sha256=dataset_archive_sha256,
-        recipe_catalog_sha256=recipe_catalog_sha256,
-        environment_lock_sha256=environment_lock_sha256,
-    )
     identity = {
         "schema_version": 1,
         "family_config": family_config,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import Path  # noqa: TC003 - Pydantic resolves this annotation at runtime.
 from typing import TYPE_CHECKING, Literal
 
@@ -12,6 +13,7 @@ if TYPE_CHECKING:
 
 _LABEL_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_-]{0,62}$")
 _LABEL_VALUE_PATTERN = re.compile(r"^[a-z0-9_-]{0,63}$")
+_GCE_INSTANCE_CSV_FIELDS = 3
 
 
 class GcpVmSpec(BaseModel):
@@ -148,33 +150,37 @@ def resolve_candidate_zones(
     )
 
 
-def provision_first_available(
-    *,
-    zones: tuple[str, ...],
-    spec_for_zone: Callable[[str], GcpVmSpec],
-    executable: str,
-    runner: Callable[[list[str]], subprocess.CompletedProcess[bytes]],
-    deadline_seconds: float,
-    poll_seconds: float,
-    clock: Callable[[], float],
-    sleep: Callable[[float], None],
-) -> str:
-    started = clock()
+@dataclass(frozen=True)
+class GcpProvisioningAttempt:
+    zones: tuple[str, ...]
+    spec_for_zone: Callable[[str], GcpVmSpec]
+    executable: str
+    runner: Callable[[list[str]], subprocess.CompletedProcess[bytes]]
+    deadline_seconds: float
+    poll_seconds: float
+    clock: Callable[[], float]
+    sleep: Callable[[float], None]
+
+
+def provision_first_available(*, attempt: GcpProvisioningAttempt) -> str:
+    started = attempt.clock()
     errors: list[str] = []
     while True:
         errors.clear()
-        for zone in zones:
-            completed = runner(build_create_instance_command(spec_for_zone(zone), executable=executable))
+        for zone in attempt.zones:
+            completed = attempt.runner(
+                build_create_instance_command(attempt.spec_for_zone(zone), executable=attempt.executable)
+            )
             if completed.returncode == 0:
                 return zone
             message = completed.stderr.decode(errors="replace")[-4096:]
             if not is_retryable_capacity_error(message):
                 raise RuntimeError(f"GCE provisioning failed in {zone}: {message.strip()}")
             errors.append(f"{zone}: {message.strip()}")
-        elapsed = clock() - started
-        if elapsed >= deadline_seconds:
+        elapsed = attempt.clock() - started
+        if elapsed >= attempt.deadline_seconds:
             raise TimeoutError(f"GCE capacity remained unavailable until deadline: {'; '.join(errors)}")
-        sleep(min(poll_seconds, deadline_seconds - elapsed, 60.0))
+        attempt.sleep(min(attempt.poll_seconds, attempt.deadline_seconds - elapsed, 60.0))
 
 
 def is_retryable_capacity_error(message: str) -> bool:
@@ -232,7 +238,7 @@ def list_labeled_instances(
     instances: list[GceInstance] = []
     for line in completed.stdout.decode(errors="replace").splitlines():
         fields = [field.strip() for field in line.split(",")]
-        if len(fields) != 3 or not any(fields):
+        if len(fields) != _GCE_INSTANCE_CSV_FIELDS or not any(fields):
             continue
         instances.append(GceInstance(name=fields[0], zone=fields[1], status=fields[2]))
     return tuple(instances)

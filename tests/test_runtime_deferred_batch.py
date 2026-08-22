@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any, cast
 import numpy as np
 import pytest
 
-from augbench.adapters.runtime import PythonModuleAdapter
-from augbench.execution.pipeline import TorchDataLoaderSource
+from augbench.adapters.runtime import PythonModuleAdapter, PythonModuleAdapterConfig
+from augbench.execution.pipeline import TorchDataLoaderConfig, TorchDataLoaderSource
 
 if TYPE_CHECKING:
     from augbench.recipes.models import RecipeSpec
@@ -94,11 +94,13 @@ def test_cpu_adapter_can_defer_a_recipe_tail_until_after_h2d(monkeypatch: pytest
     monkeypatch.setitem(sys.modules, module_name, module)
 
     adapter = PythonModuleAdapter(
-        implementation_id="cpu_impl",
-        recipe_module=module_name,
+        config=PythonModuleAdapterConfig(
+            implementation_id="cpu_impl",
+            recipe_module=module_name,
+            placement="cpu",
+            source_id="test",
+        ),
         load_source=lambda source: source,
-        placement="cpu",
-        source_id="test",
     )
 
     runtime = adapter.build_recipe(cast("RecipeSpec", _Recipe()))
@@ -121,11 +123,13 @@ def test_cpu_adapter_can_transform_a_collated_batch_before_h2d(monkeypatch: pyte
     monkeypatch.setitem(sys.modules, module_name, module)
 
     adapter = PythonModuleAdapter(
-        implementation_id="cpu_impl",
-        recipe_module=module_name,
+        config=PythonModuleAdapterConfig(
+            implementation_id="cpu_impl",
+            recipe_module=module_name,
+            placement="cpu",
+            source_id="test",
+        ),
         load_source=lambda source: source,
-        placement="cpu",
-        source_id="test",
     )
 
     runtime = adapter.build_recipe(cast("RecipeSpec", _Recipe()))
@@ -145,13 +149,15 @@ def test_loader_casts_the_collated_host_batch_before_pinning() -> None:
 
     loader = TorchDataLoaderSource(
         dataset=_TensorDataset(),  # type: ignore[arg-type]
-        batch_size=2,
-        num_workers=0,
-        prefetch_factor=None,
-        persistent_workers=False,
-        pin_memory=False,
-        seed=137,
-        host_batch_transform=cast_batch,
+        config=TorchDataLoaderConfig(
+            batch_size=2,
+            num_workers=0,
+            prefetch_factor=None,
+            persistent_workers=False,
+            pin_memory=False,
+            seed=137,
+            host_batch_transform=cast_batch,
+        ),
     )
     loader.open()
     try:
@@ -167,12 +173,14 @@ def test_loader_stacks_numpy_backed_tensors_in_worker_processes() -> None:
     torch = pytest.importorskip("torch")
     loader = TorchDataLoaderSource(
         dataset=_NumpyBackedTensorDataset(),  # type: ignore[arg-type]
-        batch_size=2,
-        num_workers=1,
-        prefetch_factor=2,
-        persistent_workers=False,
-        pin_memory=False,
-        seed=137,
+        config=TorchDataLoaderConfig(
+            batch_size=2,
+            num_workers=1,
+            prefetch_factor=2,
+            persistent_workers=False,
+            pin_memory=False,
+            seed=137,
+        ),
     )
     loader.open()
     try:
@@ -195,11 +203,13 @@ def test_cpu_adapter_keeps_an_ordinary_split_recipe_on_cpu(monkeypatch: pytest.M
     monkeypatch.setitem(sys.modules, module_name, module)
 
     adapter = PythonModuleAdapter(
-        implementation_id="cpu_impl",
-        recipe_module=module_name,
+        config=PythonModuleAdapterConfig(
+            implementation_id="cpu_impl",
+            recipe_module=module_name,
+            placement="cpu",
+            source_id="test",
+        ),
         load_source=lambda source: source,
-        placement="cpu",
-        source_id="test",
     )
 
     runtime = adapter.build_recipe(cast("RecipeSpec", _Recipe()))
@@ -217,11 +227,13 @@ def test_gpu_adapter_can_cast_a_collated_shape_prefix_before_h2d(monkeypatch: py
     monkeypatch.setitem(sys.modules, module_name, module)
 
     adapter = PythonModuleAdapter(
-        implementation_id="gpu_impl",
-        recipe_module=module_name,
+        config=PythonModuleAdapterConfig(
+            implementation_id="gpu_impl",
+            recipe_module=module_name,
+            placement="cuda",
+            source_id="test",
+        ),
         load_source=lambda source: source,
-        placement="cuda",
-        source_id="test",
     )
 
     runtime = adapter.build_recipe(cast("RecipeSpec", _Recipe()))

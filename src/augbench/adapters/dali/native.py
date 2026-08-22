@@ -145,137 +145,254 @@ class DaliBatchSource:
 
 
 def _apply_stage(data: Any, stage: RecipeStage, *, output_height: int, output_width: int) -> Any:
+    handler = _STAGE_HANDLERS.get(stage.operation_id)
+    if handler is None:
+        raise UnsupportedRecipeError(f"DALI does not implement operation {stage.operation_id!r}")
+    return handler(data, stage.parameters, output_height, output_width)
+
+
+def _apply_to_tensor(data: Any, _params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    return data
+
+
+def _apply_normalize(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
     from nvidia.dali import fn, types
 
-    name = stage.operation_id
-    params = stage.parameters
-    if name == "ToTensor":
-        return data
-    if name == "Normalize":
-        mean = [float(value) * 255.0 for value in _number_list(params, "mean")]
-        std = [float(value) * 255.0 for value in _number_list(params, "std")]
-        return fn.crop_mirror_normalize(
-            data,
-            dtype=types.FLOAT16,
-            output_layout="CHW",
-            mean=mean,
-            std=std,
-        )
-    if name == "RandomCrop224":
-        height = _integer(params, "height")
-        width = _integer(params, "width")
-        resized = fn.resize(data, resize_shorter=max(height, width), interp_type=types.INTERP_LINEAR)
-        return fn.crop(
-            resized,
-            crop=(height, width),
-            crop_pos_x=fn.random.uniform(range=(0.0, 1.0)),
-            crop_pos_y=fn.random.uniform(range=(0.0, 1.0)),
-        )
-    if name == "RandomResizedCrop":
-        return fn.random_resized_crop(
-            data,
-            size=tuple(_integer_list(params, "size")),
-            random_area=tuple(_number_list(params, "scale")),
-            random_aspect_ratio=tuple(_number_list(params, "ratio")),
-            interp_type=_interpolation(params.get("interpolation")),
-        )
-    if name == "Resize":
-        target = _integer(params, "target_size")
-        return fn.resize(
-            data,
-            resize_x=target,
-            resize_y=target,
-            interp_type=_interpolation(params.get("interpolation")),
-        )
-    if name == "HorizontalFlip":
-        return fn.flip(data, horizontal=1)
-    if name == "VerticalFlip":
-        return fn.flip(data, vertical=1)
-    if name == "Pad":
-        padding = _integer(params, "padding")
-        return fn.pad(
-            data,
-            axes=(0, 1),
-            shape=(output_height + 2 * padding, output_width + 2 * padding),
-            fill_value=params.get("fill", 0),
-        )
-    if name == "Rotate":
-        return fn.rotate(
-            data,
-            angle=_uniform(params.get("angle_range")),
-            keep_size=True,
-            fill_value=params.get("fill", 0),
-            interp_type=_interpolation(params.get("interpolation")),
-        )
-    if name == "Affine":
-        scale = _number(params, "scale")
-        shift = _number_list(params, "shift")
-        return fn.warp_affine(
-            data,
-            matrix=[1.0 / scale, 0.0, -shift[0], 0.0, 1.0 / scale, -shift[1]],
-            size=(output_height, output_width),
-            fill_value=params.get("fill", 0),
-            interp_type=_interpolation(params.get("interpolation")),
-        )
-    if name == "Shear":
-        shear = _number(params, "shear") / 57.29577951308232
-        return fn.warp_affine(
-            data,
-            matrix=[1.0, shear, 0.0, 0.0, 1.0, 0.0],
-            size=(output_height, output_width),
-        )
-    if name == "Brightness":
-        limit = _number_list(params, "brightness_limit")
-        return fn.brightness_contrast(data, brightness=1.0 + limit[0])
-    if name == "Contrast":
-        limit = _number_list(params, "contrast_limit")
-        return fn.brightness_contrast(data, contrast=1.0 + limit[0])
-    if name in {"ColorJitter", "ColorJiggle"}:
-        return fn.color_twist(
-            data,
-            brightness=_uniform(params.get("brightness", 1.0)),
-            contrast=_uniform(params.get("contrast", 1.0)),
-            saturation=_uniform(params.get("saturation", 1.0)),
-            hue=_uniform(params.get("hue", 0.0)),
-        )
-    if name == "Hue":
-        return fn.hue(data, hue=_number(params, "hue"))
-    if name == "Saturation":
-        return fn.saturation(data, saturation=1.0 + _number(params, "saturation_factor"))
-    if name == "CLAHE":
-        tile_grid = _integer_list(params, "tile_grid_size")
-        return fn.clahe(
-            data,
-            clip_limit=_number_list(params, "clip_limit")[0],
-            tiles_x=tile_grid[1],
-            tiles_y=tile_grid[0],
-        )
-    if name == "Equalize":
-        return fn.equalize(data)
-    if name == "GaussianBlur":
-        return fn.gaussian_blur(
-            data,
-            sigma=_number(params, "sigma"),
-            window_size=tuple(_integer_list(params, "kernel_size")),
-        )
-    if name == "GaussianNoise":
-        return fn.noise.gaussian(data, mean=_number(params, "mean"), stddev=_number(params, "std") * 255.0)
-    if name == "SaltAndPepper":
-        return fn.noise.salt_and_pepper(
-            data,
-            prob=_uniform(params.get("amount")),
-            salt_vs_pepper=_uniform(params.get("salt_vs_pepper")),
-        )
-    if name == "Erasing":
-        erase_kwargs: dict[str, Any] = {
-            "anchor": (output_height // 7, output_width // 7),
-            "shape": (output_height // 4, output_width // 4),
-            "fill_value": params.get("fill", 0),
-        }
-        return fn.erase(data, **erase_kwargs)
-    if name == "JpegCompression":
-        return fn.jpeg_compression_distortion(data, quality=_integer(params, "quality"))
-    raise UnsupportedRecipeError(f"DALI does not implement operation {name!r}")
+    mean = [float(value) * 255.0 for value in _number_list(params, "mean")]
+    std = [float(value) * 255.0 for value in _number_list(params, "std")]
+    return fn.crop_mirror_normalize(
+        data,
+        dtype=types.FLOAT16,
+        output_layout="CHW",
+        mean=mean,
+        std=std,
+    )
+
+
+def _apply_random_crop224(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn, types
+
+    height = _integer(params, "height")
+    width = _integer(params, "width")
+    resized = fn.resize(data, resize_shorter=max(height, width), interp_type=types.INTERP_LINEAR)
+    return fn.crop(
+        resized,
+        crop=(height, width),
+        crop_pos_x=fn.random.uniform(range=(0.0, 1.0)),
+        crop_pos_y=fn.random.uniform(range=(0.0, 1.0)),
+    )
+
+
+def _apply_random_resized_crop(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.random_resized_crop(
+        data,
+        size=tuple(_integer_list(params, "size")),
+        random_area=tuple(_number_list(params, "scale")),
+        random_aspect_ratio=tuple(_number_list(params, "ratio")),
+        interp_type=_interpolation(params.get("interpolation")),
+    )
+
+
+def _apply_resize(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    target = _integer(params, "target_size")
+    return fn.resize(
+        data,
+        resize_x=target,
+        resize_y=target,
+        interp_type=_interpolation(params.get("interpolation")),
+    )
+
+
+def _apply_horizontal_flip(data: Any, _params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.flip(data, horizontal=1)
+
+
+def _apply_vertical_flip(data: Any, _params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.flip(data, vertical=1)
+
+
+def _apply_pad(data: Any, params: dict[str, Any], output_height: int, output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    padding = _integer(params, "padding")
+    return fn.pad(
+        data,
+        axes=(0, 1),
+        shape=(output_height + 2 * padding, output_width + 2 * padding),
+        fill_value=params.get("fill", 0),
+    )
+
+
+def _apply_rotate(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.rotate(
+        data,
+        angle=_uniform(params.get("angle_range")),
+        keep_size=True,
+        fill_value=params.get("fill", 0),
+        interp_type=_interpolation(params.get("interpolation")),
+    )
+
+
+def _apply_affine(data: Any, params: dict[str, Any], output_height: int, output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    scale = _number(params, "scale")
+    shift = _number_list(params, "shift")
+    return fn.warp_affine(
+        data,
+        matrix=[1.0 / scale, 0.0, -shift[0], 0.0, 1.0 / scale, -shift[1]],
+        size=(output_height, output_width),
+        fill_value=params.get("fill", 0),
+        interp_type=_interpolation(params.get("interpolation")),
+    )
+
+
+def _apply_shear(data: Any, params: dict[str, Any], output_height: int, output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    shear = _number(params, "shear") / 57.29577951308232
+    return fn.warp_affine(
+        data,
+        matrix=[1.0, shear, 0.0, 0.0, 1.0, 0.0],
+        size=(output_height, output_width),
+    )
+
+
+def _apply_brightness(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    limit = _number_list(params, "brightness_limit")
+    return fn.brightness_contrast(data, brightness=1.0 + limit[0])
+
+
+def _apply_contrast(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    limit = _number_list(params, "contrast_limit")
+    return fn.brightness_contrast(data, contrast=1.0 + limit[0])
+
+
+def _apply_color_jitter(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.color_twist(
+        data,
+        brightness=_uniform(params.get("brightness", 1.0)),
+        contrast=_uniform(params.get("contrast", 1.0)),
+        saturation=_uniform(params.get("saturation", 1.0)),
+        hue=_uniform(params.get("hue", 0.0)),
+    )
+
+
+def _apply_hue(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.hue(data, hue=_number(params, "hue"))
+
+
+def _apply_saturation(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.saturation(data, saturation=1.0 + _number(params, "saturation_factor"))
+
+
+def _apply_clahe(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    tile_grid = _integer_list(params, "tile_grid_size")
+    return fn.clahe(
+        data,
+        clip_limit=_number_list(params, "clip_limit")[0],
+        tiles_x=tile_grid[1],
+        tiles_y=tile_grid[0],
+    )
+
+
+def _apply_equalize(data: Any, _params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.equalize(data)
+
+
+def _apply_gaussian_blur(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.gaussian_blur(
+        data,
+        sigma=_number(params, "sigma"),
+        window_size=tuple(_integer_list(params, "kernel_size")),
+    )
+
+
+def _apply_gaussian_noise(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.noise.gaussian(data, mean=_number(params, "mean"), stddev=_number(params, "std") * 255.0)
+
+
+def _apply_salt_and_pepper(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.noise.salt_and_pepper(
+        data,
+        prob=_uniform(params.get("amount")),
+        salt_vs_pepper=_uniform(params.get("salt_vs_pepper")),
+    )
+
+
+def _apply_erasing(data: Any, params: dict[str, Any], output_height: int, output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    erase_kwargs: dict[str, Any] = {
+        "anchor": (output_height // 7, output_width // 7),
+        "shape": (output_height // 4, output_width // 4),
+        "fill_value": params.get("fill", 0),
+    }
+    return fn.erase(data, **erase_kwargs)
+
+
+def _apply_jpeg_compression(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.jpeg_compression_distortion(data, quality=_integer(params, "quality"))
+
+
+_STAGE_HANDLERS = {
+    "ToTensor": _apply_to_tensor,
+    "Normalize": _apply_normalize,
+    "RandomCrop224": _apply_random_crop224,
+    "RandomResizedCrop": _apply_random_resized_crop,
+    "Resize": _apply_resize,
+    "HorizontalFlip": _apply_horizontal_flip,
+    "VerticalFlip": _apply_vertical_flip,
+    "Pad": _apply_pad,
+    "Rotate": _apply_rotate,
+    "Affine": _apply_affine,
+    "Shear": _apply_shear,
+    "Brightness": _apply_brightness,
+    "Contrast": _apply_contrast,
+    "ColorJitter": _apply_color_jitter,
+    "ColorJiggle": _apply_color_jitter,
+    "Hue": _apply_hue,
+    "Saturation": _apply_saturation,
+    "CLAHE": _apply_clahe,
+    "Equalize": _apply_equalize,
+    "GaussianBlur": _apply_gaussian_blur,
+    "GaussianNoise": _apply_gaussian_noise,
+    "SaltAndPepper": _apply_salt_and_pepper,
+    "Erasing": _apply_erasing,
+    "JpegCompression": _apply_jpeg_compression,
+}
 
 
 def _interpolation(value: Any) -> Any:

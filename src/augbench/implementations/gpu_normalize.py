@@ -6,6 +6,7 @@ import torch
 from torch import nn
 
 BatchLayout = Literal["BCHW", "BHWC"]
+_BATCH_DIMENSIONS = 4
 
 
 class GpuBatchNormalize(nn.Module):
@@ -37,7 +38,7 @@ class GpuBatchNormalize(nn.Module):
         # future adapter to move Normalize back into a DataLoader worker.
         if batch.device.type != "cuda":
             raise RuntimeError("GPU normalization requires a CUDA batch")
-        if batch.ndim != 4:
+        if batch.ndim != _BATCH_DIMENSIONS:
             raise ValueError(f"deferred normalization requires a rank-four batch, got {tuple(batch.shape)}")
         if self._input_layout == "BHWC":
             if batch.shape[-1] != self._channels:

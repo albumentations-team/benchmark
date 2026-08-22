@@ -10,7 +10,7 @@ from augbench.guest_request import GuestRequest
 from augbench.matrix import build_matrix
 from augbench.recipes.load import load_recipe_catalog
 from augbench.run_config import load_family_config, load_gcp_config
-from augbench.run_records import CellKey, RunRecord, build_run_record
+from augbench.run_records import CellKey, RunInputs, RunRecord, build_run_record
 
 
 @dataclass(frozen=True)
@@ -36,11 +36,13 @@ def build_frozen_rgb_run(
     lock_sha256 = _sha256_file(lock_path)
     run = build_run_record(
         family_config=config.model_dump(mode="json"),
-        git_commit=git_commit,
-        code_archive_sha256=code_archive_sha256,
-        dataset_archive_sha256=config.dataset.archive_sha256,
-        recipe_catalog_sha256=recipe_sha256,
-        environment_lock_sha256={"rgb": lock_sha256},
+        inputs=RunInputs(
+            git_commit=git_commit,
+            code_archive_sha256=code_archive_sha256,
+            dataset_archive_sha256=config.dataset.archive_sha256,
+            recipe_catalog_sha256=recipe_sha256,
+            environment_lock_sha256={"rgb": lock_sha256},
+        ),
         hardware={
             "machine_type": cloud.machine_type,
             "accelerator": cloud.accelerator,

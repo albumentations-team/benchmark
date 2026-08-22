@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Protocol
 
 from augbench.result_store import decode_result
 
+_SHA256_HEX_LENGTH = 64
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
@@ -48,6 +50,10 @@ def _cell_id_from_key(key: str, prefix: str) -> str | None:
     if not key.startswith(expected_prefix) or not key.endswith(".json"):
         return None
     cell_id = key.removeprefix(expected_prefix).removesuffix(".json")
-    if "/" in cell_id or len(cell_id) != 64 or any(character not in "0123456789abcdef" for character in cell_id):
+    if (
+        "/" in cell_id
+        or len(cell_id) != _SHA256_HEX_LENGTH
+        or any(character not in "0123456789abcdef" for character in cell_id)
+    ):
         return None
     return cell_id

@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
+_RGB_CHANNELS = 3
+
 
 class _RecipeModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -49,6 +51,6 @@ class RecipeCatalog(_RecipeModel):
         recipe_ids = [recipe.recipe_id for recipe in self.recipes]
         if len(recipe_ids) != len(set(recipe_ids)):
             raise ValueError("recipe catalog contains duplicate recipe IDs")
-        if any(recipe.channels != 3 for recipe in self.recipes):
+        if any(recipe.channels != _RGB_CHANNELS for recipe in self.recipes):
             raise ValueError("RGB recipes require three channels")
         return self

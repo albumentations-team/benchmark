@@ -36,6 +36,16 @@ class AugmentationAdapter(Protocol):
     def metadata(self) -> dict[str, str]: ...
 
 
+@dataclass(frozen=True)
+class PythonModuleAdapterConfig:
+    implementation_id: str
+    recipe_module: str
+    placement: Placement
+    source_id: str
+    gpu_batch_mode: Literal["direct", "per-sample"] = "direct"
+    unsupported_operation_ids: frozenset[str] = frozenset()
+
+
 class PythonModuleAdapter:
     implementation_id: str
     placement: Placement
@@ -43,21 +53,16 @@ class PythonModuleAdapter:
     def __init__(
         self,
         *,
-        implementation_id: str,
-        recipe_module: str,
+        config: PythonModuleAdapterConfig,
         load_source: Callable[[Any], Any],
-        placement: Placement,
-        source_id: str,
-        gpu_batch_mode: Literal["direct", "per-sample"] = "direct",
-        unsupported_operation_ids: frozenset[str] = frozenset(),
     ) -> None:
-        self.implementation_id = implementation_id
-        self.placement = placement
-        self._recipe_module = recipe_module
+        self.implementation_id = config.implementation_id
+        self.placement = config.placement
+        self._recipe_module = config.recipe_module
         self._load_source = load_source
-        self._source_id = source_id
-        self._gpu_batch_mode = gpu_batch_mode
-        self._unsupported_operation_ids = unsupported_operation_ids
+        self._source_id = config.source_id
+        self._gpu_batch_mode = config.gpu_batch_mode
+        self._unsupported_operation_ids = config.unsupported_operation_ids
 
     def load_source(self, source: Any) -> Any:
         return self._load_source(source)

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import random
+from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
+
+_MODEL_BATCH_DIMENSIONS = 4
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -60,35 +63,40 @@ class RecipeDataset:
         return sample
 
 
+@dataclass(frozen=True)
+class TorchDataLoaderConfig:
+    batch_size: int
+    num_workers: int
+    prefetch_factor: int | None
+    persistent_workers: bool
+    pin_memory: bool
+    seed: int
+    host_batch_transform: Callable[[Any], Any] | None = None
+    shuffle: bool = False
+    drop_last: bool = True
+
+
 class TorchDataLoaderSource:
     def __init__(
         self,
         *,
         dataset: RecipeDataset,
-        batch_size: int,
-        num_workers: int,
-        prefetch_factor: int | None,
-        persistent_workers: bool,
-        pin_memory: bool,
-        seed: int,
-        host_batch_transform: Callable[[Any], Any] | None = None,
-        shuffle: bool = False,
-        drop_last: bool = True,
+        config: TorchDataLoaderConfig,
     ) -> None:
-        if batch_size < 1:
+        if config.batch_size < 1:
             raise ValueError("batch_size must be positive")
-        if num_workers == 0 and (prefetch_factor is not None or persistent_workers):
+        if config.num_workers == 0 and (config.prefetch_factor is not None or config.persistent_workers):
             raise ValueError("prefetch and persistent workers require num_workers > 0")
         self._dataset = dataset
-        self._batch_size = batch_size
-        self._num_workers = num_workers
-        self._prefetch_factor = prefetch_factor
-        self._persistent_workers = persistent_workers
-        self._pin_memory = pin_memory
-        self._seed = seed
-        self._host_batch_transform = host_batch_transform
-        self._shuffle = shuffle
-        self._drop_last = drop_last
+        self._batch_size = config.batch_size
+        self._num_workers = config.num_workers
+        self._prefetch_factor = config.prefetch_factor
+        self._persistent_workers = config.persistent_workers
+        self._pin_memory = config.pin_memory
+        self._seed = config.seed
+        self._host_batch_transform = config.host_batch_transform
+        self._shuffle = config.shuffle
+        self._drop_last = config.drop_last
         self._loader: Any | None = None
         self._iterator: Any | None = None
 
@@ -185,7 +193,7 @@ class ReadyGpuBatchConsumer:
 
 def canonicalize_model_batch(batch: Any, *, expected_channels: int) -> Any:
     shape = tuple(batch.shape)
-    if len(shape) != 4 or shape[1] != expected_channels:
+    if len(shape) != _MODEL_BATCH_DIMENSIONS or shape[1] != expected_channels:
         raise ValueError(f"RGB batch must be BCHW with {expected_channels} channels, got {shape}")
     _require_ready_gpu_float16(batch)
     return batch

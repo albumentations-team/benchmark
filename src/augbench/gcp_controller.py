@@ -6,12 +6,14 @@ import hashlib
 import json
 import subprocess
 import time
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from augbench.cloud.gcp.instance_monitor import InstanceCommandRunner, delete_instance
 from augbench.cloud.gcp.provisioning import (
+    GcpProvisioningAttempt,
     GcpVmSpec,
     list_labeled_instances,
     provision_first_available,
@@ -20,7 +22,7 @@ from augbench.cloud.gcp.provisioning import (
 from augbench.remote_results import completed_cell_ids, pending_cells
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable
     from pathlib import Path
 
     from augbench.guest_request import GuestRequest
@@ -34,6 +36,23 @@ class GcpControllerStore(Protocol):
     def read(self, key: str) -> bytes: ...
 
     def list_keys(self, prefix: str) -> tuple[str, ...]: ...
+
+
+@dataclass(frozen=True)
+class GcpStartRequest:
+    cloud: GcpRunConfig
+    request: GuestRequest
+    cells: tuple[CellKey, ...]
+    startup_script: Path
+
+
+@dataclass(frozen=True)
+class GcpControllerDependencies:
+    remote: GcpControllerStore
+    executable: str = "gcloud"
+    runner: InstanceCommandRunner | None = None
+    clock: Callable[[], float] = time.monotonic
+    sleep: Callable[[float], None] = time.sleep
 
 
 class GcpLaunch(BaseModel):
@@ -50,22 +69,21 @@ class GcpLaunch(BaseModel):
 
 def start_or_resume(
     *,
-    cloud: GcpRunConfig,
-    request: GuestRequest,
-    cells: Iterable[CellKey],
-    startup_script: Path,
-    remote: GcpControllerStore,
-    executable: str = "gcloud",
-    runner: InstanceCommandRunner | None = None,
-    clock: Callable[[], float] = time.monotonic,
-    sleep: Callable[[float], None] = time.sleep,
+    start: GcpStartRequest,
+    dependencies: GcpControllerDependencies,
 ) -> GcpLaunch:
     """Publish immutable input, reuse valid cells, then create at most one VM."""
+    cloud = start.cloud
+    request = start.request
+    cells = start.cells
+    startup_script = start.startup_script
+    remote = dependencies.remote
+    executable = dependencies.executable
+    command_runner = dependencies.runner or _run
     if request.gcs_base_uri.rstrip("/") != cloud.gcs_base_uri.rstrip("/"):
         raise ValueError("guest request and cloud config use different GCS roots")
     if not startup_script.is_file():
         raise FileNotFoundError(startup_script)
-    command_runner = runner or _run
     matrix = tuple(cells)
     _publish_immutable(remote, f"runs/{request.run.run_id}/run.json", _json_bytes(request.run))
     completed = completed_cell_ids(remote=remote, run_id=request.run.run_id, cells=matrix)
@@ -115,27 +133,29 @@ def start_or_resume(
         runner=command_runner,
     )
     zone = provision_first_available(
-        zones=zones,
-        spec_for_zone=lambda candidate: GcpVmSpec(
-            project=cloud.project,
-            zone=candidate,
-            instance_name=instance_name,
-            machine_type=cloud.machine_type,
-            image=cloud.image,
-            boot_disk_size_gib=cloud.boot_disk_size_gib,
-            service_account=cloud.service_account,
-            startup_script=startup_script,
-            max_run_duration_seconds=cloud.run_deadline_seconds,
-            provisioning_model=cloud.provisioning_model,
-            labels={"augbench": "1", "augbench-run": label_value, "augbench-family": "rgb"},
-            metadata={"augbench-request-uri": request_uri},
+        attempt=GcpProvisioningAttempt(
+            zones=zones,
+            spec_for_zone=lambda candidate: GcpVmSpec(
+                project=cloud.project,
+                zone=candidate,
+                instance_name=instance_name,
+                machine_type=cloud.machine_type,
+                image=cloud.image,
+                boot_disk_size_gib=cloud.boot_disk_size_gib,
+                service_account=cloud.service_account,
+                startup_script=startup_script,
+                max_run_duration_seconds=cloud.run_deadline_seconds,
+                provisioning_model=cloud.provisioning_model,
+                labels={"augbench": "1", "augbench-run": label_value, "augbench-family": "rgb"},
+                metadata={"augbench-request-uri": request_uri},
+            ),
+            executable=executable,
+            runner=command_runner,
+            deadline_seconds=cloud.provisioning_deadline_seconds,
+            poll_seconds=30.0,
+            clock=dependencies.clock,
+            sleep=dependencies.sleep,
         ),
-        executable=executable,
-        runner=command_runner,
-        deadline_seconds=cloud.provisioning_deadline_seconds,
-        poll_seconds=30.0,
-        clock=clock,
-        sleep=sleep,
     )
     return GcpLaunch(
         status="launched",

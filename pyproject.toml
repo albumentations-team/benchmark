@@ -108,38 +108,14 @@ format.skip-magic-trailing-comma = false
 # Like Black, automatically detect the appropriate line ending.
 lint.select = [ "ALL" ]
 lint.ignore = [
-  "ANN001",
-  "ANN201",
-  "ANN204",
-  "ANN401",
-  "ARG004",
-  "BLE001",
-  "C901",
   "COM812",  # Conflicts with the Ruff formatter.
   "CPY001",  # The repository-level MIT LICENSE applies; per-file headers are not used.
-  "D100",
-  "D101",
-  "D102",
-  "D103",
-  "D104",
-  "D105",
-  "D107",
-  "D415",
-  "EM101",
-  "EM102",
-  "FBT001",
-  "FBT002",
-  "FBT003",
-  "G004",
-  "N802",
-  "N812",
-  "PLC0415", # Allow imports inside functions for optional dependencies
-  "PLR0911",
-  "PLR0912",
-  "PLR0913",
-  "PLR0915",
-  "PLR2004",
-  "TRY003",
+  "D",       # Public contracts are documented where useful; boilerplate docstrings are not required.
+  "ANN401",  # Adapters deliberately expose opaque third-party objects.
+  "EM101",   # Temporary exception-message variables add no behavior or clarity.
+  "EM102",   # Temporary exception-message variables add no behavior or clarity.
+  "PLC0415", # Optional benchmark dependencies must be imported only on their execution paths.
+  "TRY003",  # Error text belongs at the call site when the exception is not reused.
 ]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 lint.explicit-preview-rules = true
@@ -149,6 +125,7 @@ lint.per-file-ignores."src/augbench/implementations/pillow_impl.py" = [
   "S311",   # random is fine for augmentation — not cryptographic
 ]
 lint.per-file-ignores."tests/**/*.py" = [
+  "PLR2004", # Assertions state exact expected values.
   "S101",   # allow assert in tests
   "SLF001", # allow private member access in tests
 ]

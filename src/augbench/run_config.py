@@ -9,6 +9,8 @@ import numpy as np
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+_RGB_CHANNELS = 3
+
 
 class _ConfigModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -74,7 +76,7 @@ class FamilyRunConfig(_ConfigModel):
     def validate_runnable_family(self) -> FamilyRunConfig:
         if self.family != "rgb":
             raise ValueError("only the RGB family is runnable until its dataset and adapters are added")
-        if self.output.channels != 3:
+        if self.output.channels != _RGB_CHANNELS:
             raise ValueError("the active RGB contract requires three channels")
         if self.normalization != "gpu":
             raise ValueError("normalization is always applied to the collated CUDA batch")

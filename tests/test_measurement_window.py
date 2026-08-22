@@ -1,4 +1,4 @@
-from augbench.measurement_window import measure_window
+from augbench.measurement_window import MeasurementWindow, measure_window
 
 
 def test_only_the_post_warmup_batches_contribute_to_throughput() -> None:
@@ -19,8 +19,7 @@ def test_only_the_post_warmup_batches_contribute_to_throughput() -> None:
         batches=batches,
         consume=consume,
         synchronize=synchronize,
-        warmup_batches=1,
-        measured_batches=2,
+        window=MeasurementWindow(warmup_batches=1, measured_batches=2),
         clock=lambda: next(ticks),
     )
 

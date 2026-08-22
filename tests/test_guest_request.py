@@ -1,15 +1,17 @@
 from augbench.guest_request import GuestRequest
-from augbench.run_records import build_run_record
+from augbench.run_records import RunInputs, build_run_record
 
 
 def test_guest_request_contains_one_run_and_only_missing_cells() -> None:
     run = build_run_record(
         family_config={"family": "rgb"},
-        git_commit="a" * 40,
-        code_archive_sha256="b" * 64,
-        dataset_archive_sha256="d" * 64,
-        recipe_catalog_sha256="e" * 64,
-        environment_lock_sha256={"rgb": "f" * 64},
+        inputs=RunInputs(
+            git_commit="a" * 40,
+            code_archive_sha256="b" * 64,
+            dataset_archive_sha256="d" * 64,
+            recipe_catalog_sha256="e" * 64,
+            environment_lock_sha256={"rgb": "f" * 64},
+        ),
         hardware={"machine_type": "g2-standard-16"},
     )
     request = GuestRequest(

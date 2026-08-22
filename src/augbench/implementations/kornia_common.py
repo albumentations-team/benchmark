@@ -5,14 +5,14 @@ from typing import Any
 from torch import nn
 
 
-def set_same_on_batch(module: nn.Module, value: bool) -> None:
+def set_same_on_batch(module: nn.Module, *, value: bool) -> None:
     for child in module.modules():
         if hasattr(child, "same_on_batch"):
             child.same_on_batch = value
 
 
 def force_per_sample_randomness(module: nn.Module) -> nn.Module:
-    set_same_on_batch(module, False)
+    set_same_on_batch(module, value=False)
     return module
 
 

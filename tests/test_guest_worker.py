@@ -2,17 +2,19 @@ import pytest
 
 from augbench.guest_request import GuestRequest
 from augbench.guest_worker import preflight_implementations, select_pending_cells
-from augbench.run_records import CellKey, build_run_record
+from augbench.run_records import CellKey, RunInputs, build_run_record
 
 
 def _request(*, cell_ids: tuple[str, ...]) -> GuestRequest:
     run = build_run_record(
         family_config={"family": "rgb"},
-        git_commit="a" * 40,
-        code_archive_sha256="b" * 64,
-        dataset_archive_sha256="d" * 64,
-        recipe_catalog_sha256="e" * 64,
-        environment_lock_sha256={"rgb": "f" * 64},
+        inputs=RunInputs(
+            git_commit="a" * 40,
+            code_archive_sha256="b" * 64,
+            dataset_archive_sha256="d" * 64,
+            recipe_catalog_sha256="e" * 64,
+            environment_lock_sha256={"rgb": "f" * 64},
+        ),
         hardware={"machine_type": "g2-standard-16"},
     )
     return GuestRequest(

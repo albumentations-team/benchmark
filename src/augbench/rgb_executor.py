@@ -16,15 +16,18 @@ from augbench.dataset_access import reordered_items
 from augbench.execution.pipeline import (
     ReadyGpuBatchConsumer,
     RecipeDataset,
+    TorchDataLoaderConfig,
     TorchDataLoaderSource,
     canonicalize_model_batch,
     materialize,
     output_validation,
 )
-from augbench.measurement_window import measure_window
+from augbench.measurement_window import MeasurementWindow, measure_window
 from augbench.nvml_memory import NvmlProcessMemoryMonitor
 from augbench.recipe_contract import validate_rgb_recipes
 from augbench.run_records import CellKey, OutputObservation, ResultRecord
+
+_OUTPUT_SHAPE_DIMENSIONS = 4
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -132,13 +135,15 @@ class RGBCellExecutor:
         dataset = RecipeDataset(items=sources, adapter=adapter, runtime=runtime)
         loader = TorchDataLoaderSource(
             dataset=dataset,
-            batch_size=self._config.execution.batch_size,
-            num_workers=self._config.execution.num_workers,
-            prefetch_factor=self._config.execution.prefetch_factor,
-            persistent_workers=self._config.execution.persistent_workers,
-            pin_memory=True,
-            seed=0,
-            host_batch_transform=runtime.host_batch_transform,
+            config=TorchDataLoaderConfig(
+                batch_size=self._config.execution.batch_size,
+                num_workers=self._config.execution.num_workers,
+                prefetch_factor=self._config.execution.prefetch_factor,
+                persistent_workers=self._config.execution.persistent_workers,
+                pin_memory=True,
+                seed=0,
+                host_batch_transform=runtime.host_batch_transform,
+            ),
         )
         consumer = ReadyGpuBatchConsumer(runtime=runtime, expected_channels=self._config.output.channels)
         loader.open()
@@ -148,8 +153,10 @@ class RGBCellExecutor:
                 batches=(loader.next_batch() for _ in range(batch_count)),
                 consume=consumer,
                 synchronize=consumer.synchronize,
-                warmup_batches=self._config.execution.warmup_batches,
-                measured_batches=self._config.execution.measured_batches,
+                window=MeasurementWindow(
+                    warmup_batches=self._config.execution.warmup_batches,
+                    measured_batches=self._config.execution.measured_batches,
+                ),
                 clock=time.perf_counter,
             )
             return throughput, self._output_observation(consumer.last_validation)
@@ -165,13 +172,15 @@ class RGBCellExecutor:
         dataset = RecipeDataset(items=sources, adapter=adapter, runtime=runtime)
         loader = TorchDataLoaderSource(
             dataset=dataset,
-            batch_size=self._config.execution.batch_size,
-            num_workers=1,
-            prefetch_factor=1,
-            persistent_workers=False,
-            pin_memory=True,
-            seed=0,
-            host_batch_transform=runtime.host_batch_transform,
+            config=TorchDataLoaderConfig(
+                batch_size=self._config.execution.batch_size,
+                num_workers=1,
+                prefetch_factor=1,
+                persistent_workers=False,
+                pin_memory=True,
+                seed=0,
+                host_batch_transform=runtime.host_batch_transform,
+            ),
         )
         consumer = ReadyGpuBatchConsumer(runtime=runtime, expected_channels=self._config.output.channels)
         loader.open()
@@ -219,8 +228,10 @@ class RGBCellExecutor:
                 batches=(source.next_batch() for _ in range(batch_count)),
                 consume=consume,
                 synchronize=_cuda_synchronize,
-                warmup_batches=self._config.execution.warmup_batches,
-                measured_batches=self._config.execution.measured_batches,
+                window=MeasurementWindow(
+                    warmup_batches=self._config.execution.warmup_batches,
+                    measured_batches=self._config.execution.measured_batches,
+                ),
                 clock=time.perf_counter,
             )
         finally:
@@ -281,7 +292,11 @@ class RGBCellExecutor:
 
 def _output_observation(validation: dict[str, object]) -> OutputObservation:
     shape = validation.get("shape")
-    if not isinstance(shape, list) or len(shape) != 4 or not all(isinstance(value, int) for value in shape):
+    if (
+        not isinstance(shape, list)
+        or len(shape) != _OUTPUT_SHAPE_DIMENSIONS
+        or not all(isinstance(value, int) for value in shape)
+    ):
         raise ValueError("adapter did not report a rank-four output shape")
     return OutputObservation(shape=tuple(shape))
 

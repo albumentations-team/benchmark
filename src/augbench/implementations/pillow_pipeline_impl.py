@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from augbench.implementations.specs import TransformSpec
     from augbench.recipes.models import RecipeSpec
 
+_PAIR_LENGTH = 2
+
 
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
     return transform(image)
@@ -116,6 +118,6 @@ def _transform(spec: TransformSpec, recipe_id: str) -> Any:
 
 
 def _pair(value: Any, *, cast: Any, parameter: str) -> tuple[Any, Any]:
-    if not isinstance(value, list) or len(value) != 2:
+    if not isinstance(value, list) or len(value) != _PAIR_LENGTH:
         raise ValueError(f"Pillow {parameter} must contain exactly two values")
     return cast(value[0]), cast(value[1])

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import albumentations as A
+import albumentations
 
 from augbench.implementations.albumentationsx_impl import create_transform
 from augbench.implementations.gpu_normalize import GpuBatchNormalize
@@ -30,7 +30,7 @@ def build_recipe(recipe: RecipeSpec, implementation_id: str) -> _DeferredRecipe:
     if implementation_id != "albumentationsx_cpu":
         raise UnsupportedRecipeError(f"{implementation_id!r} is not an AlbumentationsX CPU implementation")
     transforms = [_transform(spec, recipe.recipe_id) for spec in transform_specs(recipe)]
-    return _DeferredRecipe(cpu_transform=A.Compose(transforms), recipe=recipe)
+    return _DeferredRecipe(cpu_transform=albumentations.Compose(transforms), recipe=recipe)
 
 
 def _transform(spec: Any, recipe_id: str) -> Any:

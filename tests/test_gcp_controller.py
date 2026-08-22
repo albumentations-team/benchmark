@@ -2,10 +2,10 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from augbench.gcp_controller import start_or_resume
+from augbench.gcp_controller import GcpControllerDependencies, GcpStartRequest, start_or_resume
 from augbench.guest_request import GuestRequest
 from augbench.run_config import GcpRunConfig
-from augbench.run_records import CellKey, build_run_record
+from augbench.run_records import CellKey, RunInputs, build_run_record
 
 
 @dataclass
@@ -45,11 +45,13 @@ def _cloud() -> GcpRunConfig:
 def _request() -> GuestRequest:
     run = build_run_record(
         family_config={"family": "rgb"},
-        git_commit="a" * 40,
-        code_archive_sha256="b" * 64,
-        dataset_archive_sha256="d" * 64,
-        recipe_catalog_sha256="e" * 64,
-        environment_lock_sha256={"rgb": "f" * 64},
+        inputs=RunInputs(
+            git_commit="a" * 40,
+            code_archive_sha256="b" * 64,
+            dataset_archive_sha256="d" * 64,
+            recipe_catalog_sha256="e" * 64,
+            environment_lock_sha256={"rgb": "f" * 64},
+        ),
         hardware={"machine_type": "g2-standard-16"},
     )
     return GuestRequest(
@@ -94,13 +96,17 @@ def test_controller_creates_one_labeled_vm_for_missing_cells(tmp_path: Path) -> 
         raise AssertionError(command)
 
     launch = start_or_resume(
-        cloud=_cloud(),
-        request=request,
-        cells=(cell,),
-        startup_script=startup,
-        remote=_Remote(),
-        runner=runner,
-        sleep=lambda _seconds: None,
+        start=GcpStartRequest(
+            cloud=_cloud(),
+            request=request,
+            cells=(cell,),
+            startup_script=startup,
+        ),
+        dependencies=GcpControllerDependencies(
+            remote=_Remote(),
+            runner=runner,
+            sleep=lambda _seconds: None,
+        ),
     )
 
     assert launch.status == "launched"
@@ -138,13 +144,17 @@ def test_controller_reclaims_only_terminal_augbench_instances(tmp_path: Path) ->
         raise AssertionError(command)
 
     start_or_resume(
-        cloud=_cloud(),
-        request=request,
-        cells=(cell,),
-        startup_script=startup,
-        remote=_Remote(),
-        runner=runner,
-        sleep=lambda _seconds: None,
+        start=GcpStartRequest(
+            cloud=_cloud(),
+            request=request,
+            cells=(cell,),
+            startup_script=startup,
+        ),
+        dependencies=GcpControllerDependencies(
+            remote=_Remote(),
+            runner=runner,
+            sleep=lambda _seconds: None,
+        ),
     )
 
     deletes = [command for command in commands if command[2:4] == ["instances", "delete"]]
@@ -163,12 +173,13 @@ def test_controller_never_launches_a_duplicate_active_vm(tmp_path: Path) -> None
         return subprocess.CompletedProcess(command, 0, stdout=b"augbench-rgb,us-central1-a,RUNNING\n", stderr=b"")
 
     launch = start_or_resume(
-        cloud=_cloud(),
-        request=request,
-        cells=(cell,),
-        startup_script=startup,
-        remote=_Remote(),
-        runner=runner,
+        start=GcpStartRequest(
+            cloud=_cloud(),
+            request=request,
+            cells=(cell,),
+            startup_script=startup,
+        ),
+        dependencies=GcpControllerDependencies(remote=_Remote(), runner=runner),
     )
 
     assert launch.status == "active"

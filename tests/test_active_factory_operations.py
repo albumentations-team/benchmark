@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from augbench.adapters.dali.native import _STAGE_HANDLERS, SUPPORTED_OPERATIONS
 from augbench.recipes.load import load_recipe_catalog
 
 
@@ -18,7 +19,12 @@ def test_recipe_factories_contain_only_current_rgb_operations() -> None:
         "torchvision_impl.py",
     ):
         factory_operations = _factory_operations(root / "src" / "augbench" / "implementations" / filename)
+        assert factory_operations, filename
         assert factory_operations <= catalog_operations, filename
+
+
+def test_dali_stage_handlers_cover_the_declared_operations() -> None:
+    assert set(_STAGE_HANDLERS) == SUPPORTED_OPERATIONS
 
 
 def test_kornia_factories_adapt_catalog_lists_to_kornia_ranges() -> None:
@@ -48,29 +54,14 @@ def test_kornia_factories_adapt_catalog_lists_to_kornia_ranges() -> None:
 
 def _factory_operations(path: Path) -> set[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"))
-    names: set[str] = set()
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Compare) or not _is_spec_name(node.left):
+    for node in tree.body:
+        if not isinstance(node, ast.Assign) or not _is_transform_builder_registry(node):
             continue
-        if len(node.ops) != 1 or len(node.comparators) != 1:
-            continue
-        if isinstance(node.ops[0], ast.Eq) and isinstance(node.comparators[0], ast.Constant):
-            value = node.comparators[0].value
-            if isinstance(value, str):
-                names.add(value)
-        if isinstance(node.ops[0], ast.In) and isinstance(node.comparators[0], (ast.Set, ast.Tuple, ast.List)):
-            names.update(
-                element.value
-                for element in node.comparators[0].elts
-                if isinstance(element, ast.Constant) and isinstance(element.value, str)
-            )
-    return names
+        if not isinstance(node.value, ast.Dict):
+            break
+        return {key.value for key in node.value.keys if isinstance(key, ast.Constant) and isinstance(key.value, str)}
+    raise AssertionError(f"{path} must define _TRANSFORM_BUILDERS as a string-keyed dictionary")
 
 
-def _is_spec_name(node: ast.expr) -> bool:
-    return (
-        isinstance(node, ast.Attribute)
-        and isinstance(node.value, ast.Name)
-        and node.value.id == "spec"
-        and node.attr == "name"
-    )
+def _is_transform_builder_registry(node: ast.Assign) -> bool:
+    return any(isinstance(target, ast.Name) and target.id == "_TRANSFORM_BUILDERS" for target in node.targets)

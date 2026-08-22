@@ -10,6 +10,8 @@ from typing import Any
 
 from augbench.run_records import ResultRecord
 
+_SHA256_HEX_LENGTH = 64
+
 
 class ResultConflictError(RuntimeError):
     """A completed cell ID already refers to different bytes."""
@@ -50,7 +52,7 @@ class ImmutableResultStore:
         return True
 
     def path_for(self, cell_id: str) -> Path:
-        if len(cell_id) != 64 or any(character not in "0123456789abcdef" for character in cell_id):
+        if len(cell_id) != _SHA256_HEX_LENGTH or any(character not in "0123456789abcdef" for character in cell_id):
             raise ValueError(f"invalid cell ID {cell_id!r}")
         return self._root / "cells" / f"{cell_id}.json"
 

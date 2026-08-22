@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from augbench import rgb_executor
 
+if TYPE_CHECKING:
+    import pytest
 
-def test_preflight_uses_one_transient_worker(monkeypatch) -> None:
+
+def test_preflight_uses_one_transient_worker(monkeypatch: pytest.MonkeyPatch) -> None:
     arguments: dict[str, object] = {}
 
     class Dataset:
@@ -52,6 +55,7 @@ def test_preflight_uses_one_transient_worker(monkeypatch) -> None:
         sources=(),
     )
 
-    assert arguments["num_workers"] == 1
-    assert arguments["prefetch_factor"] == 1
-    assert arguments["persistent_workers"] is False
+    config = arguments["config"]
+    assert config.num_workers == 1
+    assert config.prefetch_factor == 1
+    assert config.persistent_workers is False

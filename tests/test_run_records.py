@@ -5,6 +5,7 @@ from augbench.run_records import (
     GpuMemory,
     OutputObservation,
     ResultRecord,
+    RunInputs,
     Throughput,
     build_run_record,
 )
@@ -13,21 +14,25 @@ from augbench.run_records import (
 def test_run_identity_and_cell_identity_are_deterministic() -> None:
     run = build_run_record(
         family_config={"family": "rgb", "batch_size": 256},
-        git_commit="a" * 40,
-        code_archive_sha256="b" * 64,
-        dataset_archive_sha256="d" * 64,
-        recipe_catalog_sha256="e" * 64,
-        environment_lock_sha256={"torch-stack": "f" * 64},
+        inputs=RunInputs(
+            git_commit="a" * 40,
+            code_archive_sha256="b" * 64,
+            dataset_archive_sha256="d" * 64,
+            recipe_catalog_sha256="e" * 64,
+            environment_lock_sha256={"torch-stack": "f" * 64},
+        ),
         hardware={"machine_type": "g2-standard-16", "gpu": "NVIDIA L4"},
     )
 
     same_run = build_run_record(
         family_config={"batch_size": 256, "family": "rgb"},
-        git_commit="a" * 40,
-        code_archive_sha256="b" * 64,
-        dataset_archive_sha256="d" * 64,
-        recipe_catalog_sha256="e" * 64,
-        environment_lock_sha256={"torch-stack": "f" * 64},
+        inputs=RunInputs(
+            git_commit="a" * 40,
+            code_archive_sha256="b" * 64,
+            dataset_archive_sha256="d" * 64,
+            recipe_catalog_sha256="e" * 64,
+            environment_lock_sha256={"torch-stack": "f" * 64},
+        ),
         hardware={"gpu": "NVIDIA L4", "machine_type": "g2-standard-16"},
     )
     cell = CellKey(run_id=run.run_id, family="rgb", implementation="pillow_cpu", recipe_id="Resize", seed=137)

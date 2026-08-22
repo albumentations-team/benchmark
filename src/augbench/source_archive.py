@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+_GIT_COMMIT_HEX_LENGTH = 40
+
 
 @dataclass(frozen=True)
 class CodeArchive:
@@ -45,7 +47,7 @@ def create_clean_code_archive(
     if revision.returncode != 0:
         raise RuntimeError(_error("could not resolve HEAD", revision))
     commit = revision.stdout.decode().strip()
-    if len(commit) != 40 or any(character not in "0123456789abcdef" for character in commit):
+    if len(commit) != _GIT_COMMIT_HEX_LENGTH or any(character not in "0123456789abcdef" for character in commit):
         raise ValueError("Git returned an invalid commit ID")
     output.parent.mkdir(parents=True, exist_ok=True)
     archived = runner(
