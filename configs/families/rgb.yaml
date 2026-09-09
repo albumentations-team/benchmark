@@ -1,0 +1,38 @@
+schema_version: 1
+family: rgb
+output:
+  device: cuda
+  channels: 3
+  height: 224
+  width: 224
+  dtype: float16
+  layout: BCHW
+normalization: gpu
+dataset:
+  archive_uri: gs://imagenet_validation/imagenet/val.tar
+  archive_sha256: 1a97eafff044ac04b5f222fa83a6a20d5f9946f053fee86fa4f1ce030c64c8a2
+  archive_member_prefix: val/
+  archive_member_suffix: .JPEG
+  item_count: 10000
+  selection: first-sorted
+  access_order: seeded-random-without-replacement
+execution:
+  batch_size: 256
+  warmup_batches: 1
+  measured_batches: 32
+  seeds: [137, 138, 139]
+  num_workers: 15
+  prefetch_factor: 2
+  persistent_workers: true
+  prewarm_dataset: true
+recipes: catalog/recipes/rgb.yaml
+coverage_catalog: catalog/operations.yaml
+cloud: configs/cloud/gcp-l4.yaml
+implementations:
+  - albumentationsx_cpu
+  - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu

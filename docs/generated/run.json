@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "run_id": "3f8e2e315710528399b8e82e2359ab85c58c809644595b68a92fb9d83492cc8c",
+  "family_config": {
+    "cloud": "configs/cloud/gcp-l4.yaml",
+    "coverage_catalog": "catalog/operations.yaml",
+    "dataset": {
+      "access_order": "seeded-random-without-replacement",
+      "archive_member_prefix": "val/",
+      "archive_member_suffix": ".JPEG",
+      "archive_sha256": "1a97eafff044ac04b5f222fa83a6a20d5f9946f053fee86fa4f1ce030c64c8a2",
+      "archive_uri": "gs://imagenet_validation/imagenet/val.tar",
+      "item_count": 10000,
+      "selection": "first-sorted"
+    },
+    "execution": {
+      "batch_size": 256,
+      "measured_batches": 32,
+      "num_workers": 15,
+      "persistent_workers": true,
+      "prefetch_factor": 2,
+      "prewarm_dataset": true,
+      "seeds": [
+        137,
+        138,
+        139
+      ],
+      "warmup_batches": 1
+    },
+    "family": "rgb",
+    "implementations": [
+      "albumentationsx_cpu",
+      "pillow_cpu",
+      "torchvision_cpu",
+      "torchvision_gpu",
+      "kornia_cpu",
+      "kornia_gpu",
+      "dali_gpu"
+    ],
+    "normalization": "gpu",
+    "output": {
+      "channels": 3,
+      "device": "cuda",
+      "dtype": "float16",
+      "height": 224,
+      "layout": "BCHW",
+      "width": 224
+    },
+    "recipes": "catalog/recipes/rgb.yaml",
+    "schema_version": 1
+  },
+  "inputs": {
+    "git_commit": "5fc35f6fdd177c286cbc4f5e39d1520576d6464a",
+    "code_archive_sha256": "61238619ace0dc471bc5df7a4f165e15052ffb67046ceae07c26fd7f370eac6d",
+    "dataset_archive_sha256": "1a97eafff044ac04b5f222fa83a6a20d5f9946f053fee86fa4f1ce030c64c8a2",
+    "recipe_catalog_sha256": "3cb75f9d9e325e2d66d13578d1a77fea839b4e6b149dedb856a6f23e13c63970",
+    "environment_lock_sha256": {
+      "rgb": "238128af8bae1215f5822b29a1e01b217c1b16eaf09198ccc179eab76d763f60"
+    }
+  },
+  "hardware": {
+    "accelerator": "nvidia-l4",
+    "boot_disk_size_gib": "350",
+    "boot_disk_type": "pd-balanced",
+    "image": "projects/deeplearning-platform-release/global/images/common-cu129-ubuntu-2204-nvidia-580-v20260730",
+    "machine_type": "g2-standard-16",
+    "provisioning_model": "STANDARD",
+    "python_version": "3.13.14"
+  },
+  "access_order": "seeded-random-without-replacement"
+}

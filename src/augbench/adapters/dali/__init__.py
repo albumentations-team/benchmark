@@ -1,0 +1,1 @@
+"""DALI native-pipeline adapters."""

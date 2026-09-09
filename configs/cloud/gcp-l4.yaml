@@ -1,0 +1,13 @@
+schema_version: 1
+project: albumentations
+gcs_base_uri: gs://imagenet_validation/augmentation-benchmark
+zones: all
+machine_type: g2-standard-16
+accelerator: nvidia-l4
+image: projects/deeplearning-platform-release/global/images/common-cu129-ubuntu-2204-nvidia-580-v20260730
+service_account: augmentation-benchmark@albumentations.iam.gserviceaccount.com
+python_version: 3.13.14
+provisioning_model: STANDARD
+boot_disk_size_gib: 350
+provisioning_deadline_seconds: 600
+run_deadline_seconds: 43200

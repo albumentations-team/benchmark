@@ -1,0 +1,598 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{array,booktabs,tabularx,longtable}
+\usepackage{microtype}
+\usepackage[table]{xcolor}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{xurl,seqsplit}
+\usepackage{hyperref}
+\usetikzlibrary{arrows.meta,positioning}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black,
+  pdftitle={RGB Input Pipelines: Throughput, GPU Memory, and Transformation Coverage},
+  pdfauthor={Vladimir Iglovikov}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\widowpenalty=10000
+\clubpenalty=10000
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.18}
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\textfraction}{0.05}
+\makeatletter
+\let\inputrows\@@input
+\makeatother
+\newcommand{\ax}{AlbumentationsX}
+\newcommand{\repo}{\href{https://github.com/albumentations-team/benchmark}{benchmark repository}}
+\newcommand{\frozencode}{\href{https://github.com/albumentations-team/benchmark/tree/5fc35f6fdd177c286cbc4f5e39d1520576d6464a}{measured source revision}}
+\input{figures.tex}
+\input{generated/metrics.tex}
+\input{generated/coverage-metrics.tex}
+
+\title{RGB Input Pipelines:\\Throughput, GPU Memory, and Transformation Coverage}
+\author{Vladimir Iglovikov\\Albumentations LLC\\\texttt{vladimir@albumentations.ai}}
+\date{Working preprint, September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+An image-augmentation pipeline must deliver a complete batch before a model can
+use it. We compare seven input paths from five libraries, starting with RGB
+JPEG files and ending with a synchronized CUDA \texttt{float16} batch. We
+manually matched transformation recipes and parameters across libraries to
+make the workloads as comparable as possible. The experiment uses 57 selected
+recipes, a batch size of 256, and one NVIDIA L4 machine.
+Throughput and peak process GPU memory are recorded together in
+\ProductionCellCount{} measurements. On the \CommonRecipeCount{} recipes shared
+by all paths, DALI and \ax{} have median throughputs of
+\CommonSpeedDALIGPU{} and \CommonSpeedAlbumentationsX{} images/s, with median
+peak GPU memory of \CommonMemoryDALIGPU{} and \CommonMemoryAlbumentationsX{} MiB.
+Broader pairwise comparisons favor \ax{} on
+\PairTorchVisionWins{}/\PairTorchVisionShared{} TorchVision recipes,
+\PairKorniaWins{}/\PairKorniaShared{} Kornia recipes, and
+\PairPillowWins{}/\PairPillowShared{} Pillow recipes. DALI is faster than \ax{}
+on all \PairDALIShared{} shared recipes, with a median throughput ratio of
+\PairDALIRatio\(\times\).
+A separate census reports coverage of the \CoverageAlbumentationsX{} entries in a selected \ax{}
+RGB catalog. The study measures input preparation at fixed settings; it does
+not measure model training, numerical equivalence, or the best attainable
+configuration of each library.
+Benchmark code: \url{https://github.com/albumentations-team/benchmark}.
+\end{abstract}
+
+\section{The input-pipeline decision}
+
+A training application needs decoded, transformed, batched images on the device
+that runs its model. Choosing an augmentation library therefore also means
+choosing a way to perform this preparation. Libraries can use different JPEG
+decoders, process images individually or as a batch, and place work on the CPU
+or GPU. A faster transform call alone does not tell the application how quickly
+the complete batch will be ready.
+
+We ask two execution questions: how many ready images per second does each
+implemented path deliver, and how much GPU memory does its process occupy?
+Every path begins with the same JPEG inventory and ends with the same shape,
+layout, dtype, and device. Its decoder and internal execution choices remain
+part of the comparison. We also report which entries from a selected
+transformation catalog have corresponding APIs in other libraries.
+
+The measured output is a model input, but no model executes in the benchmark.
+Input throughput can help diagnose a loader that cannot supply data quickly
+enough. Translating it into shorter training requires measurement with the
+model: CPU work, transfers, and GPU augmentation may overlap or contend with
+model execution. The present experiment does not measure that interaction.
+
+\paragraph{Relation to other measurements.}
+Operation timing tools, such as PyTorch Benchmark, measure selected code blocks
+with warm-up and synchronization controls~\cite{pytorchbenchmark}. Mohan et al.
+analyze fetching and preprocessing stalls within DNN training~\cite{datastalls}.
+MLPerf evaluates training systems using time to a specified quality target,
+which accounts for effects beyond raw training throughput~\cite{mlperf}.
+Our contribution is a reproducible comparison of selected JPEG-to-CUDA paths
+with paired throughput and process-memory observations. It supports inspection
+of input preparation without claiming model-level speed or convergence.
+
+\section{What one test performs}
+\label{sec:workload}
+
+A \emph{recipe} specifies a complete sequence that produces a model-ready image.
+For example, two measured recipes are:
+\begin{quote}
+\texttt{RandomCrop224 $\to$ Normalize $\to$ ToTensor}\\[3pt]
+\texttt{RandomCrop224 $\to$ Equalize $\to$ Normalize $\to$ ToTensor}.
+\end{quote}
+The second recipe measures the entire input path containing Equalize. It does
+not isolate the time spent inside Equalize. Appendix~\ref{app:recipes} lists
+all recipes and their declared parameters. Each recipe has a short identifier,
+such as R02 or R22, used in the figures and detailed results.
+
+The selected inputs are RGB JPEG files with their original image dimensions.
+All paths return a \(256\times3\times224\times224\) CUDA \texttt{float16}
+batch: 256 images, three color channels, and a \(224\times224\) spatial grid.
+The layout is BCHW. Normalization uses RGB means
+\((0.485,0.456,0.406)\) and standard deviations \((0.229,0.224,0.225)\)
+after scaling intensities to the unit range. Normalize always executes on GPU.
+
+These dimensions, precision, and normalization placement are conventions of
+this experiment. They provide a common endpoint and fix the workload. No batch
+search or CPU-versus-GPU normalization experiment established them as optimal.
+The recipe stage called ToTensor names the output requirement; physical tensor
+conversion and layout changes occur at different points in different paths.
+
+\subsection{A fixed workload and two measurement windows}
+
+We select the first 10,000 \texttt{val/*.JPEG} members after lexicographic sorting
+of a SHA-256-verified ImageNet validation archive~\cite{imagenet}. Before any
+cells are timed, the VM reads every selected file once. This reduces cold-cache
+order effects. Timed accesses use filesystem calls and normally retrieve
+compressed bytes from the Linux page cache; decoding remains in the path.
+These measurements do not estimate physical-disk bandwidth.
+
+For each seed, a PCG64 permutation determines file order without replacement.
+Every implementation receives that same ordered list, with no additional loader
+shuffle. A \emph{cell} is one implementation, one recipe, and one seed. Each
+cell consumes one warm-up batch and then 32 measured batches, totaling 8,192
+measured images. The timer starts after warm-up synchronization and ends after
+all measured output has been synchronized on CUDA (Figure~\ref{fig:boundary}).
+
+
+
+Imports, worker startup, and pipeline construction are outside the throughput
+window. Loader workers can prepare later batches during warm-up and consumption.
+Thus the measurement includes the effect of prefetched work; it is neither a sum
+of isolated stage times nor proof that every path reached a saturated steady
+state. Throughput is completed images divided by elapsed wall-clock seconds.
+
+An NVML monitor samples the current process's GPU memory every \MemoryPollMs{}
+ms from before pipeline construction through the final synchronization and
+pipeline cleanup. It records the largest observed value. This includes process
+and library allocations, rather than only live image tensors. Short peaks
+between samples can be missed. CPU memory and model memory are not measured.
+
+\begin{figure}[H]
+\centering
+\InputBoundary{32}
+\caption{The input and output boundaries are shared; internal paths differ.
+Throughput excludes construction and warm-up. The memory window begins before
+construction and ends after cleanup in the same pass. Bar lengths show window placement, not
+measured stage durations. The initial dataset prewarm precedes this cell.}
+\label{fig:boundary}
+\end{figure}
+
+\begin{table}[H]
+\centering\small
+\rowcolors{2}{gray!5}{white}
+\begin{tabularx}{\textwidth}{p{3.1cm}Y}
+\textbf{Control} & \textbf{Frozen setting} \\ \midrule
+Input and access & 10,000 sorted ImageNet-validation JPEGs; prewarmed; shared per-seed permutation \\
+Output & CUDA float16 BCHW, \(256\times3\times224\times224\); GPU normalization \\
+DataLoader paths & 15 workers; persistent workers; pinned memory; prefetch factor 2 \\
+DALI & 15 pipeline threads; native prefetch queue depth 2; native file reader and mixed decoder \\
+Timing and repeats & One warm-up batch; 32 measured batches; seeds 137, 138, 139 \\
+Machine & Standard \texttt{g2-standard-16}, one NVIDIA L4; 16 vCPUs, 64 GB host memory \\
+\end{tabularx}
+\caption{One fixed configuration is used throughout. G2 specifications identify
+the CPU platform as Cascade Lake~\cite{gcp}; the cells record the L4 device name.
+Software versions and exact source identities appear in Appendix~\ref{app:reproduce}.}
+\label{tab:setup}
+\end{table}
+
+All implementations run sequentially on the same VM. Fixing the hardware,
+batch, and worker policy keeps these settings from changing between paths.
+It does not find each library's fastest configuration. DataLoader prefetch
+factor 2 permits up to two batches per worker, while DALI's queue depth applies
+to its native pipeline. The same number does not imply identical queue capacity.
+
+\subsection{Seven implementations and their execution choices}
+\label{sec:paths}
+
+The five libraries expose different interfaces: Pillow image objects,
+TorchVision tensor transforms, Kornia tensor operations, \ax{} Compose
+pipelines, and a DALI processing graph~\cite{pillow,torchvision,kornia,albumentationsx,dali}.
+Table~\ref{tab:paths} describes the measured integrations. SimpleJPEG is the
+benchmark's decoder for \ax{}; it is not an image reader supplied by Compose.
+CPU/GPU suffixes describe augmentation placement. Every path, including a CPU
+path, finishes with GPU normalization.
+
+\begin{table}[H]
+\centering\small
+\rowcolors{2}{gray!5}{white}
+\begin{tabularx}{\textwidth}{P{2.85cm}P{2.0cm}YP{1.3cm}Y}
+\textbf{Path} & \textbf{Decoder} & \textbf{Before transfer} & \textbf{H2D dtype} & \textbf{On GPU} \\ \midrule
+\ax{} & SimpleJPEG & uint8 recipe per image & uint8 & Layout conversion and Normalize \\
+Pillow CPU & Pillow & uint8 recipe per image; PILToTensor & uint8 & Normalize \\
+TorchVision CPU & TorchVision I/O & uint8 recipe per image & uint8 & Normalize \\
+TorchVision GPU & TorchVision I/O & Shape-forming prefix per image & uint8 & Cast to float16; remaining transforms per image; stack; Normalize \\
+Kornia CPU & TorchVision I/O & float32 recipe per image; collate; cast to float16 & float16 & Normalize \\
+Kornia GPU & TorchVision I/O & float32 shape prefix per image; collate; cast to float16 & float16 & Remaining transforms on batch; Normalize \\
+DALI GPU & \multicolumn{4}{P{12.6cm}}{Native file reader $\to$ mixed CPU/GPU JPEG decoder $\to$ GPU recipe graph and float16 normalization. Transfers and batching are managed by DALI.} \\
+\end{tabularx}
+\caption{Measured execution paths, verified against the source revision of the
+run. H2D means host-to-device transfer. Float16 conversion and normalization
+are separate operations; all final normalized outputs have the same contract.}
+\label{tab:paths}
+\end{table}
+
+JPEG dimensions vary. The DataLoader GPU paths execute the recipe prefix up to
+the first Resize, RandomCrop224, or RandomResizedCrop on the CPU so samples can
+be stacked. The remaining transforms execute on GPU. This split follows the
+chosen implementation; alternative GPU input designs were not evaluated.
+For a shape-only recipe, the GPU path may have no augmentation left after
+that prefix.
+
+TorchVision's GPU implementation invokes the remaining transforms separately
+for each image, then stacks the results. Kornia invokes the remaining module
+on the whole batch with \texttt{same\_on\_batch=False} where supported. This
+preserves the distinction between one batched call and per-image calls in the
+reported throughput. We do not claim that these implementations exhaust each
+library's optimization options.
+
+\subsection{Which recipes are compared, and how closely they match}
+\label{sec:matching}
+
+We selected recipes by operation and manually mapped their parameters across
+library APIs to make the transformations as comparable as possible. The
+execution catalog contains 57 such recipes, each implemented by \ax{} and at
+least one competitor. The supported matrix contains 253
+implementation--recipe pairs. Three seeds per pair produce
+\ProductionCellCount{} cells. Coverage counts transformation classes separately
+(Section~\ref{sec:coverage}); it does not determine how many execution rows a
+library receives.
+
+The matching targets each transformation's practical effect. Pixel-exact
+equality is not required: interpolation, rounding, and random-number generators
+differ across libraries. The frozen adapters also contain two departures from
+the declared recipes. DALI's RandomCrop224 first resizes
+the short side to 224 and then crops; the other paths crop the decoded image,
+padding when needed. DALI's Affine matrix uses scale and shift but omits the
+catalog's rotation and shear. These adapter differences affect the work performed
+and remain part of the reported measurements. Further mapping details appear in
+Appendix~\ref{app:semantics}.
+
+Seeds 137, 138, and 139 control file permutations and are applied to process-level
+Python, NumPy, and Torch random generators. Exact transform draws are not shared
+across libraries. In particular, the \ax{} adapter constructs Compose without
+an explicit Compose seed, and DataLoader workers use a fixed loader-generator
+seed. The three observations therefore represent repeated executions with
+specified file orders; they are not three fully matched augmentation draws.
+Validation checks output shape, layout, dtype, and device, not numerical
+agreement or augmentation quality.
+
+\section{Results on the same eleven recipes}
+\label{sec:common}
+
+The \CommonRecipeCount{} recipes supported by every implementation provide the
+most direct view of the seven measured paths. Figure~\ref{fig:common} shows
+individual recipes before aggregation. Each number is the implementation's
+median throughput over three seeds divided by \ax{}'s median for the same
+recipe. Larger values mean more images per second; \(1\times\) is the \ax{}
+reference. The absolute \ax{} column makes the scale of each recipe visible.
+
+\begin{figure}[H]
+\centering
+\CommonHeatmap{\CommonRecipeCount}
+\caption{Throughput on the common set: each cell is the ratio of three-seed
+medians for one recipe. Blue means slower than AX; orange means faster. Colors
+use a symmetric log-ratio scale; printed ratios are linear. Crop means
+RandomCrop224; every row ends with Normalize and ToTensor. Recipe IDs link to
+full definitions. DALI's Crop adds a short-side resize, and its Affine mapping
+differs (Section~\ref{sec:matching}). Colors show effect size, not significance.}
+\label{fig:common}
+\end{figure}
+
+Figure~\ref{fig:mean-ratios} summarizes the same eleven recipes with an
+arithmetic mean of their throughput ratios. We first divide each path's
+median throughput by AX's median for the same recipe, then add the eleven
+ratios and divide by eleven. Every recipe has equal weight; AX is \(1\times\).
+
+\begin{figure}[H]
+\centering
+\MeanRatioPlot{common-mean-bars.tex}{7}
+\caption{Arithmetic mean of the per-recipe throughput ratios in
+Figure~\ref{fig:common}, using the same eleven recipes for every path.
+Each ratio uses the median of three seeds. The dashed line marks AX at
+\(1\times\); a value of \(1.20\times\) means a mean relative throughput 20\% higher
+than AX. The per-recipe values remain visible in Figure~\ref{fig:common}.}
+\label{fig:mean-ratios}
+\end{figure}
+
+DALI has the highest mean ratio, \CommonMeanDaliRatio\(\times\), followed by
+AX at \(1\times\). The per-recipe view retains the exceptions hidden by an
+average: Pillow's Rotate path is faster than AX's Rotate path, although its
+mean ratio is below one.
+
+The CPU/GPU choice also changes with the recipe. TorchVision GPU outperforms
+its CPU path for GaussianBlur but falls behind it for Equalize and Affine.
+Kornia's GPU Equalize path is slower than its CPU counterpart. The measured
+paths combine decode, transforms, transfer, and scheduling, so these differences
+do not establish a causal explanation about any individual kernel.
+
+\begin{figure}[H]
+\centering
+\MemoryPlot{7}
+\caption{Median peak process GPU memory on the same eleven recipes.
+Each recipe contributes its median of three seeds; each bar is the median
+across those eleven values. Measurements exclude a model.}
+\label{fig:memory}
+\end{figure}
+
+The common-set memory medians are \CommonMemoryDALIGPU{} MiB for DALI and
+\CommonMemoryAlbumentationsX{} MiB for \ax{} (Figure~\ref{fig:memory}). The CPU
+paths still allocate GPU memory because every path produces a normalized CUDA
+batch and initializes GPU runtime state. Repeated memory values across recipes
+reflect the observed process footprint; they do not mean that the transforms
+allocate no intermediate storage.
+
+\section{Broader pairwise comparisons}
+\label{sec:pairs}
+
+The following charts repeat the arithmetic-mean comparison on a larger set
+for each library. Every bar within a chart uses the same recipes, supported
+by all paths shown: \PlotKorniaShared{} for Kornia, \PlotTorchVisionShared{}
+for TorchVision, \PlotPillowShared{} for Pillow, and \PlotDALIShared{} for DALI.
+For each recipe, we divide the path's three-seed median throughput by AX's,
+then average those ratios. CPU and GPU paths are averaged separately; AX is
+\(1\times\). The recipe sets differ between charts.
+
+\begin{figure}[H]
+\centering
+\MeanRatioPlot{pairwise-kornia.tex}{3}
+\caption{AX vs Kornia: arithmetic mean of the throughput ratios on
+\PlotKorniaShared{} recipes shared by AX, Kornia CPU, and Kornia GPU.}
+\label{fig:pair-kornia}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\MeanRatioPlot{pairwise-torchvision.tex}{3}
+\caption{AX vs TorchVision: arithmetic mean of the throughput ratios on
+\PlotTorchVisionShared{} recipes shared by AX, TorchVision CPU, and TorchVision GPU.}
+\label{fig:pair-torchvision}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\MeanRatioPlot{pairwise-pillow.tex}{2}
+\caption{AX vs Pillow (PIL): arithmetic mean of the throughput ratios on
+\PlotPillowShared{} shared recipes. Both use their CPU paths.}
+\label{fig:pair-pillow}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\MeanRatioPlot{pairwise-dali.tex}{2}
+\caption{AX vs DALI: arithmetic mean of the throughput ratios on
+\PlotDALIShared{} shared recipes, using AX CPU and DALI GPU.
+The measured DALI mappings are described in Section~\ref{sec:matching}.}
+\label{fig:pair-dali}
+\end{figure}
+
+The CPU/GPU plots use the recipes supported by both paths. Counting all
+measured recipes, including those supported by only one competing path,
+AX exceeds every available TorchVision path on \PairTorchVisionWins{} of
+\PairTorchVisionShared{} recipes and every available Kornia path on
+\PairKorniaWins{} of \PairKorniaShared{}. Kornia GPU is faster on
+ThinPlateSpline (R47). AX is faster than Pillow on \PairPillowWins{} of
+\PairPillowShared{} recipes; Pillow is faster on Rotate (R07).
+DALI is faster on all \PairDALIShared{} shared recipes; its median paired
+memory difference from AX is \PairDALIMemoryDelta{} MiB.
+
+Recipes and their frequencies in a user's training policy may differ, so the
+averages are not a prediction for that policy. Appendix~\ref{app:results} and
+the accompanying CSV retain every recipe's measurements and variation across
+seeds. Three observations do not establish statistical significance or the
+repeatability of small advantages.
+
+\section{Coverage of a selected transformation catalog}
+\label{sec:coverage}
+
+Execution speed matters only for a path that supplies the required operations.
+The separate coverage census starts from \CoverageAlbumentationsX{} RGB 2D
+entries in the maintained \ax{} catalog: geometric, pixel, dropout, and
+multi-image transformations. It excludes volume, spectrogram, annotation-only,
+and utility entries. Table~\ref{tab:coverage} counts how many of those entries
+have a cataloged counterpart in Kornia, TorchVision, and Pillow.
+
+\begin{table}[H]
+\centering
+\rowcolors{2}{gray!5}{white}
+\begin{tabular}{lrr}
+\textbf{Library} & \textbf{Matched AX catalog entries} & \textbf{Census version} \\ \midrule
+\inputrows generated/coverage.tex
+\bottomrule
+\end{tabular}
+\caption{Coverage is measured relative to the selected AX catalog. These
+counts are neither the total API sizes of the competing libraries nor a
+numerical-equivalence test. DALI participates only in the execution experiment.}
+\label{tab:coverage}
+\end{table}
+
+The unit is a matched catalog entry. A single competing API may match more
+than one AX entry, and capabilities outside the AX selection are not counted.
+For example, the census maps TorchVision RandomIoUCrop to multiple AX crop
+entries. The correspondence is a maintainer mapping, not a proof of identical
+crop behavior. Appendix~\ref{app:coverage} makes the mapping inspectable.
+
+Coverage and execution use different units and versions. The census starts
+from AX 2.3.7, while the measured AX package is 2.4.2. A transformation class
+can yield several recipes: RandomBrightnessContrast supplies separate
+Brightness and Contrast rows. Other covered classes have no measured recipe.
+The selected 57 recipes are an implemented comparison set, not an exhaustive
+or randomly sampled inventory of all feasible pipelines.
+
+\section{Using the results}
+
+The measurements favor the evaluated DALI path when its graph and the actual
+mapped operations fit the application. They favor the evaluated AX path on
+most recipes shared with the other libraries. GPU memory is a second practical
+constraint: compare the corresponding process footprint before deciding how
+much memory the input path can use alongside a model.
+
+Start with the transformations and semantics your application requires. Find
+the corresponding recipe and execution path in the detailed results, then
+check its throughput and memory together. If the application composes several
+operations or uses different image sizes, measure that complete pipeline;
+performance of a new composition does not follow by adding recipe speedups.
+Finally measure with the model to determine whether input waiting, GPU
+contention, or another stage controls the training step.
+
+The scope is one machine type, GPU, batch size, worker policy, and prewarmed
+file inventory. The ranking may change with other configurations. The finite
+measurement window includes prefetch effects, and process-memory sampling has
+finite resolution. The experiment does not measure model accuracy,
+convergence, training time, or the largest trainable batch. It also cannot
+separate a decoder advantage from a transform or transfer advantage.
+
+\paragraph{Author relationship.}
+The author maintains \ax{}. Source, mappings, per-seed observations, and
+result-generation code are provided so readers can inspect the choices behind
+the comparison.
+
+\clearpage
+\bibliographystyle{plain}
+\bibliography{references}
+
+\clearpage
+\appendix
+\section*{Appendices}
+\section{Reproducing the reported measurements}
+\label{app:reproduce}
+
+The \repo{} contains the generation script and its committed outputs. The
+execution code is pinned to the \frozencode{}. Regenerating tables uses the
+existing JSON records; it does not require a GPU or rerunning augmentation.
+The run contains \ProductionCellCount{} expected cells, each checked for schema,
+cell identity, run identity, output shape, and measured item count before
+aggregation. Throughput is recomputed from completed items and elapsed time.
+
+\begin{table}[H]
+\centering\small
+\rowcolors{2}{gray!5}{white}
+\begin{tabular}{ll}
+\textbf{Implementation} & \textbf{Version recorded in cells} \\ \midrule
+\inputrows generated/versions.tex
+\bottomrule
+\end{tabular}
+\caption{Package versions actually recorded during execution. The dependency
+lock additionally fixes Torch 2.13.0+cu130, SimpleJPEG 1.9.0, and the remaining
+runtime packages. The CUDA-tagged Torch wheels are distinct from the base VM image.}
+\end{table}
+
+The VM uses a 350 GiB balanced persistent boot disk and the image
+\nolinkurl{common-cu129-ubuntu-2204-nvidia-580-v20260730}, with Python 3.13.14.
+The family configuration, recipe catalog, dependency lock, dataset archive,
+code archive, and hardware configuration determine the immutable run identity.
+The raw-cell objects are under the following GCS prefix:
+\begin{quote}\small
+\url{gs://imagenet_validation/augmentation-benchmark/runs/3f8e2e315710528399b8e82e2359ab85c58c809644595b68a92fb9d83492cc8c/cells/}
+\end{quote}
+The prefix is an artifact location; access depends on bucket permissions.
+The accompanying generated data are in
+\texttt{paper/generated/recipe-results.csv}.
+This table has one row per measured implementation--recipe pair, with all three
+seed throughputs and GPU peaks, durations, completed-item counts, cell IDs,
+versions, selected-path flags, and declared recipe stages. It retains unrounded
+values; printed tables round only for display.
+
+From the repository root, after obtaining the run's cells:
+\begin{quote}\small
+\texttt{uv run python paper/generate\_results.py --cells /path/to/cells}\\
+\texttt{cd paper}\\
+\texttt{latexmk -pdf -outdir=build main.tex}
+\end{quote}
+The generator refuses missing or foreign cells and rejects changes to the
+inputs that define this run. The coverage snapshot is tracked separately;
+its SHA-256 is \texttt{\expandafter\seqsplit\expandafter{\CoverageCatalogSHA}}.
+
+\section{Declared recipes and parameters}
+\label{app:recipes}
+
+All listed prefixes end with Normalize and ToTensor, using the means, standard
+deviations, float16 dtype, and CHW image layout defined in
+Section~\ref{sec:workload}. Crop dimensions and other stage parameters below
+are the declared catalog values. The source adapters determine the actual
+API calls and units; Section~\ref{app:semantics} explains consequential differences.
+The CSV preserves full recipe IDs and every stage field.
+
+\begingroup\small
+\rowcolors{2}{gray!5}{white}
+\begin{longtable}{P{4.1cm}P{11.6cm}}
+\textbf{Recipe prefix} & \textbf{Declared parameters and randomness scope} \\ \midrule\endhead
+\inputrows generated/recipes.tex
+\bottomrule
+\end{longtable}
+\endgroup
+
+\section{Implementation semantics that affect interpretation}
+\label{app:semantics}
+
+\paragraph{Crop and resize.}
+Resize224 requests a fixed \(224\times224\) output rather than preserving aspect
+ratio. TorchVision Resize enables antialiasing; API interpolation and border
+rules can differ. The AX, Pillow, TorchVision, and Kornia RandomCrop224 paths
+crop from decoded dimensions and pad small inputs. DALI always resizes the short
+side to 224 first. Hence its Crop recipes process a different spatial sampling
+of the source image. Pillow's RandomResizedCrop adapter tries ten random crops
+and falls back to a direct resize; fallback behavior need not match another API.
+
+\paragraph{Affine and random parameters.}
+The Affine catalog includes rotation, translation, scale, and shear. AX samples
+rotation over a symmetric range; Kornia uses a fixed affine module with the
+specified values. TorchVision converts translation to fractions of the catalog's
+reference size and samples its RandomAffine parameters. DALI constructs a matrix
+from scale and shift only. Accordingly, the Affine results compare these
+particular mappings, not identical affine distributions. Other analogues also
+have API-specific parameters: the catalog is a declaration of intended
+operations, while the pinned adapter source is the executable definition.
+
+\paragraph{Batch execution.}
+Kornia CPU receives each image as a batch of one. Kornia GPU uses the remaining
+batch module with per-image parameter sampling where the module exposes it.
+TorchVision GPU calls its remaining transform sequence per sample. The latter
+choice avoids assuming one random batched call provides independent draws,
+but no alternative implementation was benchmarked here. No equality of
+per-library random streams is asserted.
+
+\paragraph{Shape validation and semantic validation.}
+All recorded cells returned the required CUDA output. That establishes the
+output contract used for timing. It does not establish equal pixels, equal
+random distributions, equivalent border treatment, or equal effects on model
+quality. These limits remain part of any comparison using the results.
+
+\section{Results for every measured implementation--recipe pair}
+\label{app:results}
+
+Each row reports three seed observations as median, minimum, and maximum.
+Throughput and GPU memory are separate columns from the same three cells; their
+medians need not come from the same seed. Values are rounded to whole images/s
+and MiB. The accompanying CSV preserves every unrounded observation.
+Only measured pairs appear; a missing pair is not a zero-speed result.
+Recipe identifiers link to Appendix~\ref{app:recipes}.
+
+\begingroup\small
+\rowcolors{2}{gray!5}{white}
+\input{generated/recipe-results.tex}
+\endgroup
+
+\section{Catalog correspondences used for coverage}
+\label{app:coverage}
+
+Each row is an AX catalog entry. A dash means the census records no
+corresponding API in that library. Repeated competing API names are retained:
+the unit counted is the AX entry. The table reflects the versioned maintainer
+mapping, including approximate correspondences; it is not a conformance test.
+Unmeasured catalog entries remain visible here without affecting speed summaries.
+
+\begingroup\small
+\rowcolors{2}{gray!5}{white}
+\begin{longtable}{P{4.1cm}P{4.0cm}P{3.8cm}P{3.4cm}}
+\textbf{AX entry} & \textbf{Kornia} & \textbf{TorchVision} & \textbf{Pillow} \\ \midrule\endhead
+\inputrows generated/coverage-mapping.tex
+\bottomrule
+\end{longtable}
+\endgroup
+
+\end{document}
