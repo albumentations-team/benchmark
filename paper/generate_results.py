@@ -18,14 +18,17 @@ from typing import TYPE_CHECKING
 import yaml
 
 from augbench.frozen_rgb_run import build_frozen_rgb_run
+from augbench.matrix import build_matrix
 from augbench.recipes.load import load_recipe_catalog
 from augbench.result_store import decode_result
+from augbench.run_config import FamilyRunConfig
+from augbench.run_records import build_run_record
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
-    from augbench.recipes.models import RecipeSpec
-    from augbench.run_records import ResultRecord
+    from augbench.recipes.models import RecipeCatalog, RecipeSpec
+    from augbench.run_records import ResultRecord, RunRecord
 
 RUN_ID = "3f8e2e315710528399b8e82e2359ab85c58c809644595b68a92fb9d83492cc8c"
 GIT_COMMIT = "5fc35f6fdd177c286cbc4f5e39d1520576d6464a"
@@ -103,19 +106,28 @@ def main() -> None:
 
 
 def _load_complete_run(cells_directory: Path, repository_root: Path) -> list[ResultRecord]:
-    records = [
-        decode_result(path.read_bytes(), expected_cell_id=path.stem) for path in sorted(cells_directory.glob("*.json"))
-    ]
     frozen = build_frozen_rgb_run(
         repository_root=repository_root,
         git_commit=GIT_COMMIT,
         code_archive_sha256=CODE_ARCHIVE_SHA256,
     )
-    expected = {cell.cell_id for cell in frozen.cells}
-    actual = {record.cell_id for record in records}
-    if frozen.run.run_id != RUN_ID or actual != expected or any(record.run_id != RUN_ID for record in records):
+    if frozen.run.run_id != RUN_ID:
         raise RuntimeError("paper results do not match the frozen production run")
-    config = frozen.run.family_config
+    recipes = load_recipe_catalog(repository_root / frozen.run.family_config["recipes"])
+    return load_run_results(cells_directory, frozen.run, recipes)
+
+
+def load_run_results(cells_directory: Path, run: RunRecord, recipes: RecipeCatalog) -> list[ResultRecord]:
+    identity = build_run_record(family_config=run.family_config, inputs=run.inputs, hardware=run.hardware)
+    if identity != run:
+        raise ValueError("run manifest does not match its immutable identity")
+    cells = build_matrix(run_id=run.run_id, config=FamilyRunConfig.model_validate(run.family_config), recipes=recipes)
+    records = [
+        decode_result(path.read_bytes(), expected_cell_id=path.stem) for path in sorted(cells_directory.glob("*.json"))
+    ]
+    if {record.cell_id for record in records} != {cell.cell_id for cell in cells}:
+        raise ValueError("results do not match the complete selected run matrix")
+    config = run.family_config
     output = config["output"]
     execution = config["execution"]
     expected_shape = (execution["batch_size"], output["channels"], output["height"], output["width"])
@@ -191,6 +203,7 @@ def _recipe_key(recipe: str, recipes: Sequence[RecipeSpec]) -> str:
 
 def _write_metrics(path: Path, data: _PaperData) -> None:
     common_means = _mean_ratios(data, [implementation for implementation, _ in IMPLEMENTATIONS])
+    common_memories = _common_memories(data)
     metrics = {
         "ProductionCellCount": str(sum(map(len, data.groups.values()))),
         "CommonRecipeCount": str(len(data.common)),
@@ -201,9 +214,7 @@ def _write_metrics(path: Path, data: _PaperData) -> None:
         metrics[f"CommonSpeed{command}"] = (
             f"{median(data.speed[(implementation, recipe)] for recipe in data.common):,.0f}"
         )
-        metrics[f"CommonMemory{command}"] = (
-            f"{median(data.memory[(implementation, recipe)] for recipe in data.common):,.0f}"
-        )
+        metrics[f"CommonMemory{command}"] = f"{common_memories[implementation]:,.0f}"
     for family, paths in PAIRWISE:
         metrics[f"Plot{family}Shared"] = str(len(_shared_recipes(data, [AX, *paths])))
     for family, rows in data.pairwise.items():
@@ -276,11 +287,15 @@ def _write_mean_bars(path: Path, means: dict[str, float]) -> None:
     _write_tex(path, lines)
 
 
-def _write_memory_bars(path: Path, data: _PaperData) -> None:
-    values = {
+def _common_memories(data: _PaperData) -> dict[str, float]:
+    return {
         implementation: median(data.memory[(implementation, recipe)] for recipe in data.common)
         for implementation, _ in IMPLEMENTATIONS
     }
+
+
+def _write_memory_bars(path: Path, data: _PaperData) -> None:
+    values = _common_memories(data)
     ordered = sorted(IMPLEMENTATIONS, key=lambda item: values[item[0]])
     lines: list[str] = []
     for index, (implementation, label) in enumerate(ordered):

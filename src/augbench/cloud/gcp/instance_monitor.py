@@ -12,9 +12,6 @@ class InstanceCommandRunner(Protocol):
     def __call__(self, command: list[str]) -> subprocess.CompletedProcess[bytes]: ...
 
 
-TERMINAL_INSTANCE_STATES = frozenset({"STOPPING", "TERMINATED", "SUSPENDING", "SUSPENDED", "NOT_FOUND"})
-
-
 def query_instance_state(
     *,
     project: str,

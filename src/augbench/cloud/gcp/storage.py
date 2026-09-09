@@ -33,31 +33,10 @@ class GcloudObjectStore:
         self._runner = runner
 
     def create_if_absent(self, key: str, payload: bytes) -> bool:
-        uri = self._uri(key)
-        with tempfile.NamedTemporaryFile(prefix="augbench-gcs-", delete=False) as temporary:
+        with tempfile.NamedTemporaryFile(prefix="augbench-gcs-", delete_on_close=False) as temporary:
             temporary.write(payload)
             temporary.flush()
-            temporary_path = Path(temporary.name)
-        try:
-            completed = self._runner(
-                [
-                    self._executable,
-                    "storage",
-                    "cp",
-                    "--quiet",
-                    "--if-generation-match=0",
-                    str(temporary_path),
-                    uri,
-                ],
-            )
-        finally:
-            temporary_path.unlink(missing_ok=True)
-        if completed.returncode == 0:
-            return True
-        error_text = completed.stderr.decode(errors="replace")
-        if "412" in error_text or "Precondition" in error_text:
-            return False
-        raise RuntimeError(f"gcloud conditional upload failed for {uri}: {error_text.strip()}")
+            return self.create_file_if_absent(key, Path(temporary.name))
 
     def create_file_if_absent(self, key: str, source: Path) -> bool:
         uri = self._uri(key)
@@ -87,33 +66,6 @@ class GcloudObjectStore:
             raise RuntimeError(f"gcloud read failed for {uri}: {error_text.strip()}")
         return completed.stdout
 
-    def try_read(self, key: str) -> bytes | None:
-        uri = self._uri(key)
-        completed = self._runner([self._executable, "storage", "cat", "--quiet", uri])
-        if completed.returncode == 0:
-            return completed.stdout
-        error_text = completed.stderr.decode(errors="replace")
-        lowered = error_text.lower()
-        if "not found" in lowered or "no urls matched" in lowered or "matched no objects" in lowered:
-            return None
-        raise RuntimeError(f"gcloud read failed for {uri}: {error_text.strip()}")
-
-    def write(self, key: str, payload: bytes) -> None:
-        uri = self._uri(key)
-        with tempfile.NamedTemporaryFile(prefix="augbench-gcs-", delete=False) as temporary:
-            temporary.write(payload)
-            temporary.flush()
-            temporary_path = Path(temporary.name)
-        try:
-            completed = self._runner(
-                [self._executable, "storage", "cp", "--quiet", str(temporary_path), uri],
-            )
-        finally:
-            temporary_path.unlink(missing_ok=True)
-        if completed.returncode != 0:
-            error_text = completed.stderr.decode(errors="replace")
-            raise RuntimeError(f"gcloud upload failed for {uri}: {error_text.strip()}")
-
     def list_keys(self, prefix: str) -> tuple[str, ...]:
         uri = self._uri(prefix.rstrip("/"))
         completed = self._runner([self._executable, "storage", "ls", "--recursive", uri])
@@ -136,29 +88,8 @@ class GcloudObjectStore:
                 keys.add(key)
         return tuple(sorted(keys))
 
-    def sync_prefix(self, prefix: str, destination: Path) -> None:
-        destination.mkdir(parents=True, exist_ok=True)
-        uri = self._uri(prefix.rstrip("/"))
-        completed = self._runner(
-            [
-                self._executable,
-                "storage",
-                "rsync",
-                "--recursive",
-                "--quiet",
-                uri,
-                str(destination),
-            ],
-        )
-        if completed.returncode != 0:
-            error_text = completed.stderr.decode(errors="replace")
-            raise RuntimeError(f"gcloud sync failed for {uri}: {error_text.strip()}")
-
     def _uri(self, key: str) -> str:
         parts = key.split("/")
         if not key or key.startswith(("/", "gs://")) or ".." in parts:
             raise ValueError(f"invalid relative GCS object key: {key!r}")
         return f"{self._base_uri}/{key}"
-
-    def uri_for(self, key: str) -> str:
-        return self._uri(key)

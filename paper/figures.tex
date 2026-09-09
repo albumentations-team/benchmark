@@ -1,0 +1,87 @@
+\definecolor{slower}{HTML}{5288B8}
+\definecolor{faster}{HTML}{DA9346}
+\definecolor{memorycolor}{HTML}{7467A1}
+\newcommand{\HeatCell}[4]{%
+  \fill[#4] (#1-0.48,#2-0.44) rectangle (#1+0.48,#2+0.44);
+  \node[font=\small] at (#1,#2) {#3};%
+}
+\newcommand{\MeanRatioPlot}[3][1.5]{%
+\begin{tikzpicture}[x={11.25/#1*1cm},y=0.62cm]
+\foreach \index in {0,...,6} {
+  \pgfmathsetmacro{\tick}{\index*#1/6}
+  \draw[gray!15] (\tick,-0.6) -- (\tick,{#3-0.5});
+  \draw[gray!60] (\tick,-0.65) -- (\tick,-0.75);
+  \node[anchor=north,font=\small] at (\tick,-0.85) {$\pgfmathprintnumber{\tick}\times$};
+}
+\input{generated/#2}
+\draw[densely dashed,gray!75] (1,-0.6) -- (1,{#3-0.5});
+\draw[gray!60] (0,-0.65) -- ({#1*31/30},-0.65);
+\node[anchor=north,font=\small] at ({#1/2},-1.6)
+  {Mean relative throughput (AX = $1\times$); higher is faster};
+\end{tikzpicture}%
+}
+\newcommand{\InputBoundary}[2][prewarmed bytes]{%
+\begin{tikzpicture}[x=1cm,y=1cm,
+  box/.style={draw=gray!55,rounded corners=2pt,align=center,font=\small,minimum height=1cm},
+  arrow/.style={-{Latex[length=2mm]},draw=gray!70,thick}]
+  \node[box,text width=2.5cm] (input) at (1.45,0) {JPEG files\\#1};
+  \node[box,text width=5.8cm] (work) at (7,0) {Library-specific preparation\\decode, transforms, batching, transfer};
+  \node[box,text width=3cm] (output) at (12.4,0) {Ready CUDA batch\\float16, BCHW};
+  \draw[arrow] (input) -- (work);
+  \draw[arrow] (work) -- (output);
+  \node[anchor=west,font=\small] at (0,-1.05) {One cell; stages and prefetched batches can overlap:};
+  \draw[fill=gray!8,draw=gray!40] (0,-1.9) rectangle (3.3,-1.3);
+  \node[font=\small] at (1.65,-1.6) {Construct pipeline};
+  \draw[fill=gray!8,draw=gray!40] (3.3,-1.9) rectangle (6.3,-1.3);
+  \node[font=\small] at (4.8,-1.6) {Warm up + sync};
+  \draw[fill=slower!12,draw=gray!40] (6.3,-1.9) rectangle (12.5,-1.3);
+  \node[font=\small] at (9.4,-1.6) {#2 batches + final CUDA sync};
+  \draw[fill=gray!8,draw=gray!40] (12.5,-1.9) rectangle (14,-1.3);
+  \node[font=\small] at (13.25,-1.6) {Cleanup};
+  \draw[draw=slower,line width=2.5pt] (6.3,-2.3) -- (12.5,-2.3);
+  \node[anchor=east,font=\small,text=slower!70!black] at (6.05,-2.3) {Throughput window};
+  \draw[draw=memorycolor,line width=2.5pt] (0,-2.85) -- (14,-2.85);
+  \node[anchor=north,font=\small,text=memorycolor] at (7,-2.98) {GPU memory: construction, warm-up, consumption, and cleanup};
+\end{tikzpicture}%
+}
+
+\newcommand{\CommonHeatmap}[1]{%
+\begin{tikzpicture}[x=1.13cm,y=-0.60cm]
+\foreach \x/\name in {0/Pillow,1.5/TorchVision,3.5/Kornia,5/DALI} {
+  \node[font=\small,anchor=south] at (\x,-1.4) {\name};
+}
+\foreach \x/\device in {0/CPU,1/CPU,2/GPU,3/CPU,4/GPU,5/GPU} {
+  \node[font=\small,anchor=south] at (\x,-0.75) {\device};
+}
+\node[font=\small,align=center,anchor=south] at (6.65,-0.75) {AX\\images/s};
+\input{generated/common-heatmap.tex}
+\draw[gray!35] (5.65,-0.5) -- (5.65,{#1-0.5});
+\node[font=\small,anchor=north,align=center] at (2.5,{#1})
+  {Throughput / AX throughput: $1\times$ equal, $2\times$ twice as fast};
+\foreach \exponent in {-\HeatLimit,...,\HeatLimit} {
+  \pgfmathsetmacro{\x}{\exponent+\HeatLimit}
+  \pgfmathsetmacro{\ratio}{pow(2,\exponent)}
+  \pgfmathsetmacro{\shade}{abs(\exponent)/\HeatLimit*65}
+  \ifnum\exponent<0
+    \fill[slower!\shade!white] (\x-0.45,{#1+1}) rectangle (\x+0.45,{#1+1.55});
+  \else
+    \fill[faster!\shade!white] (\x-0.45,{#1+1}) rectangle (\x+0.45,{#1+1.55});
+  \fi
+  \node[font=\scriptsize] at (\x,{#1+1.28}) {$\pgfmathprintnumber[fixed,precision=3]{\ratio}\times$};
+}
+\end{tikzpicture}%
+}
+
+\newcommand{\MemoryPlot}[2][2500]{%
+\begin{tikzpicture}[x={10/#1*1cm},y=0.62cm]
+\foreach \index in {0,...,5} {
+  \pgfmathsetmacro{\tick}{\index*#1/5}
+  \draw[gray!15] (\tick,-0.6) -- (\tick,{#2-0.5});
+  \node[anchor=north,font=\small] at (\tick,-0.85) {\pgfmathprintnumber{\tick}};
+}
+\input{generated/common-memory-bars.tex}
+\draw[gray!60] (0,-0.65) -- (#1,-0.65);
+\node[anchor=north,font=\small] at ({#1/2},-1.6)
+  {Peak process GPU memory (MiB); lower is better};
+\end{tikzpicture}%
+}

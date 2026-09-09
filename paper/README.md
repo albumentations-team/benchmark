@@ -5,7 +5,8 @@ JPEG-to-CUDA workload. It reports throughput and peak process GPU memory from
 one execution per seed. A separate census describes correspondences within a
 selected AlbumentationsX transformation catalog.
 
-Read [the manuscript](main.tex), inspect the
+Read [the published preprint on arXiv](https://arxiv.org/abs/2609.06635) or
+[the manuscript source](main.tex), inspect the
 [complete results table](generated/recipe-results.csv), or build the PDF. The
 [greenfield plan](greenfield-plan.md) records the design of this rewrite.
 The main text is followed by References, then a new page headed Appendices.
@@ -25,6 +26,11 @@ The manuscript uses standard TeX packages including TikZ, booktabs, longtable,
 xcolor, microtype, xurl, seqsplit, float, and hyperref.
 
 ## Regenerate the reported data
+
+This generator is pinned to the published run. To display a different run in the
+root README, use the [README update command](../README.md#update-the-readme-results).
+It writes PNG figures to `docs/generated/` without changing `paper/generated/`.
+Both outputs use the same calculations and TikZ definitions in `figures.tex`.
 
 The execution results belong to immutable run
 `3f8e2e315710528399b8e82e2359ab85c58c809644595b68a92fb9d83492cc8c`, measured

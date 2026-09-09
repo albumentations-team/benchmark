@@ -31,18 +31,12 @@ class RecipeDataset:
         items: Sequence[Any],
         adapter: AugmentationAdapter,
         runtime: RecipeRuntime,
-        include_labels: bool = False,
-        class_count: int = 1000,
     ) -> None:
         if not items:
             raise ValueError("recipe dataset requires at least one item")
-        if class_count < 1:
-            raise ValueError("class_count must be positive")
         self._items = items
         self._adapter = adapter
         self._runtime = runtime
-        self._include_labels = include_labels
-        self._class_count = class_count
 
     def __len__(self) -> int:
         return len(self._items)
@@ -58,8 +52,6 @@ class RecipeDataset:
                 sample = self._runtime.sample_transform(sample)
             except Exception as error:
                 raise DatasetStageError("augmentation", error) from error
-        if self._include_labels:
-            return sample, index % self._class_count
         return sample
 
 
@@ -100,10 +92,6 @@ class TorchDataLoaderSource:
         self._loader: Any | None = None
         self._iterator: Any | None = None
 
-    @property
-    def supports_persistent_start(self) -> bool:
-        return self._num_workers > 0 and self._persistent_workers
-
     def open(self) -> None:
         import torch
         from torch.utils.data import DataLoader
@@ -133,11 +121,6 @@ class TorchDataLoaderSource:
         )
         self._loader = loader
         self._iterator = iter(loader)
-
-    def reset_epoch(self) -> None:
-        if self._loader is None:
-            raise RuntimeError("DataLoader source is not open")
-        self._iterator = iter(self._loader)
 
     def next_batch(self) -> Any:
         if self._iterator is None:

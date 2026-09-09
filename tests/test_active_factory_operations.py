@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from augbench.adapters.dali.native import _STAGE_HANDLERS, SUPPORTED_OPERATIONS
+from augbench.adapters.dali.native import supports_recipe
 from augbench.recipes.load import load_recipe_catalog
 
 
@@ -23,8 +23,11 @@ def test_recipe_factories_contain_only_current_rgb_operations() -> None:
         assert factory_operations <= catalog_operations, filename
 
 
-def test_dali_stage_handlers_cover_the_declared_operations() -> None:
-    assert set(_STAGE_HANDLERS) == SUPPORTED_OPERATIONS
+def test_dali_stage_handlers_cover_the_supported_catalog_recipes() -> None:
+    recipes = load_recipe_catalog(Path(__file__).parents[1] / "catalog" / "recipes" / "rgb.yaml")
+    for recipe in recipes.recipes:
+        if "dali_gpu" in recipe.supported_implementations:
+            assert supports_recipe(recipe), recipe.recipe_id
 
 
 def test_kornia_factories_adapt_catalog_lists_to_kornia_ranges() -> None:

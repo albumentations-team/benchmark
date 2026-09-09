@@ -42,7 +42,6 @@ class PythonModuleAdapterConfig:
     recipe_module: str
     placement: Placement
     source_id: str
-    gpu_batch_mode: Literal["direct", "per-sample"] = "direct"
     unsupported_operation_ids: frozenset[str] = frozenset()
 
 
@@ -61,7 +60,6 @@ class PythonModuleAdapter:
         self._recipe_module = config.recipe_module
         self._load_source = load_source
         self._source_id = config.source_id
-        self._gpu_batch_mode = config.gpu_batch_mode
         self._unsupported_operation_ids = config.unsupported_operation_ids
 
     def load_source(self, source: Any) -> Any:
@@ -106,10 +104,7 @@ class PythonModuleAdapter:
             sample_transform = None if cpu_transform is None else partial(call_transform, cpu_transform)
             host_batch_transform = _optional_host_batch_transform(transform)
             device_transform = transform if gpu_transform is None else gpu_transform
-            if self._gpu_batch_mode == "per-sample":
-                batch_transform = _PerSampleGpuTransform(call_transform, device_transform)
-            else:
-                batch_transform = _LazyDeviceTransform(device_transform)
+            batch_transform = _LazyDeviceTransform(device_transform)
 
         return RecipeRuntime(
             implementation_id=self.implementation_id,
@@ -152,20 +147,3 @@ def _optional_host_batch_transform(transform: Any) -> Callable[[Any], Any] | Non
     if host_batch_transform is not None and not callable(host_batch_transform):
         raise TypeError("host_batch_transform must be callable")
     return cast("Callable[[Any], Any] | None", host_batch_transform)
-
-
-class _PerSampleGpuTransform:
-    def __init__(self, call_transform: Callable[[Any, Any], Any], transform: Any) -> None:
-        self._call_transform = call_transform
-        self._transform = transform
-        self._moved = False
-
-    def __call__(self, batch: Any) -> Any:
-        import torch
-
-        if not self._moved:
-            move = getattr(self._transform, "to", None)
-            if callable(move):
-                self._transform = move("cuda")
-            self._moved = True
-        return torch.stack([self._call_transform(self._transform, sample) for sample in batch], dim=0)

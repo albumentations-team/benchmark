@@ -64,11 +64,9 @@ packages.find.include = [ "augbench*" ]
 packages.find.exclude = [ ".venv*", "tests*" ]
 
 [tool.ruff]
-# Exclude a variety of commonly ignored directories.
 target-version = "py313"
 line-length = 120
 indent-width = 4
-# Assume Python 3.13
 exclude = [
   ".bzr",
   ".direnv",
@@ -100,12 +98,9 @@ exclude = [
   "venv",
 ]
 format.indent-style = "space"
-# Like Black, respect magic trailing commas.
 format.quote-style = "double"
-# Like Black, indent with spaces, rather than tabs.
 format.line-ending = "auto"
 format.skip-magic-trailing-comma = false
-# Like Black, automatically detect the appropriate line ending.
 lint.select = [ "ALL" ]
 lint.ignore = [
   "COM812",  # Conflicts with the Ruff formatter.
@@ -117,7 +112,6 @@ lint.ignore = [
   "PLC0415", # Optional benchmark dependencies must be imported only on their execution paths.
   "TRY003",  # Error text belongs at the call site when the exception is not reused.
 ]
-# Allow fix for all enabled rules (when `--fix`) is provided.
 lint.explicit-preview-rules = true
 lint.per-file-ignores."src/augbench/cli.py" = [ "T201" ]  # CLI reports progress and machine-readable JSON.
 lint.per-file-ignores."src/augbench/implementations/pillow_impl.py" = [
@@ -131,9 +125,7 @@ lint.per-file-ignores."tests/**/*.py" = [
 ]
 lint.fixable = [ "ALL" ]
 lint.unfixable = []
-# Allow unused variables when underscore-prefixed.
 lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
-# Like Black, use double quotes for strings.
 lint.pydocstyle.convention = "google"
 
 [tool.mypy]
@@ -145,7 +137,6 @@ warn_unused_ignores = true
 disallow_any_generics = true
 check_untyped_defs = true
 no_implicit_reexport = true
-# for strict mypy: (this is the tricky one :-))
 disallow_untyped_defs = true
 
 [tool.pyright]
@@ -155,9 +146,7 @@ venvPath = "."
 venv = ".venv"
 executionEnvironments = [ { root = ".", pythonVersion = "3.13" } ]
 include = [ "src/augbench" ]
-# Exclude common directories and virtual envs
 exclude = [ "**/node_modules", "**/__pycache__", ".git", ".venv" ]
-# Disable the missing imports report
 reportMissingImports = false
 reportMissingModuleSource = false
 

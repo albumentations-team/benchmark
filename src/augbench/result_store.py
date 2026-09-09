@@ -60,8 +60,7 @@ class ImmutableResultStore:
 def result_payload(result: ResultRecord) -> dict[str, Any]:
     payload = result.model_dump(mode="json")
     payload["cell_id"] = result.cell_id
-    if result.throughput is not None:
-        payload["throughput"]["value"] = result.throughput.value
+    payload["throughput"]["value"] = result.throughput.value
     return payload
 
 

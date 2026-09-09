@@ -20,38 +20,8 @@ class _Execution(Protocol):
     width: int
 
 
-SUPPORTED_OPERATIONS = frozenset(
-    {
-        "Affine",
-        "Brightness",
-        "CLAHE",
-        "ColorJiggle",
-        "ColorJitter",
-        "Contrast",
-        "Equalize",
-        "Erasing",
-        "GaussianBlur",
-        "GaussianNoise",
-        "HorizontalFlip",
-        "Hue",
-        "JpegCompression",
-        "Normalize",
-        "Pad",
-        "RandomCrop224",
-        "RandomResizedCrop",
-        "Resize",
-        "Rotate",
-        "SaltAndPepper",
-        "Saturation",
-        "Shear",
-        "ToTensor",
-        "VerticalFlip",
-    },
-)
-
-
 def supports_recipe(recipe: RecipeSpec) -> bool:
-    return all(stage.operation_id in SUPPORTED_OPERATIONS for stage in recipe.stages)
+    return all(stage.operation_id in _STAGE_HANDLERS for stage in recipe.stages)
 
 
 class DaliBatchSource:
@@ -65,9 +35,7 @@ class DaliBatchSource:
         execution: _Execution,
     ) -> None:
         if not supports_recipe(recipe):
-            unsupported = [
-                stage.operation_id for stage in recipe.stages if stage.operation_id not in SUPPORTED_OPERATIONS
-            ]
+            unsupported = [stage.operation_id for stage in recipe.stages if stage.operation_id not in _STAGE_HANDLERS]
             raise UnsupportedRecipeError(f"DALI does not implement recipe stages {unsupported}")
         self._sources = sources
         self._recipe = recipe
@@ -131,13 +99,6 @@ class DaliBatchSource:
         data = item["data"]
         labels = item["label"].reshape(-1).long()
         return data, labels
-
-    def reset_epoch(self) -> None:
-        # DALI readers cannot be rewound reliably in the middle of an epoch.
-        # Rebuilding gives startup and steady-state windows independent reader
-        # state while keeping graph construction outside the throughput timer.
-        self.close()
-        self.open()
 
     def close(self) -> None:
         self._iterator = None
