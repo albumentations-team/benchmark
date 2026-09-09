@@ -93,7 +93,7 @@ GPU memory is sampled by NVML every 50 ms from before pipeline construction thro
 
 ## Update the README results
 
-The tables, measurement settings, and eight figures above are generated from one selected run. After downloading that run's `run.json` and complete `cells/` directory, run from the repository root:
+The tables, measurement settings, eight figures, and [machine-readable results](docs/generated/results.json) are generated from one selected run. After downloading that run's `run.json` and complete `cells/` directory, run from the repository root:
 
 ```bash
 uv run python -m paper.generate_readme --run /path/to/run.json --cells /path/to/cells
@@ -101,7 +101,7 @@ uv run python -m paper.generate_readme --run /path/to/run.json --cells /path/to/
 
 Rendering requires `pdflatex` with TikZ and `preview`, and Poppler's `pdftocairo`. If the run used a different recipe catalog, pass its file with `--recipes /path/to/rgb.yaml`; its checksum must match the manifest.
 
-Rerun this command to select another complete run. It updates this README and `docs/generated/` together; editing raw JSON alone does not trigger an update. Commit those generated files with the README. Runs and their cells are immutable: changed benchmark inputs require a new run.
+Rerun this command to select another complete run. It updates this README and `docs/generated/` together; editing raw JSON alone does not trigger an update. Commit those generated files with the README. Website builds read `docs/generated/results.json` from `main`; it contains the selected run manifest, versions, seed observations, recipe medians and ranges, figure dimensions and SHA-256 checksums, and the same common-set and pairwise aggregates used above. Publish a newer completed run with this command to update website consumers; `paper/generated/` remains the published article snapshot. Runs and their cells are immutable: changed benchmark inputs require a new run.
 
 The published results stay in [`paper/generated/`](paper/generated). The README and paper share the calculation functions and [`paper/figures.tex`](paper/figures.tex), so figure design and aggregation have one implementation. The [paper generator](paper/README.md#regenerate-the-reported-data) remains pinned to the published run.
 

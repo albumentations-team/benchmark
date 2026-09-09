@@ -1,7 +1,9 @@
 import csv
+import hashlib
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from augbench.recipes.load import load_recipe_catalog
 from augbench.result_store import encode_result
@@ -191,3 +193,52 @@ def test_selected_run_rejects_missing_foreign_or_tampered_results(
     tampered = selected_run.model_copy(update={"hardware": {"machine_type": "different"}})
     with pytest.raises(ValueError, match="immutable identity"):
         paper.load_run_results(tmp_path, tampered, catalog)
+
+
+def test_machine_export_uses_selected_run_and_the_readme_aggregates(
+    paper_data: paper._PaperData,
+    selected_run: RunRecord,
+) -> None:
+    records = [
+        record.model_copy(
+            update={
+                "run_id": selected_run.run_id,
+                "cell": record.cell.model_copy(update={"run_id": selected_run.run_id}),
+            },
+        )
+        for group in paper_data.groups.values()
+        for record in group
+    ]
+    data = paper._prepare(records, paper_data.recipes)
+    result = readme.export_results(data, selected_run)
+
+    assert result["run"]["run_id"] == selected_run.run_id
+    assert result["is_published_run"] is False
+    assert result["measurement_count"] == 63
+    assert result["gpu_memory_poll_ms"] == 50
+    second = result["recipes"][1]["results"]["kornia_gpu"]
+    assert second["throughput"] == pytest.approx({"median": 99, "min": 1, "max": 99999})
+    assert second["gpu_memory"] == {"median": 100, "min": 100, "max": 100}
+    assert [observation["seed"] for observation in second["observations"]] == [137, 138, 139]
+    assert second["observations"][0]["cell_id"] == data.groups[("kornia_gpu", data.recipes[1].recipe_id)][0].cell_id
+    common = result["summaries"][0]
+    means = {path["id"]: path["mean_relative_throughput"] for path in common["paths"]}
+    assert means == paper._mean_ratios(data, [implementation for implementation, _ in paper.IMPLEMENTATIONS])
+    assert len(common["recipe_ids"]) == 3
+
+
+def test_figure_export_records_exact_generated_image_bytes_and_dimensions(tmp_path: Path) -> None:
+    path = tmp_path / "common-mean-bars.png"
+    Image.new("RGB", (120, 80), "white").save(path)
+
+    figures = readme.export_figures(tmp_path)
+
+    assert figures == {
+        "common-mean-bars": {
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "width": 120,
+            "height": 80,
+        }
+    }
+    Image.new("RGB", (120, 80), "black").save(path)
+    assert readme.export_figures(tmp_path)["common-mean-bars"]["sha256"] != figures["common-mean-bars"]["sha256"]

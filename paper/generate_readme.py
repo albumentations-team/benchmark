@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import math
 import shutil
 import subprocess
@@ -12,6 +13,8 @@ import tempfile
 from pathlib import Path
 from statistics import median
 from typing import TYPE_CHECKING
+
+from PIL import Image
 
 from augbench.recipes.load import load_recipe_catalog
 from augbench.run_config import FamilyRunConfig
@@ -69,7 +72,99 @@ def main() -> None:
         for figure in staging.glob("*.png"):
             shutil.copyfile(figure, destination / figure.name)
         (destination / "run.json").write_text(run.model_dump_json(indent=2) + "\n")
+        (destination / "results.json").write_text(
+            json.dumps({**export_results(data, run), "figures": export_figures(staging)}, indent=2, allow_nan=False)
+            + "\n"
+        )
         readme.write_text(updated)
+
+
+def export_figures(directory: Path) -> dict[str, dict[str, str | int]]:
+    figures = {}
+    for path in sorted(directory.glob("*.png")):
+        with Image.open(path) as image:
+            width, height = image.size
+        figures[path.stem] = {
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "width": width,
+            "height": height,
+        }
+    return figures
+
+
+def export_results(data: _PaperData, run: RunRecord) -> dict[str, object]:
+    """Export the selected run using the README's aggregation and supported recipe sets."""
+    libraries = [
+        {
+            "id": implementation,
+            "label": "AlbumentationsX CPU" if implementation == AX else label,
+            "version": _single(
+                {
+                    record.runtime["library_version"]
+                    for (impl, _), records in data.groups.items()
+                    if impl == implementation
+                    for record in records
+                }
+            ),
+        }
+        for implementation, label in IMPLEMENTATIONS
+    ]
+    recipes = []
+    for index, recipe in enumerate(data.recipes, 1):
+        results = {}
+        for implementation, _ in IMPLEMENTATIONS:
+            key = (implementation, recipe.recipe_id)
+            if key not in data.groups:
+                continue
+            records = data.groups[key]
+            speeds = [record.throughput.value for record in records]
+            memories = [record.gpu_memory.peak_mib for record in records]
+            results[implementation] = {
+                "throughput": {"median": data.speed[key], "min": min(speeds), "max": max(speeds)},
+                "gpu_memory": {"median": data.memory[key], "min": min(memories), "max": max(memories)},
+                "observations": [
+                    {
+                        "seed": record.cell.seed,
+                        "cell_id": record.cell_id,
+                        "throughput_images_s": record.throughput.value,
+                        "gpu_memory_peak_mib": record.gpu_memory.peak_mib,
+                    }
+                    for record in records
+                ],
+            }
+        recipes.append({"key": f"R{index:02d}", "id": recipe.recipe_id, "results": results})
+    groups = [("all", tuple(implementation for implementation, _ in IMPLEMENTATIONS))]
+    groups.extend((family.lower(), (AX, *paths)) for family, paths in PAIRWISE)
+    summaries = []
+    for name, implementations in groups:
+        shared = _shared_recipes(data, implementations)
+        means = _mean_ratios(data, implementations)
+        summaries.append(
+            {
+                "id": name,
+                "recipe_ids": shared,
+                "paths": [
+                    {
+                        "id": implementation,
+                        "mean_relative_throughput": means[implementation],
+                        "median_gpu_memory_mib": median(data.memory[(implementation, recipe)] for recipe in shared),
+                    }
+                    for implementation in implementations
+                ],
+            }
+        )
+    return {
+        "schema_version": 1,
+        "run": run.model_dump(mode="json"),
+        "is_published_run": run.run_id == RUN_ID,
+        "measurement_count": sum(map(len, data.groups.values())),
+        "gpu_memory_poll_ms": _single(
+            {record.gpu_memory.poll_interval_ms for records in data.groups.values() for record in records}
+        ),
+        "libraries": libraries,
+        "recipes": recipes,
+        "summaries": summaries,
+    }
 
 
 def replace_results(readme: str, generated: str) -> str:
