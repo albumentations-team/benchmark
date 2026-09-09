@@ -60,14 +60,13 @@ stage_environment() {
   local python_version="$4"
   local environment_root="$STATE_ROOT/environment"
   local cache_archive="$STATE_ROOT/downloads/environment.tar.gz"
+  local cache_missing=false
   printf '%s  %s\n' "$lock_sha256" "$lock_path" | sha256sum --check --status
   if ! gcloud storage cp --quiet "$cache_uri" "$cache_archive"; then
+    cache_missing=true
     rm -rf "$environment_root"
     uv python install --no-bin "$python_version"
     uv venv --relocatable --managed-python --link-mode copy --python "$python_version" "$environment_root"
-    uv pip sync --python "$environment_root/bin/python" --require-hashes --link-mode copy --torch-backend cu130 "$lock_path"
-    tar --exclude='bin/python*' -czf "$cache_archive" -C "$environment_root" .
-    gcloud storage cp --quiet --if-generation-match=0 "$cache_archive" "$cache_uri" || true
   else
     rm -rf "$environment_root"
     mkdir -p "$environment_root"
@@ -75,6 +74,12 @@ stage_environment() {
     uv python install --no-bin "$python_version"
   fi
   repair_python_links "$environment_root" "$python_version"
+  uv pip sync --python "$environment_root/bin/python" --require-hashes --reinstall \
+    --link-mode copy --torch-backend cu130 "$lock_path"
+  if [[ "$cache_missing" == true ]]; then
+    tar --exclude='bin/python*' -czf "$cache_archive" -C "$environment_root" .
+    gcloud storage cp --quiet --if-generation-match=0 "$cache_archive" "$cache_uri" || true
+  fi
 }
 
 publish_log() {
