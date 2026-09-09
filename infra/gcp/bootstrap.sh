@@ -74,7 +74,8 @@ stage_environment() {
     uv python install --no-bin "$python_version"
   fi
   repair_python_links "$environment_root" "$python_version"
-  uv pip sync --python "$environment_root/bin/python" --require-hashes --link-mode copy --torch-backend cu130 "$lock_path"
+  uv pip sync --python "$environment_root/bin/python" --require-hashes --reinstall \
+    --link-mode copy --torch-backend cu130 "$lock_path"
   if [[ "$cache_missing" == true ]]; then
     tar --exclude='bin/python*' -czf "$cache_archive" -C "$environment_root" .
     gcloud storage cp --quiet --if-generation-match=0 "$cache_archive" "$cache_uri" || true

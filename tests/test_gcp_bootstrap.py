@@ -35,12 +35,15 @@ def test_rgb_launch_uses_the_current_bootstrap() -> None:
 
 
 @pytest.mark.parametrize("wheel_hash", ["valid", "invalid"])
-def test_cached_environment_is_synced_to_the_verified_lock(tmp_path: Path, wheel_hash: str) -> None:
+@pytest.mark.parametrize("cached_version", ["1.0", "2.0"])
+def test_cached_environment_is_synced_to_the_verified_lock(
+    tmp_path: Path, wheel_hash: str, cached_version: str
+) -> None:
     uv = shutil.which("uv")
     assert uv is not None
     wheels = tmp_path / "wheels"
     wheels.mkdir()
-    old = _write_wheel(wheels, "cache_probe", "1.0")
+    cached = _write_wheel(wheels, "cache_probe", cached_version)
     current = _write_wheel(wheels, "cache_probe", "2.0")
     extra = _write_wheel(wheels, "cache_extra", "1.0")
     environment = tmp_path / "cached"
@@ -53,8 +56,12 @@ def test_cached_environment_is_synced_to_the_verified_lock(tmp_path: Path, wheel
     }
     subprocess.run([uv, "venv", "--python", sys.executable, str(environment)], env=env, check=True)  # noqa: S603
     subprocess.run(  # noqa: S603
-        [uv, "pip", "install", "--python", str(environment / "bin/python"), str(old), str(extra)], env=env, check=True
+        [uv, "pip", "install", "--python", str(environment / "bin/python"), str(cached), str(extra)],
+        env=env,
+        check=True,
     )
+    cached_module = next(environment.glob("lib/python*/site-packages/cache_probe.py"))
+    cached_module.write_text("VERSION = 'corrupted'\n")
     cache_archive = tmp_path / "cached.tar.gz"
     with tarfile.open(cache_archive, "w:gz") as archive:
         archive.add(environment, arcname=".")
