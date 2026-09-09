@@ -180,15 +180,17 @@ def _apply_vertical_flip(data: Any, _params: dict[str, Any], _output_height: int
     return fn.flip(data, vertical=1)
 
 
-def _apply_pad(data: Any, params: dict[str, Any], output_height: int, output_width: int) -> Any:
-    from nvidia.dali import fn
+def _apply_pad(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn, types
 
     padding = _integer(params, "padding")
-    return fn.pad(
+    return fn.slice(
         data,
         axes=(0, 1),
-        shape=(output_height + 2 * padding, output_width + 2 * padding),
-        fill_value=params.get("fill", 0),
+        start=(-padding, -padding),
+        shape=data.shape(dtype=types.INT32)[:2] + 2 * padding,
+        out_of_bounds_policy="pad",
+        fill_values=params.get("fill", 0),
     )
 
 
@@ -311,15 +313,21 @@ def _apply_salt_and_pepper(data: Any, params: dict[str, Any], _output_height: in
     )
 
 
-def _apply_erasing(data: Any, params: dict[str, Any], output_height: int, output_width: int) -> Any:
-    from nvidia.dali import fn
+def _apply_erasing(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
+    from nvidia.dali import fn, types
 
-    erase_kwargs: dict[str, Any] = {
-        "anchor": (output_height // 7, output_width // 7),
-        "shape": (output_height // 4, output_width // 4),
-        "fill_value": params.get("fill", 0),
-    }
-    return fn.erase(data, **erase_kwargs)
+    anchor, shape = fn.random_crop_generator(
+        data.shape(),
+        random_area=tuple(_number_list(params, "scale")),
+        random_aspect_ratio=tuple(_number_list(params, "ratio")),
+    )
+    return fn.erase(
+        data,
+        axis_names="HW",
+        anchor=fn.cast(anchor, dtype=types.FLOAT),
+        shape=fn.cast(shape, dtype=types.FLOAT),
+        fill_value=params.get("fill", 0),
+    )
 
 
 def _apply_jpeg_compression(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
