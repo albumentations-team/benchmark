@@ -71,7 +71,7 @@ operations:
   support:
     torchvision:
       api: RandomIoUCrop
-      status: partial
+      status: direct
     kornia:
       api: null
       status: none
@@ -114,7 +114,7 @@ operations:
   support:
     torchvision:
       api: RandomIoUCrop
-      status: partial
+      status: direct
     kornia:
       api: null
       status: none
@@ -244,7 +244,7 @@ operations:
   support:
     torchvision:
       api: RandomErasing
-      status: partial
+      status: direct
     kornia:
       api: null
       status: none
@@ -344,7 +344,7 @@ operations:
   support:
     torchvision:
       api: RandomZoomOut
-      status: partial
+      status: direct
     kornia:
       api: null
       status: none
@@ -758,10 +758,10 @@ operations:
   support:
     torchvision:
       api: ColorJitter
-      status: partial
+      status: direct
     kornia:
       api: RandomHue / RandomSaturation
-      status: partial
+      status: direct
     pillow:
       api: ImageEnhance.Color
       status: direct
@@ -805,7 +805,7 @@ operations:
   support:
     torchvision:
       api: JPEG
-      status: partial
+      status: direct
     kornia:
       api: RandomJPEG
       status: direct
@@ -877,7 +877,7 @@ operations:
   support:
     torchvision:
       api: Resize / RandomShortestSize
-      status: partial
+      status: direct
     kornia:
       api: LongestMaxSize
       status: direct
@@ -1064,7 +1064,7 @@ operations:
   support:
     torchvision:
       api: Pad
-      status: partial
+      status: direct
     kornia:
       api: null
       status: none
@@ -1254,7 +1254,7 @@ operations:
   support:
     torchvision:
       api: ColorJitter
-      status: partial
+      status: direct
     kornia:
       api: RandomBrightness / RandomContrast
       status: direct
@@ -1373,7 +1373,7 @@ operations:
       status: none
     kornia:
       api: RandomJigsaw
-      status: partial
+      status: direct
     pillow:
       api: null
       status: none
@@ -1430,7 +1430,7 @@ operations:
   support:
     torchvision:
       api: ScaleJitter / RandomResize
-      status: partial
+      status: direct
     kornia:
       api: null
       status: none
@@ -1458,7 +1458,7 @@ operations:
   support:
     torchvision:
       api: RandomIoUCrop + RandomResizedCrop
-      status: partial
+      status: direct
     kornia:
       api: null
       status: none
@@ -1472,7 +1472,7 @@ operations:
   support:
     torchvision:
       api: RandomResizedCrop
-      status: partial
+      status: direct
     kornia:
       api: null
       status: none
@@ -1602,7 +1602,7 @@ operations:
   support:
     torchvision:
       api: RandomAdjustSharpness
-      status: partial
+      status: direct
     kornia:
       api: RandomSharpness
       status: direct
@@ -1617,7 +1617,7 @@ operations:
   support:
     torchvision:
       api: RandomAffine
-      status: partial
+      status: direct
     kornia:
       api: null
       status: none
@@ -1645,7 +1645,7 @@ operations:
   support:
     torchvision:
       api: Resize / RandomShortestSize
-      status: partial
+      status: direct
     kornia:
       api: SmallestMaxSize
       status: direct
