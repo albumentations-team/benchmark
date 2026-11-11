@@ -94,7 +94,10 @@ def preflight_implementations(executor: RGBCellExecutor, cells: Iterable[CellKey
         if pair in preflighted:
             continue
         preflighted.add(pair)
-        executor.preflight(cell)
+        try:
+            executor.preflight(cell)
+        except Exception as error:
+            raise RuntimeError(f"RGB preflight failed for {cell.implementation}: {cell.recipe_id}") from error
 
 
 if __name__ == "__main__":
