@@ -40,10 +40,13 @@ def test_guest_selects_only_the_requested_known_cells() -> None:
         recipe_id="Resize224+Normalize+ToTensor",
         seed=137,
     )
-    request = request.model_copy(update={"pending_cell_ids": (wanted.cell_id,)})
     other = wanted.model_copy(update={"seed": 138})
+    allsimd = wanted.model_copy(update={"implementation": "pillow_allsimd_cpu"})
+    request = request.model_copy(update={"pending_cell_ids": (wanted.cell_id, allsimd.cell_id)})
+    cells = (wanted, other, allsimd)
 
-    assert select_pending_cells(request=request, cells=(wanted, other)) == (wanted,)
+    assert select_pending_cells(request=request, cells=cells) == (wanted,)
+    assert select_pending_cells(request=request, cells=cells, pillow_allsimd=True) == (allsimd,)
 
 
 def test_guest_rejects_a_cell_not_derived_from_its_run() -> None:

@@ -153,6 +153,7 @@ def _apply_random_resized_crop(data: Any, params: dict[str, Any], _output_height
         random_area=tuple(_number_list(params, "scale")),
         random_aspect_ratio=tuple(_number_list(params, "ratio")),
         interp_type=_interpolation(params.get("interpolation")),
+        antialias=params.get("antialias", True),
     )
 
 
@@ -165,6 +166,7 @@ def _apply_resize(data: Any, params: dict[str, Any], _output_height: int, _outpu
         resize_x=target,
         resize_y=target,
         interp_type=_interpolation(params.get("interpolation")),
+        antialias=params.get("antialias", True),
     )
 
 

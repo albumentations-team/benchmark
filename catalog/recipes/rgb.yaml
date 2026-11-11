@@ -1,5 +1,5 @@
 schema_version: 1
-recipe_set_id: rgb-comparable-2026-08-02
+recipe_set_id: rgb-comparable-2026-11-11
 family: rgb
 recipes:
 - recipe_id: Resize224+Normalize+ToTensor
@@ -10,6 +10,7 @@ recipes:
     parameters:
       target_size: 224
       interpolation: bilinear
+      antialias: true
     stochastic: false
     randomness_scope: deterministic
   - operation_id: Normalize
@@ -35,6 +36,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
@@ -43,6 +45,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
   - dali_gpu
 - recipe_id: RandomCrop224+Normalize+ToTensor
   augmentation_id: RandomCrop224
@@ -77,6 +80,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
@@ -85,6 +89,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
   - dali_gpu
 - recipe_id: RandomResizedCrop+Normalize+ToTensor
   augmentation_id: RandomResizedCrop
@@ -103,6 +108,7 @@ recipes:
       - 0.75
       - 1.3333333333333333
       interpolation: bilinear
+      antialias: true
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize
@@ -128,6 +134,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
@@ -136,6 +143,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
   - dali_gpu
 - recipe_id: RandomCrop224+HorizontalFlip+Normalize+ToTensor
   augmentation_id: HorizontalFlip
@@ -174,6 +182,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
@@ -182,6 +191,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
   - dali_gpu
 - recipe_id: RandomCrop224+VerticalFlip+Normalize+ToTensor
   augmentation_id: VerticalFlip
@@ -220,6 +230,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
@@ -228,6 +239,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
   - dali_gpu
 - recipe_id: Pad+RandomCrop224+Normalize+ToTensor
   augmentation_id: Pad
@@ -268,12 +280,14 @@ recipes:
   - albumentationsx
   - torchvision
   - pillow
+  - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
   - torchvision_cpu
   - torchvision_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
   - dali_gpu
 - recipe_id: RandomCrop224+Rotate+Normalize+ToTensor
   augmentation_id: Rotate
@@ -318,6 +332,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
@@ -326,6 +341,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
   - dali_gpu
 - recipe_id: RandomCrop224+Affine+Normalize+ToTensor
   augmentation_id: Affine
@@ -376,6 +392,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
@@ -384,6 +401,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
   - dali_gpu
 - recipe_id: RandomCrop224+Perspective+Normalize+ToTensor
   augmentation_id: Perspective
@@ -606,6 +624,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   supported_implementations:
   - albumentationsx_cpu
   - torchvision_cpu
@@ -613,6 +632,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+RGBShift+Normalize+ToTensor
   augmentation_id: RGBShift
   channels: 3
@@ -694,6 +714,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
@@ -702,6 +723,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
   - dali_gpu
 - recipe_id: RandomCrop224+GaussianNoise+Normalize+ToTensor
   augmentation_id: GaussianNoise
@@ -784,6 +806,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   supported_implementations:
   - albumentationsx_cpu
   - torchvision_cpu
@@ -791,6 +814,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+Posterize+Normalize+ToTensor
   augmentation_id: Posterize
   channels: 3
@@ -829,6 +853,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   supported_implementations:
   - albumentationsx_cpu
   - torchvision_cpu
@@ -836,6 +861,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+Solarize+Normalize+ToTensor
   augmentation_id: Solarize
   channels: 3
@@ -874,6 +900,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   supported_implementations:
   - albumentationsx_cpu
   - torchvision_cpu
@@ -881,6 +908,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+Sharpen+Normalize+ToTensor
   augmentation_id: Sharpen
   channels: 3
@@ -966,6 +994,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   supported_implementations:
   - albumentationsx_cpu
   - torchvision_cpu
@@ -973,6 +1002,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+Equalize+Normalize+ToTensor
   augmentation_id: Equalize
   channels: 3
@@ -1011,6 +1041,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
@@ -1019,6 +1050,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
   - dali_gpu
 - recipe_id: RandomCrop224+Erasing+Normalize+ToTensor
   augmentation_id: Erasing
@@ -1108,6 +1140,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
@@ -1115,6 +1148,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
   - dali_gpu
 - recipe_id: RandomCrop224+RandomGamma+Normalize+ToTensor
   augmentation_id: RandomGamma
@@ -1233,11 +1267,13 @@ recipes:
   - albumentationsx
   - kornia
   - pillow
+  - pillow_allsimd
   supported_implementations:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+MotionBlur+Normalize+ToTensor
   augmentation_id: MotionBlur
   channels: 3
@@ -1371,6 +1407,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
@@ -1379,6 +1416,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
   - dali_gpu
 - recipe_id: RandomCrop224+Contrast+Normalize+ToTensor
   augmentation_id: Contrast
@@ -1420,6 +1458,7 @@ recipes:
   - torchvision
   - kornia
   - pillow
+  - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
@@ -1428,6 +1467,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
   - dali_gpu
 - recipe_id: RandomCrop224+Blur+Normalize+ToTensor
   augmentation_id: Blur
@@ -1467,11 +1507,13 @@ recipes:
   - albumentationsx
   - kornia
   - pillow
+  - pillow_allsimd
   supported_implementations:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+ChannelDropout+Normalize+ToTensor
   augmentation_id: ChannelDropout
   channels: 3
@@ -1923,12 +1965,14 @@ recipes:
   - albumentationsx
   - kornia
   - pillow
+  - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
   - pillow_cpu
+  - pillow_allsimd_cpu
   - dali_gpu
 - recipe_id: RandomCrop224+Snow+Normalize+ToTensor
   augmentation_id: Snow
@@ -2050,11 +2094,13 @@ recipes:
   - albumentationsx
   - kornia
   - pillow
+  - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
   - kornia_cpu
   - pillow_cpu
+  - pillow_allsimd_cpu
   - dali_gpu
 - recipe_id: RandomCrop224+ThinPlateSpline+Normalize+ToTensor
   augmentation_id: ThinPlateSpline
@@ -2321,9 +2367,11 @@ recipes:
   supported_libraries:
   - albumentationsx
   - pillow
+  - pillow_allsimd
   supported_implementations:
   - albumentationsx_cpu
   - pillow_cpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+RandomRotate90+Normalize+ToTensor
   augmentation_id: RandomRotate90
   channels: 3
@@ -2447,9 +2495,11 @@ recipes:
   supported_libraries:
   - albumentationsx
   - pillow
+  - pillow_allsimd
   supported_implementations:
   - albumentationsx_cpu
   - pillow_cpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+EnhanceDetail+Normalize+ToTensor
   augmentation_id: EnhanceDetail
   channels: 3
@@ -2489,9 +2539,11 @@ recipes:
   supported_libraries:
   - albumentationsx
   - pillow
+  - pillow_allsimd
   supported_implementations:
   - albumentationsx_cpu
   - pillow_cpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+UnsharpMask+Normalize+ToTensor
   augmentation_id: UnsharpMask
   channels: 3
@@ -2535,6 +2587,8 @@ recipes:
   supported_libraries:
   - albumentationsx
   - pillow
+  - pillow_allsimd
   supported_implementations:
   - albumentationsx_cpu
   - pillow_cpu
+  - pillow_allsimd_cpu

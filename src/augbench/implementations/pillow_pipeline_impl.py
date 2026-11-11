@@ -97,7 +97,7 @@ class _DeferredRecipe:
 
 
 def build_recipe(recipe: RecipeSpec, implementation_id: str) -> _DeferredRecipe:
-    if implementation_id != "pillow_cpu":
+    if implementation_id not in {"pillow_cpu", "pillow_allsimd_cpu"}:
         raise UnsupportedRecipeError(f"{implementation_id!r} is not a Pillow CPU implementation")
     transforms = tuple(_transform(spec, recipe.recipe_id) for spec in transform_specs(recipe))
     return _DeferredRecipe(cpu_transform=_PillowRecipe(transforms), recipe=recipe)

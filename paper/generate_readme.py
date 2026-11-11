@@ -22,7 +22,7 @@ from augbench.run_records import RunRecord
 from paper.generate_results import (
     AX,
     IMPLEMENTATIONS,
-    PAIRWISE,
+    PILLOW_ALLSIMD,
     RUN_ID,
     _common_memories,
     _mean_ratios,
@@ -56,12 +56,13 @@ def main() -> None:
     recipes_path = args.recipes or root / config.recipes
     if hashlib.sha256(recipes_path.read_bytes()).hexdigest() != run.inputs.recipe_catalog_sha256:
         raise ValueError("recipe catalog checksum differs from the selected run; supply its catalog with --recipes")
-    if set(config.implementations) != {implementation for implementation, _ in IMPLEMENTATIONS}:
-        raise ValueError("README figures require the seven RGB implementations")
+    base = {implementation for implementation, _ in IMPLEMENTATIONS}
+    if set(config.implementations) not in (base, base | {PILLOW_ALLSIMD[0]}):
+        raise ValueError("README figures require the RGB implementations in the selected run")
     recipes = load_recipe_catalog(recipes_path)
     data = _prepare(load_run_results(args.cells, run, recipes), recipes.recipes)
     if not data.common:
-        raise ValueError("the selected run has no recipes shared by all seven paths")
+        raise ValueError("the selected run has no recipes shared by all paths")
     readme = root / "README.md"
     updated = replace_results(readme.read_text(), readme_results(data, run))
     with tempfile.TemporaryDirectory(prefix="augbench-readme-") as directory:
@@ -107,12 +108,12 @@ def export_results(data: _PaperData, run: RunRecord) -> dict[str, object]:
                 }
             ),
         }
-        for implementation, label in IMPLEMENTATIONS
+        for implementation, label in data.implementations
     ]
     recipes = []
     for index, recipe in enumerate(data.recipes, 1):
         results = {}
-        for implementation, _ in IMPLEMENTATIONS:
+        for implementation, _ in data.implementations:
             key = (implementation, recipe.recipe_id)
             if key not in data.groups:
                 continue
@@ -133,8 +134,8 @@ def export_results(data: _PaperData, run: RunRecord) -> dict[str, object]:
                 ],
             }
         recipes.append({"key": f"R{index:02d}", "id": recipe.recipe_id, "results": results})
-    groups = [("all", tuple(implementation for implementation, _ in IMPLEMENTATIONS))]
-    groups.extend((family.lower(), (AX, *paths)) for family, paths in PAIRWISE)
+    groups = [("all", tuple(implementation for implementation, _ in data.implementations))]
+    groups.extend((family.lower(), (AX, *paths)) for family, paths in data.comparisons)
     summaries = []
     for name, implementations in groups:
         shared = _shared_recipes(data, implementations)
@@ -178,9 +179,9 @@ def replace_results(readme: str, generated: str) -> str:
 def readme_results(data: _PaperData, run: RunRecord) -> str:
     config = FamilyRunConfig.model_validate(run.family_config)
     execution = config.execution
-    means = _mean_ratios(data, [implementation for implementation, _ in IMPLEMENTATIONS])
+    means = _mean_ratios(data, [implementation for implementation, _ in data.implementations])
     memories = _common_memories(data)
-    labels = dict(IMPLEMENTATIONS)
+    labels = dict(data.implementations)
     labels[AX] = "AlbumentationsX CPU"
     count = len(data.common)
     lines = [
@@ -253,16 +254,16 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
             ),
         ],
     )
-    for family, paths in PAIRWISE:
+    for family, paths in data.comparisons:
         shared = len(_shared_recipes(data, [AX, *paths]))
         lines.extend(["", _image(f"pairwise-{family.lower()}", f"AX vs {family} on {shared} shared recipes")])
     lines.extend(
         [
             "",
             (
-                "The counts below include recipes supported by only one competing CPU/GPU path. "
+                "The counts below include recipes supported by only one competing path. "
                 "AX wins when it exceeds every available competing path. Ratios and memory differences "
-                "use the faster competitor per recipe; exact ties select CPU."
+                "use the fastest competitor per recipe; exact ties select the first path in the comparison."
             ),
             "",
             (
@@ -332,11 +333,11 @@ def render_figures(output: Path, style: Path, data: _PaperData, config: FamilyRu
     commands = {
         "boundary": rf"\InputBoundary[{'prewarmed bytes' if config.execution.prewarm_dataset else 'compressed bytes'}]"
         rf"{{{config.execution.measured_batches}}}",
-        "common-heatmap": rf"\CommonHeatmap{{{len(data.common)}}}",
-        "common-memory-bars": rf"\MemoryPlot[{memory_limit}]{{{len(IMPLEMENTATIONS)}}}",
+        "common-heatmap": rf"\CommonHeatmap[{int(PILLOW_ALLSIMD in data.implementations)}]{{{len(data.common)}}}",
+        "common-memory-bars": rf"\MemoryPlot[{memory_limit}]{{{len(data.implementations)}}}",
     }
-    comparisons = {"common-mean-bars": [implementation for implementation, _ in IMPLEMENTATIONS]}
-    comparisons.update({f"pairwise-{family.lower()}": [AX, *paths] for family, paths in PAIRWISE})
+    comparisons = {"common-mean-bars": [implementation for implementation, _ in data.implementations]}
+    comparisons.update({f"pairwise-{family.lower()}": [AX, *paths] for family, paths in data.comparisons})
     for name, paths in comparisons.items():
         means = _mean_ratios(data, paths)
         _write_mean_bars(generated / f"{name}.tex", means)

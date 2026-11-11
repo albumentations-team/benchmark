@@ -52,7 +52,7 @@ def paper_data() -> paper._PaperData:
         "kornia_gpu": (1200, 100, 100),
     }
     records = []
-    for implementation, _ in paper.IMPLEMENTATIONS:
+    for implementation, _ in (*paper.IMPLEMENTATIONS, paper.PILLOW_ALLSIMD):
         for index, recipe in enumerate(recipes):
             speeds = observations.get(implementation, ((100, 100, 100),) * 3)[index]
             memory = memories.get(implementation, (100, 100, 100))[index]
@@ -214,7 +214,7 @@ def test_machine_export_uses_selected_run_and_the_readme_aggregates(
 
     assert result["run"]["run_id"] == selected_run.run_id
     assert result["is_published_run"] is False
-    assert result["measurement_count"] == 63
+    assert result["measurement_count"] == 72
     assert result["gpu_memory_poll_ms"] == 50
     second = result["recipes"][1]["results"]["kornia_gpu"]
     assert second["throughput"] == pytest.approx({"median": 99, "min": 1, "max": 99999})
@@ -223,8 +223,11 @@ def test_machine_export_uses_selected_run_and_the_readme_aggregates(
     assert second["observations"][0]["cell_id"] == data.groups[("kornia_gpu", data.recipes[1].recipe_id)][0].cell_id
     common = result["summaries"][0]
     means = {path["id"]: path["mean_relative_throughput"] for path in common["paths"]}
-    assert means == paper._mean_ratios(data, [implementation for implementation, _ in paper.IMPLEMENTATIONS])
+    assert means == paper._mean_ratios(data, [implementation for implementation, _ in data.implementations])
     assert len(common["recipe_ids"]) == 3
+    pillow = next(summary for summary in result["summaries"] if summary["id"] == "pillow")
+    assert [path["id"] for path in pillow["paths"]] == [paper.AX, "pillow_cpu", "pillow_allsimd_cpu"]
+    assert {library["label"] for library in result["libraries"]} >= {"Pillow CPU", "Pillow-AllSIMD CPU (fast)"}
 
 
 def test_figure_export_records_exact_generated_image_bytes_and_dimensions(tmp_path: Path) -> None:

@@ -19,7 +19,7 @@
 | --- | --- |
 | Данные | первые 10 000 `val/*.JPEG` из лексикографически отсортированного SHA-256-проверенного ImageNet validation archive |
 | Recipes | 57 вручную сопоставленных RGB recipes; каждая доступна хотя бы в двух библиотеках |
-| Matrix | 253 supported library–recipe pairs × 3 seeds = 759 клеток |
+| Matrix | 279 supported implementation–recipe pairs × 3 seeds = 837 клеток |
 | Seeds | 137, 138, 139 |
 | Batch | 256 изображений |
 | Warm-up | 1 полный batch вне таймера |
@@ -51,6 +51,7 @@ Normalize никогда не выполняется на CPU. Все output row
 | --- | --- | --- |
 | AlbumentationsX CPU | SimpleJPEG, `uint8` recipe и `uint8` pinned H2D | convert в `float16`, Normalize |
 | Pillow CPU | Pillow decode, `uint8` recipe и `uint8` pinned H2D | convert в `float16`, Normalize |
+| Pillow-AllSIMD CPU (fast) | тот же код, wheel Pillow-AllSIMD в отдельном процессе | convert в `float16`, Normalize |
 | TorchVision CPU | `torchvision.io`, `uint8` recipe и `uint8` pinned H2D | convert в `float16`, Normalize |
 | Kornia CPU | `torchvision.io`, CPU recipe в `float32`, host batch cast в `float16`, pinned H2D | Normalize в `float16` |
 | TorchVision GPU | `torchvision.io` и минимальный CPU-prefix до collatable shape | tail и Normalize в `float16` |
@@ -60,6 +61,8 @@ Normalize никогда не выполняется на CPU. Все output row
 JPEG имеют разные исходные размеры. Для каждого non-DALI path CPU выполняет ровно минимальный prefix recipe до первого шага, который даёт collatable `224×224` samples; остальной recipe выполняется на batch там, где implementation это поддерживает. `Resize` означает ровно `Resize(224) → Normalize → ToTensor`: hidden crop не добавляется. Если crop нужен после `Pad`, `LongestMaxSize` или `SmallestMaxSize`, он записан явным stage recipe.
 
 Для одного operation parameters сопоставляются вручную по практическому эффекту. Pixel-exact равенство не требуется: APIs, interpolation, RNG и rounding различаются.
+
+Для `Resize` и `RandomResizedCrop` при уменьшении AX использует `INTER_AREA`, DALI и TorchVision — bilinear с `antialias=True`, а Pillow и Pillow-AllSIMD — фильтр Pillow BILINEAR. Эти фильтры снижают алиасинг, но дают разные пиксели. Kornia сохраняет нативные настройки обоих преобразований.
 
 ## Доступ к данным
 
@@ -75,7 +78,7 @@ JPEG имеют разные исходные размеры. Для каждо�
 2. валидирует каждую найденную клетку по содержимому и identity;
 3. не создаёт VM, если существует активная VM с тем же `augbench-run` label;
 4. иначе ищет все zones с `g2-standard-16` и L4, затем создаёт одну Standard VM;
-5. VM скачивает code, raw dataset и cached RGB environment один раз, извлекает первые 10 000 отсортированных `val/*.JPEG`, prewarms их, затем для каждой пары `(implementation, recipe)` выполняет одну неизмеряемую batch до CUDA output: non-DALI path использует один временный DataLoader worker, DALI — native graph; после этого идут отсутствующие клетки с зафиксированными 15 workers;
+5. VM скачивает code, raw dataset и cached RGB environment один раз, проверяет lock и wheel Pillow-AllSIMD, извлекает первые 10 000 отсортированных `val/*.JPEG` и прогревает их. Каждый процесс перед замерами проверяет по одному batch до CUDA output на пару `(implementation, recipe)`: non-DALI path использует один временный DataLoader worker, DALI — native graph. Затем он выполняет отсутствующие клетки с зафиксированными 15 workers. Pillow-AllSIMD запускается отдельно на той же VM;
 6. после каждой клетки сразу создаётся immutable GCS object;
 7. при любом выходе bootstrap сохраняет stdout/stderr в `runs/<run_id>/logs/` до выключения VM;
 8. перед новой VM `launch-rgb` удаляет только terminal или suspended `augbench` VM, чтобы их boot disks не удерживали quota; active VM и GCS artifacts не затрагиваются.

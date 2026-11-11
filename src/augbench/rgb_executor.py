@@ -53,7 +53,7 @@ class _DaliAdapter(Protocol):
 
 
 class RGBCellExecutor:
-    """Execute cells sequentially inside the one benchmark VM process."""
+    """Execute cells sequentially inside a benchmark worker process."""
 
     def __init__(
         self,
@@ -304,12 +304,13 @@ def _output_observation(validation: dict[str, object]) -> OutputObservation:
 def _runtime_metadata(adapter: AugmentationAdapter) -> dict[str, str]:
     import importlib.metadata
 
-    package = adapter.implementation_id.split("_")[0]
+    package = adapter.implementation_id.rsplit("_", 1)[0]
     package_names = {
         "albumentationsx": "albumentationsx",
         "dali": "nvidia-dali-cuda120",
         "kornia": "kornia",
         "pillow": "pillow",
+        "pillow_allsimd": "pillow-allsimd",
         "torchvision": "torchvision",
     }
     try:
@@ -322,7 +323,12 @@ def _runtime_metadata(adapter: AugmentationAdapter) -> dict[str, str]:
         device = torch.cuda.get_device_name(0)
     except (ImportError, RuntimeError):
         device = "unknown"
-    return {"library_version": version, "cuda_device": device}
+    metadata = {"library_version": version, "cuda_device": device}
+    if package == "pillow_allsimd":
+        from PIL import Image
+
+        metadata.update(simd_kernels=Image.core.simd_kernels, pillow_mode="fast" if Image.get_fast() else "exact")
+    return metadata
 
 
 def _cuda_synchronize() -> None:

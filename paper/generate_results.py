@@ -34,6 +34,7 @@ RUN_ID = "3f8e2e315710528399b8e82e2359ab85c58c809644595b68a92fb9d83492cc8c"
 GIT_COMMIT = "5fc35f6fdd177c286cbc4f5e39d1520576d6464a"
 CODE_ARCHIVE_SHA256 = "61238619ace0dc471bc5df7a4f165e15052ffb67046ceae07c26fd7f370eac6d"
 AX = "albumentationsx_cpu"
+PILLOW_ALLSIMD = ("pillow_allsimd_cpu", "Pillow-AllSIMD CPU (fast)")
 IMPLEMENTATIONS = (
     (AX, "AlbumentationsX"),
     ("pillow_cpu", "Pillow CPU"),
@@ -76,6 +77,8 @@ class _PaperData:
     recipes: tuple[RecipeSpec, ...]
     speed: dict[tuple[str, str], float]
     memory: dict[tuple[str, str], float]
+    implementations: tuple[tuple[str, str], ...]
+    comparisons: tuple[tuple[str, tuple[str, ...]], ...]
     common: tuple[str, ...]
     pairwise: dict[str, list[_PairwiseRow]]
 
@@ -151,18 +154,35 @@ def _prepare(records: Sequence[ResultRecord], recipes: tuple[RecipeSpec, ...]) -
     support: dict[str, set[str]] = defaultdict(set)
     for implementation, recipe in groups:
         support[implementation].add(recipe)
-    common = set.intersection(*(support[implementation] for implementation, _ in IMPLEMENTATIONS))
+    implementations = IMPLEMENTATIONS
+    comparisons = PAIRWISE
+    if PILLOW_ALLSIMD[0] in support:
+        implementations = (*implementations, PILLOW_ALLSIMD)
+        comparisons = tuple(
+            (family, (*paths, PILLOW_ALLSIMD[0]) if family == "Pillow" else paths) for family, paths in comparisons
+        )
+    common = set.intersection(*(support[implementation] for implementation, _ in implementations))
     ordered = tuple(recipe.recipe_id for recipe in recipes if recipe.recipe_id in common)
-    return _PaperData(dict(groups), recipes, speed, memory, ordered, _pairwise(speed, memory, support))
+    return _PaperData(
+        dict(groups),
+        recipes,
+        speed,
+        memory,
+        implementations,
+        comparisons,
+        ordered,
+        _pairwise(speed, memory, support, comparisons),
+    )
 
 
 def _pairwise(
     speed: dict[tuple[str, str], float],
     memory: dict[tuple[str, str], float],
     support: dict[str, set[str]],
+    comparisons: tuple[tuple[str, tuple[str, ...]], ...],
 ) -> dict[str, list[_PairwiseRow]]:
     rows: dict[str, list[_PairwiseRow]] = {}
-    for family, implementations in PAIRWISE:
+    for family, implementations in comparisons:
         available = set.union(*(support[implementation] for implementation in implementations))
         family_rows = []
         for recipe in sorted(support[AX] & available):
@@ -232,16 +252,17 @@ def _write_heatmap(path: Path, data: _PaperData) -> None:
     ratios = [
         data.speed[(implementation, recipe)] / data.speed[(AX, recipe)]
         for recipe in data.common
-        for implementation, _ in IMPLEMENTATIONS[1:]
+        for implementation, _ in data.implementations[1:]
     ]
     limit = max(1, math.ceil(max(abs(math.log2(value)) for value in ratios)))
+    ax_column = len(data.implementations) - 0.35
     lines = [rf"\def\HeatLimit{{{limit}}}"]
     for y, recipe in enumerate(data.common):
         label = recipe.removesuffix("+Normalize+ToTensor").replace("RandomCrop224", "Crop").replace("+", " + ")
         key = _recipe_key(recipe, data.recipes)
         lines.append(rf"\node[anchor=east,font=\small] at (-0.65,{y}) {{\hyperlink{{{key}}}{{{key}}} {label}}};")
-        lines.append(rf"\node[font=\small] at (6.65,{y}) {{{data.speed[(AX, recipe)]:,.0f}}};")
-        for x, (implementation, _) in enumerate(IMPLEMENTATIONS[1:]):
+        lines.append(rf"\node[font=\small] at ({ax_column:.2f},{y}) {{{data.speed[(AX, recipe)]:,.0f}}};")
+        for x, (implementation, _) in enumerate(data.implementations[1:]):
             ratio = data.speed[(implementation, recipe)] / data.speed[(AX, recipe)]
             color = "faster" if ratio >= 1 else "slower"
             shade = abs(math.log2(ratio)) / limit * 65
@@ -266,7 +287,7 @@ def _mean_ratios(data: _PaperData, implementations: Sequence[str]) -> dict[str, 
 
 
 def _write_mean_bars(path: Path, means: dict[str, float]) -> None:
-    labels = dict(IMPLEMENTATIONS)
+    labels = dict((*IMPLEMENTATIONS, PILLOW_ALLSIMD))
     ordered = sorted(means, key=lambda implementation: means[implementation], reverse=True)
     lines: list[str] = []
     for index, implementation in enumerate(ordered):
@@ -290,13 +311,13 @@ def _write_mean_bars(path: Path, means: dict[str, float]) -> None:
 def _common_memories(data: _PaperData) -> dict[str, float]:
     return {
         implementation: median(data.memory[(implementation, recipe)] for recipe in data.common)
-        for implementation, _ in IMPLEMENTATIONS
+        for implementation, _ in data.implementations
     }
 
 
 def _write_memory_bars(path: Path, data: _PaperData) -> None:
     values = _common_memories(data)
-    ordered = sorted(IMPLEMENTATIONS, key=lambda item: values[item[0]])
+    ordered = sorted(data.implementations, key=lambda item: values[item[0]])
     lines: list[str] = []
     for index, (implementation, label) in enumerate(ordered):
         value = values[implementation]

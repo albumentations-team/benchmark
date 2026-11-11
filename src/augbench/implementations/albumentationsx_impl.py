@@ -46,6 +46,7 @@ def _build_resize(params: dict[str, Any]) -> Any | None:
         height=params["target_size"],
         width=params["target_size"],
         interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
+        area_for_downscale="image" if params.get("antialias") else None,
         p=1,
     )
 
@@ -65,6 +66,7 @@ def _build_random_resized_crop(params: dict[str, Any]) -> Any | None:
         scale=params["scale"],
         ratio=params["ratio"],
         interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
+        area_for_downscale="image" if params.get("antialias") else None,
         p=1,
     )
 

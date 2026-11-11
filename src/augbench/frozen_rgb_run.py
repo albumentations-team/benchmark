@@ -41,7 +41,10 @@ def build_frozen_rgb_run(
             code_archive_sha256=code_archive_sha256,
             dataset_archive_sha256=config.dataset.archive_sha256,
             recipe_catalog_sha256=recipe_sha256,
-            environment_lock_sha256={"rgb": lock_sha256},
+            environment_lock_sha256={
+                "rgb": lock_sha256,
+                "pillow_allsimd": _sha256_file(lock_path.with_name("pillow-allsimd.lock.txt")),
+            },
         ),
         hardware={
             "machine_type": cloud.machine_type,

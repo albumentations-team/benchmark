@@ -22,6 +22,9 @@ def test_matrix_contains_only_supported_library_recipe_seed_cells() -> None:
         for implementation in recipe.supported_implementations
     }
     assert {(cell.recipe_id, cell.implementation) for cell in cells} <= supported
+    assert {(cell.recipe_id, cell.seed) for cell in cells if cell.implementation == "pillow_allsimd_cpu"} == {
+        (cell.recipe_id, cell.seed) for cell in cells if cell.implementation == "pillow_cpu"
+    }
 
 
 def test_matrix_runs_each_implementation_through_all_recipes_and_seeds_before_the_next() -> None:

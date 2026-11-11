@@ -45,7 +45,9 @@ artifact location; bucket permissions determine access:
 gs://imagenet_validation/augmentation-benchmark/runs/3f8e2e315710528399b8e82e2359ab85c58c809644595b68a92fb9d83492cc8c/cells/
 ```
 
-Then run from the repository root:
+Regenerate the article from [the revision containing its frozen lock and recipe
+catalog](https://github.com/albumentations-team/benchmark/tree/2d45efb6b6a08f59cffca982249a25a48edd174c).
+Run these commands from that checkout:
 
 ```bash
 uv sync --group dev

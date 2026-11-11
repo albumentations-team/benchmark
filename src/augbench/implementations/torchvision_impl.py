@@ -24,7 +24,7 @@ def _build_resize(params: dict[str, Any]) -> Any | None:
         interpolation=tv_transforms.InterpolationMode.BILINEAR
         if params["interpolation"] == "bilinear"
         else tv_transforms.InterpolationMode.NEAREST,
-        antialias=True,
+        antialias=params.get("antialias", True),
     )
 
 
@@ -40,6 +40,7 @@ def _build_random_resized_crop(params: dict[str, Any]) -> Any | None:
         interpolation=tv_transforms.InterpolationMode.BILINEAR
         if params["interpolation"] == "bilinear"
         else tv_transforms.InterpolationMode.NEAREST,
+        antialias=params.get("antialias", True),
     )
 
 

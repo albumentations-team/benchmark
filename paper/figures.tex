@@ -45,7 +45,7 @@
 \end{tikzpicture}%
 }
 
-\newcommand{\CommonHeatmap}[1]{%
+\newcommand{\CommonHeatmap}[2][0]{%
 \begin{tikzpicture}[x=1.13cm,y=-0.60cm]
 \foreach \x/\name in {0/Pillow,1.5/TorchVision,3.5/Kornia,5/DALI} {
   \node[font=\small,anchor=south] at (\x,-1.4) {\name};
@@ -53,21 +53,25 @@
 \foreach \x/\device in {0/CPU,1/CPU,2/GPU,3/CPU,4/GPU,5/GPU} {
   \node[font=\small,anchor=south] at (\x,-0.75) {\device};
 }
-\node[font=\small,align=center,anchor=south] at (6.65,-0.75) {AX\\images/s};
+\ifnum#1=1
+  \node[font=\small,anchor=south] at (6,-1.4) {AllSIMD};
+  \node[font=\small,anchor=south] at (6,-0.75) {CPU (fast)};
+\fi
+\node[font=\small,align=center,anchor=south] at ({6.65+#1},-0.75) {AX\\images/s};
 \input{generated/common-heatmap.tex}
-\draw[gray!35] (5.65,-0.5) -- (5.65,{#1-0.5});
-\node[font=\small,anchor=north,align=center] at (2.5,{#1})
+\draw[gray!35] ({5.65+#1},-0.5) -- ({5.65+#1},{#2-0.5});
+\node[font=\small,anchor=north,align=center] at ({2.5+#1/2},{#2})
   {Throughput / AX throughput: $1\times$ equal, $2\times$ twice as fast};
 \foreach \exponent in {-\HeatLimit,...,\HeatLimit} {
   \pgfmathsetmacro{\x}{\exponent+\HeatLimit}
   \pgfmathsetmacro{\ratio}{pow(2,\exponent)}
   \pgfmathsetmacro{\shade}{abs(\exponent)/\HeatLimit*65}
   \ifnum\exponent<0
-    \fill[slower!\shade!white] (\x-0.45,{#1+1}) rectangle (\x+0.45,{#1+1.55});
+    \fill[slower!\shade!white] (\x-0.45,{#2+1}) rectangle (\x+0.45,{#2+1.55});
   \else
-    \fill[faster!\shade!white] (\x-0.45,{#1+1}) rectangle (\x+0.45,{#1+1.55});
+    \fill[faster!\shade!white] (\x-0.45,{#2+1}) rectangle (\x+0.45,{#2+1.55});
   \fi
-  \node[font=\scriptsize] at (\x,{#1+1.28}) {$\pgfmathprintnumber[fixed,precision=3]{\ratio}\times$};
+  \node[font=\scriptsize] at (\x,{#2+1.28}) {$\pgfmathprintnumber[fixed,precision=3]{\ratio}\times$};
 }
 \end{tikzpicture}%
 }

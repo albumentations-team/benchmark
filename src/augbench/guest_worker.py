@@ -28,6 +28,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--family-config", type=Path, required=True)
     parser.add_argument("--dataset-archive", type=Path, required=True)
     parser.add_argument("--dataset-cache", type=Path, required=True)
+    parser.add_argument("--pillow-allsimd", action="store_true")
     args = parser.parse_args(argv)
 
     request = GuestRequest.model_validate_json(args.request.read_text(encoding="utf-8"))
@@ -36,13 +37,21 @@ def main(argv: list[str] | None = None) -> int:
     cells = select_pending_cells(
         request=request,
         cells=build_matrix(run_id=request.run.run_id, config=config, recipes=recipes),
+        pillow_allsimd=args.pillow_allsimd,
     )
+    if args.pillow_allsimd and not cells:
+        return 0
+    if args.pillow_allsimd:
+        from PIL import Image
+
+        if not Image.get_fast() or Image.core.simd_kernels == "scalar":
+            raise RuntimeError("Pillow-AllSIMD requires fast mode and an active SIMD kernel")
     materialized = materialize_rgb_dataset(
         archive=args.dataset_archive,
         dataset=config.dataset,
         cache_root=args.dataset_cache,
     )
-    if config.execution.prewarm_dataset:
+    if config.execution.prewarm_dataset and not args.pillow_allsimd:
         prewarm_files(materialized.files)
 
     executor = RGBCellExecutor(
@@ -57,14 +66,20 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def select_pending_cells(*, request: GuestRequest, cells: Iterable[CellKey]) -> tuple[CellKey, ...]:
-    """Reject a request that does not exactly describe this immutable run."""
+def select_pending_cells(
+    *, request: GuestRequest, cells: Iterable[CellKey], pillow_allsimd: bool = False
+) -> tuple[CellKey, ...]:
+    """Validate the entire request and return the pending cells for this worker."""
     indexed = {cell.cell_id: cell for cell in cells}
     requested = set(request.pending_cell_ids)
     unknown = requested - indexed.keys()
     if unknown:
         raise ValueError(f"guest request references unknown cells: {sorted(unknown)[:3]}")
-    return tuple(cell for cell in indexed.values() if cell.cell_id in requested)
+    return tuple(
+        cell
+        for cell in indexed.values()
+        if cell.cell_id in requested and (cell.implementation == "pillow_allsimd_cpu") == pillow_allsimd
+    )
 
 
 def preflight_implementations(executor: RGBCellExecutor, cells: Iterable[CellKey]) -> None:
