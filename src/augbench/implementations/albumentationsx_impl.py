@@ -121,11 +121,9 @@ def _build_perspective(params: dict[str, Any]) -> Any | None:
 
 def _build_elastic(params: dict[str, Any]) -> Any | None:
     return albumentations.ElasticTransform(
-        alpha=params["alpha"],
-        sigma=params["sigma"],
+        displacement_range=_range(params["displacement_range"]),
+        control_grid_shape=tuple(params["control_grid_shape"]),
         interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
-        approximate=params["approximate"],
-        same_dxdy=params["same_dxdy"],
         p=1,
     )
 

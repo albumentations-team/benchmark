@@ -64,6 +64,8 @@ JPEG имеют разные исходные размеры. Для каждо�
 
 Для `Resize` и `RandomResizedCrop` при уменьшении AX использует `INTER_AREA`, DALI и TorchVision — bilinear с `antialias=True`, а Pillow и Pillow-AllSIMD — фильтр Pillow BILINEAR. Эти фильтры снижают алиасинг, но дают разные пиксели. Kornia сохраняет нативные настройки обоих преобразований.
 
+Для R10 (Elastic) параметры AX, TorchVision и Kornia [сопоставлены по полям смещений](rgb_elastic_calibration.md): около 0,74 px RMS при масштабе около 10 px. DALI и Pillow не выполняют этот рецепт.
+
 ## Доступ к данным
 
 После распаковки VM один раз последовательно читает все 10 000 JPEG вне timed cells. Затем для каждого seed все implementations используют одну детерминированную PCG64-перестановку без повторов. PyTorch DataLoader не делает дополнительный shuffle; DALI получает тот же уже переставленный file list.

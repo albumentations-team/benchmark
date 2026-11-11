@@ -1,5 +1,5 @@
 schema_version: 1
-recipe_set_id: rgb-comparable-2026-11-11
+recipe_set_id: rgb-comparable-2026-11-11-elastic-calibrated
 family: rgb
 recipes:
 - recipe_id: Resize224+Normalize+ToTensor
@@ -461,11 +461,12 @@ recipes:
     randomness_scope: per-image
   - operation_id: Elastic
     parameters:
-      alpha: 50.0
       sigma: 5.0
+      torchvision_alpha: 32.0
+      kornia_alpha: 0.14285714285714285
+      displacement_range: [0.0097, 0.0097]
+      control_grid_shape: [29, 29]
       interpolation: bilinear
-      approximate: false
-      same_dxdy: true
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize

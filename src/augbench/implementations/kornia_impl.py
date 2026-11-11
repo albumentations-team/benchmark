@@ -348,7 +348,7 @@ def _build_elastic(params: dict[str, Any]) -> Any | None:
     return kornia_augmentation.RandomElasticTransform(
         p=1,
         sigma=(params["sigma"], params["sigma"]),
-        alpha=(params["alpha"], params["alpha"]),
+        alpha=(params["kornia_alpha"], params["kornia_alpha"]),
     )
 
 

@@ -99,7 +99,7 @@ def _build_perspective(params: dict[str, Any]) -> Any | None:
 
 def _build_elastic(params: dict[str, Any]) -> Any | None:
     return tv_transforms.ElasticTransform(
-        alpha=params["alpha"],
+        alpha=params["torchvision_alpha"],
         sigma=params["sigma"],
         interpolation=tv_transforms.InterpolationMode.BILINEAR
         if params["interpolation"] == "bilinear"
