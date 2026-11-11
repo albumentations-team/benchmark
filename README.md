@@ -30,21 +30,26 @@ Read the [per-recipe results and seed observations](paper/generated/recipe-resul
 
 ## Results for the selected run
 
-Run [`3f8e2e315710`](docs/generated/run.json); [measured source `5fc35f6`](https://github.com/albumentations-team/benchmark/tree/5fc35f6fdd177c286cbc4f5e39d1520576d6464a). 759 measurements, 253 implementation/recipe pairs, 57 recipes, 3 seeds per pair.
+Run [`2a8b3c5737aa`](docs/generated/run.json); [measured source `8d58648`](https://github.com/albumentations-team/benchmark/tree/8d5864832ddc03950467d09854bc4a681b44843a). 837 measurements, 279 implementation/recipe pairs, 57 recipes, 3 seeds per pair.
 
-This is the run reported in the [published preprint](https://arxiv.org/abs/2609.06635).
+This selection differs from the published run. The article's results remain in [paper/generated](paper/generated).
 
 All rows below use the same 11 recipes. Throughput is the arithmetic mean of per-recipe ratios: each path's median over 3 seeds divided by AX's median for that recipe. GPU memory is the median of those recipes' peak-memory medians.
 
 | Measured path | Version | Mean throughput / AX (higher is faster) | Peak process GPU memory (MiB, lower is better) |
 | --- | --- | ---: | ---: |
-| DALI GPU | 2.2.0 | 1.17× | 2,086 |
-| AlbumentationsX CPU | 2.4.2 | 1.00× | 1,852 |
-| TorchVision CPU | 0.28.0+cu130 | 0.78× | 1,814 |
-| Pillow CPU | 12.3.0 | 0.74× | 1,814 |
-| TorchVision GPU | 0.28.0+cu130 | 0.72× | 1,972 |
-| Kornia GPU | 0.8.3 | 0.45× | 1,900 |
-| Kornia CPU | 0.8.3 | 0.40× | 1,776 |
+| DALI GPU | 2.4.0 | 1.30× | 2,054 |
+| Pillow-AllSIMD CPU (fast) | 13.0.0.post4 | 1.03× | 330 |
+| AlbumentationsX CPU | 2.6.1 | 1.00× | 1,756 |
+| Pillow CPU | 13.0.0 | 0.88× | 1,718 |
+| TorchVision CPU | 0.29.2 | 0.87× | 1,718 |
+| TorchVision GPU | 0.29.2 | 0.81× | 1,876 |
+| Kornia GPU | 0.9.0 | 0.58× | 1,828 |
+| Kornia CPU | 0.9.0 | 0.49× | 1,680 |
+
+Across 26 shared recipes, Pillow-AllSIMD was 1.79× as fast as Pillow on average, with a 1.10× median ratio. Its R27 MedianBlur ratio was 16.40×.
+
+Pillow-AllSIMD ran in a separate worker process to load its PIL package. Its GPU-memory figure is the NVML peak for that process.
 
 ### Per-recipe throughput
 
@@ -70,14 +75,14 @@ Each chart uses the exact recipe intersection of the paths it shows. Recipe sets
 
 ![AX vs DALI on 22 shared recipes](docs/generated/pairwise-dali.png)
 
-The counts below include recipes supported by only one competing CPU/GPU path. AX wins when it exceeds every available competing path. Ratios and memory differences use the faster competitor per recipe; exact ties select CPU.
+The counts below include recipes supported by only one competing path. AX wins when it exceeds every available competing path. Ratios and memory differences use the fastest competitor per recipe; exact ties select the first path in the comparison.
 
 | Competitor | Shared recipes | AX faster | Median competitor / AX throughput | Median competitor - AX GPU memory (MiB) |
 | --- | ---: | ---: | ---: | ---: |
-| Kornia | 51 | 50 | 0.45× | +72 |
-| TorchVision | 26 | 26 | 0.81× | -38 |
-| Pillow | 26 | 25 | 0.74× | -38 |
-| DALI | 22 | 0 | 1.18× | +298 |
+| Kornia | 51 | 48 | 0.53× | +152 |
+| TorchVision | 26 | 23 | 0.86× | -38 |
+| Pillow | 26 | 18 | 0.94× | -1,426 |
+| DALI | 22 | 0 | 1.26× | +298 |
 
 ### Measurement settings
 

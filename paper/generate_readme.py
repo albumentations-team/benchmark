@@ -11,7 +11,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from statistics import median
+from statistics import fmean, median
 from typing import TYPE_CHECKING
 
 from PIL import Image
@@ -154,6 +154,21 @@ def export_results(data: _PaperData, run: RunRecord) -> dict[str, object]:
                 ],
             }
         )
+    pairwise_comparisons = []
+    measurement_notes = []
+    if any(implementation == PILLOW_ALLSIMD[0] for implementation, _ in data.implementations):
+        pillow_shared, pillow_ratios = _pillow_allsimd_ratios(data)
+        pairwise_comparisons.append(
+            {
+                "id": "pillow_allsimd_vs_pillow",
+                "recipe_ids": pillow_shared,
+                "mean_throughput_ratio": fmean(pillow_ratios),
+                "median_throughput_ratio": median(pillow_ratios),
+            }
+        )
+        measurement_notes.append(
+            "Pillow-AllSIMD ran in a separate worker process. Its peak process GPU memory is from that process."
+        )
     return {
         "schema_version": 1,
         "run": run.model_dump(mode="json"),
@@ -165,6 +180,8 @@ def export_results(data: _PaperData, run: RunRecord) -> dict[str, object]:
         "libraries": libraries,
         "recipes": recipes,
         "summaries": summaries,
+        "pairwise_comparisons": pairwise_comparisons,
+        "measurement_notes": measurement_notes,
     }
 
 
@@ -176,6 +193,12 @@ def replace_results(readme: str, generated: str) -> str:
     return before + _BEGIN + "\n\n" + generated.rstrip() + "\n\n" + _END + after
 
 
+def _pillow_allsimd_ratios(data: _PaperData) -> tuple[tuple[str, ...], list[float]]:
+    recipes = _shared_recipes(data, ["pillow_cpu", PILLOW_ALLSIMD[0]])
+    ratios = [data.speed[(PILLOW_ALLSIMD[0], recipe)] / data.speed[("pillow_cpu", recipe)] for recipe in recipes]
+    return recipes, ratios
+
+
 def readme_results(data: _PaperData, run: RunRecord) -> str:
     config = FamilyRunConfig.model_validate(run.family_config)
     execution = config.execution
@@ -184,6 +207,25 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
     labels = dict(data.implementations)
     labels[AX] = "AlbumentationsX CPU"
     count = len(data.common)
+    pillow_variant_note = None
+    if any(implementation == PILLOW_ALLSIMD[0] for implementation, _ in data.implementations):
+        shared, speedups = _pillow_allsimd_ratios(data)
+        pillow_variant_note = (
+            f"Across {len(shared)} shared recipes, Pillow-AllSIMD was {fmean(speedups):.2f}\N{MULTIPLICATION SIGN} "
+            f"as fast as Pillow on average, with a {median(speedups):.2f}\N{MULTIPLICATION SIGN} median ratio."
+        )
+        median_blur = next(
+            (
+                (index, recipe)
+                for index, recipe in enumerate(data.recipes, 1)
+                if recipe.augmentation_id == "MedianBlur" and recipe.recipe_id in shared
+            ),
+            None,
+        )
+        if median_blur is not None:
+            index, recipe = median_blur
+            ratio = data.speed[(PILLOW_ALLSIMD[0], recipe.recipe_id)] / data.speed[("pillow_cpu", recipe.recipe_id)]
+            pillow_variant_note += f" Its R{index:02} MedianBlur ratio was {ratio:.2f}\N{MULTIPLICATION SIGN}."
     lines = [
         "## Results for the selected run",
         "",
@@ -226,6 +268,18 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
         lines.append(
             f"| {labels[implementation]} | {version} | "
             f"{means[implementation]:.2f}\N{MULTIPLICATION SIGN} | {memories[implementation]:,.0f} |"
+        )
+    if pillow_variant_note is not None:
+        lines.extend(
+            [
+                "",
+                pillow_variant_note,
+                "",
+                (
+                    "Pillow-AllSIMD ran in a separate worker process to load its PIL package. "
+                    "Its GPU-memory figure is the NVML peak for that process."
+                ),
+            ]
         )
     lines.extend(
         [
