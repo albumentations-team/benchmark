@@ -39,7 +39,7 @@ All rows below use the same 11 recipes. Throughput is the arithmetic mean of per
 | Measured path | Version | Mean throughput / AX (higher is faster) | Peak process GPU memory (MiB, lower is better) |
 | --- | --- | ---: | ---: |
 | DALI GPU | 2.4.0 | 1.30× | 2,054 |
-| Pillow-AllSIMD CPU (fast) | 13.0.0.post4 | 1.03× | 330 |
+| Pillow-AllSIMD CPU (fast) | 13.0.0.post4 | 1.03× | 330† |
 | AlbumentationsX CPU | 2.6.1 | 1.00× | 1,756 |
 | Pillow CPU | 13.0.0 | 0.88× | 1,718 |
 | TorchVision CPU | 0.29.2 | 0.87× | 1,718 |
@@ -49,7 +49,7 @@ All rows below use the same 11 recipes. Throughput is the arithmetic mean of per
 
 Across 26 shared recipes, Pillow-AllSIMD was 1.79× as fast as Pillow on average, with a 1.10× median ratio. Its R27 MedianBlur ratio was 16.40×.
 
-Pillow-AllSIMD ran in a separate worker process to load its PIL package. Its GPU-memory figure is the NVML peak for that process.
+†Pillow-AllSIMD ran in its own worker process to load its PIL package. Other paths share the base worker, so these NVML peaks reflect different process lifetimes.
 
 ### Per-recipe throughput
 

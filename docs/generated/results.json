@@ -9688,7 +9688,7 @@
     }
   ],
   "measurement_notes": [
-    "Pillow-AllSIMD ran in a separate worker process. Its peak process GPU memory is from that process."
+    "Pillow-AllSIMD ran in its own worker process. Other paths share the base worker, so their NVML peaks include a different process lifetime."
   ],
   "figures": {
     "boundary": {

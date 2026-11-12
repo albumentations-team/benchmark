@@ -167,7 +167,8 @@ def export_results(data: _PaperData, run: RunRecord) -> dict[str, object]:
             }
         )
         measurement_notes.append(
-            "Pillow-AllSIMD ran in a separate worker process. Its peak process GPU memory is from that process."
+            "Pillow-AllSIMD ran in its own worker process. Other paths share the base worker, so their "
+            "NVML peaks include a different process lifetime."
         )
     return {
         "schema_version": 1,
@@ -267,7 +268,8 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
         )
         lines.append(
             f"| {labels[implementation]} | {version} | "
-            f"{means[implementation]:.2f}\N{MULTIPLICATION SIGN} | {memories[implementation]:,.0f} |"
+            f"{means[implementation]:.2f}\N{MULTIPLICATION SIGN} | {memories[implementation]:,.0f}"
+            f"{'†' if implementation == PILLOW_ALLSIMD[0] else ''} |"
         )
     if pillow_variant_note is not None:
         lines.extend(
@@ -276,8 +278,8 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
                 pillow_variant_note,
                 "",
                 (
-                    "Pillow-AllSIMD ran in a separate worker process to load its PIL package. "
-                    "Its GPU-memory figure is the NVML peak for that process."
+                    "†Pillow-AllSIMD ran in its own worker process to load its PIL package. "
+                    "Other paths share the base worker, so these NVML peaks reflect different process lifetimes."
                 ),
             ]
         )
