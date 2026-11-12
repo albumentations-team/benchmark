@@ -2,13 +2,13 @@
 
 `environments/rgb/requirements.in` declares the base production environment.
 `environments/rgb/lock.txt` pins Linux x86-64 packages with hashes, including the
-PyPI build of PyTorch 2.15.0 with CUDA 13.2.
+PyPI build of PyTorch 2.15.0 with CUDA 13.2, Triton 3.9.0, and AlbumentationsX 2.6.2.
 
 Pillow-AllSIMD uses the same base packages. Bootstrap verifies
 `environments/rgb/pillow-allsimd.lock.txt` and installs its wheel into a
 separate directory. Only the AllSIMD worker prepends that directory to
-`PYTHONPATH`, so it imports the fork's `PIL` and the main worker imports
-Pillow's. The AllSIMD worker requires fast mode and records the active SIMD tier.
+`PYTHONPATH`. All other workers import Pillow's `PIL`. The AllSIMD worker
+requires fast mode and records the active SIMD tier.
 
 The archive omits the relocatable venv's Python links. Every VM restores the
 matching managed Python and relinks the environment before it executes a cell.

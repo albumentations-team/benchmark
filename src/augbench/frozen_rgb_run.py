@@ -35,7 +35,7 @@ def build_frozen_rgb_run(
     recipe_sha256 = _sha256_file(recipes_path)
     lock_sha256 = _sha256_file(lock_path)
     run = build_run_record(
-        family_config=config.model_dump(mode="json"),
+        family_config=config.model_dump(mode="json", exclude={"measurements"} if config.measurements is None else None),
         inputs=RunInputs(
             git_commit=git_commit,
             code_archive_sha256=code_archive_sha256,

@@ -1,5 +1,7 @@
 """Kornia transform factories for the active RGB recipe catalog."""
 
+import random
+from collections.abc import Callable
 from typing import Any
 
 import kornia
@@ -7,9 +9,124 @@ import kornia.augmentation as kornia_augmentation
 import torch
 import torch.nn.functional as torch_functional
 
+from augbench.implementations.geometry import aspect_size, centered_padding, emboss_kernel
+from augbench.implementations.shear import x_shear_matrix
 from augbench.implementations.specs import TransformSpec
 
 LIBRARY = "kornia"
+
+
+class _TensorOperation(torch.nn.Module):
+    def __init__(self, operation: Callable[[torch.Tensor], torch.Tensor]) -> None:
+        super().__init__()
+        self._operation = operation
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        return self._operation(image)
+
+
+class _Morphological(torch.nn.Module):
+    def __init__(self, operation: str) -> None:
+        super().__init__()
+        self._operation = kornia.morphology.dilation if operation == "dilation" else kornia.morphology.erosion
+        self.register_buffer("kernel", torch.tensor([[0, 1, 0], [1, 1, 1], [0, 1, 0]]))
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        return self._operation(image, self.kernel.to(image), engine="convolution")
+
+
+def _build_center_crop(params: dict[str, Any]) -> Any:
+    height, width = params["height"], params["width"]
+    crop = kornia.augmentation.CenterCrop(size=(height, width), cropping_mode="slice", p=1)
+
+    def apply(image: torch.Tensor) -> torch.Tensor:
+        in_height, in_width = image.shape[-2:]
+        left, top, right, bottom = centered_padding(in_height, in_width, max(in_height, height), max(in_width, width))
+        if left or top or right or bottom:
+            image = torch_functional.pad(image, (left, right, top, bottom))
+        return crop(image)
+
+    return _TensorOperation(apply)
+
+
+def _build_crop(params: dict[str, Any]) -> Any:
+    top, left = params["top"], params["left"]
+    height, width = params["height"], params["width"]
+    bottom, right = top + height - 1, left + width - 1
+    corners = ((left, top), (right, top), (right, bottom), (left, bottom))
+
+    def crop(image: torch.Tensor) -> torch.Tensor:
+        boxes = image.new_tensor([corners]).expand(image.shape[0], -1, -1)
+        return kornia.geometry.transform.crop_by_indices(image, boxes, size=(height, width))
+
+    return _TensorOperation(crop)
+
+
+def _build_crop_and_pad(params: dict[str, Any]) -> Any:
+    top, right, bottom, left = params["sides"]
+    return _TensorOperation(lambda image: torch_functional.pad(image, (left, right, top, bottom)))
+
+
+def _build_pad(params: dict[str, Any]) -> Any:
+    return _TensorOperation(lambda image: torch_functional.pad(image, (params["padding"],) * 4))
+
+
+def _build_pad_if_needed(params: dict[str, Any]) -> Any:
+    def pad(image: torch.Tensor) -> torch.Tensor:
+        height, width = image.shape[-2:]
+        right, bottom = max(params["min_width"] - width, 0), max(params["min_height"] - height, 0)
+        return torch_functional.pad(image, (0, right, 0, bottom)) if right or bottom else image
+
+    return _TensorOperation(pad)
+
+
+def _build_letter_box(params: dict[str, Any]) -> Any:
+    def letter_box(image: torch.Tensor) -> torch.Tensor:
+        height, width = image.shape[-2:]
+        height, width = aspect_size(height, width, params["height"])
+        resized = kornia.geometry.transform.resize(image, (height, width), align_corners=False, antialias=False)
+        left, top, right, bottom = centered_padding(height, width, params["height"], params["width"])
+        return torch_functional.pad(resized, (left, right, top, bottom))
+
+    return _TensorOperation(letter_box)
+
+
+def _build_random_scale(params: dict[str, Any]) -> Any:
+    def resize(image: torch.Tensor) -> torch.Tensor:
+        factor = random.uniform(*params["scale"])  # noqa: S311 - augmentation RNG.
+        height, width = image.shape[-2:]
+        size = (int(height * factor), int(width * factor))
+        return kornia.geometry.transform.resize(image, size, align_corners=False, antialias=False)
+
+    return _TensorOperation(resize)
+
+
+def _build_random_sized_crop(params: dict[str, Any]) -> Any:
+    area = (params["crop_size"] / params["input_size"]) ** 2
+    return kornia_augmentation.RandomResizedCrop(
+        tuple(params["size"]), scale=(area, area), ratio=(1.0, 1.0), cropping_mode="slice", align_corners=False, p=1
+    )
+
+
+def _build_coarse_dropout(params: dict[str, Any]) -> Any:
+    area = (params["hole_size"] / params["input_size"]) ** 2
+    return kornia_augmentation.RandomErasing(scale=(area, area), ratio=(1.0, 1.0), value=0, p=1)
+
+
+def _build_colorize(params: dict[str, Any]) -> Any:
+    anchors = list(zip(params["black"], params["white"], strict=True))
+    palette = [tuple((black + (white - black) * value / 255) / 255 for black, white in anchors) for value in range(256)]
+    colormap = kornia.color.ColorMap(palette, num_colors=256)
+    return torch.nn.Sequential(kornia.color.RgbToGrayscale(), kornia.color.ApplyColorMap(colormap))
+
+
+class _Emboss(torch.nn.Module):
+    def __init__(self, alpha: float, strength: float) -> None:
+        super().__init__()
+        self.register_buffer("kernel", torch.tensor(emboss_kernel(alpha, strength)).reshape(1, 3, 3))
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        return kornia.filters.filter2d(image, self.kernel.to(image)).clamp_(0, 1)
 
 
 class _RandomJigsawWithPad(torch.nn.Module):
@@ -99,7 +216,7 @@ def _build_auto_contrast(_params: dict[str, Any]) -> Any | None:
 def _build_blur(params: dict[str, Any]) -> Any | None:
     return kornia_augmentation.RandomBoxBlur(
         p=1,
-        kernel_size=(params["radius"], params["radius"]),
+        kernel_size=(params["kernel_size"], params["kernel_size"]),
         border_type=params["border_mode"],
     )
 
@@ -336,6 +453,15 @@ def _build_affine(params: dict[str, Any]) -> Any | None:
     )
 
 
+def _build_shift_scale_rotate(params: dict[str, Any]) -> Any:
+    return _FixedAffine(
+        angle_degrees=params["angle"],
+        translation=tuple(params["shift"]),
+        scale_factor=params["scale"],
+        shear=(0, 0),
+    )
+
+
 def _build_random_crop224(params: dict[str, Any]) -> Any | None:
     return kornia_augmentation.RandomCrop(
         size=(params["height"], params["width"]),
@@ -411,10 +537,29 @@ def _build_rotate(params: dict[str, Any]) -> Any | None:
 
 
 def _build_shear(params: dict[str, Any]) -> Any | None:
-    return kornia_augmentation.RandomShear(
-        shear=params["shear"],
-        p=1,
-    )
+    return _FixedXShear(float(params["shear"]))
+
+
+class _FixedXShear(torch.nn.Module):
+    def __init__(self, degrees: float) -> None:
+        super().__init__()
+        self._degrees = degrees
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        height, width = image.shape[-2:]
+        matrix = torch.tensor(
+            x_shear_matrix(self._degrees, (height - 1) / 2),
+            dtype=torch.float32,
+            device=image.device,
+        ).reshape(1, 2, 3)
+        return kornia.geometry.transform.warp_affine(
+            image.float(),
+            matrix.expand(image.shape[0], -1, -1),
+            (height, width),
+            mode="bilinear",
+            padding_mode="zeros",
+            align_corners=True,
+        ).to(image.dtype)
 
 
 def _build_thin_plate_spline(params: dict[str, Any]) -> Any | None:
@@ -503,6 +648,21 @@ _TRANSFORM_BUILDERS = {
     "Solarize": _build_solarize,
     "Affine": _build_affine,
     "RandomCrop224": _build_random_crop224,
+    "CenterCrop": _build_center_crop,
+    "Crop": _build_crop,
+    "CropAndPad": _build_crop_and_pad,
+    "Pad": _build_pad,
+    "PadIfNeeded": _build_pad_if_needed,
+    "LetterBox": _build_letter_box,
+    "RandomScale": _build_random_scale,
+    "RandomSizedCrop": _build_random_sized_crop,
+    "CoarseDropout": _build_coarse_dropout,
+    "Colorize": _build_colorize,
+    "Emboss": lambda params: _Emboss(params["alpha"], params["strength"]),
+    "ShiftScaleRotate": _build_shift_scale_rotate,
+    "ChannelSwap": lambda _: _TensorOperation(kornia.color.rgb_to_bgr),
+    "Transpose": lambda _: _TensorOperation(lambda image: image.transpose(-2, -1)),
+    "Morphological": lambda params: _Morphological(params["operation"]),
     "Elastic": _build_elastic,
     "Erasing": _build_erasing,
     "OpticalDistortion": _build_optical_distortion,

@@ -40,7 +40,8 @@ def selected_run() -> RunRecord:
 
 @pytest.fixture
 def paper_data() -> paper._PaperData:
-    recipes = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml").recipes[:3]
+    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
+    recipes = (*catalog.recipes[:2], next(recipe for recipe in catalog.recipes if recipe.augmentation_id == "Shear"))
     observations = {
         paper.AX: ((100, 100, 100), (200, 200, 200), (1000, 1000, 1000)),
         "kornia_cpu": ((90, 100, 110), (95, 100, 105), (300, 300, 300)),
@@ -123,7 +124,7 @@ def test_csv_retains_seed_observations_and_marks_only_the_selected_path(
     second = next(row for row in rows if row["implementation"] == "kornia_gpu" and row["recipe_key"] == "R02")
     selected = next(row for row in rows if row["implementation"] == "kornia_cpu" and row["recipe_key"] == "R02")
 
-    assert len(rows) == 21
+    assert len(rows) == 24
     assert second["selected_pairwise_path"] == "False"
     assert selected["selected_pairwise_path"] == "True"
     assert [float(second[f"throughput_images_s_{seed}"]) for seed in (137, 138, 139)] == pytest.approx([1, 99, 99999])
@@ -149,12 +150,72 @@ def test_readme_updates_results_and_selection_without_replacing_manual_text(
 
     assert "| Pillow CPU | test | 0.53\N{MULTIPLICATION SIGN}" in before
     assert "| Pillow CPU | test | 1.07\N{MULTIPLICATION SIGN}" in after
-    assert selected_run.run_id[:12] in after
-    assert "differs from the published run" in after
+    assert "[per-seed results and manifests](docs/generated/results.json)" in after
     assert "![AX vs Kornia on 3 shared recipes](docs/generated/pairwise-kornia.png)" in after
     assert after.startswith("Cite this work.\n")
     assert after.endswith("\nInstructions.")
     assert readme.replace_results(after, readme.readme_results(changed, selected_run)) == after
+
+
+def test_ax_rerun_preserves_cell_sources_and_excludes_the_previous_shear_geometry(
+    paper_data: paper._PaperData,
+    selected_run: RunRecord,
+) -> None:
+    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
+    first, second, shear = paper_data.recipes
+    crop, warp, *tail = shear.stages
+    random_warp = warp.model_copy(update={"stochastic": True, "randomness_scope": "per-image"})
+    old_shear = shear.model_copy(update={"stages": (crop, random_warp, *tail)})
+    original = catalog.model_copy(update={"recipes": (first, second, old_shear)})
+    revised = catalog.model_copy(update={"recipes": paper_data.recipes})
+    records = [record for group in paper_data.groups.values() for record in group]
+    ax_records = [
+        record.model_copy(
+            update={
+                "run_id": selected_run.run_id,
+                "cell": record.cell.model_copy(update={"run_id": selected_run.run_id}),
+            },
+        )
+        for record in records
+        if record.cell.implementation == paper.AX
+    ]
+
+    selected = paper._select_ax_rerun(original, revised, records, ax_records)
+    data = paper._prepare(selected, revised.recipes)
+
+    assert data.groups[(paper.AX, shear.recipe_id)] == [
+        record for record in ax_records if record.cell.recipe_id == shear.recipe_id
+    ]
+    assert (
+        data.groups[("pillow_allsimd_cpu", first.recipe_id)]
+        == paper_data.groups[("pillow_allsimd_cpu", first.recipe_id)]
+    )
+    assert {implementation for implementation, recipe in data.groups if recipe == shear.recipe_id} == {paper.AX}
+    assert shear.recipe_id not in data.common
+
+
+def test_report_requires_replacement_for_the_incorrect_flip(
+    paper_data: paper._PaperData, selected_run: RunRecord
+) -> None:
+    implementation, recipe = paper.DALI_VERTICAL_FLIP
+    old = [
+        record.model_copy(update={"cell": record.cell.model_copy(update={"recipe_id": recipe})})
+        for record in paper_data.groups[(implementation, paper_data.recipes[0].recipe_id)]
+    ]
+    corrected = [
+        record.model_copy(
+            update={
+                "run_id": selected_run.run_id,
+                "cell": record.cell.model_copy(update={"run_id": selected_run.run_id}),
+            },
+        )
+        for record in old
+    ]
+    expected = [record.cell for record in old]
+
+    with pytest.raises(ValueError, match="must fill exactly"):
+        paper._restore_corrected_cells(old, corrected[:-1], expected)
+    assert paper._restore_corrected_cells(old, corrected, expected) == corrected
 
 
 def test_selected_run_rejects_missing_foreign_or_tampered_results(

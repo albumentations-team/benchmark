@@ -26,4 +26,4 @@ def test_frozen_rgb_run_resolves_config_locks_and_matrix() -> None:
         "boot_disk_size_gib": "350",
         "python_version": "3.13.14",
     }
-    assert len(frozen.cells) == 837
+    assert len(frozen.cells) == 1314

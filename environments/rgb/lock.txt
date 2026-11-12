@@ -6,9 +6,9 @@ albucore==0.3.5 \
     # via
     #   -r environments/rgb/requirements.in
     #   albumentationsx
-albumentationsx==2.6.1 \
-    --hash=sha256:558f174ed548923ea62246214f79a97bee1e4f4d1f4412467401003848f0b80b \
-    --hash=sha256:7252fc50b1954edb623ea03e10e6b9f17a6e1f38dd2c7791625c82e4bc1993c0
+albumentationsx==2.6.2 \
+    --hash=sha256:54b0334c37371578acd3619aeb34c486eaa6efd667ada4b90540a77ef69cc069 \
+    --hash=sha256:d20f24f4bdf0da0b2b1925e15508cecc16d780e7d2b349dbf047df42c31a5dc3
     # via -r environments/rgb/requirements.in
 annotated-types==0.8.0 \
     --hash=sha256:13b2beaad985e05e2d6407ee4c4f35590b11f8d693a258a561055cac8f64cab7 \
@@ -1372,6 +1372,10 @@ sympy==1.14.0 \
     --hash=sha256:d3d3fe8df1e5a0b42f0e7bdf50541697dbe7d23746e894990c030e2b05e72517 \
     --hash=sha256:e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5
     # via torch
+threadpoolctl==3.7.0 \
+    --hash=sha256:61348cfb77d53b9242e0017029244b559b810c142ced65b4e21eeca1843959a7 \
+    --hash=sha256:cd8b60b5641b45c67bbf73c64c843235fc2d8a480c87389f52f5dbee893b86be
+    # via -r environments/rgb/requirements.in
 torch==2.15.0 \
     --hash=sha256:02ac0b22211c1984e5dc002d2e57fdbc13d32116537ea6ae1a0c9d07cafce0c9 \
     --hash=sha256:04597a77bbcc7a1a01e7b9efce78d258b18a7f31bcb190f4ee00360bff75e7f6 \

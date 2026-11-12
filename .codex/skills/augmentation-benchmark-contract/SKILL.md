@@ -42,8 +42,8 @@ matrix unless the user explicitly adds that research question.
   the exact supported recipe intersection; coverage is a separate census.
 - The VM runs each implementation in its own process through all of its recipes and
   seeds. It writes every valid cell to GCS immediately. Resume validates those
-  immutable cells and runs only the missing ones. Do not split by duration,
-  recipe, seed, or arbitrary shard.
+  immutable cells and runs only the missing ones. Keep each implementation on
+  one VM within a run.
 - The current runner exposes only RGB. 9ch, video, and volume become runnable
   only after each has its own data format, config, recipes, GPU-only Normalize
   implementation, and one-batch L4 preflight per implementation-recipe pair:
@@ -63,4 +63,5 @@ matrix unless the user explicitly adds that research question.
    delete active VMs or GCS result artifacts.
 
 If a required measurement is absent, repair the execution path and generate the
-smallest missing part of the production matrix. Never substitute prose for data.
+smallest correction run that restores the comparison. Before regenerating the
+report, validate the replacement cells and preserve their original run and cell IDs.

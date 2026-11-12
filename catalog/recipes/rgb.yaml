@@ -282,13 +282,16 @@ recipes:
   - pillow
   - pillow_allsimd
   - dali
+  - kornia
   supported_implementations:
   - albumentationsx_cpu
+  - pillow_cpu
   - torchvision_cpu
   - torchvision_gpu
-  - pillow_cpu
-  - pillow_allsimd_cpu
+  - kornia_cpu
+  - kornia_gpu
   - dali_gpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+Rotate+Normalize+ToTensor
   augmentation_id: Rotate
   channels: 3
@@ -449,6 +452,7 @@ recipes:
   - torchvision_cpu
   - torchvision_gpu
   - kornia_cpu
+  - kornia_gpu
 - recipe_id: RandomCrop224+Elastic+Normalize+ToTensor
   augmentation_id: Elastic
   channels: 3
@@ -464,8 +468,12 @@ recipes:
       sigma: 5.0
       torchvision_alpha: 32.0
       kornia_alpha: 0.14285714285714285
-      displacement_range: [0.0097, 0.0097]
-      control_grid_shape: [29, 29]
+      displacement_range:
+      - 0.0097
+      - 0.0097
+      control_grid_shape:
+      - 29
+      - 29
       interpolation: bilinear
     stochastic: true
     randomness_scope: per-image
@@ -581,12 +589,18 @@ recipes:
   - albumentationsx
   - torchvision
   - kornia
+  - dali
+  - pillow_allsimd
+  - pillow
   supported_implementations:
   - albumentationsx_cpu
+  - pillow_cpu
   - torchvision_cpu
   - torchvision_gpu
   - kornia_cpu
   - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+Grayscale+Normalize+ToTensor
   augmentation_id: Grayscale
   channels: 3
@@ -626,13 +640,15 @@ recipes:
   - kornia
   - pillow
   - pillow_allsimd
+  - dali
   supported_implementations:
   - albumentationsx_cpu
+  - pillow_cpu
   - torchvision_cpu
   - torchvision_gpu
   - kornia_cpu
   - kornia_gpu
-  - pillow_cpu
+  - dali_gpu
   - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+RGBShift+Normalize+ToTensor
   augmentation_id: RGBShift
@@ -670,10 +686,16 @@ recipes:
   supported_libraries:
   - albumentationsx
   - kornia
+  - dali
+  - pillow_allsimd
+  - pillow
   supported_implementations:
   - albumentationsx_cpu
+  - pillow_cpu
   - kornia_cpu
   - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+GaussianBlur+Normalize+ToTensor
   augmentation_id: GaussianBlur
   channels: 3
@@ -765,8 +787,11 @@ recipes:
   - albumentationsx
   - kornia
   - dali
+  - torchvision
   supported_implementations:
   - albumentationsx_cpu
+  - torchvision_cpu
+  - torchvision_gpu
   - kornia_cpu
   - kornia_gpu
   - dali_gpu
@@ -808,13 +833,15 @@ recipes:
   - kornia
   - pillow
   - pillow_allsimd
+  - dali
   supported_implementations:
   - albumentationsx_cpu
+  - pillow_cpu
   - torchvision_cpu
   - torchvision_gpu
   - kornia_cpu
   - kornia_gpu
-  - pillow_cpu
+  - dali_gpu
   - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+Posterize+Normalize+ToTensor
   augmentation_id: Posterize
@@ -855,13 +882,15 @@ recipes:
   - kornia
   - pillow
   - pillow_allsimd
+  - dali
   supported_implementations:
   - albumentationsx_cpu
+  - pillow_cpu
   - torchvision_cpu
   - torchvision_gpu
   - kornia_cpu
   - kornia_gpu
-  - pillow_cpu
+  - dali_gpu
   - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+Solarize+Normalize+ToTensor
   augmentation_id: Solarize
@@ -902,13 +931,15 @@ recipes:
   - kornia
   - pillow
   - pillow_allsimd
+  - dali
   supported_implementations:
   - albumentationsx_cpu
+  - pillow_cpu
   - torchvision_cpu
   - torchvision_gpu
   - kornia_cpu
   - kornia_gpu
-  - pillow_cpu
+  - dali_gpu
   - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+Sharpen+Normalize+ToTensor
   augmentation_id: Sharpen
@@ -1102,6 +1133,7 @@ recipes:
   - torchvision_cpu
   - torchvision_gpu
   - kornia_cpu
+  - kornia_gpu
   - dali_gpu
 - recipe_id: RandomCrop224+JpegCompression+Normalize+ToTensor
   augmentation_id: JpegCompression
@@ -1145,12 +1177,13 @@ recipes:
   - dali
   supported_implementations:
   - albumentationsx_cpu
+  - pillow_cpu
   - torchvision_cpu
+  - torchvision_gpu
   - kornia_cpu
   - kornia_gpu
-  - pillow_cpu
-  - pillow_allsimd_cpu
   - dali_gpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+RandomGamma+Normalize+ToTensor
   augmentation_id: RandomGamma
   channels: 3
@@ -1187,10 +1220,19 @@ recipes:
   supported_libraries:
   - albumentationsx
   - kornia
+  - torchvision
+  - pillow
+  - pillow_allsimd
+  - dali
   supported_implementations:
   - albumentationsx_cpu
+  - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
   - kornia_cpu
   - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+PlankianJitter+Normalize+ToTensor
   augmentation_id: PlankianJitter
   channels: 3
@@ -1269,11 +1311,13 @@ recipes:
   - kornia
   - pillow
   - pillow_allsimd
+  - dali
   supported_implementations:
   - albumentationsx_cpu
+  - pillow_cpu
   - kornia_cpu
   - kornia_gpu
-  - pillow_cpu
+  - dali_gpu
   - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+MotionBlur+Normalize+ToTensor
   augmentation_id: MotionBlur
@@ -1482,8 +1526,8 @@ recipes:
     randomness_scope: per-image
   - operation_id: Blur
     parameters:
-      radius: 5
-      border_mode: constant
+      kernel_size: 5
+      border_mode: reflect
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize
@@ -1509,11 +1553,13 @@ recipes:
   - kornia
   - pillow
   - pillow_allsimd
+  - dali
   supported_implementations:
   - albumentationsx_cpu
+  - pillow_cpu
   - kornia_cpu
   - kornia_gpu
-  - pillow_cpu
+  - dali_gpu
   - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+ChannelDropout+Normalize+ToTensor
   augmentation_id: ChannelDropout
@@ -1550,10 +1596,16 @@ recipes:
   supported_libraries:
   - albumentationsx
   - kornia
+  - dali
+  - pillow_allsimd
+  - pillow
   supported_implementations:
   - albumentationsx_cpu
+  - pillow_cpu
   - kornia_cpu
   - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+LinearIllumination+Normalize+ToTensor
   augmentation_id: LinearIllumination
   channels: 3
@@ -1595,6 +1647,7 @@ recipes:
   supported_implementations:
   - albumentationsx_cpu
   - kornia_cpu
+  - kornia_gpu
 - recipe_id: RandomCrop224+CornerIllumination+Normalize+ToTensor
   augmentation_id: CornerIllumination
   channels: 3
@@ -1636,6 +1689,7 @@ recipes:
   supported_implementations:
   - albumentationsx_cpu
   - kornia_cpu
+  - kornia_gpu
 - recipe_id: RandomCrop224+GaussianIllumination+Normalize+ToTensor
   augmentation_id: GaussianIllumination
   channels: 3
@@ -1715,8 +1769,11 @@ recipes:
   - albumentationsx
   - kornia
   - dali
+  - torchvision
   supported_implementations:
   - albumentationsx_cpu
+  - torchvision_cpu
+  - torchvision_gpu
   - kornia_cpu
   - kornia_gpu
   - dali_gpu
@@ -2071,8 +2128,8 @@ recipes:
   - operation_id: Shear
     parameters:
       shear: 10
-    stochastic: true
-    randomness_scope: per-image
+    stochastic: false
+    randomness_scope: deterministic
   - operation_id: Normalize
     parameters:
       mean:
@@ -2093,13 +2150,17 @@ recipes:
     randomness_scope: deterministic
   supported_libraries:
   - albumentationsx
+  - torchvision
   - kornia
   - pillow
   - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
+  - torchvision_cpu
+  - torchvision_gpu
   - kornia_cpu
+  - kornia_gpu
   - pillow_cpu
   - pillow_allsimd_cpu
   - dali_gpu
@@ -2288,10 +2349,19 @@ recipes:
   supported_libraries:
   - albumentationsx
   - kornia
+  - pillow
+  - torchvision
+  - dali
+  - pillow_allsimd
   supported_implementations:
   - albumentationsx_cpu
+  - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
   - kornia_cpu
   - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
 - recipe_id: SmallestMaxSize+RandomCrop224+Normalize+ToTensor
   augmentation_id: SmallestMaxSize
   channels: 3
@@ -2329,10 +2399,19 @@ recipes:
   supported_libraries:
   - albumentationsx
   - kornia
+  - pillow
+  - torchvision
+  - dali
+  - pillow_allsimd
   supported_implementations:
   - albumentationsx_cpu
+  - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
   - kornia_cpu
   - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+Transpose+Normalize+ToTensor
   augmentation_id: Transpose
   channels: 3
@@ -2369,9 +2448,17 @@ recipes:
   - albumentationsx
   - pillow
   - pillow_allsimd
+  - torchvision
+  - kornia
+  - dali
   supported_implementations:
   - albumentationsx_cpu
   - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
   - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+RandomRotate90+Normalize+ToTensor
   augmentation_id: RandomRotate90
@@ -2411,10 +2498,19 @@ recipes:
   supported_libraries:
   - albumentationsx
   - kornia
+  - torchvision
+  - pillow
+  - pillow_allsimd
+  - dali
   supported_implementations:
   - albumentationsx_cpu
+  - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
   - kornia_cpu
   - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
 - recipe_id: RandomCrop224+RandomJigsaw+Normalize+ToTensor
   augmentation_id: RandomJigsaw
   channels: 3
@@ -2592,4 +2688,787 @@ recipes:
   supported_implementations:
   - albumentationsx_cpu
   - pillow_cpu
+  - pillow_allsimd_cpu
+- recipe_id: CenterCrop+Normalize+ToTensor
+  augmentation_id: CenterCrop
+  channels: 3
+  stages:
+  - operation_id: CenterCrop
+    parameters:
+      height: 224
+      width: 224
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - torchvision
+  - kornia
+  - pillow
+  - pillow_allsimd
+  - dali
+  supported_implementations:
+  - albumentationsx_cpu
+  - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
+- recipe_id: Resize256+Crop+Normalize+ToTensor
+  augmentation_id: Crop
+  channels: 3
+  stages:
+  - operation_id: Resize
+    parameters:
+      target_size: 256
+      interpolation: bilinear
+      antialias: false
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Crop
+    parameters:
+      top: 9
+      left: 16
+      height: 224
+      width: 224
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - torchvision
+  - kornia
+  - pillow
+  - pillow_allsimd
+  - dali
+  supported_implementations:
+  - albumentationsx_cpu
+  - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
+- recipe_id: Resize224+CropAndPad+Normalize+ToTensor
+  augmentation_id: CropAndPad
+  channels: 3
+  stages:
+  - operation_id: Resize
+    parameters:
+      target_size: 224
+      interpolation: bilinear
+      antialias: false
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: CropAndPad
+    parameters:
+      sides:
+      - -8
+      - 12
+      - 8
+      - -12
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - torchvision
+  - kornia
+  - pillow
+  - pillow_allsimd
+  - dali
+  supported_implementations:
+  - albumentationsx_cpu
+  - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
+- recipe_id: LetterBox+Normalize+ToTensor
+  augmentation_id: LetterBox
+  channels: 3
+  stages:
+  - operation_id: LetterBox
+    parameters:
+      height: 224
+      width: 224
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - torchvision
+  - kornia
+  - pillow
+  - pillow_allsimd
+  - dali
+  supported_implementations:
+  - albumentationsx_cpu
+  - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
+- recipe_id: PadIfNeeded+RandomCrop224+Normalize+ToTensor
+  augmentation_id: PadIfNeeded
+  channels: 3
+  stages:
+  - operation_id: PadIfNeeded
+    parameters:
+      min_height: 256
+      min_width: 256
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: RandomCrop224
+    parameters:
+      height: 224
+      width: 224
+    stochastic: true
+    randomness_scope: per-image
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - torchvision
+  - kornia
+  - pillow
+  - pillow_allsimd
+  - dali
+  supported_implementations:
+  - albumentationsx_cpu
+  - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
+- recipe_id: Resize224+ChannelSwap+Normalize+ToTensor
+  augmentation_id: ChannelSwap
+  channels: 3
+  stages:
+  - operation_id: Resize
+    parameters:
+      target_size: 224
+      interpolation: bilinear
+      antialias: false
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ChannelSwap
+    parameters:
+      channel_order:
+      - 2
+      - 1
+      - 0
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - torchvision
+  - kornia
+  - pillow
+  - pillow_allsimd
+  - dali
+  supported_implementations:
+  - albumentationsx_cpu
+  - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
+- recipe_id: Resize224+Colorize+Normalize+ToTensor
+  augmentation_id: Colorize
+  channels: 3
+  stages:
+  - operation_id: Resize
+    parameters:
+      target_size: 224
+      interpolation: bilinear
+      antialias: false
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Colorize
+    parameters:
+      black:
+      - 8
+      - 24
+      - 64
+      white:
+      - 255
+      - 238
+      - 192
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - pillow
+  - pillow_allsimd
+  - dali
+  - kornia
+  supported_implementations:
+  - albumentationsx_cpu
+  - pillow_cpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
+- recipe_id: Resize224+Dithering+Normalize+ToTensor
+  augmentation_id: Dithering
+  channels: 3
+  stages:
+  - operation_id: Resize
+    parameters:
+      target_size: 224
+      interpolation: bilinear
+      antialias: false
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Dithering
+    parameters:
+      method: floyd_steinberg
+      levels: 2
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - pillow
+  - pillow_allsimd
+  supported_implementations:
+  - albumentationsx_cpu
+  - pillow_cpu
+  - pillow_allsimd_cpu
+- recipe_id: Resize224+MorphologicalDilation+Normalize+ToTensor
+  augmentation_id: MorphologicalDilation
+  channels: 3
+  stages:
+  - operation_id: Resize
+    parameters:
+      target_size: 224
+      interpolation: bilinear
+      antialias: false
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Morphological
+    parameters:
+      size: 3
+      operation: dilation
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - kornia
+  - dali
+  supported_implementations:
+  - albumentationsx_cpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
+- recipe_id: Resize224+MorphologicalErosion+Normalize+ToTensor
+  augmentation_id: MorphologicalErosion
+  channels: 3
+  stages:
+  - operation_id: Resize
+    parameters:
+      target_size: 224
+      interpolation: bilinear
+      antialias: false
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Morphological
+    parameters:
+      size: 3
+      operation: erosion
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - kornia
+  - dali
+  supported_implementations:
+  - albumentationsx_cpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
+- recipe_id: RandomScale+RandomCrop224+Normalize+ToTensor
+  augmentation_id: RandomScale
+  channels: 3
+  stages:
+  - operation_id: RandomScale
+    parameters:
+      scale:
+      - 0.75
+      - 1.25
+      interpolation: bilinear
+    stochastic: true
+    randomness_scope: per-image
+  - operation_id: RandomCrop224
+    parameters:
+      height: 224
+      width: 224
+    stochastic: true
+    randomness_scope: per-image
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - torchvision
+  - kornia
+  - pillow
+  - pillow_allsimd
+  - dali
+  supported_implementations:
+  - albumentationsx_cpu
+  - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
+- recipe_id: Resize224+RandomSizedCrop+Normalize+ToTensor
+  augmentation_id: RandomSizedCrop
+  channels: 3
+  stages:
+  - operation_id: Resize
+    parameters:
+      target_size: 224
+      interpolation: bilinear
+      antialias: false
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: RandomSizedCrop
+    parameters:
+      crop_size: 160
+      input_size: 224
+      size:
+      - 224
+      - 224
+    stochastic: true
+    randomness_scope: per-image
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - torchvision
+  - kornia
+  - pillow
+  - pillow_allsimd
+  - dali
+  supported_implementations:
+  - albumentationsx_cpu
+  - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
+- recipe_id: Resize224+CoarseDropout+Normalize+ToTensor
+  augmentation_id: CoarseDropout
+  channels: 3
+  stages:
+  - operation_id: Resize
+    parameters:
+      target_size: 224
+      interpolation: bilinear
+      antialias: false
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: CoarseDropout
+    parameters:
+      hole_size: 32
+      input_size: 224
+    stochastic: true
+    randomness_scope: per-image
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - torchvision
+  - kornia
+  - pillow
+  - pillow_allsimd
+  - dali
+  supported_implementations:
+  - albumentationsx_cpu
+  - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
+- recipe_id: Resize224+Emboss+Normalize+ToTensor
+  augmentation_id: Emboss
+  channels: 3
+  stages:
+  - operation_id: Resize
+    parameters:
+      target_size: 224
+      interpolation: bilinear
+      antialias: false
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Emboss
+    parameters:
+      alpha: 0.5
+      strength: 1.0
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - kornia
+  - pillow
+  - pillow_allsimd
+  - dali
+  supported_implementations:
+  - albumentationsx_cpu
+  - pillow_cpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu
+- recipe_id: Resize224+PixelSpread+Normalize+ToTensor
+  augmentation_id: PixelSpread
+  channels: 3
+  stages:
+  - operation_id: Resize
+    parameters:
+      target_size: 224
+      interpolation: bilinear
+      antialias: false
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: PixelSpread
+    parameters:
+      radius: 2
+    stochastic: true
+    randomness_scope: per-image
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - dali
+  supported_implementations:
+  - albumentationsx_cpu
+  - dali_gpu
+- recipe_id: Resize224+ShiftScaleRotate+Normalize+ToTensor
+  augmentation_id: ShiftScaleRotate
+  channels: 3
+  stages:
+  - operation_id: Resize
+    parameters:
+      target_size: 224
+      interpolation: bilinear
+      antialias: false
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ShiftScaleRotate
+    parameters:
+      input_size: 224
+      angle: 12
+      scale: 1.125
+      shift:
+      - 14
+      - -7
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - pillow
+  - torchvision
+  - kornia
+  - dali
+  - pillow_allsimd
+  supported_implementations:
+  - albumentationsx_cpu
+  - pillow_cpu
+  - torchvision_cpu
+  - torchvision_gpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
   - pillow_allsimd_cpu

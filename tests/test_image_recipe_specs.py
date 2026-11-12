@@ -31,3 +31,14 @@ def test_r01_pillow_uses_bilinear_without_smoothing() -> None:
     assert resize is not None
     impulse = Image.frombytes("L", (5, 1), bytes([0, 0, 255, 0, 0]))
     assert resize(impulse).tobytes() == bytes([0, 255, 0]) * 3
+
+
+def test_r46_pillow_centers_x_shear_and_interpolates_zero_border() -> None:
+    recipes = load_recipe_catalog(Path(__file__).parents[1] / "catalog" / "recipes" / "rgb.yaml")
+    recipe = next(recipe for recipe in recipes.recipes if recipe.augmentation_id == "Shear")
+    spec = next(spec for spec in transform_specs(recipe) if spec.name == "Shear")
+    shear = create_transform(spec)
+    assert shear is not None
+
+    pixels = shear(Image.new("L", (3, 3), 255)).tobytes()
+    assert pixels == bytes([255, 255, 210, 255, 255, 255, 210, 255, 255])

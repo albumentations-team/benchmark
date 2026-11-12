@@ -37,6 +37,14 @@ if TYPE_CHECKING:
     from augbench.recipes.models import RecipeCatalog, RecipeSpec
     from augbench.run_config import FamilyRunConfig
 
+    class _PillowAllSimdCore(Protocol):
+        simd_kernels: str
+
+    class _PillowAllSimdImage(Protocol):
+        core: _PillowAllSimdCore
+
+        def get_fast(self) -> bool: ...
+
 
 @dataclass(frozen=True)
 class _DaliExecution:
@@ -325,10 +333,16 @@ def _runtime_metadata(adapter: AugmentationAdapter) -> dict[str, str]:
         device = "unknown"
     metadata = {"library_version": version, "cuda_device": device, "worker_scope": "implementation"}
     if package == "pillow_allsimd":
-        from PIL import Image
-
-        metadata.update(simd_kernels=Image.core.simd_kernels, pillow_mode="fast" if Image.get_fast() else "exact")
+        fast, kernels = pillow_allsimd_runtime()
+        metadata.update(simd_kernels=kernels, pillow_mode="fast" if fast else "exact")
     return metadata
+
+
+def pillow_allsimd_runtime() -> tuple[bool, str]:
+    from PIL import Image
+
+    module = cast("_PillowAllSimdImage", Image)
+    return module.get_fast(), module.core.simd_kernels
 
 
 def _cuda_synchronize() -> None:

@@ -13,6 +13,9 @@ from typing import TYPE_CHECKING, Any
 
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
+from augbench.implementations.geometry import aspect_size, centered_inverse_affine, centered_padding, emboss_kernel
+from augbench.implementations.shear import x_shear_matrix
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -115,16 +118,20 @@ def _build_affine(params: dict[str, Any]) -> Any | None:
 
 
 def _build_shear(params: dict[str, Any]) -> Any | None:
-    import math
+    angle = float(params["shear"])
 
-    shear = math.tan(math.radians(params["shear"]))
-    return lambda img: img.transform(
-        img.size,
-        Image.Transform.AFFINE,
-        (1, shear, 0, 0, 1, 0),
-        resample=Image.Resampling.BILINEAR,
-        fillcolor=0,
-    )
+    def shear(img: Image.Image) -> Image.Image:
+        a, b, tx, d, e, ty = x_shear_matrix(-angle, img.height / 2)
+        # Padding supplies the zero-valued neighbors used by the other samplers.
+        return ImageOps.expand(img, border=1, fill=0).transform(
+            img.size,
+            Image.Transform.AFFINE,
+            (a, b, tx + 1, d, e, ty + 1),
+            resample=Image.Resampling.BILINEAR,
+            fillcolor=0,
+        )
+
+    return shear
 
 
 def _build_brightness(params: dict[str, Any]) -> Any | None:
@@ -178,7 +185,178 @@ def _build_median_blur(params: dict[str, Any]) -> Any | None:
 
 
 def _build_blur(params: dict[str, Any]) -> Any | None:
-    return lambda img: img.filter(ImageFilter.BoxBlur(radius=params["radius"]))
+    blur = ImageFilter.BoxBlur(radius=(params["kernel_size"] - 1) / 2)
+    return lambda img: img.filter(blur)
+
+
+def _build_center_crop(params: dict[str, Any]) -> Any:
+    height, width = params["height"], params["width"]
+
+    def crop(image: Image.Image) -> Image.Image:
+        left = (image.width - width + int(image.width < width)) // 2
+        top = (image.height - height + int(image.height < height)) // 2
+        return image.crop((left, top, left + width, top + height))
+
+    return crop
+
+
+def _build_crop(params: dict[str, Any]) -> Any:
+    left, top = params["left"], params["top"]
+    box = (left, top, left + params["width"], top + params["height"])
+    return lambda image: image.crop(box)
+
+
+def _build_crop_and_pad(params: dict[str, Any]) -> Any:
+    top, right, bottom, left = params["sides"]
+    return lambda image: image.crop((-left, -top, image.width + right, image.height + bottom))
+
+
+def _resize_without_antialias(image: Image.Image, height: int, width: int, interpolation: str) -> Image.Image:
+    return build_resize_transform((width, height), interpolation, antialias=False)(image)
+
+
+def _build_resize_by_side(params: dict[str, Any], *, cover: bool) -> Any:
+    def resize(image: Image.Image) -> Image.Image:
+        height, width = aspect_size(image.height, image.width, params["max_size"], cover=cover)
+        return _resize_without_antialias(image, height, width, params["interpolation"])
+
+    return resize
+
+
+def _build_letter_box(params: dict[str, Any]) -> Any:
+    def letter_box(image: Image.Image) -> Image.Image:
+        height, width = aspect_size(image.height, image.width, params["height"])
+        resized = _resize_without_antialias(image, height, width, "bilinear")
+        return ImageOps.expand(resized, centered_padding(height, width, params["height"], params["width"]), fill=0)
+
+    return letter_box
+
+
+def _build_pad_if_needed(params: dict[str, Any]) -> Any:
+    def pad(image: Image.Image) -> Image.Image:
+        right = max(params["min_width"] - image.width, 0)
+        bottom = max(params["min_height"] - image.height, 0)
+        return ImageOps.expand(image, (0, 0, right, bottom), fill=0) if right or bottom else image
+
+    return pad
+
+
+def _build_channel_swap(_params: dict[str, Any]) -> Any:
+    def swap(image: Image.Image) -> Image.Image:
+        red, green, blue = image.split()
+        return Image.merge("RGB", (blue, green, red))
+
+    return swap
+
+
+def _build_channel_shuffle(_params: dict[str, Any]) -> Any:
+    def shuffle(image: Image.Image) -> Image.Image:
+        channels = list(image.split())
+        random.shuffle(channels)
+        return Image.merge("RGB", channels)
+
+    return shuffle
+
+
+def _build_channel_dropout(_params: dict[str, Any]) -> Any:
+    def dropout(image: Image.Image) -> Image.Image:
+        channels = list(image.split())
+        channels[random.randrange(3)] = Image.new("L", image.size)
+        return Image.merge("RGB", channels)
+
+    return dropout
+
+
+def _build_rgb_shift(params: dict[str, Any]) -> Any:
+    limit = params["pixel_shift"]
+
+    def shift(image: Image.Image) -> Image.Image:
+        offsets = [random.uniform(-limit, limit) for _ in range(3)]
+        table = [min(255, max(0, int(pixel + offset))) for offset in offsets for pixel in range(256)]
+        return image.point(table)
+
+    return shift
+
+
+def _build_random_gamma(params: dict[str, Any]) -> Any:
+    gamma = params["gamma"] / 100
+    table = [int(255 * (value / 255) ** gamma) for value in range(256)] * 3
+    return lambda image: image.point(table)
+
+
+def _build_colorize(params: dict[str, Any]) -> Any:
+    return lambda image: ImageOps.colorize(image.convert("L"), tuple(params["black"]), tuple(params["white"]))
+
+
+def _build_dithering(_params: dict[str, Any]) -> Any:
+    return lambda image: image.convert("L").convert("1", dither=Image.Dither.FLOYDSTEINBERG).convert("RGB")
+
+
+def _build_random_scale(params: dict[str, Any]) -> Any:
+    def resize(image: Image.Image) -> Image.Image:
+        scale = random.uniform(*params["scale"])
+        return _resize_without_antialias(image, int(image.height * scale), int(image.width * scale), "bilinear")
+
+    return resize
+
+
+def _build_random_rotate90(params: dict[str, Any]) -> Any:
+    rotations = (None, Image.Transpose.ROTATE_90, Image.Transpose.ROTATE_180, Image.Transpose.ROTATE_270)
+
+    def rotate(image: Image.Image) -> Image.Image:
+        rotation = rotations[random.randint(*params["times"])]
+        return image if rotation is None else image.transpose(rotation)
+
+    return rotate
+
+
+def _build_random_sized_crop(params: dict[str, Any]) -> Any:
+    size = params["crop_size"]
+    height, width = params["size"]
+    resize = build_resize_transform((width, height), "bilinear", antialias=False)
+
+    def crop(image: Image.Image) -> Image.Image:
+        left = random.randint(0, image.width - size)
+        top = random.randint(0, image.height - size)
+        return resize(image.crop((left, top, left + size, top + size)))
+
+    return crop
+
+
+def _build_coarse_dropout(params: dict[str, Any]) -> Any:
+    size = params["hole_size"]
+
+    def erase(image: Image.Image) -> Image.Image:
+        left = random.randint(0, image.width - size)
+        top = random.randint(0, image.height - size)
+        image.paste(0, (left, top, left + size, top + size))
+        return image
+
+    return erase
+
+
+def _build_emboss(params: dict[str, Any]) -> Any:
+    kernel = emboss_kernel(params["alpha"], params["strength"])
+    pillow_kernel = ImageFilter.Kernel((3, 3), kernel[6:] + kernel[3:6] + kernel[:3], scale=1)
+    return lambda image: image.filter(pillow_kernel)
+
+
+def _build_shift_scale_rotate(params: dict[str, Any]) -> Any:
+    center = params["input_size"] / 2
+    a, b, tx, d, e, ty = centered_inverse_affine(
+        (center, center), params["angle"], params["scale"], tuple(params["shift"])
+    )
+
+    def warp(image: Image.Image) -> Image.Image:
+        return ImageOps.expand(image, border=1, fill=0).transform(
+            image.size,
+            Image.Transform.AFFINE,
+            (a, b, tx + 1, d, e, ty + 1),
+            resample=Image.Resampling.BILINEAR,
+            fillcolor=0,
+        )
+
+    return warp
 
 
 def _build_unsharp_mask(params: dict[str, Any]) -> Any | None:
@@ -215,6 +393,26 @@ def _build_jpeg_compression(params: dict[str, Any]) -> Any | None:
 
 _TRANSFORM_BUILDERS = {
     "Resize": _build_resize,
+    "CenterCrop": _build_center_crop,
+    "Crop": _build_crop,
+    "CropAndPad": _build_crop_and_pad,
+    "LetterBox": _build_letter_box,
+    "PadIfNeeded": _build_pad_if_needed,
+    "ChannelSwap": _build_channel_swap,
+    "ChannelShuffle": _build_channel_shuffle,
+    "ChannelDropout": _build_channel_dropout,
+    "RGBShift": _build_rgb_shift,
+    "LongestMaxSize": lambda params: _build_resize_by_side(params, cover=False),
+    "SmallestMaxSize": lambda params: _build_resize_by_side(params, cover=True),
+    "RandomGamma": _build_random_gamma,
+    "Colorize": _build_colorize,
+    "Dithering": _build_dithering,
+    "RandomScale": _build_random_scale,
+    "RandomSizedCrop": _build_random_sized_crop,
+    "CoarseDropout": _build_coarse_dropout,
+    "Emboss": _build_emboss,
+    "ShiftScaleRotate": _build_shift_scale_rotate,
+    "RandomRotate90": _build_random_rotate90,
     "HorizontalFlip": _build_horizontal_flip,
     "VerticalFlip": _build_vertical_flip,
     "Transpose": _build_transpose,
