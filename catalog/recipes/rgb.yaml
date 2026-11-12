@@ -1,5 +1,5 @@
 schema_version: 1
-recipe_set_id: rgb-comparable-2026-11-11-elastic-calibrated
+recipe_set_id: rgb-comparable-2026-11-12-bilinear
 family: rgb
 recipes:
 - recipe_id: Resize224+Normalize+ToTensor
@@ -10,7 +10,7 @@ recipes:
     parameters:
       target_size: 224
       interpolation: bilinear
-      antialias: true
+      antialias: false
     stochastic: false
     randomness_scope: deterministic
   - operation_id: Normalize
@@ -108,7 +108,7 @@ recipes:
       - 0.75
       - 1.3333333333333333
       interpolation: bilinear
-      antialias: true
+      antialias: false
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize

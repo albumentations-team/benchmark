@@ -63,7 +63,7 @@ JPEG имеют разные исходные размеры. Для каждо�
 
 Для одного operation parameters сопоставляются вручную по практическому эффекту. Pixel-exact равенство не требуется: APIs, interpolation, RNG и rounding различаются.
 
-Для `Resize` и `RandomResizedCrop` при уменьшении AX использует `INTER_AREA`, DALI и TorchVision — bilinear с `antialias=True`, а Pillow и Pillow-AllSIMD — фильтр Pillow BILINEAR. Эти фильтры снижают алиасинг, но дают разные пиксели. Kornia сохраняет нативные настройки обоих преобразований.
+В `Resize` (R01) и `RandomResizedCrop` (R03) сравниваем bilinear без антиалиасинга. AX использует OpenCV `INTER_LINEAR`, DALI и TorchVision отключают антиалиасинг через `antialias=False`. Pillow и Pillow-AllSIMD используют `Image.transform(AFFINE, resample=BILINEAR)`, так как Pillow `resize` автоматически сглаживает при уменьшении. Kornia использует `align_corners=False` для обеих операций, явный `antialias=False` для `Resize` и обычный resize без антиалиасинга после среза в `RandomResizedCrop`. Выбор crop и округление могут отличаться между библиотеками.
 
 Для R10 (Elastic) параметры AX, TorchVision и Kornia [сопоставлены по полям смещений](rgb_elastic_calibration.md): около 0,74 px RMS при масштабе около 10 px. DALI и Pillow не выполняют этот рецепт.
 

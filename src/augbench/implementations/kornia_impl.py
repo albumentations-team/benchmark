@@ -388,6 +388,9 @@ def _build_random_resized_crop(params: dict[str, Any]) -> Any | None:
         size=tuple(params["size"]),
         scale=tuple(params["scale"]),
         ratio=tuple(params["ratio"]),
+        resample=params["interpolation"],
+        align_corners=False,
+        cropping_mode="slice",
         p=1,
     )
 
@@ -428,6 +431,9 @@ def _build_vertical_flip(_params: dict[str, Any]) -> Any | None:
 def _build_resize(params: dict[str, Any]) -> Any | None:
     return kornia_augmentation.Resize(
         size=(params["target_size"], params["target_size"]),
+        resample=params["interpolation"],
+        align_corners=False,
+        antialias=params.get("antialias", False),
         p=1,
     )
 

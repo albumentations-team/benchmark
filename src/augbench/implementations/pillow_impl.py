@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING, Any
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from augbench.implementations.specs import TransformSpec
 
 LIBRARY = "pillow"
@@ -56,7 +58,24 @@ def create_transform(spec: TransformSpec) -> Any | None:
 
 def _build_resize(params: dict[str, Any]) -> Any | None:
     size = params["target_size"]
-    return lambda img: img.resize((size, size), _pil_interp(params["interpolation"]))
+    return build_resize_transform((size, size), params["interpolation"], antialias=params.get("antialias", True))
+
+
+def build_resize_transform(
+    size: tuple[int, int], interpolation: str, *, antialias: bool
+) -> Callable[[Image.Image], Image.Image]:
+    resample = _pil_interp(interpolation)
+    if antialias or resample != Image.Resampling.BILINEAR:
+        return lambda image: image.resize(size, resample)
+
+    width, height = size
+
+    def resize_bilinear(image: Image.Image) -> Image.Image:
+        return image.transform(
+            size, Image.Transform.AFFINE, (image.width / width, 0, 0, 0, image.height / height, 0), resample=resample
+        )
+
+    return resize_bilinear
 
 
 def _build_horizontal_flip(_params: dict[str, Any]) -> Any | None:
