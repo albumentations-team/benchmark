@@ -93,6 +93,12 @@ def export_figures(directory: Path) -> dict[str, dict[str, str | int]]:
     return figures
 
 
+def _isolated_workers(data: _PaperData) -> bool:
+    return all(
+        record.runtime.get("worker_scope") == "implementation" for records in data.groups.values() for record in records
+    )
+
+
 def export_results(data: _PaperData, run: RunRecord) -> dict[str, object]:
     """Export the selected run using the README's aggregation and supported recipe sets."""
     libraries = [
@@ -129,6 +135,11 @@ def export_results(data: _PaperData, run: RunRecord) -> dict[str, object]:
                         "cell_id": record.cell_id,
                         "throughput_images_s": record.throughput.value,
                         "gpu_memory_peak_mib": record.gpu_memory.peak_mib,
+                        **(
+                            {"gpu_memory_baseline_mib": record.gpu_memory.baseline_mib}
+                            if record.gpu_memory.baseline_mib is not None
+                            else {}
+                        ),
                     }
                     for record in records
                 ],
@@ -155,7 +166,12 @@ def export_results(data: _PaperData, run: RunRecord) -> dict[str, object]:
             }
         )
     pairwise_comparisons = []
-    measurement_notes = []
+    isolated_workers = _isolated_workers(data)
+    measurement_notes = (
+        ["Each implementation ran in its own process. The baseline is sampled before pipeline construction."]
+        if isolated_workers
+        else []
+    )
     if any(implementation == PILLOW_ALLSIMD[0] for implementation, _ in data.implementations):
         pillow_shared, pillow_ratios = _pillow_allsimd_ratios(data)
         pairwise_comparisons.append(
@@ -166,10 +182,11 @@ def export_results(data: _PaperData, run: RunRecord) -> dict[str, object]:
                 "median_throughput_ratio": median(pillow_ratios),
             }
         )
-        measurement_notes.append(
-            "Pillow-AllSIMD ran in its own worker process. Other paths share the base worker, so their "
-            "NVML peaks include a different process lifetime."
-        )
+        if not isolated_workers:
+            measurement_notes.append(
+                "Pillow-AllSIMD ran in its own worker process. Other paths share the base worker, so their "
+                "NVML peaks include a different process lifetime."
+            )
     return {
         "schema_version": 1,
         "run": run.model_dump(mode="json"),
@@ -208,6 +225,7 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
     labels = dict(data.implementations)
     labels[AX] = "AlbumentationsX CPU"
     count = len(data.common)
+    isolated_workers = _isolated_workers(data)
     pillow_variant_note = None
     if any(implementation == PILLOW_ALLSIMD[0] for implementation, _ in data.implementations):
         shared, speedups = _pillow_allsimd_ratios(data)
@@ -269,13 +287,23 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
         lines.append(
             f"| {labels[implementation]} | {version} | "
             f"{means[implementation]:.2f}\N{MULTIPLICATION SIGN} | {memories[implementation]:,.0f}"
-            f"{'†' if implementation == PILLOW_ALLSIMD[0] else ''} |"
+            f"{'†' if implementation == PILLOW_ALLSIMD[0] and not isolated_workers else ''} |"
         )
     if pillow_variant_note is not None:
+        lines.extend(["", pillow_variant_note])
+    if isolated_workers:
         lines.extend(
             [
                 "",
-                pillow_variant_note,
+                (
+                    "Each implementation ran in its own process. Peak VRAM includes the CUDA state that process "
+                    "retains. The per-seed baseline before pipeline construction is in the machine-readable results."
+                ),
+            ]
+        )
+    elif pillow_variant_note is not None:
+        lines.extend(
+            [
                 "",
                 (
                     "†Pillow-AllSIMD ran in its own worker process to load its PIL package. "

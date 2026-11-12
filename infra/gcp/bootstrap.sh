@@ -128,14 +128,6 @@ stage_environment \
   "$(request_field environment_lock_sha256)" \
   "$(request_field environment_python_version)"
 
-run_worker() {
-  "$STATE_ROOT/environment/bin/python" -m augbench.guest_worker \
-    --request "$REQUEST_PATH" \
-    --family-config "$CODE_ROOT/configs/families/rgb.yaml" \
-    --dataset-archive "$STATE_ROOT/downloads/dataset.tar" \
-    --dataset-cache "$STATE_ROOT/datasets" "$@"
-}
-
 allsimd_lock="$CODE_ROOT/environments/rgb/pillow-allsimd.lock.txt"
 allsimd_site="$STATE_ROOT/pillow-allsimd"
 printf '%s  %s\n' "$(request_field run.inputs.environment_lock_sha256.pillow_allsimd)" "$allsimd_lock" \
@@ -144,5 +136,9 @@ uv pip install --python "$STATE_ROOT/environment/bin/python" --target "$allsimd_
   --require-hashes --no-deps --only-binary :all: --reinstall --requirements "$allsimd_lock"
 unset PILLOW_ALLSIMD_ISA
 cd "$CODE_ROOT"
-PYTHONPATH="$CODE_ROOT/src" run_worker
-PYTHONPATH="$allsimd_site:$CODE_ROOT/src" PILLOW_ALLSIMD_FAST=1 run_worker --pillow-allsimd
+PYTHONPATH="$CODE_ROOT/src" "$STATE_ROOT/environment/bin/python" -m augbench.guest_worker \
+  --request "$REQUEST_PATH" \
+  --family-config "$CODE_ROOT/configs/families/rgb.yaml" \
+  --dataset-archive "$STATE_ROOT/downloads/dataset.tar" \
+  --dataset-cache "$STATE_ROOT/datasets" \
+  --pillow-allsimd-site "$allsimd_site"

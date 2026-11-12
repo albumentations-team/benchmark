@@ -323,7 +323,7 @@ def _runtime_metadata(adapter: AugmentationAdapter) -> dict[str, str]:
         device = torch.cuda.get_device_name(0)
     except (ImportError, RuntimeError):
         device = "unknown"
-    metadata = {"library_version": version, "cuda_device": device}
+    metadata = {"library_version": version, "cuda_device": device, "worker_scope": "implementation"}
     if package == "pillow_allsimd":
         from PIL import Image
 

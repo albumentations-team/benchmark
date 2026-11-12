@@ -8,6 +8,7 @@
 
 - throughput от JPEG на диске до готового batch;
 - peak process GPU memory от построения pipeline до последнего CUDA synchronize;
+- объём GPU-памяти того же процесса перед построением pipeline (`gpu_memory.baseline_mib`);
 - проверенный output: CUDA `float16`, BCHW, `B×3×224×224`;
 - версии библиотеки и GPU как краткую диагностику.
 
@@ -43,13 +44,13 @@ JPEG на локальном диске
   → CUDA synchronize
 ```
 
-`Compose` init, import и preflight не входят в throughput. NVML monitor стартует до построения pipeline, поэтому peak memory включает reader, decoder, workers, buffers и GPU allocations. Он работает в том же pass, что throughput.
+`Compose` init, import и preflight не входят в throughput. NVML записывает память PID реализации до построения pipeline и измеряет пик в том же проходе, что throughput. Пик показывает, сколько VRAM занимал весь процесс, включая CUDA-состояние, оставшееся после preflight. Разность пика и исходного значения показывает, насколько выросло потребление за измеряемую клетку.
 
 Normalize никогда не выполняется на CPU. Все output rows заканчиваются CUDA `float16` Normalize:
 
 | Implementation | До GPU | На GPU |
 | --- | --- | --- |
-| AlbumentationsX CPU | SimpleJPEG, `uint8` recipe и `uint8` pinned H2D | convert в `float16`, Normalize |
+| AlbumentationsX CPU | SimpleJPEG, `uint8` recipe и `uint8` pinned H2D | BCHW view, `albumentations.batch.InputNormalizer` с вычислением в FP32 и выходом в FP16 |
 | Pillow CPU | Pillow decode, `uint8` recipe и `uint8` pinned H2D | convert в `float16`, Normalize |
 | Pillow-AllSIMD CPU (fast) | тот же код, wheel Pillow-AllSIMD в отдельном процессе | convert в `float16`, Normalize |
 | TorchVision CPU | `torchvision.io`, `uint8` recipe и `uint8` pinned H2D | convert в `float16`, Normalize |
@@ -80,7 +81,7 @@ JPEG имеют разные исходные размеры. Для каждо�
 2. валидирует каждую найденную клетку по содержимому и identity;
 3. не создаёт VM, если существует активная VM с тем же `augbench-run` label;
 4. иначе ищет все zones с `g2-standard-16` и L4, затем создаёт одну Standard VM;
-5. VM скачивает code, raw dataset и cached RGB environment один раз, проверяет lock и wheel Pillow-AllSIMD, извлекает первые 10 000 отсортированных `val/*.JPEG` и прогревает их. Каждый процесс перед замерами проверяет по одному batch до CUDA output на пару `(implementation, recipe)`: non-DALI path использует один временный DataLoader worker, DALI — native graph. Затем он выполняет отсутствующие клетки с зафиксированными 15 workers. Pillow-AllSIMD запускается отдельно на той же VM;
+5. VM скачивает code, raw dataset и cached RGB environment один раз, проверяет lock и wheel Pillow-AllSIMD, извлекает первые 10 000 отсортированных `val/*.JPEG` и прогревает их. Для каждой реализации VM запускает отдельный процесс. Он проверяет по одному batch до CUDA output на рецепт и выполняет отсутствующие клетки с зафиксированными 15 workers. Non-DALI preflight использует одного временного DataLoader worker, DALI — native graph;
 6. после каждой клетки сразу создаётся immutable GCS object;
 7. при любом выходе bootstrap сохраняет stdout/stderr в `runs/<run_id>/logs/` до выключения VM;
 8. перед новой VM `launch-rgb` удаляет только terminal или suspended `augbench` VM, чтобы их boot disks не удерживали quota; active VM и GCS artifacts не затрагиваются.

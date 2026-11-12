@@ -20,4 +20,5 @@ def test_nvml_monitor_reports_the_peak_from_the_same_execution_pass() -> None:
 
     assert memory.measurement == "nvml_process_memory"
     assert memory.peak_mib == 512.0
+    assert memory.baseline_mib == 128.0
     assert memory.valid_samples >= 2

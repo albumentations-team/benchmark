@@ -45,8 +45,7 @@ def test_guest_selects_only_the_requested_known_cells() -> None:
     request = request.model_copy(update={"pending_cell_ids": (wanted.cell_id, allsimd.cell_id)})
     cells = (wanted, other, allsimd)
 
-    assert select_pending_cells(request=request, cells=cells) == (wanted,)
-    assert select_pending_cells(request=request, cells=cells, pillow_allsimd=True) == (allsimd,)
+    assert select_pending_cells(request=request, cells=cells) == (wanted, allsimd)
 
 
 def test_guest_rejects_a_cell_not_derived_from_its_run() -> None:

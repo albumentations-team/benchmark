@@ -24,7 +24,7 @@ class _GpuBatchRecipe(nn.Module):
         super().__init__()
         mean, std = normalization_stats(recipe)
         self._tail = tail
-        self._batch_normalize = GpuBatchNormalize(mean=mean, std=std, input_layout="BCHW")
+        self._batch_normalize = GpuBatchNormalize(mean=mean, std=std)
 
     def forward(self, batch: torch.Tensor) -> torch.Tensor:
         if batch.dtype == torch.uint8:
@@ -55,7 +55,7 @@ class _DeferredCpuRecipe(nn.Module):
         super().__init__()
         mean, std = normalization_stats(recipe)
         self.cpu_transform = tv_transforms.Compose(list(transforms))
-        self.gpu_transform = GpuBatchNormalize(mean=mean, std=std, input_layout="BCHW")
+        self.gpu_transform = GpuBatchNormalize(mean=mean, std=std)
 
 
 def build_recipe(recipe: RecipeSpec, implementation_id: str) -> nn.Module:

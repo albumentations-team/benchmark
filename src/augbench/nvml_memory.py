@@ -29,12 +29,13 @@ class NvmlProcessMemoryMonitor:
         self._lock = Lock()
         self._thread: Thread | None = None
         self._peak_mib = 0.0
+        self._baseline_mib: float | None = None
         self._valid_samples = 0
 
     def start(self) -> None:
         if self._thread is not None:
             raise RuntimeError("GPU memory monitor is already running")
-        self._record_sample()
+        self._baseline_mib = self._record_sample()
         self._thread = Thread(target=self._run, name="augbench-nvml-memory", daemon=True)
         self._thread.start()
 
@@ -48,6 +49,7 @@ class NvmlProcessMemoryMonitor:
             with self._lock:
                 return GpuMemory(
                     peak_mib=self._peak_mib,
+                    baseline_mib=self._baseline_mib,
                     poll_interval_ms=self._poll_interval_ms,
                     valid_samples=self._valid_samples,
                 )
@@ -59,13 +61,14 @@ class NvmlProcessMemoryMonitor:
         while not self._stop.wait(self._poll_interval_ms / 1000.0):
             self._record_sample()
 
-    def _record_sample(self) -> None:
+    def _record_sample(self) -> float | None:
         value = self._sample_process_memory()
         if value is None:
-            return
+            return None
         with self._lock:
             self._valid_samples += 1
             self._peak_mib = max(self._peak_mib, value)
+        return value
 
 
 class _NvmlProcessSampler:

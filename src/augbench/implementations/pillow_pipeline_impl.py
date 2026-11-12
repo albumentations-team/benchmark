@@ -93,7 +93,7 @@ class _DeferredRecipe:
     def __init__(self, *, cpu_transform: Any, recipe: RecipeSpec) -> None:
         mean, std = normalization_stats(recipe)
         self.cpu_transform = cpu_transform
-        self.gpu_transform = GpuBatchNormalize(mean=mean, std=std, input_layout="BCHW")
+        self.gpu_transform = GpuBatchNormalize(mean=mean, std=std)
 
 
 def build_recipe(recipe: RecipeSpec, implementation_id: str) -> _DeferredRecipe:
