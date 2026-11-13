@@ -81,14 +81,12 @@ class _Float32Transform(nn.Module):
 
 
 def build_recipe(recipe: RecipeSpec, implementation_id: str) -> nn.Module:
-    cpu_specs, gpu_specs = collatable_prefix(recipe)
-    cpu_transforms = tuple(_transform(spec, recipe.recipe_id) for spec in cpu_specs)
-    if not cpu_transforms:
-        raise UnsupportedRecipeError(f"Kornia recipe {recipe.recipe_id!r} has no augmentation stages")
     if implementation_id == "kornia_cpu":
         transforms = tuple(_transform(spec, recipe.recipe_id) for spec in transform_specs(recipe))
         return _DeferredCpuRecipe(transforms=transforms, recipe=recipe)
     if implementation_id == "kornia_gpu":
+        cpu_specs, gpu_specs = collatable_prefix(recipe)
+        cpu_transforms = tuple(_transform(spec, recipe.recipe_id) for spec in cpu_specs)
         gpu_transforms = tuple(
             _transform(spec, recipe.recipe_id, fp32=spec.name in _FP32_GPU_STAGES) for spec in gpu_specs
         )
