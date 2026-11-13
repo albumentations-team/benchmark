@@ -4,24 +4,18 @@ from typing import TYPE_CHECKING, Any
 
 import albumentations
 from albumentations.batch import InputNormalizer
+from albumentations.pytorch import ToTensorV2
 
 from augbench.implementations.albumentationsx_impl import create_transform
 from augbench.implementations.recipe_stages import normalization_stats, transform_specs
 from augbench.recipes.runtime import UnsupportedRecipeError
 
 if TYPE_CHECKING:
-    from torch import Tensor
-
     from augbench.recipes.models import RecipeSpec
 
 
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
     return transform(image=image)["image"]
-
-
-class _RgbInputNormalizer(InputNormalizer):
-    def forward(self, batch: Tensor) -> Tensor:
-        return super().forward(batch.permute(0, 3, 1, 2))
 
 
 class _DeferredRecipe:
@@ -30,7 +24,7 @@ class _DeferredRecipe:
     def __init__(self, *, cpu_transform: Any, recipe: RecipeSpec) -> None:
         mean, std = normalization_stats(recipe)
         self.cpu_transform = cpu_transform
-        self.gpu_transform = _RgbInputNormalizer(
+        self.gpu_transform = InputNormalizer(
             "fixed", output_precision="fp16", mean=mean, standard_deviation=std, input_scale=255.0
         )
 
@@ -39,6 +33,7 @@ def build_recipe(recipe: RecipeSpec, implementation_id: str) -> _DeferredRecipe:
     if implementation_id != "albumentationsx_cpu":
         raise UnsupportedRecipeError(f"{implementation_id!r} is not an AlbumentationsX CPU implementation")
     transforms = [_transform(spec, recipe.recipe_id) for spec in transform_specs(recipe)]
+    transforms.append(ToTensorV2(p=1))
     return _DeferredRecipe(cpu_transform=albumentations.Compose(transforms), recipe=recipe)
 
 

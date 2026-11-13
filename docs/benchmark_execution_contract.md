@@ -66,7 +66,7 @@ Normalization always runs on the GPU. Every path produces normalized CUDA `float
 
 | Implementation | Before GPU transfer | On the GPU |
 | --- | --- | --- |
-| AlbumentationsX CPU | SimpleJPEG, `uint8` recipe, pinned H2D transfer in `uint8` | BCHW view, then `albumentations.batch.InputNormalizer` with FP32 arithmetic and FP16 output |
+| AlbumentationsX CPU | SimpleJPEG, `uint8` recipe, `ToTensorV2` converts each image to CHW, collate to BCHW and transfer pinned `uint8` | `albumentations.batch.InputNormalizer` with FP32 arithmetic and FP16 output |
 | Pillow CPU | Pillow decode, `uint8` recipe, pinned H2D transfer in `uint8` | Convert to `float16` and normalize |
 | Pillow-AllSIMD CPU (fast) | Same code with the Pillow-AllSIMD wheel in a separate process | Convert to `float16` and normalize |
 | TorchVision CPU | `torchvision.io`, `uint8` recipe, pinned H2D transfer in `uint8` | Convert to `float16` and normalize |

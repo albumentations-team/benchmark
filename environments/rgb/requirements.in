@@ -1,6 +1,6 @@
 # One cached, exact Linux environment for the active RGB production matrix.
-albucore
-albumentationsx[headless]
+albucore==0.3.6
+albumentationsx[headless] @ https://github.com/albumentations-team/AlbumentationsX/archive/4d994b01eb206a3e876465724ea3697c3d6741e4.tar.gz
 kornia
 kornia-rs
 numkong

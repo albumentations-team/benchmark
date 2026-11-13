@@ -1,12 +1,15 @@
 import sys
+from pathlib import Path
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pytest
 
+from augbench.adapters.registry import default_adapter_registry
 from augbench.adapters.runtime import PythonModuleAdapter, PythonModuleAdapterConfig
 from augbench.execution.pipeline import TorchDataLoaderConfig, TorchDataLoaderSource, _collate_images
+from augbench.recipes.load import load_recipe_catalog
 
 if TYPE_CHECKING:
     from augbench.recipes.models import RecipeSpec
@@ -19,6 +22,35 @@ def test_collate_preserves_pixels_from_a_reversed_numpy_view() -> None:
     batch = _collate_images([image, image[:, ::-1]])
 
     torch.testing.assert_close(batch, torch.from_numpy(np.stack([image, image[:, ::-1]])))
+
+
+def test_ax_rgb_flip_recipe_produces_a_uint8_bchw_batch_before_normalization(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("albumentations")
+    torch = pytest.importorskip("torch")
+    from albumentations.batch import InputNormalizer
+
+    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
+    recipe = next(recipe for recipe in catalog.recipes if recipe.recipe_id.startswith("RandomCrop224+HorizontalFlip+"))
+    runtime = default_adapter_registry().load("albumentationsx_cpu").build_recipe(recipe)
+    assert runtime.sample_transform is not None
+    assert runtime.batch_transform is not None
+    image = np.arange(224 * 224 * 3, dtype=np.int32).astype(np.uint8).reshape(224, 224, 3)
+
+    batch = _collate_images([runtime.sample_transform(image), runtime.sample_transform(255 - image)])
+    expected = np.stack([image, 255 - image])[:, :, ::-1, :].transpose(0, 3, 1, 2)
+
+    assert batch.is_contiguous()
+    assert batch.dtype == torch.uint8
+    np.testing.assert_array_equal(batch.numpy(), expected)
+    normalizer = InputNormalizer(
+        "fixed",
+        output_precision="fp16",
+        mean=(0.485, 0.456, 0.406),
+        standard_deviation=(0.229, 0.224, 0.225),
+        input_scale=255.0,
+    )
+    monkeypatch.setattr(InputNormalizer, "to", lambda self, _device: self)
+    torch.testing.assert_close(runtime.batch_transform(batch), normalizer(batch))
 
 
 class _Recipe:
