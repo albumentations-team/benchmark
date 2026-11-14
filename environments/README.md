@@ -2,7 +2,10 @@
 
 `environments/rgb/requirements.in` declares the base production environment.
 `environments/rgb/lock.txt` pins Linux x86-64 packages with hashes, including the
-PyPI build of PyTorch 2.15.0 with CUDA 13.2, Triton 3.9.0, and AlbumentationsX 2.6.2.
+PyPI build of PyTorch 2.15.0 with CUDA 13.2 and Triton 3.9.0. AX is built from the
+source archive at the commit pinned in `requirements.in`. The archive hash
+identifies the exact pre-release source even when its package metadata still
+reports the previous release version.
 
 Pillow-AllSIMD uses the same base packages. Bootstrap verifies
 `environments/rgb/pillow-allsimd.lock.txt` and installs its wheel into a
