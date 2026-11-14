@@ -1,13 +1,15 @@
 import csv
 import hashlib
+from argparse import Namespace
 from pathlib import Path
 
 import pytest
 from PIL import Image
 
+from augbench.matrix import build_matrix
 from augbench.recipes.load import load_recipe_catalog
 from augbench.result_store import encode_result
-from augbench.run_config import load_family_config
+from augbench.run_config import FamilyRunConfig, load_family_config
 from augbench.run_records import (
     CellKey,
     GpuMemory,
@@ -216,6 +218,62 @@ def test_report_requires_replacement_for_the_incorrect_flip(
     with pytest.raises(ValueError, match="must fill exactly"):
         paper._restore_corrected_cells(old, corrected[:-1], expected)
     assert paper._restore_corrected_cells(old, corrected, expected) == corrected
+
+
+def test_full_report_rejects_measurement_selection(tmp_path: Path, selected_run: RunRecord) -> None:
+    config = {**selected_run.family_config, "measurements": {"Resize224+Normalize+ToTensor": [paper.AX]}}
+    run = build_run_record(family_config=config, inputs=selected_run.inputs, hardware=selected_run.hardware)
+    manifest = tmp_path / "run.json"
+    manifest.write_text(run.model_dump_json())
+
+    with pytest.raises(ValueError, match="complete RGB run"):
+        paper.load_report(Namespace(run=manifest), tmp_path)
+
+
+def test_extension_replaces_changed_pairs_and_preserves_other_source_cells(
+    paper_data: paper._PaperData, selected_run: RunRecord
+) -> None:
+    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
+    resize, crop, shear = paper_data.recipes
+    dropout = next(recipe for recipe in catalog.recipes if recipe.augmentation_id == "ChannelDropout")
+    previous_resize = resize.model_copy(update={"supported_implementations": (paper.AX, "kornia_gpu")})
+    previous = catalog.model_copy(update={"recipes": (previous_resize, crop, shear, dropout)})
+    fixed_crop = crop.stages[0].model_copy(update={"parameters": {**crop.stages[0].parameters, "fill": 0}})
+    expanded_crop = crop.model_copy(update={"stages": (fixed_crop, *crop.stages[1:])})
+    expanded = catalog.model_copy(update={"recipes": (resize, expanded_crop, shear, dropout)})
+    base = paper_data.groups[(paper.AX, resize.recipe_id)][0]
+    config = FamilyRunConfig.model_validate(selected_run.family_config)
+    checked = build_matrix(run_id=base.run_id, config=config, recipes=previous)
+    expected = build_matrix(run_id=selected_run.run_id, config=config, recipes=expanded)
+    records = [base.model_copy(update={"cell": cell}) for cell in checked]
+    retained = [
+        r
+        for r in records
+        if r.cell.recipe_id != crop.recipe_id
+        and (r.cell.implementation, r.cell.recipe_id) != paper.AX_CHANNEL_DROPOUT
+        and not (r.cell.implementation == "dali_gpu" and r.cell.recipe_id in (shear.recipe_id, dropout.recipe_id))
+    ]
+    keys = {(r.cell.implementation, r.cell.recipe_id, r.cell.seed) for r in retained}
+    added = [
+        base.model_copy(update={"run_id": cell.run_id, "cell": cell})
+        for cell in expected
+        if (cell.implementation, cell.recipe_id, cell.seed) not in keys
+    ]
+
+    combined = paper._extend_matrix(records, added, previous, expanded, config)
+    assert {r.cell_id for r in combined} == {r.cell_id for r in (*retained, *added)}
+    for invalid in (added[:-1], [*added[:-1], added[0]]):
+        with pytest.raises(ValueError, match="must fill exactly"):
+            paper._extend_matrix(records, invalid, previous, expanded, config)
+
+
+def test_published_export_flag_excludes_supplemental_results(
+    paper_data: paper._PaperData, selected_run: RunRecord
+) -> None:
+    published = selected_run.model_copy(update={"run_id": paper.RUN_ID})
+
+    assert readme.export_results(paper_data, published)["is_published_run"] is True
+    assert readme.export_results(paper_data, published, correction_runs=(selected_run,))["is_published_run"] is False
 
 
 def test_selected_run_rejects_missing_foreign_or_tampered_results(

@@ -191,7 +191,7 @@ def export_results(
             if correction_runs
             else {}
         ),
-        "is_published_run": ax_run is None and run.run_id == RUN_ID,
+        "is_published_run": ax_run is None and not correction_runs and run.run_id == RUN_ID,
         "measurement_count": sum(map(len, data.groups.values())),
         "gpu_memory_poll_ms": _single(
             {record.gpu_memory.poll_interval_ms for records in data.groups.values() for record in records}

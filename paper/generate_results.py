@@ -145,7 +145,7 @@ def load_report(
     run = RunRecord.model_validate_json(args.run.read_bytes())
     config = FamilyRunConfig.model_validate(run.family_config)
     base = {implementation for implementation, _ in IMPLEMENTATIONS}
-    if set(config.implementations) not in (base, base | {PILLOW_ALLSIMD[0]}):
+    if config.measurements is not None or set(config.implementations) not in (base, base | {PILLOW_ALLSIMD[0]}):
         raise ValueError("report requires a complete RGB run")
     recipes = _run_catalog(run, args.recipes or root / config.recipes)
     records = load_run_results(args.cells, run, recipes)
