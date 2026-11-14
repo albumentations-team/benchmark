@@ -15,6 +15,11 @@ if TYPE_CHECKING:
     from augbench.recipes.models import RecipeSpec
 
 
+_FP32_GPU_STAGES = frozenset(
+    {"CoarseDropout", "CornerIllumination", "Erasing", "LinearIllumination", "Perspective", "ShiftScaleRotate"}
+)
+
+
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
     return transform(image.unsqueeze(0)).squeeze(0)
 
@@ -36,7 +41,7 @@ class _DeferredCpuRecipe(nn.Module):
         mean, std = normalization_stats(recipe)
         self.cpu_transform = force_per_sample_randomness(nn.Sequential(*transforms))
         self.host_batch_transform = _HostBatchFloat16()
-        self.gpu_transform = GpuBatchNormalize(mean=mean, std=std, input_layout="BCHW")
+        self.gpu_transform = GpuBatchNormalize(mean=mean, std=std)
 
 
 class _GpuBatchRecipe(nn.Module):
@@ -44,7 +49,7 @@ class _GpuBatchRecipe(nn.Module):
         super().__init__()
         mean, std = normalization_stats(recipe)
         self._tail = tail
-        self._batch_normalize = GpuBatchNormalize(mean=mean, std=std, input_layout="BCHW")
+        self._batch_normalize = GpuBatchNormalize(mean=mean, std=std)
 
     def forward(self, batch: torch.Tensor) -> torch.Tensor:
         if not batch.is_floating_point():
@@ -66,16 +71,25 @@ class _GpuRecipe(nn.Module):
         return self.cpu_transform(image)
 
 
+class _Float32Transform(nn.Module):
+    def __init__(self, transform: nn.Module) -> None:
+        super().__init__()
+        self.transform = transform
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        return self.transform(image.float()).to(image.dtype)
+
+
 def build_recipe(recipe: RecipeSpec, implementation_id: str) -> nn.Module:
-    cpu_specs, gpu_specs = collatable_prefix(recipe)
-    cpu_transforms = tuple(_transform(spec, recipe.recipe_id) for spec in cpu_specs)
-    gpu_transforms = tuple(_transform(spec, recipe.recipe_id) for spec in gpu_specs)
-    if not cpu_transforms:
-        raise UnsupportedRecipeError(f"Kornia recipe {recipe.recipe_id!r} has no augmentation stages")
     if implementation_id == "kornia_cpu":
         transforms = tuple(_transform(spec, recipe.recipe_id) for spec in transform_specs(recipe))
         return _DeferredCpuRecipe(transforms=transforms, recipe=recipe)
     if implementation_id == "kornia_gpu":
+        cpu_specs, gpu_specs = collatable_prefix(recipe)
+        cpu_transforms = tuple(_transform(spec, recipe.recipe_id) for spec in cpu_specs)
+        gpu_transforms = tuple(
+            _transform(spec, recipe.recipe_id, fp32=spec.name in _FP32_GPU_STAGES) for spec in gpu_specs
+        )
         tail = force_per_sample_randomness(nn.Sequential(*gpu_transforms)) if gpu_transforms else None
         return _GpuRecipe(
             cpu_transform=force_per_sample_randomness(nn.Sequential(*cpu_transforms)),
@@ -84,8 +98,8 @@ def build_recipe(recipe: RecipeSpec, implementation_id: str) -> nn.Module:
     raise UnsupportedRecipeError(f"{implementation_id!r} is not a Kornia implementation")
 
 
-def _transform(spec: Any, recipe_id: str) -> nn.Module:
+def _transform(spec: Any, recipe_id: str, *, fp32: bool = False) -> nn.Module:
     transform = create_transform(spec)
     if transform is None:
         raise UnsupportedRecipeError(f"Kornia cannot build {spec.name!r} for {recipe_id!r}")
-    return transform
+    return _Float32Transform(transform) if fp32 else transform

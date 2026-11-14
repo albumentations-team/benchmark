@@ -3,7 +3,7 @@ from pathlib import Path
 from augbench.frozen_rgb_run import build_frozen_rgb_run
 
 
-def test_frozen_rgb_run_resolves_one_config_lock_and_matrix() -> None:
+def test_frozen_rgb_run_resolves_config_locks_and_matrix() -> None:
     root = Path(__file__).parents[1]
 
     frozen = build_frozen_rgb_run(
@@ -15,6 +15,7 @@ def test_frozen_rgb_run_resolves_one_config_lock_and_matrix() -> None:
     assert frozen.request.run == frozen.run
     assert frozen.request.pending_cell_ids == tuple(cell.cell_id for cell in frozen.cells)
     assert frozen.request.environment_lock_path == "environments/rgb/lock.txt"
+    assert set(frozen.run.inputs.environment_lock_sha256) == {"rgb", "pillow_allsimd"}
     assert frozen.run.family_config["normalization"] == "gpu"
     assert frozen.run.hardware == {
         "machine_type": "g2-standard-16",
@@ -25,4 +26,4 @@ def test_frozen_rgb_run_resolves_one_config_lock_and_matrix() -> None:
         "boot_disk_size_gib": "350",
         "python_version": "3.13.14",
     }
-    assert len(frozen.cells) == 759
+    assert len(frozen.cells) == 1314

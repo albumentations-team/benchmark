@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "run_id": "3f8e2e315710528399b8e82e2359ab85c58c809644595b68a92fb9d83492cc8c",
+  "run_id": "75bc062fe770cfec3d857f401e16366deb01f6582c8645e952930e3cd3d788fb",
   "family_config": {
     "cloud": "configs/cloud/gcp-l4.yaml",
     "coverage_catalog": "catalog/operations.yaml",
@@ -35,7 +35,8 @@
       "torchvision_gpu",
       "kornia_cpu",
       "kornia_gpu",
-      "dali_gpu"
+      "dali_gpu",
+      "pillow_allsimd_cpu"
     ],
     "normalization": "gpu",
     "output": {
@@ -50,12 +51,13 @@
     "schema_version": 1
   },
   "inputs": {
-    "git_commit": "5fc35f6fdd177c286cbc4f5e39d1520576d6464a",
-    "code_archive_sha256": "61238619ace0dc471bc5df7a4f165e15052ffb67046ceae07c26fd7f370eac6d",
+    "git_commit": "7ec3669077ca10a9b6b3421bd908b5f0c44acdd2",
+    "code_archive_sha256": "960860407bd564f8b50fe654ca35fc13ba3830c7eb252cc4b1f1da5ea73ba2fb",
     "dataset_archive_sha256": "1a97eafff044ac04b5f222fa83a6a20d5f9946f053fee86fa4f1ce030c64c8a2",
-    "recipe_catalog_sha256": "3cb75f9d9e325e2d66d13578d1a77fea839b4e6b149dedb856a6f23e13c63970",
+    "recipe_catalog_sha256": "b087cf9d76aafc073b0174f1b1867ace6a5a60fb4dc810a4fd38cf1212072ecb",
     "environment_lock_sha256": {
-      "rgb": "238128af8bae1215f5822b29a1e01b217c1b16eaf09198ccc179eab76d763f60"
+      "pillow_allsimd": "d6d279fadead4b30426d96f4dfbfcdf77c4ae876b91d44915b20e20b1996cf8a",
+      "rgb": "ff9a5cbce33a00051b3c8ab7603a34631e6036eba935c633432e28f7a73d57e5"
     }
   },
   "hardware": {

@@ -7,11 +7,13 @@ from typing import TYPE_CHECKING, Any
 from PIL import Image
 
 from augbench.implementations.gpu_normalize import GpuBatchNormalize
-from augbench.implementations.pillow_impl import create_transform
+from augbench.implementations.pillow_impl import build_resize_transform, create_transform
 from augbench.implementations.recipe_stages import normalization_stats, transform_specs
 from augbench.recipes.runtime import UnsupportedRecipeError
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import torch
 
     from augbench.implementations.specs import TransformSpec
@@ -55,8 +57,14 @@ class _RandomCrop:
 
 
 class _RandomResizedCrop:
-    def __init__(self, *, size: tuple[int, int], scale: tuple[float, float], ratio: tuple[float, float]) -> None:
-        self._size = size
+    def __init__(
+        self,
+        *,
+        resize: Callable[[Image.Image], Image.Image],
+        scale: tuple[float, float],
+        ratio: tuple[float, float],
+    ) -> None:
+        self._resize = resize
         self._scale = scale
         self._ratio = ratio
 
@@ -73,8 +81,8 @@ class _RandomResizedCrop:
                 left = random.randint(0, width - crop_width)  # noqa: S311
                 top = random.randint(0, height - crop_height)  # noqa: S311
                 cropped = image.crop((left, top, left + crop_width, top + crop_height))
-                return cropped.resize(self._size, Image.Resampling.BILINEAR)
-        return image.resize(self._size, Image.Resampling.BILINEAR)
+                return self._resize(cropped)
+        return self._resize(image)
 
 
 class _PillowRecipe:
@@ -93,11 +101,11 @@ class _DeferredRecipe:
     def __init__(self, *, cpu_transform: Any, recipe: RecipeSpec) -> None:
         mean, std = normalization_stats(recipe)
         self.cpu_transform = cpu_transform
-        self.gpu_transform = GpuBatchNormalize(mean=mean, std=std, input_layout="BCHW")
+        self.gpu_transform = GpuBatchNormalize(mean=mean, std=std)
 
 
 def build_recipe(recipe: RecipeSpec, implementation_id: str) -> _DeferredRecipe:
-    if implementation_id != "pillow_cpu":
+    if implementation_id not in {"pillow_cpu", "pillow_allsimd_cpu"}:
         raise UnsupportedRecipeError(f"{implementation_id!r} is not a Pillow CPU implementation")
     transforms = tuple(_transform(spec, recipe.recipe_id) for spec in transform_specs(recipe))
     return _DeferredRecipe(cpu_transform=_PillowRecipe(transforms), recipe=recipe)
@@ -107,10 +115,13 @@ def _transform(spec: TransformSpec, recipe_id: str) -> Any:
     if spec.name == "RandomCrop224":
         return _RandomCrop(height=int(spec.params["height"]), width=int(spec.params["width"]))
     if spec.name == "RandomResizedCrop":
-        size = _pair(spec.params["size"], cast=int, parameter="size")
+        height, width = _pair(spec.params["size"], cast=int, parameter="size")
         scale = _pair(spec.params["scale"], cast=float, parameter="scale")
         ratio = _pair(spec.params["ratio"], cast=float, parameter="ratio")
-        return _RandomResizedCrop(size=size, scale=scale, ratio=ratio)
+        resize = build_resize_transform(
+            (width, height), spec.params["interpolation"], antialias=spec.params.get("antialias", True)
+        )
+        return _RandomResizedCrop(resize=resize, scale=scale, ratio=ratio)
     transform = create_transform(spec)
     if transform is None:
         raise UnsupportedRecipeError(f"Pillow cannot build {spec.name!r} for {recipe_id!r}")

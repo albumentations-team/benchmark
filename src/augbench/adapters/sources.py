@@ -22,7 +22,7 @@ def load_pillow_rgb(source: SourceRef) -> Any:
     from PIL import Image
 
     with Image.open(source.path) as image:
-        return image.convert("RGB").copy()
+        return image.convert("RGB")
 
 
 def load_torchvision_rgb(source: SourceRef) -> Any:

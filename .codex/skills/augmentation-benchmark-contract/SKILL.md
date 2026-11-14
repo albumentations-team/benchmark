@@ -29,9 +29,10 @@ matrix unless the user explicitly adds that research question.
 ## Non-negotiable execution rules
 
 - **Normalize never runs on CPU.** CPU paths may decode, form a collatable
-  shape, and apply their CPU recipe. The collated batch moves to CUDA first;
-  conversion to `float16` and Normalize then happen on GPU. DALI performs its
-  native GPU normalization in the graph.
+  shape, and apply their CPU recipe. The collated batch moves to CUDA first.
+  AX uses its batch `InputNormalizer` with FP32 arithmetic and FP16 output.
+  DALI performs native GPU normalization in the graph. Other paths use
+  GPU normalization in FP16.
 - The timed output is CUDA `float16` BCHW `B×3×224×224`, materialized and
   synchronized. `Resize` is exactly `Resize(224) → Normalize → ToTensor`.
 - Measure recipe execution, not `Compose` init or imports. Start the NVML
@@ -39,10 +40,10 @@ matrix unless the user explicitly adds that research question.
 - Keep batch, workers, prefetch policy, recipe parameters, dataset ordering,
   hardware, and timing boundary identical across rows. Pairwise summaries use
   the exact supported recipe intersection; coverage is a separate census.
-- The VM runs one implementation sequentially through all of its recipes and
+- The VM runs each implementation in its own process through all of its recipes and
   seeds. It writes every valid cell to GCS immediately. Resume validates those
-  immutable cells and runs only the missing ones. Do not split by duration,
-  recipe, seed, or arbitrary shard.
+  immutable cells and runs only the missing ones. Keep each implementation on
+  one VM within a run.
 - The current runner exposes only RGB. 9ch, video, and volume become runnable
   only after each has its own data format, config, recipes, GPU-only Normalize
   implementation, and one-batch L4 preflight per implementation-recipe pair:
@@ -62,4 +63,5 @@ matrix unless the user explicitly adds that research question.
    delete active VMs or GCS result artifacts.
 
 If a required measurement is absent, repair the execution path and generate the
-smallest missing part of the production matrix. Never substitute prose for data.
+smallest correction run that restores the comparison. Before regenerating the
+report, validate the replacement cells and preserve their original run and cell IDs.

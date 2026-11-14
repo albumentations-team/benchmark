@@ -78,8 +78,15 @@ class Throughput(_Record):
 class GpuMemory(_Record):
     measurement: Literal["nvml_process_memory"] = "nvml_process_memory"
     peak_mib: float = Field(gt=0)
+    baseline_mib: float | None = Field(default=None, ge=0)
     poll_interval_ms: int = Field(gt=0)
     valid_samples: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def validate_baseline(self) -> GpuMemory:
+        if self.baseline_mib is not None and self.baseline_mib > self.peak_mib:
+            raise ValueError("GPU memory baseline exceeds the peak")
+        return self
 
 
 class OutputObservation(_Record):

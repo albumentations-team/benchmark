@@ -11,7 +11,9 @@ if TYPE_CHECKING:
 
 
 _TERMINAL_STAGES = frozenset({"Normalize", "ToTensor"})
-_COLLATABLE_STAGES = frozenset({"Resize", "RandomCrop224", "RandomResizedCrop"})
+COLLATABLE_STAGES = frozenset(
+    {"CenterCrop", "Crop", "LetterBox", "Resize", "RandomCrop224", "RandomResizedCrop", "RandomSizedCrop"}
+)
 
 
 def transform_specs(recipe: RecipeSpec) -> tuple[TransformSpec, ...]:
@@ -27,7 +29,7 @@ def collatable_prefix(recipe: RecipeSpec) -> tuple[tuple[TransformSpec, ...], tu
     """Split a recipe at the first stage that gives DataLoader a common shape."""
     specs = transform_specs(recipe)
     for index, spec in enumerate(specs, start=1):
-        if spec.name in _COLLATABLE_STAGES:
+        if spec.name in COLLATABLE_STAGES:
             return specs[:index], specs[index:]
     raise ValueError(f"recipe {recipe.recipe_id!r} never forms a collatable image shape")
 

@@ -37,6 +37,14 @@ if TYPE_CHECKING:
     from augbench.recipes.models import RecipeCatalog, RecipeSpec
     from augbench.run_config import FamilyRunConfig
 
+    class _PillowAllSimdCore(Protocol):
+        simd_kernels: str
+
+    class _PillowAllSimdImage(Protocol):
+        core: _PillowAllSimdCore
+
+        def get_fast(self) -> bool: ...
+
 
 @dataclass(frozen=True)
 class _DaliExecution:
@@ -53,7 +61,7 @@ class _DaliAdapter(Protocol):
 
 
 class RGBCellExecutor:
-    """Execute cells sequentially inside the one benchmark VM process."""
+    """Execute cells sequentially inside a benchmark worker process."""
 
     def __init__(
         self,
@@ -304,12 +312,13 @@ def _output_observation(validation: dict[str, object]) -> OutputObservation:
 def _runtime_metadata(adapter: AugmentationAdapter) -> dict[str, str]:
     import importlib.metadata
 
-    package = adapter.implementation_id.split("_")[0]
+    package = adapter.implementation_id.rsplit("_", 1)[0]
     package_names = {
         "albumentationsx": "albumentationsx",
         "dali": "nvidia-dali-cuda120",
         "kornia": "kornia",
         "pillow": "pillow",
+        "pillow_allsimd": "pillow-allsimd",
         "torchvision": "torchvision",
     }
     try:
@@ -322,7 +331,18 @@ def _runtime_metadata(adapter: AugmentationAdapter) -> dict[str, str]:
         device = torch.cuda.get_device_name(0)
     except (ImportError, RuntimeError):
         device = "unknown"
-    return {"library_version": version, "cuda_device": device}
+    metadata = {"library_version": version, "cuda_device": device, "worker_scope": "implementation"}
+    if package == "pillow_allsimd":
+        fast, kernels = pillow_allsimd_runtime()
+        metadata.update(simd_kernels=kernels, pillow_mode="fast" if fast else "exact")
+    return metadata
+
+
+def pillow_allsimd_runtime() -> tuple[bool, str]:
+    from PIL import Image
+
+    module = cast("_PillowAllSimdImage", Image)
+    return module.get_fast(), module.core.simd_kernels
 
 
 def _cuda_synchronize() -> None:

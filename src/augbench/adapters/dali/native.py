@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from itertools import permutations
 from typing import TYPE_CHECKING, Any, Protocol
 
+from augbench.implementations.geometry import centered_inverse_affine, emboss_kernel
+from augbench.implementations.shear import x_shear_matrix
 from augbench.recipes.runtime import UnsupportedRecipeError
 
 if TYPE_CHECKING:
@@ -131,17 +134,257 @@ def _apply_normalize(data: Any, params: dict[str, Any], _output_height: int, _ou
 
 
 def _apply_random_crop224(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
-    from nvidia.dali import fn, types
+    from nvidia.dali import fn, math, types
 
     height = _integer(params, "height")
     width = _integer(params, "width")
-    resized = fn.resize(data, resize_shorter=max(height, width), interp_type=types.INTERP_LINEAR)
-    return fn.crop(
-        resized,
-        crop=(height, width),
-        crop_pos_x=fn.random.uniform(range=(0.0, 1.0)),
-        crop_pos_y=fn.random.uniform(range=(0.0, 1.0)),
+    extent = types.Constant([height, width], dtype=types.INT32)
+    delta = data.shape(dtype=types.INT32)[:2] - extent
+    choices = math.max(delta, 0) + 1
+    offset = fn.cast(fn.random.uniform(range=(0.0, 1.0), shape=[2]) * choices, dtype=types.INT32)
+    start = offset - math.max(-delta, 0) // 2
+    return fn.slice(
+        data, start, extent, axes=(0, 1), normalized_anchor=False, normalized_shape=False, out_of_bounds_policy="pad"
     )
+
+
+def _apply_center_crop(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn, math, types
+
+    extent = types.Constant([_integer(params, "height"), _integer(params, "width")], dtype=types.INT32)
+    delta = data.shape(dtype=types.INT32)[:2] - extent
+    start = math.max(delta, 0) // 2 - math.max(-delta, 0) // 2
+    return fn.slice(
+        data, start, extent, axes=(0, 1), normalized_anchor=False, normalized_shape=False, out_of_bounds_policy="pad"
+    )
+
+
+def _apply_crop(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.slice(
+        data,
+        start=(_integer(params, "top"), _integer(params, "left")),
+        shape=(_integer(params, "height"), _integer(params, "width")),
+        axes=(0, 1),
+        out_of_bounds_policy="pad",
+    )
+
+
+def _apply_crop_and_pad(data: Any, params: dict[str, Any], height: int, width: int) -> Any:
+    from nvidia.dali import fn
+
+    top, _, _, left = _integer_list(params, "sides")
+    return fn.slice(data, start=(-top, -left), shape=(height, width), axes=(0, 1), out_of_bounds_policy="pad")
+
+
+def _apply_letter_box(data: Any, params: dict[str, Any], height: int, width: int) -> Any:
+    from nvidia.dali import fn, types
+
+    fitted = fn.resize(data, size=(height, width), mode="not_larger", interp_type=types.INTERP_LINEAR, antialias=False)
+    return _apply_center_crop(fitted, params, height, width)
+
+
+def _apply_pad_if_needed(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn, math, types
+
+    minimum = types.Constant([_integer(params, "min_height"), _integer(params, "min_width")], dtype=types.INT32)
+    extent = math.max(data.shape(dtype=types.INT32)[:2], minimum)
+    return fn.slice(data, (0, 0), extent, axes=(0, 1), normalized_shape=False, out_of_bounds_policy="pad")
+
+
+def _apply_longest_max_size(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.resize(
+        data,
+        resize_longer=_integer(params, "max_size"),
+        interp_type=_interpolation(params["interpolation"]),
+        antialias=False,
+    )
+
+
+def _apply_smallest_max_size(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.resize(
+        data,
+        resize_shorter=_integer(params, "max_size"),
+        interp_type=_interpolation(params["interpolation"]),
+        antialias=False,
+    )
+
+
+def _apply_random_scale(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn, math
+
+    shape = data.shape()[:2]
+    scale = _uniform(params["scale"])
+    return fn.resize(
+        data, size=math.floor(shape * scale), interp_type=_interpolation(params["interpolation"]), antialias=False
+    )
+
+
+def _apply_channel_swap(data: Any, _params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn, types
+
+    return fn.color_space_conversion(data, image_type=types.RGB, output_type=types.BGR)
+
+
+def _apply_grayscale(data: Any, _params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn, types
+
+    gray = fn.color_space_conversion(data, image_type=types.RGB, output_type=types.GRAY)
+    return fn.color_space_conversion(gray, image_type=types.GRAY, output_type=types.RGB)
+
+
+def _apply_channel_shuffle(data: Any, _params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn, types
+
+    choices = list(range(6))
+    order = fn.random.uniform(values=choices, shape=[1], dtype=types.INT32)
+    channels = []
+    for values in zip(*permutations(range(3)), strict=True):
+        start = fn.lookup_table(order, keys=choices, values=list(values), dtype=types.INT32)
+        channels.append(fn.slice(data, start, (1,), axes=(2,), normalized_anchor=False, normalized_shape=False))
+    return fn.cat(*channels, axis=2)
+
+
+def _apply_channel_dropout(data: Any, _params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn
+
+    channel = fn.random.uniform(values=[0.0, 1.0, 2.0], shape=[1])
+    return fn.erase(data, axis_names="C", anchor=channel, shape=[1.0], fill_value=0)
+
+
+def _apply_rgb_shift(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn, types
+
+    limit = _number(params, "pixel_shift")
+    channels = [
+        fn.slice(data, (index,), (1,), axes=(2,), normalized_anchor=False, normalized_shape=False)
+        + fn.random.uniform(range=(-limit, limit)).gpu()
+        for index in range(3)
+    ]
+    return fn.cast(fn.cat(*channels, axis=2), dtype=types.UINT8)
+
+
+def _byte_lookup(data: Any, values: list[int]) -> Any:
+    from nvidia.dali import fn, types
+
+    return fn.lookup_table(data, keys=list(range(256)), values=values, dtype=types.UINT8)
+
+
+def _apply_invert(data: Any, _params: dict[str, Any], _height: int, _width: int) -> Any:
+    return _byte_lookup(data, list(range(255, -1, -1)))
+
+
+def _apply_posterize(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    mask = (255 << (8 - _integer(params, "bits"))) & 255
+    return _byte_lookup(data, [value & mask for value in range(256)])
+
+
+def _apply_solarize(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    threshold = 255 * _number(params, "threshold")
+    return _byte_lookup(data, [value if value < threshold else 255 - value for value in range(256)])
+
+
+def _apply_random_gamma(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    gamma = _number(params, "gamma") / 100
+    return _byte_lookup(data, [int(255 * (value / 255) ** gamma) for value in range(256)])
+
+
+def _apply_median_blur(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn
+
+    size = _integer(params, "blur_limit")
+    return fn.experimental.median_blur(data, window_size=(size, size))
+
+
+def _apply_blur(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn, types
+
+    size = _integer(params, "kernel_size")
+    kernel = types.Constant([1 / (size * size)] * (size * size), shape=[size, size], dtype=types.FLOAT)
+    return fn.filter(data, kernel, border="reflect_101")
+
+
+def _apply_transpose(data: Any, _params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.transpose(data, perm=(1, 0, 2), transpose_layout=False)
+
+
+def _apply_random_rotate90(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn, types
+
+    start, end = _integer_list(params, "times")
+    angle = fn.random.uniform(values=[90 * turns for turns in range(start, end + 1)])
+    return fn.rotate(data, angle=angle, keep_size=True, interp_type=types.INTERP_NN)
+
+
+def _apply_random_sized_crop(data: Any, params: dict[str, Any], height: int, width: int) -> Any:
+    from nvidia.dali import fn, types
+
+    crop = _integer(params, "crop_size")
+    cropped = _apply_random_crop224(data, {"height": crop, "width": crop}, height, width)
+    return fn.resize(cropped, size=(height, width), interp_type=types.INTERP_LINEAR, antialias=False)
+
+
+def _apply_coarse_dropout(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn, math
+
+    size = _integer(params, "hole_size")
+    choices = _integer(params, "input_size") - size + 1
+    anchor = math.floor(fn.random.uniform(range=(0.0, 1.0), shape=[2]) * choices)
+    return fn.erase(data, axis_names="HW", anchor=anchor, shape=(size, size), fill_value=0)
+
+
+def _apply_emboss(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn, types
+
+    kernel = emboss_kernel(_number(params, "alpha"), _number(params, "strength"))
+    return fn.filter(data, types.Constant(list(kernel), shape=[3, 3], dtype=types.FLOAT), border="reflect_101")
+
+
+def _apply_pixel_spread(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn
+
+    return fn.jitter(data, nDegree=2 * _integer(params, "radius"), fill_value=0)
+
+
+def _apply_shift_scale_rotate(data: Any, params: dict[str, Any], height: int, width: int) -> Any:
+    from nvidia.dali import fn, types
+
+    x, y = _number_list(params, "shift")
+    matrix = centered_inverse_affine(
+        (width / 2, height / 2), _number(params, "angle"), _number(params, "scale"), (x, y)
+    )
+    return fn.warp_affine(
+        data, matrix=list(matrix), size=(height, width), inverse_map=True, fill_value=0, interp_type=types.INTERP_LINEAR
+    )
+
+
+def _apply_colorize(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn, types
+
+    gray = fn.color_space_conversion(data, image_type=types.RGB, output_type=types.GRAY)
+    channels = [
+        _byte_lookup(gray, [int(black + (white - black) * value / 255) for value in range(256)])
+        for black, white in zip(_integer_list(params, "black"), _integer_list(params, "white"), strict=True)
+    ]
+    return fn.cat(*channels, axis=2)
+
+
+def _apply_morphological(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    from nvidia.dali import fn, math
+
+    size = _integer(params, "size")
+    if params["operation"] == "dilation":
+        dilate = fn.experimental.dilate
+        return math.max(dilate(data, mask_size=(1, size)), dilate(data, mask_size=(size, 1)))
+    erode = fn.experimental.erode
+    return math.min(erode(data, mask_size=(1, size)), erode(data, mask_size=(size, 1)))
 
 
 def _apply_random_resized_crop(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
@@ -153,6 +396,7 @@ def _apply_random_resized_crop(data: Any, params: dict[str, Any], _output_height
         random_area=tuple(_number_list(params, "scale")),
         random_aspect_ratio=tuple(_number_list(params, "ratio")),
         interp_type=_interpolation(params.get("interpolation")),
+        antialias=params.get("antialias", True),
     )
 
 
@@ -165,6 +409,7 @@ def _apply_resize(data: Any, params: dict[str, Any], _output_height: int, _outpu
         resize_x=target,
         resize_y=target,
         interp_type=_interpolation(params.get("interpolation")),
+        antialias=params.get("antialias", True),
     )
 
 
@@ -177,7 +422,7 @@ def _apply_horizontal_flip(data: Any, _params: dict[str, Any], _output_height: i
 def _apply_vertical_flip(data: Any, _params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
     from nvidia.dali import fn
 
-    return fn.flip(data, vertical=1)
+    return fn.flip(data, horizontal=0, vertical=1)
 
 
 def _apply_pad(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
@@ -221,13 +466,15 @@ def _apply_affine(data: Any, params: dict[str, Any], output_height: int, output_
 
 
 def _apply_shear(data: Any, params: dict[str, Any], output_height: int, output_width: int) -> Any:
-    from nvidia.dali import fn
+    from nvidia.dali import fn, types
 
-    shear = _number(params, "shear") / 57.29577951308232
     return fn.warp_affine(
         data,
-        matrix=[1.0, shear, 0.0, 0.0, 1.0, 0.0],
+        matrix=list(x_shear_matrix(-_number(params, "shear"), output_height / 2)),
         size=(output_height, output_width),
+        inverse_map=True,
+        fill_value=0,
+        interp_type=types.INTERP_LINEAR,
     )
 
 
@@ -340,10 +587,27 @@ _STAGE_HANDLERS = {
     "ToTensor": _apply_to_tensor,
     "Normalize": _apply_normalize,
     "RandomCrop224": _apply_random_crop224,
+    "CenterCrop": _apply_center_crop,
+    "Crop": _apply_crop,
+    "CropAndPad": _apply_crop_and_pad,
+    "LetterBox": _apply_letter_box,
+    "PadIfNeeded": _apply_pad_if_needed,
+    "LongestMaxSize": _apply_longest_max_size,
+    "SmallestMaxSize": _apply_smallest_max_size,
+    "RandomScale": _apply_random_scale,
+    "RandomSizedCrop": _apply_random_sized_crop,
+    "CoarseDropout": _apply_coarse_dropout,
+    "Emboss": _apply_emboss,
+    "PixelSpread": _apply_pixel_spread,
+    "ShiftScaleRotate": _apply_shift_scale_rotate,
+    "Colorize": _apply_colorize,
+    "Morphological": _apply_morphological,
     "RandomResizedCrop": _apply_random_resized_crop,
     "Resize": _apply_resize,
     "HorizontalFlip": _apply_horizontal_flip,
     "VerticalFlip": _apply_vertical_flip,
+    "Transpose": _apply_transpose,
+    "RandomRotate90": _apply_random_rotate90,
     "Pad": _apply_pad,
     "Rotate": _apply_rotate,
     "Affine": _apply_affine,
@@ -357,6 +621,17 @@ _STAGE_HANDLERS = {
     "CLAHE": _apply_clahe,
     "Equalize": _apply_equalize,
     "GaussianBlur": _apply_gaussian_blur,
+    "MedianBlur": _apply_median_blur,
+    "Blur": _apply_blur,
+    "ChannelSwap": _apply_channel_swap,
+    "ChannelShuffle": _apply_channel_shuffle,
+    "ChannelDropout": _apply_channel_dropout,
+    "RGBShift": _apply_rgb_shift,
+    "Grayscale": _apply_grayscale,
+    "Invert": _apply_invert,
+    "Posterize": _apply_posterize,
+    "Solarize": _apply_solarize,
+    "RandomGamma": _apply_random_gamma,
     "GaussianNoise": _apply_gaussian_noise,
     "SaltAndPepper": _apply_salt_and_pepper,
     "Erasing": _apply_erasing,

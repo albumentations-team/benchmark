@@ -3,18 +3,25 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import albumentations
+from albumentations.batch import InputNormalizer
 
 from augbench.implementations.albumentationsx_impl import create_transform
-from augbench.implementations.gpu_normalize import GpuBatchNormalize
 from augbench.implementations.recipe_stages import normalization_stats, transform_specs
 from augbench.recipes.runtime import UnsupportedRecipeError
 
 if TYPE_CHECKING:
+    from torch import Tensor
+
     from augbench.recipes.models import RecipeSpec
 
 
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
     return transform(image=image)["image"]
+
+
+class _RgbInputNormalizer(InputNormalizer):
+    def forward(self, batch: Tensor) -> Tensor:
+        return super().forward(batch.permute(0, 3, 1, 2))
 
 
 class _DeferredRecipe:
@@ -23,7 +30,9 @@ class _DeferredRecipe:
     def __init__(self, *, cpu_transform: Any, recipe: RecipeSpec) -> None:
         mean, std = normalization_stats(recipe)
         self.cpu_transform = cpu_transform
-        self.gpu_transform = GpuBatchNormalize(mean=mean, std=std, input_layout="BHWC")
+        self.gpu_transform = _RgbInputNormalizer(
+            "fixed", output_precision="fp16", mean=mean, standard_deviation=std, input_scale=255.0
+        )
 
 
 def build_recipe(recipe: RecipeSpec, implementation_id: str) -> _DeferredRecipe:

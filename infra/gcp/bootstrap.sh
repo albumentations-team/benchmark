@@ -75,7 +75,7 @@ stage_environment() {
   fi
   repair_python_links "$environment_root" "$python_version"
   uv pip sync --python "$environment_root/bin/python" --require-hashes --reinstall \
-    --link-mode copy --torch-backend cu130 "$lock_path"
+    --link-mode copy "$lock_path"
   if [[ "$cache_missing" == true ]]; then
     tar --exclude='bin/python*' -czf "$cache_archive" -C "$environment_root" .
     gcloud storage cp --quiet --if-generation-match=0 "$cache_archive" "$cache_uri" || true
@@ -128,9 +128,17 @@ stage_environment \
   "$(request_field environment_lock_sha256)" \
   "$(request_field environment_python_version)"
 
+allsimd_lock="$CODE_ROOT/environments/rgb/pillow-allsimd.lock.txt"
+allsimd_site="$STATE_ROOT/pillow-allsimd"
+printf '%s  %s\n' "$(request_field run.inputs.environment_lock_sha256.pillow_allsimd)" "$allsimd_lock" \
+  | sha256sum --check --status
+uv pip install --python "$STATE_ROOT/environment/bin/python" --target "$allsimd_site" \
+  --require-hashes --no-deps --only-binary :all: --reinstall --requirements "$allsimd_lock"
+unset PILLOW_ALLSIMD_ISA
 cd "$CODE_ROOT"
 PYTHONPATH="$CODE_ROOT/src" "$STATE_ROOT/environment/bin/python" -m augbench.guest_worker \
   --request "$REQUEST_PATH" \
   --family-config "$CODE_ROOT/configs/families/rgb.yaml" \
   --dataset-archive "$STATE_ROOT/downloads/dataset.tar" \
-  --dataset-cache "$STATE_ROOT/datasets"
+  --dataset-cache "$STATE_ROOT/datasets" \
+  --pillow-allsimd-site "$allsimd_site"

@@ -35,13 +35,16 @@ def build_frozen_rgb_run(
     recipe_sha256 = _sha256_file(recipes_path)
     lock_sha256 = _sha256_file(lock_path)
     run = build_run_record(
-        family_config=config.model_dump(mode="json"),
+        family_config=config.model_dump(mode="json", exclude={"measurements"} if config.measurements is None else None),
         inputs=RunInputs(
             git_commit=git_commit,
             code_archive_sha256=code_archive_sha256,
             dataset_archive_sha256=config.dataset.archive_sha256,
             recipe_catalog_sha256=recipe_sha256,
-            environment_lock_sha256={"rgb": lock_sha256},
+            environment_lock_sha256={
+                "rgb": lock_sha256,
+                "pillow_allsimd": _sha256_file(lock_path.with_name("pillow-allsimd.lock.txt")),
+            },
         ),
         hardware={
             "machine_type": cloud.machine_type,

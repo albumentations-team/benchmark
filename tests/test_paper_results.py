@@ -1,13 +1,15 @@
 import csv
 import hashlib
+from argparse import Namespace
 from pathlib import Path
 
 import pytest
 from PIL import Image
 
+from augbench.matrix import build_matrix
 from augbench.recipes.load import load_recipe_catalog
 from augbench.result_store import encode_result
-from augbench.run_config import load_family_config
+from augbench.run_config import FamilyRunConfig, load_family_config
 from augbench.run_records import (
     CellKey,
     GpuMemory,
@@ -40,7 +42,8 @@ def selected_run() -> RunRecord:
 
 @pytest.fixture
 def paper_data() -> paper._PaperData:
-    recipes = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml").recipes[:3]
+    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
+    recipes = (*catalog.recipes[:2], next(recipe for recipe in catalog.recipes if recipe.augmentation_id == "Shear"))
     observations = {
         paper.AX: ((100, 100, 100), (200, 200, 200), (1000, 1000, 1000)),
         "kornia_cpu": ((90, 100, 110), (95, 100, 105), (300, 300, 300)),
@@ -52,7 +55,7 @@ def paper_data() -> paper._PaperData:
         "kornia_gpu": (1200, 100, 100),
     }
     records = []
-    for implementation, _ in paper.IMPLEMENTATIONS:
+    for implementation, _ in (*paper.IMPLEMENTATIONS, paper.PILLOW_ALLSIMD):
         for index, recipe in enumerate(recipes):
             speeds = observations.get(implementation, ((100, 100, 100),) * 3)[index]
             memory = memories.get(implementation, (100, 100, 100))[index]
@@ -123,7 +126,7 @@ def test_csv_retains_seed_observations_and_marks_only_the_selected_path(
     second = next(row for row in rows if row["implementation"] == "kornia_gpu" and row["recipe_key"] == "R02")
     selected = next(row for row in rows if row["implementation"] == "kornia_cpu" and row["recipe_key"] == "R02")
 
-    assert len(rows) == 21
+    assert len(rows) == 24
     assert second["selected_pairwise_path"] == "False"
     assert selected["selected_pairwise_path"] == "True"
     assert [float(second[f"throughput_images_s_{seed}"]) for seed in (137, 138, 139)] == pytest.approx([1, 99, 99999])
@@ -149,12 +152,128 @@ def test_readme_updates_results_and_selection_without_replacing_manual_text(
 
     assert "| Pillow CPU | test | 0.53\N{MULTIPLICATION SIGN}" in before
     assert "| Pillow CPU | test | 1.07\N{MULTIPLICATION SIGN}" in after
-    assert selected_run.run_id[:12] in after
-    assert "differs from the published run" in after
+    assert "[per-seed results and manifests](docs/generated/results.json)" in after
     assert "![AX vs Kornia on 3 shared recipes](docs/generated/pairwise-kornia.png)" in after
     assert after.startswith("Cite this work.\n")
     assert after.endswith("\nInstructions.")
     assert readme.replace_results(after, readme.readme_results(changed, selected_run)) == after
+
+
+def test_ax_rerun_preserves_cell_sources_and_excludes_the_previous_shear_geometry(
+    paper_data: paper._PaperData,
+    selected_run: RunRecord,
+) -> None:
+    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
+    first, second, shear = paper_data.recipes
+    crop, warp, *tail = shear.stages
+    random_warp = warp.model_copy(update={"stochastic": True, "randomness_scope": "per-image"})
+    old_shear = shear.model_copy(update={"stages": (crop, random_warp, *tail)})
+    original = catalog.model_copy(update={"recipes": (first, second, old_shear)})
+    revised = catalog.model_copy(update={"recipes": paper_data.recipes})
+    records = [record for group in paper_data.groups.values() for record in group]
+    ax_records = [
+        record.model_copy(
+            update={
+                "run_id": selected_run.run_id,
+                "cell": record.cell.model_copy(update={"run_id": selected_run.run_id}),
+            },
+        )
+        for record in records
+        if record.cell.implementation == paper.AX
+    ]
+
+    selected = paper._select_ax_rerun(original, revised, records, ax_records)
+    data = paper._prepare(selected, revised.recipes)
+
+    assert data.groups[(paper.AX, shear.recipe_id)] == [
+        record for record in ax_records if record.cell.recipe_id == shear.recipe_id
+    ]
+    assert (
+        data.groups[("pillow_allsimd_cpu", first.recipe_id)]
+        == paper_data.groups[("pillow_allsimd_cpu", first.recipe_id)]
+    )
+    assert {implementation for implementation, recipe in data.groups if recipe == shear.recipe_id} == {paper.AX}
+    assert shear.recipe_id not in data.common
+
+
+def test_report_requires_replacement_for_the_incorrect_flip(
+    paper_data: paper._PaperData, selected_run: RunRecord
+) -> None:
+    implementation, recipe = paper.DALI_VERTICAL_FLIP
+    old = [
+        record.model_copy(update={"cell": record.cell.model_copy(update={"recipe_id": recipe})})
+        for record in paper_data.groups[(implementation, paper_data.recipes[0].recipe_id)]
+    ]
+    corrected = [
+        record.model_copy(
+            update={
+                "run_id": selected_run.run_id,
+                "cell": record.cell.model_copy(update={"run_id": selected_run.run_id}),
+            },
+        )
+        for record in old
+    ]
+    expected = [record.cell for record in old]
+
+    with pytest.raises(ValueError, match="must fill exactly"):
+        paper._restore_corrected_cells(old, corrected[:-1], expected)
+    assert paper._restore_corrected_cells(old, corrected, expected) == corrected
+
+
+def test_full_report_rejects_measurement_selection(tmp_path: Path, selected_run: RunRecord) -> None:
+    config = {**selected_run.family_config, "measurements": {"Resize224+Normalize+ToTensor": [paper.AX]}}
+    run = build_run_record(family_config=config, inputs=selected_run.inputs, hardware=selected_run.hardware)
+    manifest = tmp_path / "run.json"
+    manifest.write_text(run.model_dump_json())
+
+    with pytest.raises(ValueError, match="complete RGB run"):
+        paper.load_report(Namespace(run=manifest), tmp_path)
+
+
+def test_extension_replaces_changed_pairs_and_preserves_other_source_cells(
+    paper_data: paper._PaperData, selected_run: RunRecord
+) -> None:
+    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
+    resize, crop, shear = paper_data.recipes
+    dropout = next(recipe for recipe in catalog.recipes if recipe.augmentation_id == "ChannelDropout")
+    previous_resize = resize.model_copy(update={"supported_implementations": (paper.AX, "kornia_gpu")})
+    previous = catalog.model_copy(update={"recipes": (previous_resize, crop, shear, dropout)})
+    fixed_crop = crop.stages[0].model_copy(update={"parameters": {**crop.stages[0].parameters, "fill": 0}})
+    expanded_crop = crop.model_copy(update={"stages": (fixed_crop, *crop.stages[1:])})
+    expanded = catalog.model_copy(update={"recipes": (resize, expanded_crop, shear, dropout)})
+    base = paper_data.groups[(paper.AX, resize.recipe_id)][0]
+    config = FamilyRunConfig.model_validate(selected_run.family_config)
+    checked = build_matrix(run_id=base.run_id, config=config, recipes=previous)
+    expected = build_matrix(run_id=selected_run.run_id, config=config, recipes=expanded)
+    records = [base.model_copy(update={"cell": cell}) for cell in checked]
+    retained = [
+        r
+        for r in records
+        if r.cell.recipe_id != crop.recipe_id
+        and (r.cell.implementation, r.cell.recipe_id) != paper.AX_CHANNEL_DROPOUT
+        and not (r.cell.implementation == "dali_gpu" and r.cell.recipe_id in (shear.recipe_id, dropout.recipe_id))
+    ]
+    keys = {(r.cell.implementation, r.cell.recipe_id, r.cell.seed) for r in retained}
+    added = [
+        base.model_copy(update={"run_id": cell.run_id, "cell": cell})
+        for cell in expected
+        if (cell.implementation, cell.recipe_id, cell.seed) not in keys
+    ]
+
+    combined = paper._extend_matrix(records, added, previous, expanded, config)
+    assert {r.cell_id for r in combined} == {r.cell_id for r in (*retained, *added)}
+    for invalid in (added[:-1], [*added[:-1], added[0]]):
+        with pytest.raises(ValueError, match="must fill exactly"):
+            paper._extend_matrix(records, invalid, previous, expanded, config)
+
+
+def test_published_export_flag_excludes_supplemental_results(
+    paper_data: paper._PaperData, selected_run: RunRecord
+) -> None:
+    published = selected_run.model_copy(update={"run_id": paper.RUN_ID})
+
+    assert readme.export_results(paper_data, published)["is_published_run"] is True
+    assert readme.export_results(paper_data, published, correction_runs=(selected_run,))["is_published_run"] is False
 
 
 def test_selected_run_rejects_missing_foreign_or_tampered_results(
@@ -214,7 +333,7 @@ def test_machine_export_uses_selected_run_and_the_readme_aggregates(
 
     assert result["run"]["run_id"] == selected_run.run_id
     assert result["is_published_run"] is False
-    assert result["measurement_count"] == 63
+    assert result["measurement_count"] == 72
     assert result["gpu_memory_poll_ms"] == 50
     second = result["recipes"][1]["results"]["kornia_gpu"]
     assert second["throughput"] == pytest.approx({"median": 99, "min": 1, "max": 99999})
@@ -223,8 +342,11 @@ def test_machine_export_uses_selected_run_and_the_readme_aggregates(
     assert second["observations"][0]["cell_id"] == data.groups[("kornia_gpu", data.recipes[1].recipe_id)][0].cell_id
     common = result["summaries"][0]
     means = {path["id"]: path["mean_relative_throughput"] for path in common["paths"]}
-    assert means == paper._mean_ratios(data, [implementation for implementation, _ in paper.IMPLEMENTATIONS])
+    assert means == paper._mean_ratios(data, [implementation for implementation, _ in data.implementations])
     assert len(common["recipe_ids"]) == 3
+    pillow = next(summary for summary in result["summaries"] if summary["id"] == "pillow")
+    assert [path["id"] for path in pillow["paths"]] == [paper.AX, "pillow_cpu", "pillow_allsimd_cpu"]
+    assert {library["label"] for library in result["libraries"]} >= {"Pillow CPU", "Pillow-AllSIMD CPU (fast)"}
 
 
 def test_figure_export_records_exact_generated_image_bytes_and_dimensions(tmp_path: Path) -> None:
