@@ -50,6 +50,9 @@ uv run python -m paper.generate_readme "${run_args[@]}"
 The second command also needs `pdflatex` with TikZ and `preview`, and
 Poppler's `pdftocairo`.
 
+The [interim November report](https://github.com/albumentations-team/benchmark/blob/863c9a7eb4bd13eedf3f3abbe2b5ff735e76f31c/paper/README.md#regenerate-the-results)
+has its own commands and source manifests at that revision.
+
 The generators validate each cell against its source manifest and require
 complete coverage of the report matrix. Each observation retains its source
 run and cell IDs. Throughput ratios use shared recipe IDs and seed medians.

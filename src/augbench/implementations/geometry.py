@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from math import cos, radians, sin
+from math import cos, radians, sin, tan
 
 
 def aspect_size(height: int, width: int, size: int, *, cover: bool = False) -> tuple[int, int]:
@@ -29,3 +29,9 @@ def centered_inverse_affine(
     x, y = cx + shift[0], cy + shift[1]
     a, b = cos(radians(angle)) / scale, sin(radians(angle)) / scale
     return a, -b, cx - a * x + b * y, b, a, cy - b * x - a * y
+
+
+def x_shear_matrix(degrees: float, center_y: float) -> tuple[float, float, float, float, float, float]:
+    """Map source pixels to destination pixels, fixing the horizontal center line."""
+    slope = tan(radians(degrees))
+    return (1.0, slope, -slope * center_y, 0.0, 1.0, 0.0)

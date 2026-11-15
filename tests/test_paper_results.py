@@ -4,12 +4,12 @@ from argparse import Namespace
 from pathlib import Path
 
 import pytest
+import yaml
 from PIL import Image
 
-from augbench.matrix import build_matrix
 from augbench.recipes.load import load_recipe_catalog
 from augbench.result_store import encode_result
-from augbench.run_config import FamilyRunConfig, load_family_config
+from augbench.run_config import load_family_config
 from augbench.run_records import (
     CellKey,
     GpuMemory,
@@ -159,65 +159,64 @@ def test_readme_updates_results_and_selection_without_replacing_manual_text(
     assert readme.replace_results(after, readme.readme_results(changed, selected_run)) == after
 
 
-def test_ax_rerun_preserves_cell_sources_and_excludes_the_previous_shear_geometry(
-    paper_data: paper._PaperData,
-    selected_run: RunRecord,
+def test_ax_rerun_replaces_only_ax_observations(
+    tmp_path: Path, paper_data: paper._PaperData, selected_run: RunRecord
 ) -> None:
     catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
-    first, second, shear = paper_data.recipes
-    crop, warp, *tail = shear.stages
-    random_warp = warp.model_copy(update={"stochastic": True, "randomness_scope": "per-image"})
-    old_shear = shear.model_copy(update={"stages": (crop, random_warp, *tail)})
-    original = catalog.model_copy(update={"recipes": (first, second, old_shear)})
-    revised = catalog.model_copy(update={"recipes": paper_data.recipes})
-    records = [record for group in paper_data.groups.values() for record in group]
-    ax_records = [
-        record.model_copy(
-            update={
-                "run_id": selected_run.run_id,
-                "cell": record.cell.model_copy(update={"run_id": selected_run.run_id}),
-            },
-        )
-        for record in records
-        if record.cell.implementation == paper.AX
-    ]
-
-    selected = paper._select_ax_rerun(original, revised, records, ax_records)
-    data = paper._prepare(selected, revised.recipes)
-
-    assert data.groups[(paper.AX, shear.recipe_id)] == [
-        record for record in ax_records if record.cell.recipe_id == shear.recipe_id
-    ]
-    assert (
-        data.groups[("pillow_allsimd_cpu", first.recipe_id)]
-        == paper_data.groups[("pillow_allsimd_cpu", first.recipe_id)]
+    catalog_path = tmp_path / "rgb.yaml"
+    catalog_path.write_text(
+        yaml.safe_dump(catalog.model_copy(update={"recipes": paper_data.recipes}).model_dump(mode="json"))
     )
-    assert {implementation for implementation, recipe in data.groups if recipe == shear.recipe_id} == {paper.AX}
-    assert shear.recipe_id not in data.common
+    inputs = selected_run.inputs.model_copy(
+        update={"recipe_catalog_sha256": hashlib.sha256(catalog_path.read_bytes()).hexdigest()}
+    )
+    run = build_run_record(family_config=selected_run.family_config, inputs=inputs, hardware=selected_run.hardware)
+    ax_run = build_run_record(
+        family_config={**run.family_config, "implementations": [paper.AX]},
+        inputs=inputs,
+        hardware=run.hardware,
+    )
+    run_manifest = tmp_path / "run.json"
+    run_manifest.write_text(run.model_dump_json())
+    ax_manifest = tmp_path / "ax.json"
+    ax_manifest.write_text(ax_run.model_dump_json())
+    full_cells = tmp_path / "full"
+    full_cells.mkdir()
+    ax_cells = tmp_path / "ax"
+    ax_cells.mkdir()
+    for (implementation, _), group in paper_data.groups.items():
+        for record in group:
+            _write_observation(full_cells, run, record)
+            if implementation == paper.AX:
+                _write_observation(ax_cells, ax_run, record)
+    args = Namespace(
+        run=run_manifest, cells=full_cells, recipes=catalog_path, ax_run=(ax_manifest, ax_cells, catalog_path)
+    )
+
+    report, _, replacement = paper.load_report(args, tmp_path)
+
+    assert replacement == ax_run
+    assert {(group[0].run_id, implementation) for (implementation, _), group in report.groups.items()} == {
+        (ax_run.run_id if implementation == paper.AX else run.run_id, implementation)
+        for implementation, _ in paper_data.implementations
+    }
+    assert {
+        record.cell_id for group in report.groups.values() for record in group if record.run_id == ax_run.run_id
+    } == {path.stem for path in ax_cells.glob("*.json")}
+    mismatched = build_run_record(
+        family_config=ax_run.family_config,
+        inputs=inputs.model_copy(update={"environment_lock_sha256": {"rgb": "e" * 64}}),
+        hardware=ax_run.hardware,
+    )
+    ax_manifest.write_text(mismatched.model_dump_json())
+    with pytest.raises(ValueError, match="same workload, hardware, and package locks"):
+        paper.load_report(args, tmp_path)
 
 
-def test_report_requires_replacement_for_the_incorrect_flip(
-    paper_data: paper._PaperData, selected_run: RunRecord
-) -> None:
-    implementation, recipe = paper.DALI_VERTICAL_FLIP
-    old = [
-        record.model_copy(update={"cell": record.cell.model_copy(update={"recipe_id": recipe})})
-        for record in paper_data.groups[(implementation, paper_data.recipes[0].recipe_id)]
-    ]
-    corrected = [
-        record.model_copy(
-            update={
-                "run_id": selected_run.run_id,
-                "cell": record.cell.model_copy(update={"run_id": selected_run.run_id}),
-            },
-        )
-        for record in old
-    ]
-    expected = [record.cell for record in old]
-
-    with pytest.raises(ValueError, match="must fill exactly"):
-        paper._restore_corrected_cells(old, corrected[:-1], expected)
-    assert paper._restore_corrected_cells(old, corrected, expected) == corrected
+def _write_observation(directory: Path, run: RunRecord, record: ResultRecord) -> None:
+    cell = record.cell.model_copy(update={"run_id": run.run_id})
+    updated = record.model_copy(update={"run_id": run.run_id, "cell": cell})
+    (directory / f"{cell.cell_id}.json").write_bytes(encode_result(updated))
 
 
 def test_full_report_rejects_measurement_selection(tmp_path: Path, selected_run: RunRecord) -> None:
@@ -230,50 +229,11 @@ def test_full_report_rejects_measurement_selection(tmp_path: Path, selected_run:
         paper.load_report(Namespace(run=manifest), tmp_path)
 
 
-def test_extension_replaces_changed_pairs_and_preserves_other_source_cells(
-    paper_data: paper._PaperData, selected_run: RunRecord
-) -> None:
-    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
-    resize, crop, shear = paper_data.recipes
-    dropout = next(recipe for recipe in catalog.recipes if recipe.augmentation_id == "ChannelDropout")
-    previous_resize = resize.model_copy(update={"supported_implementations": (paper.AX, "kornia_gpu")})
-    previous = catalog.model_copy(update={"recipes": (previous_resize, crop, shear, dropout)})
-    fixed_crop = crop.stages[0].model_copy(update={"parameters": {**crop.stages[0].parameters, "fill": 0}})
-    expanded_crop = crop.model_copy(update={"stages": (fixed_crop, *crop.stages[1:])})
-    expanded = catalog.model_copy(update={"recipes": (resize, expanded_crop, shear, dropout)})
-    base = paper_data.groups[(paper.AX, resize.recipe_id)][0]
-    config = FamilyRunConfig.model_validate(selected_run.family_config)
-    checked = build_matrix(run_id=base.run_id, config=config, recipes=previous)
-    expected = build_matrix(run_id=selected_run.run_id, config=config, recipes=expanded)
-    records = [base.model_copy(update={"cell": cell}) for cell in checked]
-    retained = [
-        r
-        for r in records
-        if r.cell.recipe_id != crop.recipe_id
-        and (r.cell.implementation, r.cell.recipe_id) != paper.AX_CHANNEL_DROPOUT
-        and not (r.cell.implementation == "dali_gpu" and r.cell.recipe_id in (shear.recipe_id, dropout.recipe_id))
-    ]
-    keys = {(r.cell.implementation, r.cell.recipe_id, r.cell.seed) for r in retained}
-    added = [
-        base.model_copy(update={"run_id": cell.run_id, "cell": cell})
-        for cell in expected
-        if (cell.implementation, cell.recipe_id, cell.seed) not in keys
-    ]
-
-    combined = paper._extend_matrix(records, added, previous, expanded, config)
-    assert {r.cell_id for r in combined} == {r.cell_id for r in (*retained, *added)}
-    for invalid in (added[:-1], [*added[:-1], added[0]]):
-        with pytest.raises(ValueError, match="must fill exactly"):
-            paper._extend_matrix(records, invalid, previous, expanded, config)
-
-
-def test_published_export_flag_excludes_supplemental_results(
-    paper_data: paper._PaperData, selected_run: RunRecord
-) -> None:
+def test_published_export_flag_excludes_ax_rerun(paper_data: paper._PaperData, selected_run: RunRecord) -> None:
     published = selected_run.model_copy(update={"run_id": paper.RUN_ID})
 
     assert readme.export_results(paper_data, published)["is_published_run"] is True
-    assert readme.export_results(paper_data, published, correction_runs=(selected_run,))["is_published_run"] is False
+    assert readme.export_results(paper_data, published, ax_run=selected_run)["is_published_run"] is False
 
 
 def test_selected_run_rejects_missing_foreign_or_tampered_results(

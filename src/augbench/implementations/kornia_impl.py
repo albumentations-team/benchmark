@@ -9,8 +9,7 @@ import kornia.augmentation as kornia_augmentation
 import torch
 import torch.nn.functional as torch_functional
 
-from augbench.implementations.geometry import aspect_size, centered_padding, emboss_kernel
-from augbench.implementations.shear import x_shear_matrix
+from augbench.implementations.geometry import aspect_size, centered_padding, emboss_kernel, x_shear_matrix
 from augbench.implementations.specs import TransformSpec
 
 LIBRARY = "kornia"

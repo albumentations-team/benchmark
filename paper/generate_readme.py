@@ -47,7 +47,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     add_run_arguments(parser)
     args = parser.parse_args()
-    data, run, ax_run, correction_runs = load_report(args, root)
+    data, run, ax_run = load_report(args, root)
     config = FamilyRunConfig.model_validate(run.family_config)
     readme = root / "README.md"
     updated = replace_results(readme.read_text(), readme_results(data, run))
@@ -61,7 +61,7 @@ def main() -> None:
         (destination / "run.json").write_text(run.model_dump_json(indent=2) + "\n")
         (destination / "results.json").write_text(
             json.dumps(
-                {**export_results(data, run, ax_run, correction_runs), "figures": export_figures(staging)},
+                {**export_results(data, run, ax_run), "figures": export_figures(staging)},
                 indent=2,
                 allow_nan=False,
             )
@@ -93,7 +93,6 @@ def export_results(
     data: _PaperData,
     run: RunRecord,
     ax_run: RunRecord | None = None,
-    correction_runs: tuple[RunRecord, ...] = (),
 ) -> dict[str, object]:
     libraries = [
         {
@@ -186,12 +185,7 @@ def export_results(
         "schema_version": 1,
         "run": run.model_dump(mode="json"),
         **({"ax_run": ax_run.model_dump(mode="json")} if ax_run else {}),
-        **(
-            {"correction_runs": [source.model_dump(mode="json") for source in correction_runs]}
-            if correction_runs
-            else {}
-        ),
-        "is_published_run": ax_run is None and not correction_runs and run.run_id == RUN_ID,
+        "is_published_run": ax_run is None and run.run_id == RUN_ID,
         "measurement_count": sum(map(len, data.groups.values())),
         "gpu_memory_poll_ms": _single(
             {record.gpu_memory.poll_interval_ms for records in data.groups.values() for record in records}

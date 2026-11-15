@@ -3,8 +3,7 @@ from __future__ import annotations
 from itertools import permutations
 from typing import TYPE_CHECKING, Any, Protocol
 
-from augbench.implementations.geometry import centered_inverse_affine, emboss_kernel
-from augbench.implementations.shear import x_shear_matrix
+from augbench.implementations.geometry import centered_inverse_affine, emboss_kernel, x_shear_matrix
 from augbench.recipes.runtime import UnsupportedRecipeError
 
 if TYPE_CHECKING:

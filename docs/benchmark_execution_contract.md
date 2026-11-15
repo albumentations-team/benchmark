@@ -164,10 +164,10 @@ corrected recipe, freeze a correction run covering the affected implementationâ€
 and all three seeds. Validate the replacement cells before regenerating the report. Keep the
 original cells for reproduction.
 
-For an extension, `measurements` in the frozen family configuration lists the selected
-implementation IDs by recipe ID. The recipe catalog still records full support. Supply the
-extension artifacts to the report generator with `--extension-run`. The generator validates
-the complete matrix against the expanded catalog.
+For a targeted run, `measurements` lists the implementation IDs to measure for each
+recipe. The catalog still records full support. The paper generators take a complete
+RGB run and can replace its AX observations with a complete AX-only run under the
+same workload, hardware, and package locks.
 
 ## Adding a benchmark family
 

@@ -27,13 +27,11 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
     from augbench.recipes.models import RecipeCatalog, RecipeSpec
-    from augbench.run_records import CellKey, ResultRecord
+    from augbench.run_records import ResultRecord
 
 RUN_ID = "3f8e2e315710528399b8e82e2359ab85c58c809644595b68a92fb9d83492cc8c"
-DALI_DOUBLE_FLIP_RUN = "75bc062fe770cfec3d857f401e16366deb01f6582c8645e952930e3cd3d788fb"
+INVALID_DALI_FLIP_RUN = "75bc062fe770cfec3d857f401e16366deb01f6582c8645e952930e3cd3d788fb"
 AX = "albumentationsx_cpu"
-DALI_VERTICAL_FLIP = ("dali_gpu", "RandomCrop224+VerticalFlip+Normalize+ToTensor")
-AX_CHANNEL_DROPOUT = (AX, "RandomCrop224+ChannelDropout+Normalize+ToTensor")
 PILLOW_ALLSIMD = ("pillow_allsimd_cpu", "Pillow-AllSIMD CPU (fast)")
 IMPLEMENTATIONS = (
     (AX, "AlbumentationsX"),
@@ -89,7 +87,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=Path(__file__).parent / "generated")
     args = parser.parse_args()
     root = Path(__file__).parents[1]
-    data, run, ax_run, correction_runs = load_report(args, root)
+    data, run, ax_run = load_report(args, root)
     args.output.mkdir(parents=True, exist_ok=True)
     _write_metrics(args.output / "metrics.tex", data)
     _write_heatmap(args.output / "common-heatmap.tex", data)
@@ -105,7 +103,7 @@ def main() -> None:
     _write_recipe_results(args.output / "recipe-results.tex", data)
     _write_versions(args.output / "versions.tex", data)
     _write_coverage(args.output, root / "catalog/operations.yaml")
-    _write_sources(args.output / "sources.tex", run, ax_run, correction_runs)
+    _write_sources(args.output / "sources.tex", run, ax_run)
 
 
 def add_run_arguments(parser: argparse.ArgumentParser) -> None:
@@ -115,22 +113,6 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--ax-run", nargs=3, type=Path, metavar=("MANIFEST", "CELLS", "RECIPES"), help="optional AX-only rerun"
     )
-    parser.add_argument(
-        "--correction-run",
-        action="append",
-        nargs=3,
-        type=Path,
-        metavar=("MANIFEST", "CELLS", "RECIPES"),
-        help="rerun of the corrected DALI VerticalFlip and non-AX Shear cells; repeat for multiple runs",
-    )
-    parser.add_argument(
-        "--extension-run",
-        action="append",
-        nargs=3,
-        type=Path,
-        metavar=("MANIFEST", "CELLS", "RECIPES"),
-        help="additional measurements for the expanded RGB catalog; repeat for multiple runs",
-    )
 
 
 def _run_catalog(run: RunRecord, path: Path) -> RecipeCatalog:
@@ -139,156 +121,42 @@ def _run_catalog(run: RunRecord, path: Path) -> RecipeCatalog:
     return load_recipe_catalog(path)
 
 
-def load_report(
-    args: argparse.Namespace, root: Path
-) -> tuple[_PaperData, RunRecord, RunRecord | None, tuple[RunRecord, ...]]:
+def load_report(args: argparse.Namespace, root: Path) -> tuple[_PaperData, RunRecord, RunRecord | None]:
     run = RunRecord.model_validate_json(args.run.read_bytes())
     config = FamilyRunConfig.model_validate(run.family_config)
     base = {implementation for implementation, _ in IMPLEMENTATIONS}
     if config.measurements is not None or set(config.implementations) not in (base, base | {PILLOW_ALLSIMD[0]}):
         raise ValueError("report requires a complete RGB run")
+    if run.run_id == INVALID_DALI_FLIP_RUN:
+        raise ValueError("this run contains incorrect DALI VerticalFlip measurements")
     recipes = _run_catalog(run, args.recipes or root / config.recipes)
     records = load_run_results(args.cells, run, recipes)
     ax_run = None
     if args.ax_run:
-        ax_run, ax_recipes, ax_records = _load_ax_run(args.ax_run, run)
-        records = _select_ax_rerun(recipes, ax_recipes, records, ax_records)
-        recipes = ax_recipes
-    correction_runs: tuple[RunRecord, ...] = ()
-    if args.correction_run:
-        if run.run_id != DALI_DOUBLE_FLIP_RUN or ax_run is None:
-            raise ValueError("the flip and shear correction requires the November full run and the AX rerun")
-        sources = [_load_additional_run(inputs, run, ax_run, recipes) for inputs in args.correction_run]
-        correction_runs = tuple(source for source, _ in sources)
-        records = _restore_corrected_cells(
-            records,
-            [record for _, batch in sources for record in batch],
-            build_matrix(run_id=run.run_id, config=config, recipes=recipes),
-        )
-    elif run.run_id == DALI_DOUBLE_FLIP_RUN:
-        raise ValueError("this full run requires the corrected flip and shear measurements")
-    if args.extension_run:
-        expanded = load_recipe_catalog(root / config.recipes)
-        sources = [_load_additional_run(inputs, run, ax_run or run, expanded) for inputs in args.extension_run]
-        records = _extend_matrix(
-            records, [record for _, batch in sources for record in batch], recipes, expanded, config
-        )
-        recipes = expanded
-        correction_runs = (*correction_runs, *(source for source, _ in sources))
+        ax_run, ax_records = _load_ax_run(args.ax_run, run)
+        records = [record for record in records if record.cell.implementation != AX] + ax_records
     data = _prepare(records, recipes.recipes)
     if not data.common:
         raise ValueError("the selected results have no recipes shared by all paths")
-    return data, run, ax_run, correction_runs
+    return data, run, ax_run
 
 
-def _load_ax_run(inputs: Sequence[Path], run: RunRecord) -> tuple[RunRecord, RecipeCatalog, list[ResultRecord]]:
+def _load_ax_run(inputs: Sequence[Path], run: RunRecord) -> tuple[RunRecord, list[ResultRecord]]:
     manifest, cells, catalog = inputs
     ax_run = RunRecord.model_validate_json(manifest.read_bytes())
-    if ax_run.family_config != {**run.family_config, "implementations": [AX]} or ax_run.hardware != run.hardware:
-        raise ValueError("AX rerun must use the same workload and hardware settings")
+    if (
+        ax_run.family_config != {**run.family_config, "implementations": [AX]}
+        or ax_run.hardware != run.hardware
+        or ax_run.inputs.dataset_archive_sha256 != run.inputs.dataset_archive_sha256
+        or ax_run.inputs.recipe_catalog_sha256 != run.inputs.recipe_catalog_sha256
+        or ax_run.inputs.environment_lock_sha256 != run.inputs.environment_lock_sha256
+    ):
+        raise ValueError("AX rerun must use the same workload, hardware, and package locks")
     recipes = _run_catalog(ax_run, catalog)
-    return ax_run, recipes, load_run_results(cells, ax_run, recipes)
+    return ax_run, load_run_results(cells, ax_run, recipes)
 
 
-def _load_additional_run(
-    inputs: Sequence[Path], run: RunRecord, ax_run: RunRecord, recipes: RecipeCatalog
-) -> tuple[RunRecord, list[ResultRecord]]:
-    manifest, cells, catalog = inputs
-    correction = RunRecord.model_validate_json(manifest.read_bytes())
-    implementations = correction.family_config["implementations"]
-    workload = {key: value for key, value in correction.family_config.items() if key != "measurements"}
-    if (
-        workload != {**run.family_config, "implementations": implementations}
-        or not set(implementations) <= set(run.family_config["implementations"])
-        or correction.hardware != run.hardware
-        or correction.inputs.environment_lock_sha256 != ax_run.inputs.environment_lock_sha256
-    ):
-        raise ValueError("additional run differs in workload, hardware settings, or package locks")
-    correction_recipes = _run_catalog(correction, catalog)
-    by_recipe = {recipe.recipe_id: recipe for recipe in recipes.recipes}
-    for recipe in correction_recipes.recipes:
-        original = by_recipe.get(recipe.recipe_id)
-        if original is None or recipe.stages != original.stages or recipe.channels != original.channels:
-            raise ValueError(f"additional run changed the definition of {recipe.recipe_id}")
-    return correction, load_run_results(cells, correction, correction_recipes, require_complete=False)
-
-
-def _restore_corrected_cells(
-    records: list[ResultRecord], corrected: list[ResultRecord], expected: Sequence[CellKey]
-) -> list[ResultRecord]:
-    retained = [
-        record for record in records if (record.cell.implementation, record.cell.recipe_id) != DALI_VERTICAL_FLIP
-    ]
-    return _fill_matrix(retained, corrected, expected)
-
-
-def _extend_matrix(
-    records: list[ResultRecord],
-    added: list[ResultRecord],
-    previous: RecipeCatalog,
-    expanded: RecipeCatalog,
-    config: FamilyRunConfig,
-) -> list[ResultRecord]:
-    current = {recipe.recipe_id: recipe for recipe in expanded.recipes}
-    unchanged = {
-        recipe.recipe_id
-        for recipe in previous.recipes
-        if recipe.recipe_id in current and recipe.stages == current[recipe.recipe_id].stages
-    }
-    raw_crop = {
-        recipe.recipe_id
-        for recipe in expanded.recipes
-        if any(stage.operation_id == "RandomCrop224" for stage in recipe.stages)
-    }
-    retained = [
-        record
-        for record in records
-        if record.cell.recipe_id in unchanged
-        and (record.cell.implementation, record.cell.recipe_id) != AX_CHANNEL_DROPOUT
-        and (record.cell.implementation != "dali_gpu" or record.cell.recipe_id not in raw_crop)
-    ]
-    expected = build_matrix(run_id=records[0].run_id, config=config, recipes=expanded)
-    return _fill_matrix(retained, added, expected)
-
-
-def _fill_matrix(
-    retained: list[ResultRecord], added: list[ResultRecord], expected: Sequence[CellKey]
-) -> list[ResultRecord]:
-    def identity(cell: CellKey) -> tuple[str, str, int]:
-        return cell.implementation, cell.recipe_id, cell.seed
-
-    keys = {identity(cell) for cell in expected}
-    kept = {identity(record.cell) for record in retained}
-    missing = keys - kept
-    if (
-        len(retained) != len(kept)
-        or not kept <= keys
-        or len(added) != len(missing)
-        or {identity(record.cell) for record in added} != missing
-    ):
-        raise ValueError("additional cells must fill exactly the missing measurements")
-    return retained + added
-
-
-def _select_ax_rerun(
-    recipes: RecipeCatalog,
-    ax_recipes: RecipeCatalog,
-    records: list[ResultRecord],
-    ax_records: list[ResultRecord],
-) -> list[ResultRecord]:
-    if {(r.cell.recipe_id, r.cell.seed) for r in ax_records} != {
-        (r.cell.recipe_id, r.cell.seed) for r in records if r.cell.implementation == AX
-    }:
-        raise ValueError("AX rerun must measure the same recipe and seed pairs")
-    changed = {new.recipe_id for old, new in zip(recipes.recipes, ax_recipes.recipes, strict=True) if old != new}
-    if changed - {recipe.recipe_id for recipe in recipes.recipes if recipe.augmentation_id == "Shear"}:
-        raise ValueError("only Shear may differ in the AX rerun catalog")
-    return [r for r in records if r.cell.implementation != AX and r.cell.recipe_id not in changed] + ax_records
-
-
-def load_run_results(
-    cells_directory: Path, run: RunRecord, recipes: RecipeCatalog, *, require_complete: bool = True
-) -> list[ResultRecord]:
+def load_run_results(cells_directory: Path, run: RunRecord, recipes: RecipeCatalog) -> list[ResultRecord]:
     identity = build_run_record(family_config=run.family_config, inputs=run.inputs, hardware=run.hardware)
     if identity != run:
         raise ValueError("run manifest does not match its immutable identity")
@@ -298,7 +166,7 @@ def load_run_results(
     ]
     found = {record.cell_id for record in records}
     expected = {cell.cell_id for cell in cells}
-    if not found <= expected or (require_complete and found != expected):
+    if found != expected:
         raise ValueError("results do not match the complete selected run matrix")
     config = run.family_config
     output = config["output"]
@@ -560,9 +428,7 @@ def _write_versions(path: Path, data: _PaperData) -> None:
     _write_tex(path, lines)
 
 
-def _write_sources(
-    path: Path, run: RunRecord, ax_run: RunRecord | None, correction_runs: tuple[RunRecord, ...]
-) -> None:
+def _write_sources(path: Path, run: RunRecord, ax_run: RunRecord | None) -> None:
     lines: list[str] = []
     for label, source in (("Full", run), ("AX", ax_run or run)):
         lines.extend(
@@ -571,13 +437,7 @@ def _write_sources(
                 rf"\newcommand{{\{label}SourceRevision}}{{{source.inputs.git_commit}}}",
             )
         )
-    lines.append(r"\newcommand{\CorrectionRunEntries}{%")
-    for index, source in enumerate(correction_runs, 1):
-        lines.append(
-            rf"\item[Correction {index}] \texttt{{\seqsplit{{{source.run_id}}}}}\\"
-            rf" Source \texttt{{{source.inputs.git_commit}}}.%"
-        )
-    _write_tex(path, [*lines, "}"])
+    _write_tex(path, lines)
 
 
 def _csv_row(group: list[ResultRecord], recipe: RecipeSpec, data: _PaperData) -> dict[str, object]:

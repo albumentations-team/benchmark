@@ -13,8 +13,13 @@ from typing import TYPE_CHECKING, Any
 
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
-from augbench.implementations.geometry import aspect_size, centered_inverse_affine, centered_padding, emboss_kernel
-from augbench.implementations.shear import x_shear_matrix
+from augbench.implementations.geometry import (
+    aspect_size,
+    centered_inverse_affine,
+    centered_padding,
+    emboss_kernel,
+    x_shear_matrix,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
