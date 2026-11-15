@@ -58,7 +58,7 @@ class ImmutableResultStore:
 
 
 def result_payload(result: ResultRecord) -> dict[str, Any]:
-    payload = result.model_dump(mode="json")
+    payload = result.model_dump(mode="json", exclude_none=True)
     payload["cell_id"] = result.cell_id
     payload["throughput"]["value"] = result.throughput.value
     return payload

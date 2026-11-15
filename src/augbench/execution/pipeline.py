@@ -245,6 +245,13 @@ def _collate_images(samples: Sequence[Any]) -> Any:
     from torch.utils.data._utils.collate import default_collate
 
     first = samples[0]
-    if isinstance(first, (np.ndarray, torch.Tensor)):
-        return torch.stack([torch.as_tensor(sample) for sample in samples])
+    if isinstance(first, np.ndarray):
+        return torch.stack(
+            [
+                torch.from_numpy(np.ascontiguousarray(sample) if min(sample.strides) < 0 else sample)
+                for sample in samples
+            ]
+        )
+    if isinstance(first, torch.Tensor):
+        return torch.stack(samples)
     return default_collate(samples)

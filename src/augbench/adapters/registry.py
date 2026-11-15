@@ -53,6 +53,11 @@ def default_adapter_registry() -> AdapterRegistry:
                 module="augbench.adapters.pillow.rgb",
             ),
             AdapterRegistration(
+                implementation_id="pillow_allsimd_cpu",
+                adapter_kind="python-module",
+                module="augbench.adapters.pillow.rgb",
+            ),
+            AdapterRegistration(
                 implementation_id="torchvision_cpu",
                 adapter_kind="python-module",
                 module="augbench.adapters.torchvision.rgb",

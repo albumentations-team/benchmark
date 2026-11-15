@@ -10,7 +10,7 @@ def test_deferred_normalization_rejects_cpu_batches() -> None:
     batch = torch.zeros((1, 2, 2, 3), dtype=torch.uint8)
 
     with pytest.raises(RuntimeError, match="CUDA batch"):
-        normalizer(mean=_MEAN, std=_STD, input_layout="BHWC")(batch)
+        normalizer(mean=_MEAN, std=_STD)(batch)
 
 
 def test_deferred_normalization_makes_float16_bchw_on_cuda() -> None:
@@ -20,7 +20,7 @@ def test_deferred_normalization_makes_float16_bchw_on_cuda() -> None:
         pytest.skip("requires CUDA")
     batch = torch.zeros((2, 3, 2, 2), dtype=torch.float32, device="cuda")
 
-    output = normalizer(mean=_MEAN, std=_STD, input_layout="BCHW")(batch)
+    output = normalizer(mean=_MEAN, std=_STD)(batch)
 
     expected = -torch.tensor(_MEAN, dtype=torch.float16).view(1, 3, 1, 1) / torch.tensor(
         _STD,

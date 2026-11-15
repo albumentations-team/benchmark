@@ -71,6 +71,7 @@ class FamilyRunConfig(_ConfigModel):
     cloud: pathlib.Path
     execution: ExecutionConfig
     implementations: tuple[str, ...] = Field(min_length=1)
+    measurements: dict[str, tuple[str, ...]] | None = None
 
     @model_validator(mode="after")
     def validate_runnable_family(self) -> FamilyRunConfig:

@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 import ast
+import sys
 from pathlib import Path
+from types import SimpleNamespace
+from typing import TYPE_CHECKING
+from unittest.mock import Mock
 
-from augbench.adapters.dali.native import supports_recipe
+from augbench.adapters.dali.native import _apply_vertical_flip, supports_recipe
 from augbench.recipes.load import load_recipe_catalog
+
+if TYPE_CHECKING:
+    import pytest
 
 
 def test_recipe_factories_contain_only_current_rgb_operations() -> None:
@@ -28,6 +35,25 @@ def test_dali_stage_handlers_cover_the_supported_catalog_recipes() -> None:
     for recipe in recipes.recipes:
         if "dali_gpu" in recipe.supported_implementations:
             assert supports_recipe(recipe), recipe.recipe_id
+
+
+def test_dali_vertical_flip_disables_default_horizontal_flip(monkeypatch: pytest.MonkeyPatch) -> None:
+    flip = Mock()
+    monkeypatch.setitem(sys.modules, "nvidia.dali", SimpleNamespace(fn=SimpleNamespace(flip=flip)))
+    image = object()
+    _apply_vertical_flip(image, {}, 224, 224)
+
+    flip.assert_called_once_with(image, horizontal=0, vertical=1)
+
+
+def test_kornia_gpu_support_policy_matches_the_recipe_catalog() -> None:
+    root = Path(__file__).parents[1]
+    recipes = load_recipe_catalog(root / "catalog/recipes/rgb.yaml")
+    builders = _factory_operations(root / "src/augbench/implementations/kornia_impl.py")
+
+    for recipe in recipes.recipes:
+        if "kornia_gpu" in recipe.supported_implementations:
+            assert {stage.operation_id for stage in recipe.stages[:-2]} <= builders, recipe.recipe_id
 
 
 def test_kornia_factories_adapt_catalog_lists_to_kornia_ranges() -> None:

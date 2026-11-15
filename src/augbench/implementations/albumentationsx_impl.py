@@ -46,6 +46,7 @@ def _build_resize(params: dict[str, Any]) -> Any | None:
         height=params["target_size"],
         width=params["target_size"],
         interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
+        area_for_downscale="image" if params.get("antialias") else None,
         p=1,
     )
 
@@ -65,6 +66,7 @@ def _build_random_resized_crop(params: dict[str, Any]) -> Any | None:
         scale=params["scale"],
         ratio=params["ratio"],
         interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
+        area_for_downscale="image" if params.get("antialias") else None,
         p=1,
     )
 
@@ -119,11 +121,9 @@ def _build_perspective(params: dict[str, Any]) -> Any | None:
 
 def _build_elastic(params: dict[str, Any]) -> Any | None:
     return albumentations.ElasticTransform(
-        alpha=params["alpha"],
-        sigma=params["sigma"],
+        displacement_range=_range(params["displacement_range"]),
+        control_grid_shape=tuple(params["control_grid_shape"]),
         interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
-        approximate=params["approximate"],
-        same_dxdy=params["same_dxdy"],
         p=1,
     )
 
@@ -295,13 +295,13 @@ def _build_contrast(params: dict[str, Any]) -> Any | None:
 
 def _build_blur(params: dict[str, Any]) -> Any | None:
     return albumentations.Blur(
-        blur_range=_range(params["radius"]),
+        blur_range=_range(params["kernel_size"]),
         p=1,
     )
 
 
 def _build_channel_dropout(_params: dict[str, Any]) -> Any | None:
-    return albumentations.ChannelDropout(p=1)
+    return albumentations.ChannelDropout(dropout_ratio=1 / 3, fill=0, p=1)
 
 
 def _build_linear_illumination(_params: dict[str, Any]) -> Any | None:
@@ -372,9 +372,11 @@ def _build_optical_distortion(params: dict[str, Any]) -> Any | None:
 
 
 def _build_shear(params: dict[str, Any]) -> Any | None:
+    # AX negates its shear angle when building the forward pixel matrix.
+    angle = -float(params["shear"])
     return albumentations.Affine(
         p=1,
-        shear=_range(params["shear"]),
+        shear={"x": (angle, angle), "y": (0.0, 0.0)},
         interpolation=cv2.INTER_LINEAR,
         border_mode=cv2.BORDER_CONSTANT,
         fill=0,
@@ -420,6 +422,92 @@ def _build_transpose(_params: dict[str, Any]) -> Any | None:
     return albumentations.Transpose(p=1)
 
 
+def _build_center_crop(params: dict[str, Any]) -> Any:
+    return albumentations.CenterCrop(height=params["height"], width=params["width"], pad_if_needed=True)
+
+
+def _build_crop(params: dict[str, Any]) -> Any:
+    left, top = params["left"], params["top"]
+    return albumentations.Crop(x_min=left, y_min=top, x_max=left + params["width"], y_max=top + params["height"])
+
+
+def _build_crop_and_pad(params: dict[str, Any]) -> Any:
+    return albumentations.CropAndPad(px=tuple(params["sides"]), keep_size=False, p=1)
+
+
+def _build_letter_box(params: dict[str, Any]) -> Any:
+    return albumentations.LetterBox(size=(params["height"], params["width"]), fill=0)
+
+
+def _build_pad_if_needed(params: dict[str, Any]) -> Any:
+    return albumentations.PadIfNeeded(
+        min_height=params["min_height"], min_width=params["min_width"], position="top_left"
+    )
+
+
+def _build_channel_swap(_params: dict[str, Any]) -> Any:
+    return albumentations.ChannelSwap(channel_order=(2, 1, 0), p=1)
+
+
+def _build_colorize(params: dict[str, Any]) -> Any:
+    return albumentations.Sequential(
+        [
+            albumentations.ToGray(num_output_channels=1, p=1),
+            albumentations.Colorize(
+                black_range=(params["black"], params["black"]), white_range=(params["white"], params["white"]), p=1
+            ),
+        ],
+        p=1,
+    )
+
+
+def _build_dithering(_params: dict[str, Any]) -> Any:
+    return albumentations.Dithering(method="error_diffusion", error_diffusion_algorithm="floyd_steinberg", p=1)
+
+
+def _build_morphological(params: dict[str, Any]) -> Any:
+    return albumentations.Morphological(scale=(params["size"], params["size"]), operation=params["operation"], p=1)
+
+
+def _build_random_scale(params: dict[str, Any]) -> Any:
+    return albumentations.RandomScale(scale_range=tuple(value - 1 for value in params["scale"]), p=1)
+
+
+def _build_random_sized_crop(params: dict[str, Any]) -> Any:
+    return albumentations.RandomSizedCrop(
+        min_max_height=(params["crop_size"], params["crop_size"]), size=tuple(params["size"]), p=1
+    )
+
+
+def _build_coarse_dropout(params: dict[str, Any]) -> Any:
+    size = params["hole_size"]
+    return albumentations.CoarseDropout(
+        num_holes_range=(1, 1), hole_height_range=(size, size), hole_width_range=(size, size), fill=0, p=1
+    )
+
+
+def _build_emboss(params: dict[str, Any]) -> Any:
+    return albumentations.Emboss(alpha_range=_range(params["alpha"]), strength_range=_range(params["strength"]), p=1)
+
+
+def _build_pixel_spread(params: dict[str, Any]) -> Any:
+    return albumentations.PixelSpread(radius=params["radius"], border_mode=cv2.BORDER_CONSTANT, p=1)
+
+
+def _build_shift_scale_rotate(params: dict[str, Any]) -> Any:
+    x, y = params["shift"]
+    size = params["input_size"]
+    return albumentations.ShiftScaleRotate(
+        shift_range_x=_range(x / size),
+        shift_range_y=_range(y / size),
+        scale_range=_range(params["scale"] - 1),
+        rotate_range=_range(params["angle"]),
+        border_mode=cv2.BORDER_CONSTANT,
+        fill=0,
+        p=1,
+    )
+
+
 def _build_random_rotate90(_params: dict[str, Any]) -> Any | None:
     return albumentations.RandomRotate90(p=1)
 
@@ -445,6 +533,21 @@ def _build_unsharp_mask(params: dict[str, Any]) -> Any | None:
 _TRANSFORM_BUILDERS = {
     "Resize": _build_resize,
     "RandomCrop224": _build_random_crop224,
+    "CenterCrop": _build_center_crop,
+    "Crop": _build_crop,
+    "CropAndPad": _build_crop_and_pad,
+    "LetterBox": _build_letter_box,
+    "PadIfNeeded": _build_pad_if_needed,
+    "ChannelSwap": _build_channel_swap,
+    "Colorize": _build_colorize,
+    "Dithering": _build_dithering,
+    "Morphological": _build_morphological,
+    "RandomScale": _build_random_scale,
+    "RandomSizedCrop": _build_random_sized_crop,
+    "CoarseDropout": _build_coarse_dropout,
+    "Emboss": _build_emboss,
+    "PixelSpread": _build_pixel_spread,
+    "ShiftScaleRotate": _build_shift_scale_rotate,
     "RandomResizedCrop": _build_random_resized_crop,
     "HorizontalFlip": _build_horizontal_flip,
     "VerticalFlip": _build_vertical_flip,

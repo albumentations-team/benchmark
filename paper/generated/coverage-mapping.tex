@@ -5,108 +5,115 @@ Affine & Random\allowbreak{}Affine /\allowbreak{} Random\allowbreak{}Shear & Ran
 At\allowbreak{}Least\allowbreak{}One\allowbreak{}BBox\allowbreak{}Random\allowbreak{}Crop & --- & Random\allowbreak{}Io\allowbreak{}UCrop & --- \\
 Atmospheric\allowbreak{}Fog & --- & --- & --- \\
 Auto\allowbreak{}Contrast & Random\allowbreak{}Auto\allowbreak{}Contrast & Random\allowbreak{}Autocontrast & Image\allowbreak{}Ops.\allowbreak{}autocontrast \\
-BBox\allowbreak{}Safe\allowbreak{}Random\allowbreak{}Crop & --- & Random\allowbreak{}Io\allowbreak{}UCrop & --- \\
+BBox\allowbreak{}Safe\allowbreak{}Random\allowbreak{}Crop & --- & --- & --- \\
+BBox\allowbreak{}Subset\allowbreak{}Safe\allowbreak{}Random\allowbreak{}Crop & --- & --- & --- \\
+Bias\allowbreak{}Field & --- & --- & --- \\
 Blur & Random\allowbreak{}Box\allowbreak{}Blur & --- & Image\allowbreak{}Filter.\allowbreak{}Box\allowbreak{}Blur \\
 CLAHE & Random\allowbreak{}Clahe & --- & --- \\
-Center\allowbreak{}Crop & Center\allowbreak{}Crop & --- & --- \\
-Channel\allowbreak{}Dropout & Random\allowbreak{}Channel\allowbreak{}Dropout & --- & --- \\
-Channel\allowbreak{}Shuffle & Random\allowbreak{}Channel\allowbreak{}Shuffle & Random\allowbreak{}Channel\allowbreak{}Permutation & --- \\
-Channel\allowbreak{}Swap & --- & --- & --- \\
+Center\allowbreak{}Crop & Center\allowbreak{}Crop & Center\allowbreak{}Crop & Image.\allowbreak{}crop \\
+Channel\allowbreak{}Dropout & Random\allowbreak{}Channel\allowbreak{}Dropout & --- & Image.\allowbreak{}split + Image.\allowbreak{}new + Image.\allowbreak{}merge \\
+Channel\allowbreak{}Shuffle & Random\allowbreak{}Channel\allowbreak{}Shuffle & Random\allowbreak{}Channel\allowbreak{}Permutation & Image.\allowbreak{}split + Image.\allowbreak{}merge \\
+Channel\allowbreak{}Swap & color.\allowbreak{}rgb\_\allowbreak{}to\_\allowbreak{}bgr & functional.\allowbreak{}permute\_\allowbreak{}channels & Image.\allowbreak{}split + Image.\allowbreak{}merge \\
 Chromatic\allowbreak{}Aberration & --- & --- & --- \\
-Coarse\allowbreak{}Dropout & --- & Random\allowbreak{}Erasing & --- \\
+Coarse\allowbreak{}Dropout & Random\allowbreak{}Erasing & Random\allowbreak{}Erasing & Image.\allowbreak{}paste \\
 Color\allowbreak{}Jitter & Color\allowbreak{}Jitter /\allowbreak{} Color\allowbreak{}Jiggle & Color\allowbreak{}Jitter & --- \\
-Colorize & --- & --- & Image\allowbreak{}Ops.\allowbreak{}colorize \\
+Colorize & color.\allowbreak{}Apply\allowbreak{}Color\allowbreak{}Map & --- & Image\allowbreak{}Ops.\allowbreak{}colorize \\
 Constrained\allowbreak{}Coarse\allowbreak{}Dropout & --- & --- & --- \\
 Copy\allowbreak{}And\allowbreak{}Paste & --- & --- & --- \\
-Crop & --- & --- & --- \\
-Crop\allowbreak{}And\allowbreak{}Pad & --- & Random\allowbreak{}Zoom\allowbreak{}Out & --- \\
+Crop & geometry.\allowbreak{}transform.\allowbreak{}crop\_\allowbreak{}by\_\allowbreak{}indices & functional.\allowbreak{}crop & Image.\allowbreak{}crop \\
+Crop\allowbreak{}And\allowbreak{}Pad & --- & functional.\allowbreak{}crop + Pad & Image.\allowbreak{}crop + Image\allowbreak{}Ops.\allowbreak{}expand \\
 Crop\allowbreak{}Non\allowbreak{}Empty\allowbreak{}Mask\allowbreak{}If\allowbreak{}Exists & --- & --- & --- \\
 D4 & --- & --- & --- \\
 Defocus & --- & --- & --- \\
 Dithering & --- & --- & Image.\allowbreak{}convert(\allowbreak{}"L")\allowbreak{}.\allowbreak{}convert(\allowbreak{}"1",\allowbreak{} dither=\allowbreak{}FLOYDSTEINBERG)\allowbreak{}.\allowbreak{}convert(\allowbreak{}"RGB")\allowbreak{} \\
 Downscale & --- & --- & --- \\
 Elastic\allowbreak{}Transform & Random\allowbreak{}Elastic\allowbreak{}Transform & Elastic\allowbreak{}Transform & --- \\
-Emboss & --- & --- & --- \\
+Emboss & filters.\allowbreak{}filter2d & --- & Image\allowbreak{}Filter.\allowbreak{}Kernel \\
 Enhance & --- & --- & Image\allowbreak{}Filter.\allowbreak{}EDGE\_\allowbreak{}ENHANCE\_\allowbreak{}MORE /\allowbreak{} Image\allowbreak{}Filter.\allowbreak{}DETAIL \\
 Equalize & Random\allowbreak{}Equalize & Random\allowbreak{}Equalize & Image\allowbreak{}Ops.\allowbreak{}equalize \\
 Erasing & Random\allowbreak{}Erasing & Random\allowbreak{}Erasing & --- \\
+Exposure\allowbreak{}Matching & --- & --- & --- \\
 FDA & --- & --- & --- \\
 Fancy\allowbreak{}PCA & --- & --- & --- \\
 Film\allowbreak{}Grain & --- & --- & --- \\
 Gauss\allowbreak{}Noise & Random\allowbreak{}Gaussian\allowbreak{}Noise & Gaussian\allowbreak{}Noise & --- \\
 Gaussian\allowbreak{}Blur & Random\allowbreak{}Gaussian\allowbreak{}Blur & Gaussian\allowbreak{}Blur & Image\allowbreak{}Filter.\allowbreak{}Gaussian\allowbreak{}Blur \\
+Gibbs\allowbreak{}Ringing & --- & --- & --- \\
 Glass\allowbreak{}Blur & --- & --- & --- \\
 Grid\allowbreak{}Distortion & --- & --- & --- \\
 Grid\allowbreak{}Dropout & --- & --- & --- \\
 Grid\allowbreak{}Elastic\allowbreak{}Deform & --- & --- & --- \\
 Grid\allowbreak{}Mask & --- & --- & --- \\
+Guided\allowbreak{}Coarse\allowbreak{}Dropout & --- & --- & --- \\
 HEStain & --- & --- & --- \\
 Halftone & --- & --- & --- \\
-Histogram\allowbreak{}Matching & --- & --- & --- \\
+Histogram\allowbreak{}Matching & contrib.\allowbreak{}histogram\_\allowbreak{}matching & --- & --- \\
 Horizontal\allowbreak{}Flip & Random\allowbreak{}Horizontal\allowbreak{}Flip & Random\allowbreak{}Horizontal\allowbreak{}Flip & Image.\allowbreak{}transpose(\allowbreak{}FLIP\_\allowbreak{}LEFT\_\allowbreak{}RIGHT)\allowbreak{} \\
-Hue\allowbreak{}Saturation\allowbreak{}Value & Random\allowbreak{}Hue /\allowbreak{} Random\allowbreak{}Saturation & Color\allowbreak{}Jitter & Image\allowbreak{}Enhance.\allowbreak{}Color \\
+Hue\allowbreak{}Saturation\allowbreak{}Value & --- & Color\allowbreak{}Jitter & --- \\
 ISONoise & --- & --- & --- \\
 Illumination & Random\allowbreak{}Linear\allowbreak{}Illumination /\allowbreak{} Random\allowbreak{}Linear\allowbreak{}Corner\allowbreak{}Illumination /\allowbreak{} Random\allowbreak{}Gaussian\allowbreak{}Illumination & --- & --- \\
 Image\allowbreak{}Compression & Random\allowbreak{}JPEG & JPEG & JPEG save/\allowbreak{}load roundtrip \\
 Invert\allowbreak{}Img & Random\allowbreak{}Invert & Random\allowbreak{}Invert & Image\allowbreak{}Ops.\allowbreak{}invert \\
+KSpace\allowbreak{}Spike\allowbreak{}Noise & --- & --- & --- \\
 Lens\allowbreak{}Flare & --- & --- & --- \\
-Letter\allowbreak{}Box & --- & --- & --- \\
-Longest\allowbreak{}Max\allowbreak{}Size & Longest\allowbreak{}Max\allowbreak{}Size & Resize /\allowbreak{} Random\allowbreak{}Shortest\allowbreak{}Size & --- \\
+Letter\allowbreak{}Box & --- & --- & Image\allowbreak{}Ops.\allowbreak{}pad \\
+Longest\allowbreak{}Max\allowbreak{}Size & Longest\allowbreak{}Max\allowbreak{}Size & Resize(\allowbreak{}size=\allowbreak{}None,\allowbreak{} max\_\allowbreak{}size=\allowbreak{}.\allowbreak{}.\allowbreak{}.\allowbreak{})\allowbreak{} & Image\allowbreak{}Ops.\allowbreak{}contain \\
 Mask\allowbreak{}Dropout & --- & --- & --- \\
 Median\allowbreak{}Blur & Random\allowbreak{}Median\allowbreak{}Blur & --- & Image\allowbreak{}Filter.\allowbreak{}Median\allowbreak{}Filter \\
-Mode\allowbreak{}Filter & --- & --- & --- \\
-Morphological & --- & --- & --- \\
-Mosaic & --- & --- & --- \\
+Mode\allowbreak{}Filter & --- & --- & Image\allowbreak{}Filter.\allowbreak{}Mode\allowbreak{}Filter \\
+Morphological & morphology.\allowbreak{}dilation /\allowbreak{} morphology.\allowbreak{}erosion & --- & Image\allowbreak{}Filter.\allowbreak{}Max\allowbreak{}Filter /\allowbreak{} Image\allowbreak{}Filter.\allowbreak{}Min\allowbreak{}Filter \\
+Mosaic & Random\allowbreak{}Mosaic & --- & --- \\
 Motion\allowbreak{}Blur & Random\allowbreak{}Motion\allowbreak{}Blur & --- & --- \\
 Multiplicative\allowbreak{}Noise & --- & --- & --- \\
 Normalize & Normalize & Normalize & --- \\
 Optical\allowbreak{}Distortion & Random\allowbreak{}Fisheye & --- & --- \\
 Overlay\allowbreak{}Elements & --- & --- & --- \\
 Pad & --- & Pad & Image\allowbreak{}Ops.\allowbreak{}expand \\
-Pad\allowbreak{}If\allowbreak{}Needed & --- & Pad & --- \\
+Pad\allowbreak{}If\allowbreak{}Needed & Pad\allowbreak{}To & Pad & Image\allowbreak{}Ops.\allowbreak{}expand \\
 Perspective & Random\allowbreak{}Perspective & Random\allowbreak{}Perspective & --- \\
 Photo\allowbreak{}Metric\allowbreak{}Distort & --- & Random\allowbreak{}Photometric\allowbreak{}Distort & --- \\
 Piecewise\allowbreak{}Affine & --- & --- & --- \\
 Pixel\allowbreak{}Distribution\allowbreak{}Adaptation & --- & --- & --- \\
 Pixel\allowbreak{}Dropout & --- & --- & --- \\
-Pixel\allowbreak{}Spread & --- & --- & --- \\
+Pixel\allowbreak{}Spread & --- & --- & Image.\allowbreak{}effect\_\allowbreak{}spread \\
 Planckian\allowbreak{}Jitter & Random\allowbreak{}Planckian\allowbreak{}Jitter & --- & --- \\
 Plasma\allowbreak{}Brightness\allowbreak{}Contrast & Random\allowbreak{}Plasma\allowbreak{}Brightness /\allowbreak{} Random\allowbreak{}Plasma\allowbreak{}Contrast & --- & --- \\
 Plasma\allowbreak{}Shadow & Random\allowbreak{}Plasma\allowbreak{}Shadow & --- & --- \\
 Posterize & Random\allowbreak{}Posterize & Random\allowbreak{}Posterize & Image\allowbreak{}Ops.\allowbreak{}posterize \\
-RGBShift & Random\allowbreak{}RGBShift & --- & --- \\
+RGBShift & Random\allowbreak{}RGBShift & --- & Image.\allowbreak{}point \\
 Random\allowbreak{}Brightness\allowbreak{}Contrast & Random\allowbreak{}Brightness /\allowbreak{} Random\allowbreak{}Contrast & Color\allowbreak{}Jitter & Image\allowbreak{}Enhance.\allowbreak{}Brightness /\allowbreak{} Image\allowbreak{}Enhance.\allowbreak{}Contrast \\
-Random\allowbreak{}Crop & Random\allowbreak{}Crop & Random\allowbreak{}Crop & --- \\
+Random\allowbreak{}Crop & Random\allowbreak{}Crop & Random\allowbreak{}Crop & Image.\allowbreak{}crop + Image\allowbreak{}Ops.\allowbreak{}expand \\
 Random\allowbreak{}Crop\allowbreak{}From\allowbreak{}Borders & --- & --- & --- \\
 Random\allowbreak{}Crop\allowbreak{}Near\allowbreak{}BBox & --- & --- & --- \\
 Random\allowbreak{}Fog & --- & --- & --- \\
-Random\allowbreak{}Gamma & Random\allowbreak{}Gamma & --- & --- \\
+Random\allowbreak{}Gamma & Random\allowbreak{}Gamma & functional.\allowbreak{}adjust\_\allowbreak{}gamma & Image.\allowbreak{}point \\
 Random\allowbreak{}Gravel & --- & --- & --- \\
 Random\allowbreak{}Grid\allowbreak{}Shuffle & Random\allowbreak{}Jigsaw & --- & --- \\
 Random\allowbreak{}Rain & Random\allowbreak{}Rain & --- & --- \\
-Random\allowbreak{}Resized\allowbreak{}Crop & Random\allowbreak{}Resized\allowbreak{}Crop & Random\allowbreak{}Resized\allowbreak{}Crop & --- \\
-Random\allowbreak{}Rotate90 & Random\allowbreak{}Rotation90 & --- & --- \\
-Random\allowbreak{}Scale & --- & Scale\allowbreak{}Jitter /\allowbreak{} Random\allowbreak{}Resize & --- \\
+Random\allowbreak{}Resized\allowbreak{}Crop & Random\allowbreak{}Resized\allowbreak{}Crop & Random\allowbreak{}Resized\allowbreak{}Crop & Image.\allowbreak{}crop + Image.\allowbreak{}transform(\allowbreak{}AFFINE)\allowbreak{} \\
+Random\allowbreak{}Rotate90 & Random\allowbreak{}Rotation90 & --- & Image.\allowbreak{}transpose(\allowbreak{}ROTATE\_\allowbreak{}90)\allowbreak{} \\
+Random\allowbreak{}Scale & geometry.\allowbreak{}transform.\allowbreak{}resize & Scale\allowbreak{}Jitter /\allowbreak{} Random\allowbreak{}Resize & Image.\allowbreak{}transform(\allowbreak{}AFFINE)\allowbreak{} \\
 Random\allowbreak{}Shadow & --- & --- & --- \\
-Random\allowbreak{}Sized\allowbreak{}BBox\allowbreak{}Safe\allowbreak{}Crop & --- & Random\allowbreak{}Io\allowbreak{}UCrop + Random\allowbreak{}Resized\allowbreak{}Crop & --- \\
-Random\allowbreak{}Sized\allowbreak{}Crop & --- & Random\allowbreak{}Resized\allowbreak{}Crop & --- \\
+Random\allowbreak{}Sized\allowbreak{}BBox\allowbreak{}Safe\allowbreak{}Crop & --- & --- & --- \\
+Random\allowbreak{}Sized\allowbreak{}Crop & Random\allowbreak{}Resized\allowbreak{}Crop & Random\allowbreak{}Resized\allowbreak{}Crop & Image.\allowbreak{}crop + Image.\allowbreak{}transform(\allowbreak{}AFFINE)\allowbreak{} \\
 Random\allowbreak{}Snow & Random\allowbreak{}Snow & --- & --- \\
 Random\allowbreak{}Sun\allowbreak{}Flare & --- & --- & --- \\
 Random\allowbreak{}Tone\allowbreak{}Curve & --- & --- & --- \\
 Resize & Resize & Resize & Image.\allowbreak{}resize \\
+Rician\allowbreak{}Noise & --- & --- & --- \\
 Ringing\allowbreak{}Overshoot & --- & --- & --- \\
 Rotate & Random\allowbreak{}Rotation & Random\allowbreak{}Rotation & Image.\allowbreak{}rotate \\
 Safe\allowbreak{}Rotate & --- & --- & --- \\
 Salt\allowbreak{}And\allowbreak{}Pepper & Random\allowbreak{}Salt\allowbreak{}And\allowbreak{}Pepper\allowbreak{}Noise & --- & --- \\
-Sharpen & Random\allowbreak{}Sharpness & Random\allowbreak{}Adjust\allowbreak{}Sharpness & --- \\
-Shift\allowbreak{}Scale\allowbreak{}Rotate & --- & Random\allowbreak{}Affine & --- \\
+Sharpen & Random\allowbreak{}Sharpness & Random\allowbreak{}Adjust\allowbreak{}Sharpness & Image\allowbreak{}Enhance.\allowbreak{}Sharpness \\
+Shift\allowbreak{}Scale\allowbreak{}Rotate & Random\allowbreak{}Affine & Random\allowbreak{}Affine & Image.\allowbreak{}transform(\allowbreak{}AFFINE)\allowbreak{} \\
 Shot\allowbreak{}Noise & --- & --- & --- \\
-Smallest\allowbreak{}Max\allowbreak{}Size & Smallest\allowbreak{}Max\allowbreak{}Size & Resize /\allowbreak{} Random\allowbreak{}Shortest\allowbreak{}Size & --- \\
+Smallest\allowbreak{}Max\allowbreak{}Size & Smallest\allowbreak{}Max\allowbreak{}Size & Resize(\allowbreak{}size=\allowbreak{}.\allowbreak{}.\allowbreak{}.\allowbreak{})\allowbreak{} /\allowbreak{} Random\allowbreak{}Shortest\allowbreak{}Size & Image\allowbreak{}Ops.\allowbreak{}cover \\
 Solarize & Random\allowbreak{}Solarize & Random\allowbreak{}Solarize & Image\allowbreak{}Ops.\allowbreak{}solarize \\
 Spatter & --- & --- & --- \\
 Square\allowbreak{}Symmetry & --- & --- & --- \\
+Stochastic\allowbreak{}Convolution & --- & --- & --- \\
 Superpixels & --- & --- & --- \\
-Text\allowbreak{}Image & --- & --- & --- \\
 Thin\allowbreak{}Plate\allowbreak{}Spline & Random\allowbreak{}Thin\allowbreak{}Plate\allowbreak{}Spline & --- & --- \\
 To\allowbreak{}Gray & Random\allowbreak{}Grayscale & Grayscale & Image\allowbreak{}Ops.\allowbreak{}grayscale(\allowbreak{}.\allowbreak{}.\allowbreak{}.\allowbreak{})\allowbreak{}.\allowbreak{}convert(\allowbreak{}"RGB")\allowbreak{} \\
 To\allowbreak{}Sepia & --- & --- & --- \\

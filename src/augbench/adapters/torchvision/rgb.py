@@ -10,7 +10,6 @@ def create_adapter(implementation_id: str) -> PythonModuleAdapter:
             recipe_module="augbench.implementations.torchvision_pipeline_impl",
             placement=placement,
             source_id="torchvision-io",
-            unsupported_operation_ids=frozenset({"JpegCompression"}) if placement == "cuda" else frozenset(),
         ),
         load_source=load_torchvision_rgb,
     )

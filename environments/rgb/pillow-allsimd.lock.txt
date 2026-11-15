@@ -1,0 +1,2 @@
+pillow-allsimd==13.0.0.post4 \
+    --hash=sha256:07636e3c6e3210c8b0cca63a0d4a528d22b3a4188f08566de5f0385b59b3bafa

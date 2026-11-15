@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from augbench.implementations.recipe_stages import COLLATABLE_STAGES
+
 if TYPE_CHECKING:
     from augbench.recipes.models import RecipeCatalog, RecipeSpec
     from augbench.run_config import FamilyRunConfig
@@ -23,9 +25,7 @@ def _validate_recipe(config: FamilyRunConfig, recipe: RecipeSpec) -> None:
     tensor = stages.get("ToTensor")
     if not isinstance(tensor, dict) or tensor.get("dtype") != config.output.dtype:
         raise ValueError(f"recipe {recipe.recipe_id} does not match output dtype")
-    shape_stages = [
-        stage for stage in recipe.stages if stage.operation_id in {"Resize", "RandomCrop224", "RandomResizedCrop"}
-    ]
+    shape_stages = [stage for stage in recipe.stages if stage.operation_id in COLLATABLE_STAGES]
     if not shape_stages:
         raise ValueError(f"recipe {recipe.recipe_id} has no explicit shape-forming stage")
     shape_stage = shape_stages[-1]
@@ -34,15 +34,12 @@ def _validate_recipe(config: FamilyRunConfig, recipe: RecipeSpec) -> None:
         if (target, target) != (config.output.height, config.output.width):
             raise ValueError(f"recipe {recipe.recipe_id} does not match the configured Resize shape")
         return
-    if shape_stage.operation_id == "RandomCrop224":
-        _require_shape(shape_stage.parameters, config, recipe.recipe_id)
-        return
-    if shape_stage.operation_id == "RandomResizedCrop":
+    if shape_stage.operation_id in {"RandomResizedCrop", "RandomSizedCrop"}:
         size = shape_stage.parameters.get("size")
         if size != [config.output.height, config.output.width]:
             raise ValueError(f"recipe {recipe.recipe_id} does not match the configured RandomResizedCrop shape")
         return
-    raise ValueError(f"recipe {recipe.recipe_id} has an unsupported shape-forming stage")
+    _require_shape(shape_stage.parameters, config, recipe.recipe_id)
 
 
 def _require_shape(parameters: dict[str, Any], config: FamilyRunConfig, recipe_id: str) -> None:

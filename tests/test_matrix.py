@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from augbench.matrix import build_matrix
 from augbench.recipes.load import load_recipe_catalog
 from augbench.run_config import load_family_config
@@ -22,6 +24,9 @@ def test_matrix_contains_only_supported_library_recipe_seed_cells() -> None:
         for implementation in recipe.supported_implementations
     }
     assert {(cell.recipe_id, cell.implementation) for cell in cells} <= supported
+    assert {(cell.recipe_id, cell.seed) for cell in cells if cell.implementation == "pillow_allsimd_cpu"} == {
+        (cell.recipe_id, cell.seed) for cell in cells if cell.implementation == "pillow_cpu"
+    }
 
 
 def test_matrix_runs_each_implementation_through_all_recipes_and_seeds_before_the_next() -> None:
@@ -40,3 +45,19 @@ def test_matrix_runs_each_implementation_through_all_recipes_and_seeds_before_th
         implementation_cells = [cell for cell in cells if cell.implementation == implementation]
         assert implementation_cells
         assert {cell.seed for cell in implementation_cells} == set(config.execution.seeds)
+
+
+def test_supplemental_matrix_selects_pairs_without_changing_the_catalog() -> None:
+    config = load_family_config(ROOT / "configs/families/rgb.yaml")
+    recipes = load_recipe_catalog(ROOT / config.recipes)
+    recipe = recipes.recipes[0].recipe_id
+    selected = config.model_copy(update={"measurements": {recipe: ("dali_gpu",)}})
+
+    cells = build_matrix(run_id="a" * 64, config=selected, recipes=recipes)
+    assert [(cell.recipe_id, cell.implementation, cell.seed) for cell in cells] == [
+        (recipe, "dali_gpu", seed) for seed in config.execution.seeds
+    ]
+
+    invalid = config.model_copy(update={"measurements": {recipe: ("unknown",)}})
+    with pytest.raises(ValueError, match="invalid measurement selection"):
+        build_matrix(run_id="a" * 64, config=invalid, recipes=recipes)

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 import torch
 import torchvision.transforms.v2 as tv_transforms
 from torch import nn
+from torchvision.io import decode_jpeg, encode_jpeg
 
 from augbench.implementations.gpu_normalize import GpuBatchNormalize
 from augbench.implementations.recipe_stages import collatable_prefix, normalization_stats, transform_specs
@@ -24,7 +25,7 @@ class _GpuBatchRecipe(nn.Module):
         super().__init__()
         mean, std = normalization_stats(recipe)
         self._tail = tail
-        self._batch_normalize = GpuBatchNormalize(mean=mean, std=std, input_layout="BCHW")
+        self._batch_normalize = GpuBatchNormalize(mean=mean, std=std)
 
     def forward(self, batch: torch.Tensor) -> torch.Tensor:
         if batch.dtype == torch.uint8:
@@ -48,6 +49,19 @@ class _SplitRecipe(nn.Module):
         return self.cpu_transform(image)
 
 
+class _CudaJpegBatch(nn.Module):
+    def __init__(self, quality: int, recipe: RecipeSpec) -> None:
+        super().__init__()
+        self.quality = quality
+        mean, std = normalization_stats(recipe)
+        self.normalize = GpuBatchNormalize(mean=mean, std=std)
+
+    def forward(self, batch: torch.Tensor) -> torch.Tensor:
+        encoded = encode_jpeg(list(batch.unbind()), quality=self.quality)
+        decoded = decode_jpeg([item.cpu() for item in encoded], device=batch.device)
+        return self.normalize(torch.stack(decoded))
+
+
 class _DeferredCpuRecipe(nn.Module):
     defer_batch_to_gpu = True
 
@@ -55,21 +69,25 @@ class _DeferredCpuRecipe(nn.Module):
         super().__init__()
         mean, std = normalization_stats(recipe)
         self.cpu_transform = tv_transforms.Compose(list(transforms))
-        self.gpu_transform = GpuBatchNormalize(mean=mean, std=std, input_layout="BCHW")
+        self.gpu_transform = GpuBatchNormalize(mean=mean, std=std)
 
 
 def build_recipe(recipe: RecipeSpec, implementation_id: str) -> nn.Module:
-    cpu_specs, gpu_specs = collatable_prefix(recipe)
-    cpu_transforms = tuple(_transform(spec, recipe.recipe_id) for spec in cpu_specs)
-    gpu_transforms = tuple(_transform(spec, recipe.recipe_id) for spec in gpu_specs)
-    if not cpu_transforms:
-        raise UnsupportedRecipeError(f"TorchVision recipe {recipe.recipe_id!r} has no augmentation stages")
     if implementation_id == "torchvision_cpu":
         transforms = tuple(_transform(spec, recipe.recipe_id) for spec in transform_specs(recipe))
         return _DeferredCpuRecipe(transforms=transforms, recipe=recipe)
     if implementation_id == "torchvision_gpu":
+        cpu_specs, gpu_specs = collatable_prefix(recipe)
+        cpu_transforms = tuple(_transform(spec, recipe.recipe_id) for spec in cpu_specs)
+        cpu_transform = tv_transforms.Compose(list(cpu_transforms))
+        if len(gpu_specs) == 1 and gpu_specs[0].name == "JpegCompression":
+            return _SplitRecipe(
+                cpu_transform=cpu_transform,
+                gpu_transform=_CudaJpegBatch(int(gpu_specs[0].params["quality"]), recipe),
+            )
+        gpu_transforms = tuple(_transform(spec, recipe.recipe_id) for spec in gpu_specs)
         return _SplitRecipe(
-            cpu_transform=tv_transforms.Compose(list(cpu_transforms)),
+            cpu_transform=cpu_transform,
             gpu_transform=_GpuBatchRecipe(
                 tail=tv_transforms.Compose(list(gpu_transforms)) if gpu_transforms else None,
                 recipe=recipe,

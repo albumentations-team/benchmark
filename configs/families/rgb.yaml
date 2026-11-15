@@ -36,3 +36,4 @@ implementations:
   - kornia_cpu
   - kornia_gpu
   - dali_gpu
+  - pillow_allsimd_cpu

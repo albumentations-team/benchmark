@@ -35,6 +35,7 @@ def test_rgb_config_defines_the_entire_runnable_contract() -> None:
         "kornia_cpu",
         "kornia_gpu",
         "dali_gpu",
+        "pillow_allsimd_cpu",
     )
 
 

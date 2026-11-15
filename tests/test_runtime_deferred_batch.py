@@ -6,10 +6,19 @@ import numpy as np
 import pytest
 
 from augbench.adapters.runtime import PythonModuleAdapter, PythonModuleAdapterConfig
-from augbench.execution.pipeline import TorchDataLoaderConfig, TorchDataLoaderSource
+from augbench.execution.pipeline import TorchDataLoaderConfig, TorchDataLoaderSource, _collate_images
 
 if TYPE_CHECKING:
     from augbench.recipes.models import RecipeSpec
+
+
+def test_collate_preserves_pixels_from_a_reversed_numpy_view() -> None:
+    torch = pytest.importorskip("torch")
+    image = np.arange(12, dtype=np.uint8).reshape(2, 2, 3)
+
+    batch = _collate_images([image, image[:, ::-1]])
+
+    torch.testing.assert_close(batch, torch.from_numpy(np.stack([image, image[:, ::-1]])))
 
 
 class _Recipe:

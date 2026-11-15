@@ -1,11 +1,11 @@
 schema_version: 2
-catalog_id: albumentationsx-public-catalog-2026-07-30
+catalog_id: albumentationsx-public-catalog-2026-11-12
 selection_provenance: maintainer-gap-audit
 versions:
-  albumentationsx: 2.3.7
-  torchvision: 0.28.0
-  kornia: 0.8.3
-  pillow: 12.3.0
+  albumentationsx: 2.6.2
+  torchvision: 0.29.2
+  kornia: 0.9.0
+  pillow: 13.0.0
 operations:
 - operation_id: AdditiveNoise
   domain: pixel
@@ -35,20 +35,6 @@ operations:
       api: null
       status: none
   benchmark_recipe_ids: []
-- operation_id: AnnotationArtifacts
-  domain: annotations
-  module: albumentations.augmentations.other.annotation_artifacts
-  support:
-    torchvision:
-      api: null
-      status: none
-    kornia:
-      api: null
-      status: none
-    pillow:
-      api: null
-      status: none
-  benchmark_recipe_ids: []
 - operation_id: Affine
   domain: geometry
   module: albumentations.augmentations.geometric.transforms
@@ -65,6 +51,48 @@ operations:
   benchmark_recipe_ids:
   - Affine
   - Shear
+- operation_id: Affine3D
+  domain: volume
+  module: albumentations.augmentations.transforms3d.transforms
+  support:
+    torchvision:
+      api: null
+      status: none
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
+- operation_id: Anisotropy3D
+  domain: volume
+  module: albumentations.augmentations.medical.transforms
+  support:
+    torchvision:
+      api: null
+      status: none
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
+- operation_id: AnnotationArtifacts
+  domain: annotations
+  module: albumentations.augmentations.other.annotation_artifacts
+  support:
+    torchvision:
+      api: null
+      status: none
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
 - operation_id: AtLeastOneBBoxRandomCrop
   domain: geometry
   module: albumentations.augmentations.crops.transforms
@@ -113,8 +141,36 @@ operations:
   module: albumentations.augmentations.crops.transforms
   support:
     torchvision:
-      api: RandomIoUCrop
-      status: direct
+      api: null
+      status: none
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
+- operation_id: BBoxSubsetSafeRandomCrop
+  domain: geometry
+  module: albumentations.augmentations.crops.transforms
+  support:
+    torchvision:
+      api: null
+      status: none
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
+- operation_id: BiasField
+  domain: pixel
+  module: albumentations.augmentations.medical.transforms
+  support:
+    torchvision:
+      api: null
+      status: none
     kornia:
       api: null
       status: none
@@ -157,15 +213,16 @@ operations:
   module: albumentations.augmentations.crops.transforms
   support:
     torchvision:
-      api: null
-      status: none
+      api: CenterCrop
+      status: direct
     kornia:
       api: CenterCrop
       status: direct
     pillow:
-      api: null
-      status: none
-  benchmark_recipe_ids: []
+      api: Image.crop
+      status: direct
+  benchmark_recipe_ids:
+  - CenterCrop
 - operation_id: CenterCrop3D
   domain: volume
   module: albumentations.augmentations.transforms3d.transforms
@@ -191,8 +248,8 @@ operations:
       api: RandomChannelDropout
       status: direct
     pillow:
-      api: null
-      status: none
+      api: Image.split + Image.new + Image.merge
+      status: direct
   benchmark_recipe_ids:
   - ChannelDropout
 - operation_id: ChannelShuffle
@@ -206,8 +263,8 @@ operations:
       api: RandomChannelShuffle
       status: direct
     pillow:
-      api: null
-      status: none
+      api: Image.split + Image.merge
+      status: direct
   benchmark_recipe_ids:
   - ChannelShuffle
 - operation_id: ChannelSwap
@@ -215,15 +272,16 @@ operations:
   module: albumentations.augmentations.pixel.channel
   support:
     torchvision:
-      api: null
-      status: none
+      api: functional.permute_channels
+      status: direct
     kornia:
-      api: null
-      status: none
+      api: color.rgb_to_bgr
+      status: direct
     pillow:
-      api: null
-      status: none
-  benchmark_recipe_ids: []
+      api: Image.split + Image.merge
+      status: direct
+  benchmark_recipe_ids:
+  - ChannelSwap
 - operation_id: ChromaticAberration
   domain: pixel
   module: albumentations.augmentations.pixel.color
@@ -246,12 +304,13 @@ operations:
       api: RandomErasing
       status: direct
     kornia:
-      api: null
-      status: none
+      api: RandomErasing
+      status: direct
     pillow:
-      api: null
-      status: none
-  benchmark_recipe_ids: []
+      api: Image.paste
+      status: direct
+  benchmark_recipe_ids:
+  - CoarseDropout
 - operation_id: CoarseDropout3D
   domain: volume
   module: albumentations.augmentations.transforms3d.transforms
@@ -290,12 +349,13 @@ operations:
       api: null
       status: none
     kornia:
-      api: null
-      status: none
+      api: color.ApplyColorMap
+      status: direct
     pillow:
       api: ImageOps.colorize
       status: direct
-  benchmark_recipe_ids: []
+  benchmark_recipe_ids:
+  - Colorize
 - operation_id: ConstrainedCoarseDropout
   domain: dropout_or_multi_image
   module: albumentations.augmentations.dropout.coarse_dropout
@@ -329,29 +389,31 @@ operations:
   module: albumentations.augmentations.crops.transforms
   support:
     torchvision:
-      api: null
-      status: none
+      api: functional.crop
+      status: direct
     kornia:
-      api: null
-      status: none
+      api: geometry.transform.crop_by_indices
+      status: direct
     pillow:
-      api: null
-      status: none
-  benchmark_recipe_ids: []
+      api: Image.crop
+      status: direct
+  benchmark_recipe_ids:
+  - Crop
 - operation_id: CropAndPad
   domain: geometry
   module: albumentations.augmentations.crops.transforms
   support:
     torchvision:
-      api: RandomZoomOut
+      api: functional.crop + Pad
       status: direct
     kornia:
       api: null
       status: none
     pillow:
-      api: null
-      status: none
-  benchmark_recipe_ids: []
+      api: Image.crop + ImageOps.expand
+      status: direct
+  benchmark_recipe_ids:
+  - CropAndPad
 - operation_id: CropNonEmptyMaskIfExists
   domain: geometry
   module: albumentations.augmentations.crops.transforms
@@ -421,7 +483,8 @@ operations:
     pillow:
       api: Image.convert("L").convert("1", dither=FLOYDSTEINBERG).convert("RGB")
       status: direct
-  benchmark_recipe_ids: []
+  benchmark_recipe_ids:
+  - Dithering
 - operation_id: Downscale
   domain: pixel
   module: albumentations.augmentations.pixel.compression
@@ -451,9 +514,9 @@ operations:
       status: none
   benchmark_recipe_ids:
   - Elastic
-- operation_id: Emboss
-  domain: pixel
-  module: albumentations.augmentations.pixel.transforms
+- operation_id: ElasticTransform3D
+  domain: volume
+  module: albumentations.augmentations.transforms3d.transforms
   support:
     torchvision:
       api: null
@@ -465,6 +528,21 @@ operations:
       api: null
       status: none
   benchmark_recipe_ids: []
+- operation_id: Emboss
+  domain: pixel
+  module: albumentations.augmentations.pixel.transforms
+  support:
+    torchvision:
+      api: null
+      status: none
+    kornia:
+      api: filters.filter2d
+      status: direct
+    pillow:
+      api: ImageFilter.Kernel
+      status: direct
+  benchmark_recipe_ids:
+  - Emboss
 - operation_id: Enhance
   domain: pixel
   module: albumentations.augmentations.pixel.transforms
@@ -511,6 +589,20 @@ operations:
       status: none
   benchmark_recipe_ids:
   - Erasing
+- operation_id: ExposureMatching
+  domain: pixel
+  module: albumentations.augmentations.pixel.color
+  support:
+    torchvision:
+      api: null
+      status: none
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
 - operation_id: FDA
   domain: dropout_or_multi_image
   module: albumentations.augmentations.mixing.domain_adaptation
@@ -542,6 +634,20 @@ operations:
 - operation_id: FilmGrain
   domain: pixel
   module: albumentations.augmentations.pixel.noise
+  support:
+    torchvision:
+      api: null
+      status: none
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
+- operation_id: Flip3D
+  domain: volume
+  module: albumentations.augmentations.transforms3d.transforms
   support:
     torchvision:
       api: null
@@ -611,6 +717,34 @@ operations:
       status: direct
   benchmark_recipe_ids:
   - GaussianBlur
+- operation_id: GhostingArtifact
+  domain: volume
+  module: albumentations.augmentations.medical.transforms
+  support:
+    torchvision:
+      api: null
+      status: none
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
+- operation_id: GibbsRinging
+  domain: pixel
+  module: albumentations.augmentations.medical.transforms
+  support:
+    torchvision:
+      api: null
+      status: none
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
 - operation_id: GlassBlur
   domain: pixel
   module: albumentations.augmentations.blur.transforms
@@ -695,9 +829,23 @@ operations:
       api: null
       status: none
   benchmark_recipe_ids: []
+- operation_id: GuidedCoarseDropout
+  domain: dropout_or_multi_image
+  module: albumentations.augmentations.dropout.guided_coarse_dropout
+  support:
+    torchvision:
+      api: null
+      status: none
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
 - operation_id: HEStain
   domain: pixel
-  module: albumentations.augmentations.pixel.color
+  module: albumentations.augmentations.medical.transforms
   support:
     torchvision:
       api: null
@@ -731,8 +879,8 @@ operations:
       api: null
       status: none
     kornia:
-      api: null
-      status: none
+      api: contrib.histogram_matching
+      status: direct
     pillow:
       api: null
       status: none
@@ -760,11 +908,11 @@ operations:
       api: ColorJitter
       status: direct
     kornia:
-      api: RandomHue / RandomSaturation
-      status: direct
+      api: null
+      status: none
     pillow:
-      api: ImageEnhance.Color
-      status: direct
+      api: null
+      status: none
   benchmark_recipe_ids:
   - Hue
   - Saturation
@@ -829,6 +977,20 @@ operations:
       status: direct
   benchmark_recipe_ids:
   - Invert
+- operation_id: KSpaceSpikeNoise
+  domain: pixel
+  module: albumentations.augmentations.medical.transforms
+  support:
+    torchvision:
+      api: null
+      status: none
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
 - operation_id: Lambda
   domain: utility
   module: albumentations.augmentations.other.lambda_transform
@@ -868,22 +1030,23 @@ operations:
       api: null
       status: none
     pillow:
-      api: null
-      status: none
-  benchmark_recipe_ids: []
+      api: ImageOps.pad
+      status: direct
+  benchmark_recipe_ids:
+  - LetterBox
 - operation_id: LongestMaxSize
   domain: geometry
   module: albumentations.augmentations.geometric.resize
   support:
     torchvision:
-      api: Resize / RandomShortestSize
+      api: Resize(size=None, max_size=...)
       status: direct
     kornia:
       api: LongestMaxSize
       status: direct
     pillow:
-      api: null
-      status: none
+      api: ImageOps.contain
+      status: direct
   benchmark_recipe_ids:
   - LongestMaxSize
 - operation_id: MaskDropout
@@ -926,8 +1089,8 @@ operations:
       api: null
       status: none
     pillow:
-      api: null
-      status: none
+      api: ImageFilter.ModeFilter
+      status: direct
   benchmark_recipe_ids: []
 - operation_id: Morphological
   domain: geometry
@@ -937,15 +1100,31 @@ operations:
       api: null
       status: none
     kornia:
+      api: morphology.dilation / morphology.erosion
+      status: direct
+    pillow:
+      api: ImageFilter.MaxFilter / ImageFilter.MinFilter
+      status: direct
+  benchmark_recipe_ids:
+  - MorphologicalDilation
+  - MorphologicalErosion
+- operation_id: Mosaic
+  domain: dropout_or_multi_image
+  module: albumentations.augmentations.mixing.transforms
+  support:
+    torchvision:
       api: null
       status: none
+    kornia:
+      api: RandomMosaic
+      status: direct
     pillow:
       api: null
       status: none
   benchmark_recipe_ids: []
-- operation_id: Mosaic
-  domain: dropout_or_multi_image
-  module: albumentations.augmentations.mixing.transforms
+- operation_id: MotionArtifact
+  domain: volume
+  module: albumentations.augmentations.medical.transforms
   support:
     torchvision:
       api: null
@@ -1066,12 +1245,13 @@ operations:
       api: Pad
       status: direct
     kornia:
-      api: null
-      status: none
+      api: PadTo
+      status: direct
     pillow:
-      api: null
-      status: none
-  benchmark_recipe_ids: []
+      api: ImageOps.expand
+      status: direct
+  benchmark_recipe_ids:
+  - PadIfNeeded
 - operation_id: PadIfNeeded3D
   domain: volume
   module: albumentations.augmentations.transforms3d.transforms
@@ -1169,9 +1349,10 @@ operations:
       api: null
       status: none
     pillow:
-      api: null
-      status: none
-  benchmark_recipe_ids: []
+      api: Image.effect_spread
+      status: direct
+  benchmark_recipe_ids:
+  - PixelSpread
 - operation_id: PlanckianJitter
   domain: pixel
   module: albumentations.augmentations.pixel.color
@@ -1244,8 +1425,8 @@ operations:
       api: RandomRGBShift
       status: direct
     pillow:
-      api: null
-      status: none
+      api: Image.point
+      status: direct
   benchmark_recipe_ids:
   - RGBShift
 - operation_id: RandomBrightnessContrast
@@ -1275,8 +1456,8 @@ operations:
       api: RandomCrop
       status: direct
     pillow:
-      api: null
-      status: none
+      api: Image.crop + ImageOps.expand
+      status: direct
   benchmark_recipe_ids:
   - RandomCrop224
 - operation_id: RandomCrop3D
@@ -1340,14 +1521,14 @@ operations:
   module: albumentations.augmentations.pixel.color
   support:
     torchvision:
-      api: null
-      status: none
+      api: functional.adjust_gamma
+      status: direct
     kornia:
       api: RandomGamma
       status: direct
     pillow:
-      api: null
-      status: none
+      api: Image.point
+      status: direct
   benchmark_recipe_ids:
   - RandomGamma
 - operation_id: RandomGravel
@@ -1405,10 +1586,24 @@ operations:
       api: RandomResizedCrop
       status: direct
     pillow:
-      api: null
-      status: none
+      api: Image.crop + Image.transform(AFFINE)
+      status: direct
   benchmark_recipe_ids:
   - RandomResizedCrop
+- operation_id: RandomResizedCrop3D
+  domain: volume
+  module: albumentations.augmentations.transforms3d.transforms
+  support:
+    torchvision:
+      api: null
+      status: none
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
 - operation_id: RandomRotate90
   domain: geometry
   module: albumentations.augmentations.geometric.rotate
@@ -1420,10 +1615,24 @@ operations:
       api: RandomRotation90
       status: direct
     pillow:
-      api: null
-      status: none
+      api: Image.transpose(ROTATE_90)
+      status: direct
   benchmark_recipe_ids:
   - RandomRotate90
+- operation_id: RandomRotate90_3D
+  domain: volume
+  module: albumentations.augmentations.transforms3d.transforms
+  support:
+    torchvision:
+      api: null
+      status: none
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
 - operation_id: RandomScale
   domain: geometry
   module: albumentations.augmentations.geometric.resize
@@ -1432,12 +1641,13 @@ operations:
       api: ScaleJitter / RandomResize
       status: direct
     kornia:
-      api: null
-      status: none
+      api: geometry.transform.resize
+      status: direct
     pillow:
-      api: null
-      status: none
-  benchmark_recipe_ids: []
+      api: Image.transform(AFFINE)
+      status: direct
+  benchmark_recipe_ids:
+  - RandomScale
 - operation_id: RandomShadow
   domain: pixel
   module: albumentations.augmentations.pixel.weather
@@ -1457,8 +1667,8 @@ operations:
   module: albumentations.augmentations.crops.transforms
   support:
     torchvision:
-      api: RandomIoUCrop + RandomResizedCrop
-      status: direct
+      api: null
+      status: none
     kornia:
       api: null
       status: none
@@ -1474,12 +1684,13 @@ operations:
       api: RandomResizedCrop
       status: direct
     kornia:
-      api: null
-      status: none
+      api: RandomResizedCrop
+      status: direct
     pillow:
-      api: null
-      status: none
-  benchmark_recipe_ids: []
+      api: Image.crop + Image.transform(AFFINE)
+      status: direct
+  benchmark_recipe_ids:
+  - RandomSizedCrop
 - operation_id: RandomSnow
   domain: pixel
   module: albumentations.augmentations.pixel.weather
@@ -1538,6 +1749,34 @@ operations:
       status: direct
   benchmark_recipe_ids:
   - Resize
+- operation_id: Resize3D
+  domain: volume
+  module: albumentations.augmentations.transforms3d.transforms
+  support:
+    torchvision:
+      api: null
+      status: none
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
+- operation_id: RicianNoise
+  domain: pixel
+  module: albumentations.augmentations.medical.transforms
+  support:
+    torchvision:
+      api: null
+      status: none
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
 - operation_id: RingingOvershoot
   domain: pixel
   module: albumentations.augmentations.pixel.transforms
@@ -1607,8 +1846,8 @@ operations:
       api: RandomSharpness
       status: direct
     pillow:
-      api: null
-      status: none
+      api: ImageEnhance.Sharpness
+      status: direct
   benchmark_recipe_ids:
   - Sharpen
 - operation_id: ShiftScaleRotate
@@ -1619,12 +1858,13 @@ operations:
       api: RandomAffine
       status: direct
     kornia:
-      api: null
-      status: none
+      api: RandomAffine
+      status: direct
     pillow:
-      api: null
-      status: none
-  benchmark_recipe_ids: []
+      api: Image.transform(AFFINE)
+      status: direct
+  benchmark_recipe_ids:
+  - ShiftScaleRotate
 - operation_id: ShotNoise
   domain: pixel
   module: albumentations.augmentations.pixel.noise
@@ -1644,14 +1884,14 @@ operations:
   module: albumentations.augmentations.geometric.resize
   support:
     torchvision:
-      api: Resize / RandomShortestSize
+      api: Resize(size=...) / RandomShortestSize
       status: direct
     kornia:
       api: SmallestMaxSize
       status: direct
     pillow:
-      api: null
-      status: none
+      api: ImageOps.cover
+      status: direct
   benchmark_recipe_ids:
   - SmallestMaxSize
 - operation_id: Solarize
@@ -1697,9 +1937,9 @@ operations:
       api: null
       status: none
   benchmark_recipe_ids: []
-- operation_id: Superpixels
+- operation_id: StochasticConvolution
   domain: pixel
-  module: albumentations.augmentations.pixel.transforms
+  module: albumentations.augmentations.pixel.noise
   support:
     torchvision:
       api: null
@@ -1711,9 +1951,9 @@ operations:
       api: null
       status: none
   benchmark_recipe_ids: []
-- operation_id: TextImage
+- operation_id: Superpixels
   domain: pixel
-  module: albumentations.augmentations.text.transforms
+  module: albumentations.augmentations.pixel.transforms
   support:
     torchvision:
       api: null
@@ -1840,6 +2080,20 @@ operations:
       status: direct
   benchmark_recipe_ids:
   - Transpose
+- operation_id: UniformTemporalSubsample
+  domain: video
+  module: albumentations.augmentations.other.temporal
+  support:
+    torchvision:
+      api: UniformTemporalSubsample
+      status: direct
+    kornia:
+      api: null
+      status: none
+    pillow:
+      api: null
+      status: none
+  benchmark_recipe_ids: []
 - operation_id: UnsharpMask
   domain: pixel
   module: albumentations.augmentations.pixel.transforms

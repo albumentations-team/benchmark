@@ -1,8 +1,10 @@
 import csv
 import hashlib
+from argparse import Namespace
 from pathlib import Path
 
 import pytest
+import yaml
 from PIL import Image
 
 from augbench.recipes.load import load_recipe_catalog
@@ -40,7 +42,8 @@ def selected_run() -> RunRecord:
 
 @pytest.fixture
 def paper_data() -> paper._PaperData:
-    recipes = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml").recipes[:3]
+    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
+    recipes = (*catalog.recipes[:2], next(recipe for recipe in catalog.recipes if recipe.augmentation_id == "Shear"))
     observations = {
         paper.AX: ((100, 100, 100), (200, 200, 200), (1000, 1000, 1000)),
         "kornia_cpu": ((90, 100, 110), (95, 100, 105), (300, 300, 300)),
@@ -52,7 +55,7 @@ def paper_data() -> paper._PaperData:
         "kornia_gpu": (1200, 100, 100),
     }
     records = []
-    for implementation, _ in paper.IMPLEMENTATIONS:
+    for implementation, _ in (*paper.IMPLEMENTATIONS, paper.PILLOW_ALLSIMD):
         for index, recipe in enumerate(recipes):
             speeds = observations.get(implementation, ((100, 100, 100),) * 3)[index]
             memory = memories.get(implementation, (100, 100, 100))[index]
@@ -123,7 +126,7 @@ def test_csv_retains_seed_observations_and_marks_only_the_selected_path(
     second = next(row for row in rows if row["implementation"] == "kornia_gpu" and row["recipe_key"] == "R02")
     selected = next(row for row in rows if row["implementation"] == "kornia_cpu" and row["recipe_key"] == "R02")
 
-    assert len(rows) == 21
+    assert len(rows) == 24
     assert second["selected_pairwise_path"] == "False"
     assert selected["selected_pairwise_path"] == "True"
     assert [float(second[f"throughput_images_s_{seed}"]) for seed in (137, 138, 139)] == pytest.approx([1, 99, 99999])
@@ -149,12 +152,88 @@ def test_readme_updates_results_and_selection_without_replacing_manual_text(
 
     assert "| Pillow CPU | test | 0.53\N{MULTIPLICATION SIGN}" in before
     assert "| Pillow CPU | test | 1.07\N{MULTIPLICATION SIGN}" in after
-    assert selected_run.run_id[:12] in after
-    assert "differs from the published run" in after
+    assert "[per-seed results and manifests](docs/generated/results.json)" in after
     assert "![AX vs Kornia on 3 shared recipes](docs/generated/pairwise-kornia.png)" in after
     assert after.startswith("Cite this work.\n")
     assert after.endswith("\nInstructions.")
     assert readme.replace_results(after, readme.readme_results(changed, selected_run)) == after
+
+
+def test_ax_rerun_replaces_only_ax_observations(
+    tmp_path: Path, paper_data: paper._PaperData, selected_run: RunRecord
+) -> None:
+    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
+    catalog_path = tmp_path / "rgb.yaml"
+    catalog_path.write_text(
+        yaml.safe_dump(catalog.model_copy(update={"recipes": paper_data.recipes}).model_dump(mode="json"))
+    )
+    inputs = selected_run.inputs.model_copy(
+        update={"recipe_catalog_sha256": hashlib.sha256(catalog_path.read_bytes()).hexdigest()}
+    )
+    run = build_run_record(family_config=selected_run.family_config, inputs=inputs, hardware=selected_run.hardware)
+    ax_run = build_run_record(
+        family_config={**run.family_config, "implementations": [paper.AX]},
+        inputs=inputs,
+        hardware=run.hardware,
+    )
+    run_manifest = tmp_path / "run.json"
+    run_manifest.write_text(run.model_dump_json())
+    ax_manifest = tmp_path / "ax.json"
+    ax_manifest.write_text(ax_run.model_dump_json())
+    full_cells = tmp_path / "full"
+    full_cells.mkdir()
+    ax_cells = tmp_path / "ax"
+    ax_cells.mkdir()
+    for (implementation, _), group in paper_data.groups.items():
+        for record in group:
+            _write_observation(full_cells, run, record)
+            if implementation == paper.AX:
+                _write_observation(ax_cells, ax_run, record)
+    args = Namespace(
+        run=run_manifest, cells=full_cells, recipes=catalog_path, ax_run=(ax_manifest, ax_cells, catalog_path)
+    )
+
+    report, _, replacement = paper.load_report(args, tmp_path)
+
+    assert replacement == ax_run
+    assert {(group[0].run_id, implementation) for (implementation, _), group in report.groups.items()} == {
+        (ax_run.run_id if implementation == paper.AX else run.run_id, implementation)
+        for implementation, _ in paper_data.implementations
+    }
+    assert {
+        record.cell_id for group in report.groups.values() for record in group if record.run_id == ax_run.run_id
+    } == {path.stem for path in ax_cells.glob("*.json")}
+    mismatched = build_run_record(
+        family_config=ax_run.family_config,
+        inputs=inputs.model_copy(update={"environment_lock_sha256": {"rgb": "e" * 64}}),
+        hardware=ax_run.hardware,
+    )
+    ax_manifest.write_text(mismatched.model_dump_json())
+    with pytest.raises(ValueError, match="same workload, hardware, and package locks"):
+        paper.load_report(args, tmp_path)
+
+
+def _write_observation(directory: Path, run: RunRecord, record: ResultRecord) -> None:
+    cell = record.cell.model_copy(update={"run_id": run.run_id})
+    updated = record.model_copy(update={"run_id": run.run_id, "cell": cell})
+    (directory / f"{cell.cell_id}.json").write_bytes(encode_result(updated))
+
+
+def test_full_report_rejects_measurement_selection(tmp_path: Path, selected_run: RunRecord) -> None:
+    config = {**selected_run.family_config, "measurements": {"Resize224+Normalize+ToTensor": [paper.AX]}}
+    run = build_run_record(family_config=config, inputs=selected_run.inputs, hardware=selected_run.hardware)
+    manifest = tmp_path / "run.json"
+    manifest.write_text(run.model_dump_json())
+
+    with pytest.raises(ValueError, match="complete RGB run"):
+        paper.load_report(Namespace(run=manifest), tmp_path)
+
+
+def test_published_export_flag_excludes_ax_rerun(paper_data: paper._PaperData, selected_run: RunRecord) -> None:
+    published = selected_run.model_copy(update={"run_id": paper.RUN_ID})
+
+    assert readme.export_results(paper_data, published)["is_published_run"] is True
+    assert readme.export_results(paper_data, published, ax_run=selected_run)["is_published_run"] is False
 
 
 def test_selected_run_rejects_missing_foreign_or_tampered_results(
@@ -214,7 +293,7 @@ def test_machine_export_uses_selected_run_and_the_readme_aggregates(
 
     assert result["run"]["run_id"] == selected_run.run_id
     assert result["is_published_run"] is False
-    assert result["measurement_count"] == 63
+    assert result["measurement_count"] == 72
     assert result["gpu_memory_poll_ms"] == 50
     second = result["recipes"][1]["results"]["kornia_gpu"]
     assert second["throughput"] == pytest.approx({"median": 99, "min": 1, "max": 99999})
@@ -223,8 +302,11 @@ def test_machine_export_uses_selected_run_and_the_readme_aggregates(
     assert second["observations"][0]["cell_id"] == data.groups[("kornia_gpu", data.recipes[1].recipe_id)][0].cell_id
     common = result["summaries"][0]
     means = {path["id"]: path["mean_relative_throughput"] for path in common["paths"]}
-    assert means == paper._mean_ratios(data, [implementation for implementation, _ in paper.IMPLEMENTATIONS])
+    assert means == paper._mean_ratios(data, [implementation for implementation, _ in data.implementations])
     assert len(common["recipe_ids"]) == 3
+    pillow = next(summary for summary in result["summaries"] if summary["id"] == "pillow")
+    assert [path["id"] for path in pillow["paths"]] == [paper.AX, "pillow_cpu", "pillow_allsimd_cpu"]
+    assert {library["label"] for library in result["libraries"]} >= {"Pillow CPU", "Pillow-AllSIMD CPU (fast)"}
 
 
 def test_figure_export_records_exact_generated_image_bytes_and_dimensions(tmp_path: Path) -> None:
