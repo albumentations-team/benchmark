@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "run_id": "75bc062fe770cfec3d857f401e16366deb01f6582c8645e952930e3cd3d788fb",
+  "run_id": "1e7c6db29a2cc0da95eee8f9fce0806f5eb4c5e0c541e1defc784f2f56864d68",
   "family_config": {
     "cloud": "configs/cloud/gcp-l4.yaml",
     "coverage_catalog": "catalog/operations.yaml",
@@ -51,13 +51,13 @@
     "schema_version": 1
   },
   "inputs": {
-    "git_commit": "7ec3669077ca10a9b6b3421bd908b5f0c44acdd2",
-    "code_archive_sha256": "960860407bd564f8b50fe654ca35fc13ba3830c7eb252cc4b1f1da5ea73ba2fb",
+    "git_commit": "fca0c616b4932b4ca50e61b615117e142348f5cb",
+    "code_archive_sha256": "4ac9571cea0b7697b6b85613046cd675453fb616bd7740959d6f89f3c96492d2",
     "dataset_archive_sha256": "1a97eafff044ac04b5f222fa83a6a20d5f9946f053fee86fa4f1ce030c64c8a2",
-    "recipe_catalog_sha256": "b087cf9d76aafc073b0174f1b1867ace6a5a60fb4dc810a4fd38cf1212072ecb",
+    "recipe_catalog_sha256": "5cb5a580121a62b1d47a951cd97bdee8dc0c99553e616a4261021ba2d6f86d36",
     "environment_lock_sha256": {
       "pillow_allsimd": "d6d279fadead4b30426d96f4dfbfcdf77c4ae876b91d44915b20e20b1996cf8a",
-      "rgb": "ff9a5cbce33a00051b3c8ab7603a34631e6036eba935c633432e28f7a73d57e5"
+      "rgb": "1cab616c0eb4372ef87c62dcd154be514238a89550589e773704355af3418cdc"
     }
   },
   "hardware": {

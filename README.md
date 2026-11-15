@@ -39,16 +39,16 @@ All rows below use the same 34 recipes. Throughput is the arithmetic mean of per
 
 | Measured path | Version | Mean throughput / AX (higher is faster) | Peak process GPU memory (MiB, lower is better) |
 | --- | --- | ---: | ---: |
-| DALI GPU | 2.4.0 | 1.16× | 1,936 |
-| AlbumentationsX CPU | 2.6.2 | 1.00× | 404 |
-| Pillow-AllSIMD CPU (fast) | 13.0.0.post4 | 0.88× | 330 |
-| TorchVision GPU | 0.29.2 | 0.82× | 488 |
+| DALI GPU | 2.4.0 | 1.18× | 1,872 |
+| AlbumentationsX CPU | 2.6.3 | 1.00× | 404 |
+| Pillow-AllSIMD CPU (fast) | 13.0.0.post4 | 0.89× | 330 |
+| TorchVision GPU | 0.29.2 | 0.84× | 544 |
 | TorchVision CPU | 0.29.2 | 0.82× | 330 |
-| Pillow CPU | 13.0.0 | 0.73× | 330 |
-| Kornia GPU | 0.9.0 | 0.54× | 390 |
-| Kornia CPU | 0.9.0 | 0.45× | 292 |
+| Pillow CPU | 13.0.0 | 0.74× | 330 |
+| Kornia GPU | 0.9.1 | 0.53× | 390 |
+| Kornia CPU | 0.9.1 | 0.45× | 292 |
 
-Across 46 shared recipes, Pillow-AllSIMD was 1.66× as fast as Pillow on average, with a 1.14× median ratio. Its R27 MedianBlur ratio was 16.51×.
+Across 46 shared recipes, Pillow-AllSIMD was 1.66× as fast as Pillow on average, with a 1.16× median ratio. Its R27 MedianBlur ratio was 16.16×.
 
 Each implementation ran in its own process. Peak VRAM includes the CUDA state that process retains. The per-seed baseline before pipeline construction is in the machine-readable results.
 
@@ -80,10 +80,10 @@ The counts below include recipes supported by only one competing path. AX wins w
 
 | Competitor | Shared recipes | AX faster | Median competitor / AX throughput | Median competitor - AX GPU memory (MiB) |
 | --- | ---: | ---: | ---: | ---: |
-| Kornia | 67 | 64 | 0.57× | +160 |
-| TorchVision | 44 | 38 | 0.84× | -66 |
+| Kornia | 67 | 66 | 0.56× | +272 |
+| TorchVision | 44 | 38 | 0.87× | -18 |
 | Pillow | 46 | 41 | 0.89× | -74 |
-| DALI | 51 | 2 | 1.14× | +1,532 |
+| DALI | 51 | 0 | 1.16× | +1,468 |
 
 ### Measurement settings
 
@@ -129,8 +129,8 @@ run ID for each observation. Rebuild the paper from the same inputs.
 
 ## Transformation coverage
 
-The [coverage census](catalog/operations.yaml) starts from 125 selected 2D RGB
-entries in AlbumentationsX 2.6.2. It records counterparts for 57 entries in
+The [coverage census](catalog/operations.yaml) records the APIs reviewed for
+125 selected 2D RGB entries in AlbumentationsX 2.6.2. It records counterparts for 57 entries in
 Kornia 0.9.0, 40 in TorchVision 0.29.2, and 46 in Pillow 13.0.0.
 The mapping includes similar image effects. Sampling, border handling, and
 annotation support can differ.

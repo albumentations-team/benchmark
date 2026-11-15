@@ -25,7 +25,7 @@
 \let\inputrows\@@input
 \makeatother
 \newcommand{\ax}{AlbumentationsX}
-\newcommand{\repo}{\href{https://github.com/albumentations-team/benchmark}{benchmark repository}}
+\newcommand{\repo}{\href{https://github.com/albumentations-team/benchmark/tree/codex/fix-rgb-review-findings}{benchmark repository}}
 \input{figures.tex}
 \input{generated/metrics.tex}
 \input{generated/sources.tex}
@@ -33,7 +33,7 @@
 
 \title{RGB Input Pipelines:\\Throughput, GPU Memory, and Transformation Coverage}
 \author{Vladimir Iglovikov\\Albumentations LLC\\\texttt{vladimir@albumentations.ai}}
-\date{Working preprint, November 2026}
+\date{November 2026}
 
 \begin{document}
 \maketitle
@@ -45,14 +45,13 @@ We measure eight input paths from RGB JPEGs on disk to a synchronized CUDA
 \ProductionCellCount{} measurements across \RecipeCount{} recipes, with throughput and peak
 process GPU memory recorded together. On the \CommonRecipeCount{} recipes shared
 by all eight paths, DALI averaged \CommonMeanDaliRatio\(\times\) the throughput
-of AlbumentationsX (AX) 2.6.2. Median peak process memory was
+of AlbumentationsX (AX) 2.6.3. Median peak process memory was
 \CommonMemoryDALIGPU{} MiB for DALI and \CommonMemoryAlbumentationsX{} MiB
 for AX. Across \AllSIMDShared{} shared
 recipes, Pillow-AllSIMD in fast mode had a median throughput ratio of
 \AllSIMDMedianRatio\(\times\) versus Pillow. Its MedianBlur recipe reached
 \AllSIMDMedianBlurRatio\(\times\). A separate census maps
 \CoverageAlbumentationsX{} selected AX RGB entries to corresponding APIs.
-Benchmark code: \url{https://github.com/albumentations-team/benchmark}.
 \end{abstract}
 
 \section{Introduction}
@@ -127,9 +126,8 @@ can fall between samples.
 \begin{figure}[H]
 \centering
 \InputBoundary{32}
-\caption{Throughput and NVML memory are measured in the same pass.
-The dataset is prewarmed before the cells run. The diagram shows the
-measurement windows schematically.}
+\caption{Throughput timing begins after warm-up. GPU memory sampling also
+covers pipeline construction and warm-up.}
 \label{fig:boundary}
 \end{figure}
 
@@ -166,8 +164,7 @@ the same adapter with a different \texttt{PIL} package in each process.
 Pillow-AllSIMD can trade arithmetic precision for speed in fast mode~\cite{allsimd}.
 The worker recorded AVX2 and fast mode. Both Pillow paths transfer pinned
 \texttt{uint8} batches to CUDA and normalize there. AX uses its batch
-\texttt{InputNormalizer} with FP32 arithmetic and FP16 output. Its preflight
-verified the fused Triton kernel on a full batch outside the timed cells.
+\texttt{InputNormalizer} with FP32 arithmetic and FP16 output.
 
 \begin{table}[H]
 \centering\small
@@ -202,10 +199,10 @@ module on the batch, with \texttt{same\_on\_batch=False} where supported.
 \label{sec:matching}
 
 The catalog defines \RecipeCount{} recipes for individual RGB images.
-An adapter maps each recipe to native operations. The added comparisons use
-the same requested effect, parameters or sampling ranges, and output shape.
-Some earlier recipes retain differing mappings, such as the Affine recipe
-(R08). Appendix~\ref{app:semantics} describes these differences.
+An adapter maps each recipe to native operations. We align the requested
+effects, parameters or sampling ranges, and output shape where the APIs
+allow it. Appendix~\ref{app:semantics} describes differences such as the
+geometry of Affine (R08).
 
 The report includes \ProductionPairCount{} implementation--recipe pairs with
 three seeds each.
@@ -302,12 +299,10 @@ AX has higher median throughput than the fastest available TorchVision
 path on \PairTorchVisionWins{} of \PairTorchVisionShared{} recipes and the
 fastest Kornia path on \PairKorniaWins{} of \PairKorniaShared{}. AX exceeds
 both Pillow paths on \PairPillowWins{} of \PairPillowShared{} recipes.
-On MedianBlur (R27), Pillow-AllSIMD, AX, and Pillow delivered 3,998, 3,829,
-and 242 images/s, respectively. The R27 ratio of AllSIMD to Pillow is
-\AllSIMDMedianBlurRatio\(\times\), compared with the median ratio of
-\AllSIMDMedianRatio\(\times\) across \AllSIMDShared{} recipes.
-On Dithering (R65), AX, Pillow, and Pillow-AllSIMD delivered 118, 2,478,
-and 3,626 images/s, respectively.
+Pillow-AllSIMD's gains over Pillow varied by recipe. The throughput ratio
+reached \AllSIMDMedianBlurRatio\(\times\) on MedianBlur (R27), with a median
+of \AllSIMDMedianRatio\(\times\) across \AllSIMDShared{} shared recipes.
+Both Pillow paths also exceeded AX on Dithering (R65).
 DALI delivered more images/s than AX on \PairDALIFaster{} of
 \PairDALIShared{} shared recipes. The median paired difference in peak process memory was
 \PairDALIMemoryDelta{} MiB.
@@ -395,10 +390,14 @@ following run directories:
 \begin{description}
 \item[Full RGB] \texttt{\expandafter\seqsplit\expandafter{\FullRunID}}\\
   Source \texttt{\FullSourceRevision}.
-\item[AX 2.6.2] \texttt{\expandafter\seqsplit\expandafter{\AXRunID}}\\
+\item[AX 2.6.3] \texttt{\expandafter\seqsplit\expandafter{\AXRunID}}\\
   Source \texttt{\AXSourceRevision}.
 \CorrectionRunEntries
 \end{description}
+
+The AX observations come from the AX-only run. An automatic OS package
+update overlapped the AX measurements in the full run. The AX-only run
+used the same workload, machine configuration, and package locks.
 
 The repository's \texttt{paper/README.md} gives the commands to regenerate the
 report from the source archives and cells. The CSV in
@@ -461,7 +460,7 @@ first shear value. Kornia uses a fixed angle and drops the list-valued shear
 parameter. DALI uses only scale and shift.
 
 \paragraph{Brightness and blur.}
-In R30, AX 2.6.2, DALI, and the Pillow paths use a fixed brightness factor
+In R30, AX, DALI, and the Pillow paths use a fixed brightness factor
 of 1.2. TorchVision samples a factor in \([0.8,1.2]\). Kornia adds 0.2 in
 unit-range intensity coordinates. In GaussianBlur (R15), Pillow's filter
 approximates a Gaussian with box filters~\cite{pillowfilters}. R32 applies a
