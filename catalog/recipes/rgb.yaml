@@ -1,5 +1,5 @@
 schema_version: 1
-recipe_set_id: rgb-comparable-2026-11-12-bilinear
+recipe_set_id: rgb-comparable-2026-11-16
 family: rgb
 recipes:
 - recipe_id: Resize224+Normalize+ToTensor
@@ -369,9 +369,9 @@ recipes:
       interpolation: bilinear
       mode: constant
       fill: 0
-      reference_size: 512
-    stochastic: true
-    randomness_scope: per-image
+      input_size: 224
+    stochastic: false
+    randomness_scope: deterministic
   - operation_id: Normalize
     parameters:
       mean:
@@ -418,6 +418,7 @@ recipes:
     randomness_scope: per-image
   - operation_id: Perspective
     parameters:
+      input_size: 224
       scale:
       - 0.05
       - 0.1
@@ -447,12 +448,18 @@ recipes:
   - albumentationsx
   - torchvision
   - kornia
+  - pillow
+  - pillow_allsimd
+  - dali
   supported_implementations:
   - albumentationsx_cpu
   - torchvision_cpu
   - torchvision_gpu
   - kornia_cpu
   - kornia_gpu
+  - pillow_cpu
+  - pillow_allsimd_cpu
+  - dali_gpu
 - recipe_id: RandomCrop224+Elastic+Normalize+ToTensor
   augmentation_id: Elastic
   channels: 3
@@ -517,10 +524,10 @@ recipes:
     randomness_scope: per-image
   - operation_id: ColorJitter
     parameters:
-      brightness: 0.5
-      contrast: 1.5
-      saturation: 1.5
-      hue: 0.5
+      brightness: [0.5, 1.5]
+      contrast: [0.0, 2.5]
+      saturation: [0.0, 2.5]
+      hue: [-0.5, 0.5]
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize
@@ -712,8 +719,8 @@ recipes:
       kernel_size:
       - 5
       - 5
-    stochastic: true
-    randomness_scope: per-image
+    stochastic: false
+    randomness_scope: deterministic
   - operation_id: Normalize
     parameters:
       mean:
@@ -956,9 +963,7 @@ recipes:
       alpha:
       - 0.2
       - 0.5
-      lightness:
-      - 0.5
-      - 1
+      lightness: [1.0, 1.0]
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize
@@ -1147,7 +1152,9 @@ recipes:
     randomness_scope: per-image
   - operation_id: JpegCompression
     parameters:
-      quality: 50
+      quality_range:
+      - 30
+      - 90
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize
@@ -1197,8 +1204,8 @@ recipes:
   - operation_id: RandomGamma
     parameters:
       gamma: 120
-    stochastic: true
-    randomness_scope: per-image
+    stochastic: false
+    randomness_scope: deterministic
   - operation_id: Normalize
     parameters:
       mean:
@@ -1286,8 +1293,8 @@ recipes:
   - operation_id: MedianBlur
     parameters:
       blur_limit: 5
-    stochastic: true
-    randomness_scope: per-image
+    stochastic: false
+    randomness_scope: deterministic
   - operation_id: Normalize
     parameters:
       mean:
@@ -1377,9 +1384,7 @@ recipes:
     randomness_scope: per-image
   - operation_id: CLAHE
     parameters:
-      clip_limit:
-      - 1
-      - 4
+      clip_limits: [1, 2, 3, 4]
       tile_grid_size:
       - 8
       - 8
@@ -1427,8 +1432,8 @@ recipes:
       brightness_limit:
       - 0.2
       - 0.2
-    stochastic: true
-    randomness_scope: per-image
+    stochastic: false
+    randomness_scope: deterministic
   - operation_id: Normalize
     parameters:
       mean:
@@ -1478,8 +1483,8 @@ recipes:
       contrast_limit:
       - 0.2
       - 0.2
-    stochastic: true
-    randomness_scope: per-image
+    stochastic: false
+    randomness_scope: deterministic
   - operation_id: Normalize
     parameters:
       mean:
@@ -1528,8 +1533,8 @@ recipes:
     parameters:
       kernel_size: 5
       border_mode: reflect
-    stochastic: true
-    randomness_scope: per-image
+    stochastic: false
+    randomness_scope: deterministic
   - operation_id: Normalize
     parameters:
       mean:
@@ -1744,7 +1749,9 @@ recipes:
     randomness_scope: per-image
   - operation_id: Hue
     parameters:
-      hue: 20
+      hue_degrees:
+      - -20
+      - 20
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize
@@ -1999,8 +2006,8 @@ recipes:
   - operation_id: Saturation
     parameters:
       saturation_factor: 0.5
-    stochastic: true
-    randomness_scope: per-image
+    stochastic: false
+    randomness_scope: deterministic
   - operation_id: Normalize
     parameters:
       mean:
@@ -2044,9 +2051,8 @@ recipes:
     randomness_scope: per-image
   - operation_id: Snow
     parameters:
-      snow_point_range:
-      - 0.5
-      - 0.5
+      snow_point_range: [0.2, 0.5]
+      brightness: 2.0
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize
@@ -2320,8 +2326,8 @@ recipes:
     parameters:
       max_size: 512
       interpolation: bilinear
-    stochastic: true
-    randomness_scope: per-image
+    stochastic: false
+    randomness_scope: deterministic
   - operation_id: RandomCrop224
     parameters:
       height: 224
@@ -2370,8 +2376,8 @@ recipes:
     parameters:
       max_size: 512
       interpolation: bilinear
-    stochastic: true
-    randomness_scope: per-image
+    stochastic: false
+    randomness_scope: deterministic
   - operation_id: RandomCrop224
     parameters:
       height: 224

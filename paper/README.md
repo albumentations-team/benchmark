@@ -29,12 +29,15 @@ and code-archive SHA-256 values. GCS access depends on bucket permissions.
 
 | Artifact | Run ID |
 | --- | --- |
-| Full RGB | `1e7c6db29a2cc0da95eee8f9fce0806f5eb4c5e0c541e1defc784f2f56864d68` |
-| AX-only | `175d077e5ee85e9785067111573615b3fa7c6bf80641dabf4f5dd72f3a5dae81` |
+| Primary RGB source, 492 cells | `03b5fd6c6fab74fd1029fc88012e03cb4b51d0a2e3c4b8be59ead6928efae6ee` |
+| GPU correction, 534 cells | `9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3` |
+| DALI and Pillow-AllSIMD correction, 297 cells | `32825567918e566a56b11057388185be4085e381f4194495529fe29e0a8897f8` |
 
-The report uses AX observations from the AX-only run because automatic OS
-package updates overlapped the AX measurements in the full run. Both runs
-used the same recipes, dataset, machine configuration, and package locks.
+The three manifests contain complementary implementation cells. Together
+they cover the complete 1,323-cell matrix. The generator validates each cell
+against its own immutable manifest, then checks that the combined set has no
+missing or duplicate implementation, recipe, and seed combinations. All three
+runs use the same recipes, dataset, machine configuration, and package locks.
 
 The GCS root is `gs://imagenet_validation/augmentation-benchmark`.
 Manifests and cells are under `runs/<run_id>/`. The source archive is
@@ -44,8 +47,9 @@ Place each run's manifest, cells, and extracted recipe catalog in separate
 directories. Run from the repository root:
 
 ```bash
-run_args=(--run full/run.json --cells full/cells --recipes full/rgb.yaml
-          --ax-run ax/run.json ax/cells ax/rgb.yaml)
+run_args=(--run primary/run.json --cells primary/cells --recipes primary/rgb.yaml
+          --supplemental-run gpu/run.json gpu/cells gpu/rgb.yaml
+          --supplemental-run dali-pillow/run.json dali-pillow/cells dali-pillow/rgb.yaml)
 uv run python -m paper.generate_results "${run_args[@]}"
 uv run python -m paper.generate_readme "${run_args[@]}"
 ```

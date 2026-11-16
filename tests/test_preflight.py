@@ -51,11 +51,13 @@ def test_preflight_uses_one_transient_worker(monkeypatch: pytest.MonkeyPatch) ->
     rgb_executor.RGBCellExecutor._preflight_dataloader(
         executor,
         adapter=object(),
-        runtime=SimpleNamespace(host_batch_transform=None),
+        runtime=SimpleNamespace(host_batch_transform=None, batch_input_on_host=False),
         sources=(),
+        seed=137,
     )
 
     config = arguments["config"]
     assert config.num_workers == 1
     assert config.prefetch_factor == 1
     assert config.persistent_workers is False
+    assert config.seed == 137

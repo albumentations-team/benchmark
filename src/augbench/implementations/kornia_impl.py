@@ -2,6 +2,7 @@
 
 import random
 from collections.abc import Callable
+from functools import partial
 from typing import Any
 
 import kornia
@@ -9,7 +10,14 @@ import kornia.augmentation as kornia_augmentation
 import torch
 import torch.nn.functional as torch_functional
 
-from augbench.implementations.geometry import aspect_size, centered_padding, emboss_kernel, x_shear_matrix
+from augbench.implementations.geometry import (
+    aspect_size,
+    centered_inverse_affine,
+    centered_inverse_perspective,
+    centered_padding,
+    emboss_kernel,
+    x_shear_matrix,
+)
 from augbench.implementations.specs import TransformSpec
 
 LIBRARY = "kornia"
@@ -22,6 +30,17 @@ class _TensorOperation(torch.nn.Module):
 
     def forward(self, image: torch.Tensor) -> torch.Tensor:
         return self._operation(image)
+
+
+class _PerImageJitter(torch.nn.Module):
+    def __init__(self, jitter: torch.nn.Module) -> None:
+        super().__init__()
+        self.jitter = jitter
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        return (
+            torch.cat([self.jitter(sample) for sample in image.split(1)]) if image.shape[0] > 1 else self.jitter(image)
+        )
 
 
 class _Morphological(torch.nn.Module):
@@ -187,24 +206,15 @@ def create_transform(spec: TransformSpec) -> Any | None:
 
 
 def _build_color_jitter(params: dict[str, Any]) -> Any | None:
-    return kornia_augmentation.ColorJitter(
-        brightness=params["brightness"],
-        contrast=params["contrast"],
-        saturation=params["saturation"],
-        hue=params["hue"],
-        p=1,
-        same_on_batch=False,
-    )
-
-
-def _build_color_jiggle(params: dict[str, Any]) -> Any | None:
-    return kornia_augmentation.ColorJiggle(
-        brightness=params["brightness"],
-        contrast=params["contrast"],
-        saturation=params["saturation"],
-        hue=params["hue"],
-        p=1,
-        same_on_batch=False,
+    return _PerImageJitter(
+        kornia_augmentation.ColorJitter(
+            brightness=params["brightness"],
+            contrast=params["contrast"],
+            saturation=params["saturation"],
+            hue=params["hue"],
+            p=1,
+            same_on_batch=False,
+        )
     )
 
 
@@ -221,14 +231,7 @@ def _build_blur(params: dict[str, Any]) -> Any | None:
 
 
 def _build_brightness(params: dict[str, Any]) -> Any | None:
-    # Kornia brightness is multiplicative (1.0=no change). Spec limit is additive offset,
-    # so +0.2 additive -> multiplicative factor (1.2, 1.2).
-    limit = params["brightness_limit"]
-    offset = float(limit[0] if isinstance(limit, (list, tuple)) else limit)
-    return kornia_augmentation.RandomBrightness(
-        brightness=(1.0 + offset, 1.0 + offset),
-        p=1,
-    )
+    return kornia.enhance.AdjustBrightnessAccumulative(1 + params["brightness_limit"][0])
 
 
 def _build_channel_dropout(_params: dict[str, Any]) -> Any | None:
@@ -240,24 +243,21 @@ def _build_channel_shuffle(_params: dict[str, Any]) -> Any | None:
 
 
 def _build_clahe(params: dict[str, Any]) -> Any | None:
-    # Pass float clip_limit to avoid Kornia's internal Long-dtype sampling bug
-    clip = params["clip_limit"]
-    clip_float = (float(clip[0]), float(clip[1])) if isinstance(clip, (list, tuple)) else (float(clip), float(clip))
-    return kornia_augmentation.RandomClahe(
-        p=1,
-        clip_limit=clip_float,
-        grid_size=tuple(params["tile_grid_size"]),
+    levels = params["clip_limits"]
+    return _DiscreteClahe(
+        clip_limit=(float(levels[0]), float(levels[-1] + 1)), grid_size=tuple(params["tile_grid_size"])
     )
+
+
+class _DiscreteClahe(kornia_augmentation.RandomClahe):
+    def forward_parameters(self, batch_shape: tuple[int, ...]) -> dict[str, torch.Tensor]:
+        parameters = super().forward_parameters(batch_shape)
+        parameters["clip_limit_factor"].floor_()
+        return parameters
 
 
 def _build_contrast(params: dict[str, Any]) -> Any | None:
-    # Kornia contrast is multiplicative (1.0=no change). Convert additive offset to factor.
-    limit = params["contrast_limit"]
-    offset = float(limit[0] if isinstance(limit, (list, tuple)) else limit)
-    return kornia_augmentation.RandomContrast(
-        contrast=(1.0 + offset, 1.0 + offset),
-        p=1,
-    )
+    return kornia.enhance.AdjustContrastWithMeanSubtraction(1 + params["contrast_limit"][0])
 
 
 def _build_equalize(_params: dict[str, Any]) -> Any | None:
@@ -314,10 +314,8 @@ def _build_grayscale(_params: dict[str, Any]) -> Any | None:
 
 
 def _build_hue(params: dict[str, Any]) -> Any | None:
-    # Kornia expects hue in [-0.5, 0.5] (fraction of 360°). Spec is in degrees.
-    hue_fraction = params["hue"] / 360.0
     return kornia_augmentation.RandomHue(
-        hue=(-hue_fraction, hue_fraction),
+        hue=tuple(angle / 360 for angle in params["hue_degrees"]),
         p=1,
     )
 
@@ -327,10 +325,14 @@ def _build_invert(_params: dict[str, Any]) -> Any | None:
 
 
 def _build_jpeg_compression(params: dict[str, Any]) -> Any | None:
-    return kornia_augmentation.RandomJPEG(
-        jpeg_quality=params["quality"],
-        p=1,
-    )
+    low, high = params["quality_range"]
+    codec = kornia.enhance.JPEGCodecDifferentiable()
+
+    def compress(image: torch.Tensor) -> torch.Tensor:
+        quality = torch.randint(low, high + 1, (image.shape[0],), device=image.device).to(image.dtype)
+        return codec(image, quality)
+
+    return _TensorOperation(compress)
 
 
 def _build_median_blur(params: dict[str, Any]) -> Any | None:
@@ -404,52 +406,51 @@ def _build_salt_and_pepper(params: dict[str, Any]) -> Any | None:
 
 
 def _build_saturation(params: dict[str, Any]) -> Any | None:
-    # Kornia saturation is multiplicative (1.0=no change, >1=more saturated).
-    # Spec saturation_factor=0.5 is an additive-style offset -> factor (1.5, 1.5).
-    factor = 1.0 + params["saturation_factor"]
-    return kornia_augmentation.RandomSaturation(
-        saturation=(factor, factor),
-        p=1,
-    )
+    return kornia.enhance.AdjustSaturationWithGraySubtraction(1 + params["saturation_factor"])
 
 
-def _build_sharpen(_params: dict[str, Any]) -> Any | None:
-    # sharpness=2.0 produces noticeable sharpening (default 0.5 barely changes the image)
-    return kornia_augmentation.RandomSharpness(
-        sharpness=2.0,
-        p=1,
-    )
+def _build_sharpen(params: dict[str, Any]) -> Any:
+    return _ReflectSharpness(tuple(1 + 13 * alpha for alpha in params["alpha"]))
+
+
+class _ReflectSharpness(torch.nn.Module):
+    def __init__(self, factor: tuple[float, float]) -> None:
+        super().__init__()
+        self.sharpen = kornia_augmentation.RandomSharpness(sharpness=factor, p=1)
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        padded = torch_functional.pad(image, (1, 1, 1, 1), mode="reflect")
+        return self.sharpen(padded)[..., 1:-1, 1:-1]
 
 
 def _build_snow(params: dict[str, Any]) -> Any | None:
     # Pass explicit float brightness to avoid Kornia's internal Long-dtype sampling bug
     return kornia_augmentation.RandomSnow(
         snow_coefficient=tuple(params["snow_point_range"]),
-        brightness=(2.0, 2.0),
+        brightness=(params["brightness"], params["brightness"]),
         p=1,
     )
 
 
 def _build_solarize(params: dict[str, Any]) -> Any | None:
-    return kornia_augmentation.RandomSolarize(
-        thresholds=params["threshold"],
-        p=1,
-    )
+    return _TensorOperation(partial(kornia.enhance.solarize, thresholds=params["threshold"]))
 
 
 def _build_affine(params: dict[str, Any]) -> Any | None:
-    angle_degrees = float(params["angle"])
-    # Translation in pixels (same as albumentations translate_px)
-    tx, ty = float(params["shift"][0]), float(params["shift"][1])
-    scale_factor = float(params["scale"])
-    shear_value = float(params["shear"]) if isinstance(params["shear"], int | float) else 0.0
-
-    return _FixedAffine(
-        angle_degrees=angle_degrees,
-        translation=(tx, ty),
-        scale_factor=scale_factor,
-        shear=(shear_value, shear_value),
+    size = params["input_size"]
+    center = (size - 1) / 2
+    inverse = centered_inverse_affine(
+        (center, center), params["angle"], params["scale"], tuple(params["shift"]), tuple(params["shear"])
     )
+    matrix = torch.tensor(inverse, dtype=torch.float32).reshape(1, 2, 3)
+    forward = kornia.geometry.transform.invert_affine_transform(matrix)
+
+    def warp(image: torch.Tensor) -> torch.Tensor:
+        return kornia.geometry.transform.warp_affine(
+            image.float(), forward.to(image.device).expand(image.shape[0], -1, -1), (size, size), align_corners=True
+        ).to(image.dtype)
+
+    return _TensorOperation(warp)
 
 
 def _build_shift_scale_rotate(params: dict[str, Any]) -> Any:
@@ -462,11 +463,21 @@ def _build_shift_scale_rotate(params: dict[str, Any]) -> Any:
 
 
 def _build_random_crop224(params: dict[str, Any]) -> Any | None:
-    return kornia_augmentation.RandomCrop(
-        size=(params["height"], params["width"]),
-        pad_if_needed=True,
-        p=1,
-    )
+    return _CenteredRandomCrop((params["height"], params["width"]))
+
+
+class _CenteredRandomCrop(torch.nn.Module):
+    def __init__(self, size: tuple[int, int]) -> None:
+        super().__init__()
+        self.size = size
+        self.crop = kornia_augmentation.RandomCrop(size=size, p=1)
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        height, width = image.shape[-2:]
+        left, top, right, bottom = centered_padding(height, width, max(self.size[0], height), max(self.size[1], width))
+        if left or right or top or bottom:
+            image = torch_functional.pad(image, (left, right, top, bottom))
+        return self.crop(image)
 
 
 def _build_elastic(params: dict[str, Any]) -> Any | None:
@@ -500,12 +511,22 @@ def _build_horizontal_flip(_params: dict[str, Any]) -> Any | None:
     return kornia_augmentation.RandomHorizontalFlip(p=1)
 
 
-def _build_perspective(params: dict[str, Any]) -> Any | None:
-    return kornia_augmentation.RandomPerspective(
-        distortion_scale=params["scale"][1],
-        resample=params["interpolation"],
-        p=1,
-    )
+def _build_perspective(params: dict[str, Any]) -> Any:
+    size = params["input_size"]
+    low, high = params["scale"]
+
+    def warp(image: torch.Tensor) -> torch.Tensor:
+        shape = (2, image.shape[0])
+        magnitude = torch.empty(shape, device=image.device, dtype=torch.float32).uniform_(low, high)
+        sign = (torch.randint(0, 2, shape, device=image.device) * 2) - 1
+        x, y = magnitude * sign / size
+        coefficients = centered_inverse_perspective((size - 1) / 2, -x, -y)
+        forward = torch.stack((*coefficients, torch.ones_like(x)), dim=-1).reshape(-1, 3, 3)
+        return kornia.geometry.transform.warp_perspective(image.float(), forward, (size, size), align_corners=True).to(
+            image.dtype
+        )
+
+    return _TensorOperation(warp)
 
 
 def _build_random_resized_crop(params: dict[str, Any]) -> Any | None:
@@ -531,6 +552,7 @@ def _build_random_jigsaw(params: dict[str, Any]) -> Any | None:
 def _build_rotate(params: dict[str, Any]) -> Any | None:
     return kornia_augmentation.RandomRotation(
         degrees=tuple(params["angle_range"]),
+        resample=params["interpolation"],
         p=1,
     )
 
@@ -583,8 +605,6 @@ def _build_resize(params: dict[str, Any]) -> Any | None:
 
 
 def _build_normalize(_params: dict[str, Any]) -> Any | None:
-    # Normalization is applied by GpuBatchNormalize after H2D, not by a
-    # CPU Kornia recipe.
     return None
 
 
@@ -613,7 +633,7 @@ def _build_smallest_max_size(params: dict[str, Any]) -> Any | None:
 
 _TRANSFORM_BUILDERS = {
     "ColorJitter": _build_color_jitter,
-    "ColorJiggle": _build_color_jiggle,
+    "ColorJiggle": _build_color_jitter,
     "AutoContrast": _build_auto_contrast,
     "Blur": _build_blur,
     "Brightness": _build_brightness,

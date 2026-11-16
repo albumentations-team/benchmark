@@ -7,12 +7,7 @@ _BATCH_DIMENSIONS = 4
 
 
 class GpuBatchNormalize(nn.Module):
-    """Convert a collated RGB batch to normalized float16 BCHW on CUDA.
-
-    CPU pipelines retain uint8 until the pinned H2D copy. Kornia CPU augments
-    in float32, then casts the completed host batch to float16 before H2D.
-    Both representations use this single GPU normalization step.
-    """
+    """Convert a collated RGB batch to normalized float16 BCHW on CUDA."""
 
     def __init__(
         self,

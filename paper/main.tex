@@ -21,7 +21,7 @@
 \makeatletter
 \let\inputrows\@@input
 \makeatother
-\newcommand{\repo}{\href{https://github.com/albumentations-team/benchmark/tree/codex/fix-rgb-review-findings}{benchmark repository}}
+\newcommand{\repo}{\href{https://github.com/albumentations-team/benchmark}{benchmark repository}}
 \input{generated/metrics.tex}
 \input{generated/sources.tex}
 \input{generated/coverage-metrics.tex}
@@ -124,9 +124,9 @@ AX CPU & SimpleJPEG & Augment; transfer uint8 & Batch InputNormalizer \\
 Pillow CPU & Pillow & Augment; transfer uint8 & Normalize \\
 Pillow-AllSIMD (fast) & AllSIMD & Augment; transfer uint8 & Normalize \\
 TorchVision CPU & TorchVision I/O & Augment; transfer uint8 & Normalize \\
-TorchVision GPU & TorchVision I/O & Form batch shape; transfer uint8 & Cast to FP16; augment per image; normalize \\
-Kornia CPU & TorchVision I/O & Augment in FP32; transfer FP16 & Normalize \\
-Kornia GPU & TorchVision I/O & Form batch shape in FP32; transfer FP16 & Augment batch; normalize \\
+TorchVision GPU & Batched NVJPEG & Read encoded JPEG bytes & Decode on CUDA; transform per image; stack; normalize \\
+Kornia CPU & Kornia Rust reader & Augment in FP32; transfer FP16 & Normalize \\
+Kornia GPU & Kornia Rust reader & Decode; shape prefix in FP32; transfer FP16 & Augment; normalize \\
 DALI GPU & Mixed CPU/GPU & Native reader; DALI manages transfer & Augment and normalize in native graph \\
 \end{tabularx}
 \caption{Execution paths~\cite{albumentationsx,pillow,torchvision,kornia,dali}.
@@ -144,17 +144,17 @@ pixels or identical work. Crop offsets, padding, interpolation, and
 arithmetic can differ. Appendix~\ref{app:recipes} gives the parameters
 and Appendix~\ref{app:semantics} documents the differences.
 
-We use AX measurements from a separate run because an OS package update
-overlapped AX's measurements in the full run. Workload, machine settings,
-and package locks match. Appendix~\ref{app:reproduce} identifies both
-runs. Results retain their source run and cell IDs.
+The report combines three immutable runs with the same dataset, recipes,
+hardware settings, and package locks. Each cell retains its source run and
+cell ID. Appendix~\ref{app:reproduce} lists the manifests.
 
 \section{Throughput on the same recipes}
 
 Figure~\ref{fig:delivery} uses the \CommonRecipeCount{} recipes measured by
 all eight paths. The full matrix contains \ProductionPairCount{}
 implementation--recipe pairs. Pairwise comparisons use the recipes measured
-by both paths.
+by both paths. Table~\ref{tab:common-throughput} lists each path's throughput
+ratio on the common set, recipe by recipe.
 
 \begin{figure}[H]
 \centering
@@ -311,30 +311,32 @@ and reads them once before timing. Each seed selects the first 8,448 files
 from a PCG64 permutation of that list. After synchronizing the warm-up
 batch, the runner times the remaining 8,192 images. Pipeline and worker
 setup precede timing. Prefetch can prepare part of the workload before the
-timer starts. Reads typically hit the Linux page cache after prewarming.
+timer starts. The selected JPEGs fit in the VM's 64 GB of host memory, so
+sequential prewarming lets timed random file reads usually hit the Linux page
+cache. File lookup, cache access, decoding, and augmentation remain in the
+timer. The measurement does not establish cold-cache disk performance.
 
 NVML samples process GPU memory at a nominal \MemoryPollMs{}\,ms interval
 and takes readings before pipeline construction and after teardown.
-Short peaks can fall between samples. The DataLoader generator is
-seeded with zero. The cell seed sets file order, the DALI graph seed,
-and the main process's Python, NumPy, and PyTorch RNGs. AX Compose has no
-explicit seed in the adapter. Augmentation draws can differ between
-implementations.
+Short peaks can fall between samples. The DataLoader generator and DALI graph
+use the cell seed. The cell seed also initializes Python, NumPy, and PyTorch
+RNGs in the worker processes. AX Compose uses base seed zero, combined with
+its DataLoader worker seed. Augmentation draws are independent per image.
 
 Normalization uses RGB means \((0.485,0.456,0.406)\) and standard deviations
 \((0.229,0.224,0.225)\) on the unit intensity scale. The runner validates
 CUDA placement, FP16 type, and BCHW output. The catalog's \texttt{ToTensor}
 stage describes this output contract.
 
-The TorchVision and Kornia GPU paths run the prefix through the first
-shape-forming resize, crop, or letterbox on the CPU so the images can be stacked.
-For a recipe that ends there, only normalization and output preparation run
-on the GPU.
+TorchVision GPU reads JPEG bytes in DataLoader workers, decodes each batch with
+NVJPEG, applies crop and other shape-forming transforms to each decoded image,
+then stacks the results. Kornia GPU uses its Rust JPEG reader and runs the
+shape-forming prefix on CPU because source images can have different sizes.
 
-The TorchVision adapter typically calls GPU transforms per image and stacks
-the results. Its JPEG recipe uses batched CUDA encode and decode, with JPEG
-bytes passed through host memory between the calls. Kornia calls its GPU
-module on the batch, with \texttt{same\_on\_batch=False} where supported.
+TorchVision GPU transforms draw random parameters per image. JPEG compression
+draws a quality from 30 through 90 independently for each image, groups equal
+qualities for encoding, then restores input order after CUDA decoding. Kornia
+RGB augmentation draws per-image parameters, including its ColorJitter order.
 
 \clearpage
 \section{Declared recipes and parameters}
@@ -366,9 +368,10 @@ fallbacks, and rounding can differ. The Pillow adapter tries up to ten
 candidate crops and then resizes the whole image if none fits.
 
 RandomCrop224 takes a window at decoded resolution and pads with zeros when
-needed. In DALI the slice has integer offsets, with centered padding on
-short axes. R50 and R51 resize by long or short side before
-cropping~\cite{daliresize}.
+needed. DALI decodes the requested source window when the JPEG crop is valid.
+It then pads short axes with zeros at the centre. RandomResizedCrop uses the
+decoder's per-image crop followed by resize. R50 and R51 resize by long or
+short side before cropping~\cite{daliresize}.
 
 \paragraph{VerticalFlip (R05).}
 The DALI adapter sets \texttt{horizontal=0} and \texttt{vertical=1}
@@ -380,18 +383,21 @@ In pixel-center coordinates, each path maps \(x\) to
 with zero-valued neighbors outside the frame.
 
 \paragraph{Affine (R08).}
-AX samples rotation in \([-25^\circ,25^\circ]\) with fixed per-axis
-translation and shear. TorchVision also samples rotation but interprets the
-shear pair as a range for X shear and draws translation using the configured
-fractions of the image size. The Pillow paths use a fixed matrix and the
-first shear value. Kornia uses a fixed angle and drops the list-valued shear
-parameter. DALI uses only scale and shift.
+Every R08 path applies the same fixed centered warp: scale 2, rotation 25°,
+shear 10° on X and 15° on Y, and translation 20 pixels on both axes. Each
+implementation performs all four operations in one affine transform.
+Coordinate conventions, interpolation arithmetic, and rounding can still
+produce small pixel differences.
 
 \paragraph{Brightness and blur.}
-In R30, AX, DALI, and the Pillow paths use a fixed brightness factor
-of 1.2. TorchVision samples a factor in \([0.8,1.2]\). Kornia adds 0.2 in
-unit-range intensity coordinates. In GaussianBlur (R15), Pillow's filter
-approximates a Gaussian with box filters~\cite{pillowfilters}. R32 applies a
+R30 uses a fixed brightness multiplier of 1.2. R31 uses contrast factor 1.2
+around each image's grayscale mean. R11 samples ColorJitter factors and
+operation order independently for each image. DALI uses its native RGB-space
+hue approximation. R24 draws an integer JPEG quality from 30 through 90 per
+image. Kornia and DALI simulate JPEG artifacts, while TorchVision, AX, and
+Pillow encode and decode JPEGs, so a shared nominal quality does not imply
+pixel-identical output. In GaussianBlur (R15), Pillow's filter approximates a
+Gaussian with box filters~\cite{pillowfilters}. R32 applies a
 \(5\times5\) box in every measured path. AX, Kornia, and DALI reflect the
 boundary, and the Pillow paths extend the edge pixels.
 
@@ -422,6 +428,17 @@ and their boundary effects. The calibration procedure is in
 Each row gives the median, minimum, and maximum across the same three cells
 for throughput and peak GPU memory. The CSV contains unrounded values and
 GPU baselines. Recipe IDs link to Appendix~\ref{app:recipes}.
+
+The table below gives a direct comparison on the recipes shared by all
+eight paths. Each value is the implementation's median throughput divided
+by the AX median for the same recipe. K means Kornia, PIL means Pillow, and
+TV means TorchVision. SIMD identifies Pillow-AllSIMD. A value above 1 indicates
+a faster median on that recipe.
+
+\begingroup\small
+\rowcolors{3}{gray!5}{white}
+\input{generated/common-recipe-ratios.tex}
+\endgroup
 
 \paragraph{Recipe sets used for the library comparisons.}
 The comparisons in Section~\ref{sec:library-comparisons} use the
@@ -467,13 +484,14 @@ and annotation support can differ. One API can cover several entries:
 TorchVision ColorJitter is listed for both ColorJitter and
 RandomBrightnessContrast.
 
-Each row is an AX catalog entry. A dash means the catalog records no
-corresponding API for that library.
+Each row is an AX catalog entry. The counts include direct operators and
+compositions. Approximate matches are marked separately.
+A dash means the catalog records no corresponding API for that library.
 
 \begingroup\small
 \rowcolors{2}{gray!5}{white}
-\begin{longtable}{P{4.1cm}P{4.0cm}P{3.8cm}P{3.4cm}}
-\textbf{AX entry} & \textbf{Kornia} & \textbf{TorchVision} & \textbf{Pillow} \\ \midrule\endhead
+\begin{longtable}{P{3.2cm}P{3.0cm}P{2.7cm}P{2.7cm}P{3.3cm}}
+\textbf{AX entry} & \textbf{Kornia} & \textbf{TorchVision} & \textbf{Pillow} & \textbf{DALI} \\ \midrule\endhead
 \inputrows generated/coverage-mapping.tex
 \bottomrule
 \end{longtable}
@@ -506,8 +524,9 @@ The benchmark used Python 3.13.14 on
 following run directories:
 
 \begin{description}
-\item[Full RGB] \texttt{\expandafter\seqsplit\expandafter{\FullRunID}}\\
+\item[Primary RGB source] \texttt{\expandafter\seqsplit\expandafter{\FullRunID}}\\
   Source \texttt{\FullSourceRevision}.
+\SupplementalRunDetails
 \item[AX 2.6.3] \texttt{\expandafter\seqsplit\expandafter{\AXRunID}}\\
   Source \texttt{\AXSourceRevision}.
 \end{description}

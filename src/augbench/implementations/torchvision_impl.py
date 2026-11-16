@@ -6,7 +6,12 @@ from typing import Any
 import torch
 import torchvision.transforms.v2 as tv_transforms
 
-from augbench.implementations.geometry import aspect_size, centered_padding
+from augbench.implementations.geometry import (
+    aspect_size,
+    centered_inverse_affine,
+    centered_padding,
+    sample_inverse_perspective,
+)
 from augbench.implementations.specs import TransformSpec
 
 LIBRARY = "torchvision"
@@ -32,7 +37,17 @@ def _build_resize(params: dict[str, Any]) -> Any | None:
 
 
 def _build_random_crop224(params: dict[str, Any]) -> Any | None:
-    return tv_transforms.RandomCrop(size=(params["height"], params["width"]), pad_if_needed=True)
+    height, width = params["height"], params["width"]
+    crop = tv_transforms.RandomCrop(size=(height, width))
+
+    def apply(image: torch.Tensor) -> torch.Tensor:
+        image_height, image_width = image.shape[-2:]
+        padding = centered_padding(image_height, image_width, max(height, image_height), max(width, image_width))
+        if any(padding):
+            image = tv_transforms.functional.pad(image, list(padding))
+        return crop(image)
+
+    return tv_transforms.Lambda(apply)
 
 
 def _build_random_resized_crop(params: dict[str, Any]) -> Any | None:
@@ -56,9 +71,11 @@ def _build_vertical_flip(_params: dict[str, Any]) -> Any | None:
 
 
 def _build_random_rotate90(params: dict[str, Any]) -> Any:
-    return tv_transforms.Lambda(
-        lambda image: torch.rot90(image, random.randint(*params["times"]), (-2, -1))  # noqa: S311 - augmentation RNG.
-    )
+    def rotate(image: torch.Tensor) -> torch.Tensor:
+        turns = random.randint(*params["times"])  # noqa: S311 - augmentation RNG.
+        return torch.rot90(image, turns, (-2, -1))
+
+    return tv_transforms.Lambda(rotate)
 
 
 def _build_center_crop(params: dict[str, Any]) -> Any:
@@ -126,8 +143,7 @@ def _build_random_gamma(params: dict[str, Any]) -> Any:
 
 
 def _build_hue(params: dict[str, Any]) -> Any:
-    limit = params["hue"] / 180
-    return tv_transforms.ColorJitter(hue=(-limit, limit))
+    return tv_transforms.ColorJitter(hue=tuple(angle / 360 for angle in params["hue_degrees"]))
 
 
 def _build_transpose(_params: dict[str, Any]) -> Any:
@@ -177,18 +193,16 @@ def _build_rotate(params: dict[str, Any]) -> Any | None:
 
 
 def _build_affine(params: dict[str, Any]) -> Any | None:
-    # TV translate is a fraction of image size; spec shift is in pixels for reference_size
-    ref = float(params.get("reference_size", 512))
-    translate_fraction = [x / ref for x in params["shift"]]
-    return tv_transforms.RandomAffine(
-        degrees=params["angle"],
-        translate=translate_fraction,
-        scale=(params["scale"], params["scale"]),
-        shear=params["shear"],
-        interpolation=tv_transforms.InterpolationMode.BILINEAR
-        if params["interpolation"] == "bilinear"
-        else tv_transforms.InterpolationMode.NEAREST,
+    size = params["input_size"]
+    inverse = centered_inverse_affine(
+        (size / 2, size / 2), params["angle"], params["scale"], tuple(params["shift"]), tuple(params["shear"])
     )
+
+    def warp(image: torch.Tensor) -> torch.Tensor:
+        work = image.float() if image.is_floating_point() else image
+        return tv_transforms.functional.perspective(work, None, None, coefficients=[*inverse, 0.0, 0.0]).to(image.dtype)
+
+    return tv_transforms.Lambda(warp)
 
 
 class _FixedXShear(torch.nn.Module):
@@ -215,16 +229,13 @@ def _build_shear(params: dict[str, Any]) -> Any | None:
     return _FixedXShear(float(params["shear"]))
 
 
-def _build_perspective(params: dict[str, Any]) -> Any | None:
-    maximum_distortion = params["scale"][1]
-    return tv_transforms.RandomPerspective(
-        distortion_scale=maximum_distortion,
-        interpolation=tv_transforms.InterpolationMode.BILINEAR
-        if params["interpolation"] == "bilinear"
-        else tv_transforms.InterpolationMode.NEAREST,
-        fill=params["fill"],
-        p=1,
-    )
+def _build_perspective(params: dict[str, Any]) -> Any:
+    def warp(image: torch.Tensor) -> torch.Tensor:
+        coefficients = sample_inverse_perspective(params["input_size"], params["scale"], pixel_center=False)
+        work = image.float() if image.is_floating_point() else image
+        return tv_transforms.functional.perspective(work, None, None, coefficients=list(coefficients)).to(image.dtype)
+
+    return tv_transforms.Lambda(warp)
 
 
 def _build_elastic(params: dict[str, Any]) -> Any | None:
@@ -278,12 +289,21 @@ def _build_posterize(params: dict[str, Any]) -> Any | None:
 
 
 def _build_solarize(params: dict[str, Any]) -> Any | None:
-    return tv_transforms.RandomSolarize(threshold=params["threshold"], p=1)
+    threshold = params["threshold"]
+    return tv_transforms.Lambda(
+        lambda image: tv_transforms.functional.solarize(
+            image, threshold if image.is_floating_point() else 255 * threshold
+        )
+    )
 
 
-def _build_sharpen(_params: dict[str, Any]) -> Any | None:
-    # sharpness_factor=2.0 corresponds to maximum sharpening (1.0=original, 0.0=blurred)
-    return tv_transforms.RandomAdjustSharpness(sharpness_factor=2.0, p=1)
+def _build_sharpen(params: dict[str, Any]) -> Any:
+    def sharpen(image: torch.Tensor) -> torch.Tensor:
+        alpha = random.uniform(*params["alpha"])  # noqa: S311 - augmentation RNG.
+        padded = tv_transforms.functional.pad(image, [1], padding_mode="reflect")
+        return tv_transforms.functional.adjust_sharpness(padded, 1 + 13 * alpha)[..., 1:-1, 1:-1]
+
+    return tv_transforms.Lambda(sharpen)
 
 
 def _build_auto_contrast(_params: dict[str, Any]) -> Any | None:
@@ -295,7 +315,6 @@ def _build_equalize(_params: dict[str, Any]) -> Any | None:
 
 
 def _build_normalize(_params: dict[str, Any]) -> Any | None:
-    # Normalization is a CUDA batch stage, shared by all RGB paths.
     return None
 
 
@@ -309,20 +328,17 @@ def _build_erasing(params: dict[str, Any]) -> Any | None:
 
 
 def _build_jpeg_compression(params: dict[str, Any]) -> Any | None:
-    return tv_transforms.JPEG(quality=params["quality"])
+    return tv_transforms.JPEG(quality=tuple(params["quality_range"]))
 
 
 def _build_brightness(params: dict[str, Any]) -> Any | None:
-    # Use scalar so TV picks factor in [1-limit, 1+limit], matching albumentations additive semantics
-    limit = params["brightness_limit"]
-    brightness_scalar = limit[0] if isinstance(limit, (list, tuple)) else limit
-    return tv_transforms.ColorJitter(brightness=brightness_scalar, contrast=0.0, saturation=0.0, hue=0.0)
+    factor = 1 + params["brightness_limit"][0]
+    return tv_transforms.Lambda(lambda image: tv_transforms.functional.adjust_brightness(image, factor))
 
 
 def _build_contrast(params: dict[str, Any]) -> Any | None:
-    limit = params["contrast_limit"]
-    contrast_scalar = limit[0] if isinstance(limit, (list, tuple)) else limit
-    return tv_transforms.ColorJitter(brightness=0.0, contrast=contrast_scalar, saturation=0.0, hue=0.0)
+    factor = 1 + params["contrast_limit"][0]
+    return tv_transforms.Lambda(lambda image: tv_transforms.functional.adjust_contrast(image, factor))
 
 
 def _build_photo_metric_distort(params: dict[str, Any]) -> Any | None:

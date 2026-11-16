@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import torch
+from kornia.enhance import Normalize
 from torch import nn
 
-from augbench.implementations.gpu_normalize import GpuBatchNormalize
 from augbench.implementations.kornia_common import force_per_sample_randomness
 from augbench.implementations.kornia_impl import create_transform
 from augbench.implementations.recipe_stages import collatable_prefix, normalization_stats, transform_specs
@@ -38,25 +38,29 @@ class _DeferredCpuRecipe(nn.Module):
 
     def __init__(self, *, transforms: tuple[nn.Module, ...], recipe: RecipeSpec) -> None:
         super().__init__()
-        mean, std = normalization_stats(recipe)
         self.cpu_transform = force_per_sample_randomness(nn.Sequential(*transforms))
         self.host_batch_transform = _HostBatchFloat16()
-        self.gpu_transform = GpuBatchNormalize(mean=mean, std=std)
+        self.gpu_transform = _GpuBatchRecipe(tail=None, recipe=recipe)
 
 
 class _GpuBatchRecipe(nn.Module):
     def __init__(self, *, tail: nn.Module | None, recipe: RecipeSpec) -> None:
         super().__init__()
-        mean, std = normalization_stats(recipe)
         self._tail = tail
-        self._batch_normalize = GpuBatchNormalize(mean=mean, std=std)
+        mean, std = normalization_stats(recipe)
+        self._batch_normalize = Normalize(
+            mean=torch.tensor(mean, dtype=torch.float16),
+            std=torch.tensor(std, dtype=torch.float16),
+        )
 
     def forward(self, batch: torch.Tensor) -> torch.Tensor:
+        if batch.device.type != "cuda":
+            raise RuntimeError("GPU normalization requires a CUDA batch")
         if not batch.is_floating_point():
             raise TypeError(f"Kornia GPU transforms require floating input, got {batch.dtype}")
         batch = batch.to(dtype=torch.float16)
         if self._tail is not None:
-            batch = self._tail(batch)
+            batch = self._tail(batch).to(dtype=torch.float16)
         return self._batch_normalize(batch)
 
 

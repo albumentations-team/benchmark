@@ -23,6 +23,7 @@ class RecipeRuntime:
     sample_transform: Callable[[Any], Any] | None
     host_batch_transform: Callable[[Any], Any] | None
     batch_transform: Callable[[Any], Any] | None
+    batch_input_on_host: bool = False
 
 
 class AugmentationAdapter(Protocol):
@@ -43,6 +44,7 @@ class PythonModuleAdapterConfig:
     placement: Placement
     source_id: str
     unsupported_operation_ids: frozenset[str] = frozenset()
+    batch_input_on_host: bool = False
 
 
 class PythonModuleAdapter:
@@ -61,6 +63,7 @@ class PythonModuleAdapter:
         self._load_source = load_source
         self._source_id = config.source_id
         self._unsupported_operation_ids = config.unsupported_operation_ids
+        self._batch_input_on_host = config.batch_input_on_host
 
     def load_source(self, source: Any) -> Any:
         return self._load_source(source)
@@ -113,6 +116,7 @@ class PythonModuleAdapter:
             sample_transform=sample_transform,
             host_batch_transform=host_batch_transform,
             batch_transform=batch_transform,
+            batch_input_on_host=self._batch_input_on_host,
         )
 
     def metadata(self) -> dict[str, str]:

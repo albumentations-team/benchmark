@@ -9,7 +9,7 @@ def create_adapter(implementation_id: str) -> PythonModuleAdapter:
             implementation_id=implementation_id,
             recipe_module="augbench.implementations.kornia_pipeline_impl",
             placement=placement,
-            source_id="torchvision-io-float32",
+            source_id="kornia-io-rgb32",
         ),
         load_source=load_kornia_rgb,
     )
