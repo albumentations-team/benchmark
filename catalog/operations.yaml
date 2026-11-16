@@ -6,6 +6,7 @@ versions:
   torchvision: 0.29.2
   kornia: 0.9.0
   pillow: 13.0.0
+  dali: 2.4.0
 operations:
 - operation_id: AdditiveNoise
   domain: pixel
@@ -48,6 +49,7 @@ operations:
     pillow:
       api: Image.transform(AFFINE)
       status: direct
+    dali: {api: "warp_affine", status: direct}
   benchmark_recipe_ids:
   - Affine
   - Shear
@@ -106,6 +108,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "random_bbox_crop", status: approximate}
   benchmark_recipe_ids: []
 - operation_id: AtmosphericFog
   domain: pixel
@@ -149,6 +152,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "random_bbox_crop", status: approximate}
   benchmark_recipe_ids: []
 - operation_id: BBoxSubsetSafeRandomCrop
   domain: geometry
@@ -163,6 +167,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "random_bbox_crop", status: approximate}
   benchmark_recipe_ids: []
 - operation_id: BiasField
   domain: pixel
@@ -191,6 +196,7 @@ operations:
     pillow:
       api: ImageFilter.BoxBlur
       status: direct
+    dali: {api: "filter + box kernel", status: composed}
   benchmark_recipe_ids:
   - Blur
 - operation_id: CLAHE
@@ -206,6 +212,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "clahe", status: direct}
   benchmark_recipe_ids:
   - CLAHE
 - operation_id: CenterCrop
@@ -221,6 +228,7 @@ operations:
     pillow:
       api: Image.crop
       status: direct
+    dali: {api: "decoders.image_slice + pad / slice", status: composed}
   benchmark_recipe_ids:
   - CenterCrop
 - operation_id: CenterCrop3D
@@ -250,6 +258,7 @@ operations:
     pillow:
       api: Image.split + Image.new + Image.merge
       status: direct
+    dali: {api: "uniform + erase", status: composed}
   benchmark_recipe_ids:
   - ChannelDropout
 - operation_id: ChannelShuffle
@@ -265,6 +274,7 @@ operations:
     pillow:
       api: Image.split + Image.merge
       status: direct
+    dali: {api: "uniform + slice + cat", status: composed}
   benchmark_recipe_ids:
   - ChannelShuffle
 - operation_id: ChannelSwap
@@ -280,6 +290,7 @@ operations:
     pillow:
       api: Image.split + Image.merge
       status: direct
+    dali: {api: "color_space_conversion RGB to BGR", status: composed}
   benchmark_recipe_ids:
   - ChannelSwap
 - operation_id: ChromaticAberration
@@ -309,6 +320,7 @@ operations:
     pillow:
       api: Image.paste
       status: direct
+    dali: {api: "uniform + erase", status: composed}
   benchmark_recipe_ids:
   - CoarseDropout
 - operation_id: CoarseDropout3D
@@ -338,6 +350,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "color_twist", status: approximate}
   benchmark_recipe_ids:
   - ColorJitter
   - ColorJiggle
@@ -354,6 +367,7 @@ operations:
     pillow:
       api: ImageOps.colorize
       status: direct
+    dali: {api: "color_space_conversion + lookup_table", status: composed}
   benchmark_recipe_ids:
   - Colorize
 - operation_id: ConstrainedCoarseDropout
@@ -397,6 +411,7 @@ operations:
     pillow:
       api: Image.crop
       status: direct
+    dali: {api: "slice", status: direct}
   benchmark_recipe_ids:
   - Crop
 - operation_id: CropAndPad
@@ -412,6 +427,7 @@ operations:
     pillow:
       api: Image.crop + ImageOps.expand
       status: direct
+    dali: {api: "slice with padding", status: composed}
   benchmark_recipe_ids:
   - CropAndPad
 - operation_id: CropNonEmptyMaskIfExists
@@ -455,6 +471,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "uniform + rotate + flip", status: composed}
   benchmark_recipe_ids: []
 - operation_id: Defocus
   domain: pixel
@@ -481,7 +498,7 @@ operations:
       api: null
       status: none
     pillow:
-      api: Image.convert("L").convert("1", dither=FLOYDSTEINBERG).convert("RGB")
+      api: Image.convert with Floyd-Steinberg
       status: direct
   benchmark_recipe_ids:
   - Dithering
@@ -498,6 +515,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "resize twice", status: composed}
   benchmark_recipe_ids: []
 - operation_id: ElasticTransform
   domain: geometry
@@ -541,6 +559,7 @@ operations:
     pillow:
       api: ImageFilter.Kernel
       status: direct
+    dali: {api: "filter + emboss kernel", status: composed}
   benchmark_recipe_ids:
   - Emboss
 - operation_id: Enhance
@@ -572,6 +591,7 @@ operations:
     pillow:
       api: ImageOps.equalize
       status: direct
+    dali: {api: "equalize", status: direct}
   benchmark_recipe_ids:
   - Equalize
 - operation_id: Erasing
@@ -587,6 +607,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "erase", status: direct}
   benchmark_recipe_ids:
   - Erasing
 - operation_id: ExposureMatching
@@ -700,6 +721,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "noise.gaussian", status: direct}
   benchmark_recipe_ids:
   - GaussianNoise
 - operation_id: GaussianBlur
@@ -715,6 +737,7 @@ operations:
     pillow:
       api: ImageFilter.GaussianBlur
       status: direct
+    dali: {api: "gaussian_blur", status: direct}
   benchmark_recipe_ids:
   - GaussianBlur
 - operation_id: GhostingArtifact
@@ -786,6 +809,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "grid_mask", status: direct}
   benchmark_recipe_ids: []
 - operation_id: GridElasticDeform
   domain: geometry
@@ -814,6 +838,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "grid_mask", status: approximate}
   benchmark_recipe_ids: []
 - operation_id: GridShuffle3D
   domain: volume
@@ -898,6 +923,7 @@ operations:
     pillow:
       api: Image.transpose(FLIP_LEFT_RIGHT)
       status: direct
+    dali: {api: "flip (horizontal)", status: composed}
   benchmark_recipe_ids:
   - HorizontalFlip
 - operation_id: HueSaturationValue
@@ -913,6 +939,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "hsv", status: approximate}
   benchmark_recipe_ids:
   - Hue
   - Saturation
@@ -960,6 +987,7 @@ operations:
     pillow:
       api: JPEG save/load roundtrip
       status: direct
+    dali: {api: "jpeg_compression_distortion", status: direct}
   benchmark_recipe_ids:
   - JpegCompression
 - operation_id: InvertImg
@@ -975,6 +1003,7 @@ operations:
     pillow:
       api: ImageOps.invert
       status: direct
+    dali: {api: "lookup_table", status: composed}
   benchmark_recipe_ids:
   - Invert
 - operation_id: KSpaceSpikeNoise
@@ -1032,6 +1061,7 @@ operations:
     pillow:
       api: ImageOps.pad
       status: direct
+    dali: {api: "resize + slice with padding", status: composed}
   benchmark_recipe_ids:
   - LetterBox
 - operation_id: LongestMaxSize
@@ -1047,6 +1077,7 @@ operations:
     pillow:
       api: ImageOps.contain
       status: direct
+    dali: {api: "resize (resize_longer)", status: direct}
   benchmark_recipe_ids:
   - LongestMaxSize
 - operation_id: MaskDropout
@@ -1076,6 +1107,7 @@ operations:
     pillow:
       api: ImageFilter.MedianFilter
       status: direct
+    dali: {api: "experimental.median_blur", status: direct}
   benchmark_recipe_ids:
   - MedianBlur
 - operation_id: ModeFilter
@@ -1105,6 +1137,7 @@ operations:
     pillow:
       api: ImageFilter.MaxFilter / ImageFilter.MinFilter
       status: direct
+    dali: {api: "experimental.dilate / erode + min / max", status: composed}
   benchmark_recipe_ids:
   - MorphologicalDilation
   - MorphologicalErosion
@@ -1178,6 +1211,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "crop_mirror_normalize", status: direct}
   benchmark_recipe_ids: []
 - operation_id: OpticalDistortion
   domain: geometry
@@ -1221,6 +1255,7 @@ operations:
     pillow:
       api: ImageOps.expand
       status: direct
+    dali: {api: "pad / slice", status: direct}
   benchmark_recipe_ids:
   - Pad
 - operation_id: Pad3D
@@ -1250,6 +1285,7 @@ operations:
     pillow:
       api: ImageOps.expand
       status: direct
+    dali: {api: "pad / slice", status: direct}
   benchmark_recipe_ids:
   - PadIfNeeded
 - operation_id: PadIfNeeded3D
@@ -1279,6 +1315,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "experimental.warp_perspective", status: direct}
   benchmark_recipe_ids:
   - Perspective
 - operation_id: PhotoMetricDistort
@@ -1350,7 +1387,8 @@ operations:
       status: none
     pillow:
       api: Image.effect_spread
-      status: direct
+      status: approximate
+    dali: {api: "jitter", status: approximate}
   benchmark_recipe_ids:
   - PixelSpread
 - operation_id: PlanckianJitter
@@ -1412,6 +1450,7 @@ operations:
     pillow:
       api: ImageOps.posterize
       status: direct
+    dali: {api: "lookup_table", status: composed}
   benchmark_recipe_ids:
   - Posterize
 - operation_id: RGBShift
@@ -1427,6 +1466,7 @@ operations:
     pillow:
       api: Image.point
       status: direct
+    dali: {api: "uniform + slice + add + cat", status: composed}
   benchmark_recipe_ids:
   - RGBShift
 - operation_id: RandomBrightnessContrast
@@ -1442,6 +1482,7 @@ operations:
     pillow:
       api: ImageEnhance.Brightness / ImageEnhance.Contrast
       status: direct
+    dali: {api: "brightness_contrast + reductions.mean", status: composed}
   benchmark_recipe_ids:
   - Brightness
   - Contrast
@@ -1458,6 +1499,7 @@ operations:
     pillow:
       api: Image.crop + ImageOps.expand
       status: direct
+    dali: {api: "uniform + decoders.image_slice + pad", status: composed}
   benchmark_recipe_ids:
   - RandomCrop224
 - operation_id: RandomCrop3D
@@ -1487,6 +1529,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "uniform + slice", status: composed}
   benchmark_recipe_ids: []
 - operation_id: RandomCropNearBBox
   domain: geometry
@@ -1529,6 +1572,7 @@ operations:
     pillow:
       api: Image.point
       status: direct
+    dali: {api: "lookup_table / pow", status: composed}
   benchmark_recipe_ids:
   - RandomGamma
 - operation_id: RandomGravel
@@ -1588,6 +1632,7 @@ operations:
     pillow:
       api: Image.crop + Image.transform(AFFINE)
       status: direct
+    dali: {api: "random_resized_crop / decoders.image_random_crop", status: direct}
   benchmark_recipe_ids:
   - RandomResizedCrop
 - operation_id: RandomResizedCrop3D
@@ -1617,6 +1662,7 @@ operations:
     pillow:
       api: Image.transpose(ROTATE_90)
       status: direct
+    dali: {api: "uniform + rotate", status: composed}
   benchmark_recipe_ids:
   - RandomRotate90
 - operation_id: RandomRotate90_3D
@@ -1646,6 +1692,7 @@ operations:
     pillow:
       api: Image.transform(AFFINE)
       status: direct
+    dali: {api: "uniform + resize", status: composed}
   benchmark_recipe_ids:
   - RandomScale
 - operation_id: RandomShadow
@@ -1675,6 +1722,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "random_bbox_crop + resize", status: approximate}
   benchmark_recipe_ids: []
 - operation_id: RandomSizedCrop
   domain: geometry
@@ -1689,6 +1737,7 @@ operations:
     pillow:
       api: Image.crop + Image.transform(AFFINE)
       status: direct
+    dali: {api: "uniform + slice + resize", status: composed}
   benchmark_recipe_ids:
   - RandomSizedCrop
 - operation_id: RandomSnow
@@ -1733,6 +1782,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "lookup_table", status: composed}
   benchmark_recipe_ids: []
 - operation_id: Resize
   domain: geometry
@@ -1747,6 +1797,7 @@ operations:
     pillow:
       api: Image.resize
       status: direct
+    dali: {api: "resize", status: direct}
   benchmark_recipe_ids:
   - Resize
 - operation_id: Resize3D
@@ -1804,6 +1855,7 @@ operations:
     pillow:
       api: Image.rotate
       status: direct
+    dali: {api: "rotate", status: direct}
   benchmark_recipe_ids:
   - Rotate
 - operation_id: SafeRotate
@@ -1819,6 +1871,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "rotate + resize", status: composed}
   benchmark_recipe_ids: []
 - operation_id: SaltAndPepper
   domain: pixel
@@ -1833,6 +1886,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "noise.salt_and_pepper", status: direct}
   benchmark_recipe_ids:
   - SaltAndPepper
 - operation_id: Sharpen
@@ -1848,6 +1902,7 @@ operations:
     pillow:
       api: ImageEnhance.Sharpness
       status: direct
+    dali: {api: "gaussian_blur + arithmetic", status: composed}
   benchmark_recipe_ids:
   - Sharpen
 - operation_id: ShiftScaleRotate
@@ -1863,6 +1918,7 @@ operations:
     pillow:
       api: Image.transform(AFFINE)
       status: direct
+    dali: {api: "warp_affine", status: direct}
   benchmark_recipe_ids:
   - ShiftScaleRotate
 - operation_id: ShotNoise
@@ -1892,6 +1948,7 @@ operations:
     pillow:
       api: ImageOps.cover
       status: direct
+    dali: {api: "resize (resize_shorter)", status: direct}
   benchmark_recipe_ids:
   - SmallestMaxSize
 - operation_id: Solarize
@@ -1907,6 +1964,7 @@ operations:
     pillow:
       api: ImageOps.solarize
       status: direct
+    dali: {api: "lookup_table", status: composed}
   benchmark_recipe_ids:
   - Solarize
 - operation_id: Spatter
@@ -1936,6 +1994,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "uniform + rotate + flip", status: composed}
   benchmark_recipe_ids: []
 - operation_id: StochasticConvolution
   domain: pixel
@@ -2035,6 +2094,7 @@ operations:
     pillow:
       api: ImageOps.grayscale(...).convert("RGB")
       status: direct
+    dali: {api: "color_space_conversion", status: direct}
   benchmark_recipe_ids:
   - Grayscale
 - operation_id: ToRGB
@@ -2064,6 +2124,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "color_space_conversion / arithmetic", status: composed}
   benchmark_recipe_ids: []
 - operation_id: Transpose
   domain: geometry
@@ -2078,6 +2139,7 @@ operations:
     pillow:
       api: Image.transpose(TRANSPOSE)
       status: direct
+    dali: {api: "transpose", status: direct}
   benchmark_recipe_ids:
   - Transpose
 - operation_id: UniformTemporalSubsample
@@ -2107,6 +2169,7 @@ operations:
     pillow:
       api: ImageFilter.UnsharpMask
       status: direct
+    dali: {api: "gaussian_blur + arithmetic", status: composed}
   benchmark_recipe_ids:
   - UnsharpMask
 - operation_id: VerticalFlip
@@ -2122,6 +2185,7 @@ operations:
     pillow:
       api: Image.transpose(FLIP_TOP_BOTTOM)
       status: direct
+    dali: {api: "flip (vertical)", status: composed}
   benchmark_recipe_ids:
   - VerticalFlip
 - operation_id: Vignetting
@@ -2165,6 +2229,7 @@ operations:
     pillow:
       api: null
       status: none
+    dali: {api: "erase along H or W", status: composed}
   benchmark_recipe_ids: []
 - operation_id: ZoomBlur
   domain: pixel

@@ -5,6 +5,8 @@ model on the GPU. Only RGB runs today. Nine-channel images, video, and volumes w
 runner and result schema once each family has an agreed dataset, recipe catalog, output
 contract, and batch size.
 
+The [methodology FAQ](benchmark_faq.md) explains the choices behind this contract.
+
 ## What one cell measures
 
 A cell is identified by `(family, implementation, recipe, seed)`. A successful RGB cell records
@@ -26,7 +28,7 @@ fall outside the production benchmark.
 | --- | --- |
 | Data | The first 10,000 `val/*.JPEG` files in lexicographic order from the SHA-256-verified ImageNet validation archive |
 | Recipes | 73 manually matched RGB recipes, each supported by at least two libraries |
-| Matrix | 438 supported implementation–recipe pairs × 3 seeds = 1,314 cells |
+| Matrix | 441 supported implementation–recipe pairs × 3 seeds = 1,323 cells |
 | Seeds | 137, 138, 139 |
 | Batch size | 256 images |
 | Warm-up | 1 full batch outside the timer |
@@ -63,21 +65,22 @@ as throughput. The peak includes the entire process's VRAM use, including CUDA s
 after preflight. Subtracting the baseline from the peak gives the increase during the cell.
 
 Normalization always runs on the GPU. Every path produces normalized CUDA `float16` output.
+The table describes new runs. Each completed run retains the implementation in its frozen code archive.
 
 | Implementation | Before GPU transfer | On the GPU |
 | --- | --- | --- |
 | AlbumentationsX CPU | SimpleJPEG, `uint8` recipe, pinned H2D transfer in `uint8` | BCHW view, then `albumentations.batch.InputNormalizer` with FP32 arithmetic and FP16 output |
 | Pillow CPU | Pillow decode, `uint8` recipe, pinned H2D transfer in `uint8` | Convert to `float16` and normalize |
 | Pillow-AllSIMD CPU (fast) | Same code with the Pillow-AllSIMD wheel in a separate process | Convert to `float16` and normalize |
-| TorchVision CPU | `torchvision.io`, `uint8` recipe, pinned H2D transfer in `uint8` | Convert to `float16` and normalize |
-| Kornia CPU | `torchvision.io`, CPU recipe in `float32`, cast the host batch to `float16`, pinned H2D transfer | Normalize in `float16` |
-| TorchVision GPU | `torchvision.io` and the minimum CPU stages needed to produce samples that can be batched | Remaining stages and normalization in `float16` |
-| Kornia GPU | `torchvision.io`, minimum CPU stages in `float32` to produce samples that can be batched, cast the host batch to `float16`, pinned H2D transfer | Remaining stages and normalization in `float16` |
+| TorchVision CPU | `torchvision.io`, `uint8` recipe, pinned H2D transfer in `uint8` | Convert the batch to `float16` and apply `torchvision.transforms.v2.Normalize` |
+| Kornia CPU | `kornia.io.load_image` with `kornia-rs`, CPU recipe in `float32`, cast the host batch to `float16`, pinned H2D transfer | Apply `kornia.enhance.Normalize` to the `float16` batch |
+| TorchVision GPU | `torchvision.io.read_file` reads variable-length JPEG byte tensors | Batched CUDA JPEG decode, per-image crop/resize and augmentation, then batch FP16 Normalize |
+| Kornia GPU | `kornia.io.load_image` with `kornia-rs`, minimum CPU stages in `float32` to produce samples that can be batched, cast the host batch to `float16`, pinned H2D transfer | Remaining stages, then `kornia.enhance.Normalize` on the `float16` batch |
 | DALI GPU | Native file reader and mixed JPEG decoder | Native DALI graph and `float16` normalization |
 
-Source JPEGs vary in size. The TorchVision and Kornia GPU paths run the shape-forming
-prefix on the CPU and run the remaining stages after transfer. CPU paths complete the
-image operations before transfer. The `Resize` recipe has one image operation, `Resize(224)`,
+Source JPEGs vary in size. TorchVision GPU decodes a list on CUDA and applies its
+shape-forming stages per image before stacking. Kornia GPU forms collatable samples on the CPU.
+CPU paths complete the image operations before transfer. The `Resize` recipe has one image operation, `Resize(224)`,
 followed by GPU normalization and output preparation. Recipes such as `Pad` and
 `LongestMaxSize` list the subsequent crop explicitly.
 
@@ -91,8 +94,10 @@ such as Pillow channel splitting and merging or a byte lookup table. Mosaic, ref
 histogram matching, and box-aware crops require a different input protocol. ModeFilter is outside
 the recipe selection. DALI's grid mask drops square patches, while AX GridMask drops stripes.
 
-DALI `RandomCrop224` samples a window at decoded resolution and supplies centered zero padding
-where a dimension is too short. It uses a slice with integer offsets, with no preliminary resize.
+DALI uses ROI JPEG decoding when a recipe starts with a compatible crop.
+`RandomCrop224` samples a separate window at native resolution for every image and adds
+centered zero padding where a dimension is too short. `RandomResizedCrop` samples separate windows
+inside the decoder and then resizes them. All readers use the pixel orientation stored in the file.
 `Blur` uses a 5×5 box in every measured path. AX, Kornia, and DALI reflect the boundary; the
 Pillow box filter repeats edge pixels. ChannelDropout zeros one uniformly sampled RGB channel.
 
@@ -106,6 +111,20 @@ resizes it without antialiasing. Crop selection and rounding may differ by libra
 For R10 (Elastic), the AX, TorchVision, and Kornia parameters are
 [matched by their displacement fields](rgb_elastic_calibration.md) at roughly 0.74 px RMS and a
 spatial scale of about 10 px. DALI and Pillow omit this recipe.
+
+R08 applies scale 2, rotation 25°, X/Y shears 10°/15°, and translation
+20 px on each axis as one centered bilinear warp. R09 uses a centered
+projective map with independent sign and a uniform magnitude in 0.05–0.10,
+divided by crop width, for each axis of each image.
+
+R24 samples an integer JPEG quality uniformly from 30 through 90 for each
+image. TorchVision GPU encodes images in groups with the same sampled quality
+and restores sample order after decoding. Kornia and DALI apply JPEG artifact
+simulators. Nominal quality is shared across implementations and does not
+calibrate distortion strength.
+
+ColorJitter recipes sample factors and operation order per image. DALI uses
+its native hue adjustment, an RGB-space approximation to HSV hue rotation.
 
 R46 (Shear) applies a fixed 10° X shear about the image center on all eight paths.
 In pixel-center coordinates its forward map is
@@ -121,10 +140,10 @@ After extraction, the VM reads all 10,000 JPEGs sequentially once outside the ti
 implementations then use the same deterministic PCG64 permutation without replacement for each
 seed. PyTorch DataLoader adds no shuffle. DALI receives the same preordered file list.
 
-The measurement covers reading through the filesystem API, decoding, and augmentation. After
-prewarming, reads usually come from the Linux page cache, so the measurement cannot establish
-physical disk bandwidth. Prewarming gives the libraries the same starting cache conditions and
-preserves a random access order typical of training.
+The selected files fit in the VM's 64 GiB host memory. Prewarming therefore lets the Linux page
+cache serve the timed random reads in the usual case. The timer still includes file lookup,
+cache access, decoding, and augmentation. It measures the warm cache-resident workload and does
+not establish cold random disk I/O or physical disk bandwidth.
 
 ## Runs, VMs, and resume
 

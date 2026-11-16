@@ -1,7 +1,7 @@
 \input{generated/delivery-rows.tex}
 \newcommand{\DeliveryRow}[5]{%
   \pgfmathsetmacro{\ratepos}{4.0+0.218*#3}%
-  \pgfmathsetmacro{\mempos}{10.1+0.00205*#4}%
+  \pgfmathsetmacro{\mempos}{10.1+0.00159*#4}%
   \node[anchor=west] at (0,#1) {#2};
   \fill[#5] (4.0,#1-0.15) rectangle (\ratepos,#1+0.15);
   \node[anchor=west,xshift=2pt,font=\small,fill=white,inner sep=1pt] at (\ratepos,#1)
@@ -18,8 +18,8 @@
   \draw[black!12] (\pos,-0.48) -- (\pos,\DeliveryTopRow+0.52);
   \node[anchor=north,font=\footnotesize,text=black!75] at (\pos,-0.63) {\tick};
 }
-\foreach \tick in {0,500,1000,1500,2000}{
-  \pgfmathsetmacro{\pos}{10.1+0.00205*\tick}
+\foreach \tick in {0,1000,2000,3000,3500}{
+  \pgfmathsetmacro{\pos}{10.1+0.00159*\tick}
   \draw[black!12] (\pos,-0.48) -- (\pos,\DeliveryTopRow+0.52);
   \node[anchor=north,font=\footnotesize,text=black!75] at (\pos,-0.63) {\tick};
 }

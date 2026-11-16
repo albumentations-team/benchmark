@@ -66,6 +66,7 @@ class TorchDataLoaderConfig:
     host_batch_transform: Callable[[Any], Any] | None = None
     shuffle: bool = False
     drop_last: bool = True
+    collate_fn: Callable[[Sequence[Any]], Any] | None = None
 
 
 class TorchDataLoaderSource:
@@ -89,6 +90,7 @@ class TorchDataLoaderSource:
         self._host_batch_transform = config.host_batch_transform
         self._shuffle = config.shuffle
         self._drop_last = config.drop_last
+        self._collate = config.collate_fn or _collate_images
         self._loader: Any | None = None
         self._iterator: Any | None = None
 
@@ -112,9 +114,9 @@ class TorchDataLoaderSource:
             drop_last=self._drop_last,
             pin_memory=self._pin_memory,
             collate_fn=(
-                _collate_images
+                self._collate
                 if self._host_batch_transform is None
-                else partial(_collate_then_transform, transform=self._host_batch_transform)
+                else partial(_collate_then_transform, collate=self._collate, transform=self._host_batch_transform)
             ),
             generator=generator,
             **worker_options,
@@ -149,7 +151,7 @@ class ReadyGpuBatchConsumer:
 
         if not torch.cuda.is_available():
             raise RuntimeError("ready-batch scopes require CUDA")
-        device_batch = batch.to("cuda", non_blocking=True)
+        device_batch = batch if self._runtime.batch_input_on_host else batch.to("cuda", non_blocking=True)
         if self._runtime.batch_transform is not None:
             device_batch = self._runtime.batch_transform(device_batch)
         device_batch = canonicalize_model_batch(device_batch, expected_channels=self._expected_channels)
@@ -232,8 +234,10 @@ def _seed_worker(_worker_id: int) -> None:
     np.random.seed(seed)  # noqa: NPY002 - third-party transforms consume NumPy's process-global RNG.
 
 
-def _collate_then_transform(samples: Sequence[Any], *, transform: Callable[[Any], Any]) -> Any:
-    return transform(_collate_images(samples))
+def _collate_then_transform(
+    samples: Sequence[Any], *, collate: Callable[[Sequence[Any]], Any], transform: Callable[[Any], Any]
+) -> Any:
+    return transform(collate(samples))
 
 
 def _collate_images(samples: Sequence[Any]) -> Any:

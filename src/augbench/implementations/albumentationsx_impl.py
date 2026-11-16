@@ -4,7 +4,9 @@ from typing import Any
 
 import albumentations
 import cv2
+import numpy as np
 
+from augbench.implementations.geometry import sample_inverse_perspective
 from augbench.implementations.specs import TransformSpec
 
 LIBRARY = "albumentationsx"
@@ -100,10 +102,10 @@ def _build_rotate(params: dict[str, Any]) -> Any | None:
 
 def _build_affine(params: dict[str, Any]) -> Any | None:
     return albumentations.Affine(
-        rotate=_symmetric_range(params["angle"]),
+        rotate=_range(params["angle"]),
         translate_px=_affine_axis_ranges(params["shift"]),
         scale=_range(params["scale"]),
-        shear=_affine_axis_ranges(params["shear"]),
+        shear=_affine_axis_ranges([-value for value in params["shear"]]),
         interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
         border_mode=cv2.BORDER_CONSTANT if params["mode"] == "constant" else cv2.BORDER_REFLECT,
         fill=params["fill"],
@@ -111,12 +113,15 @@ def _build_affine(params: dict[str, Any]) -> Any | None:
     )
 
 
-def _build_perspective(params: dict[str, Any]) -> Any | None:
-    return albumentations.Perspective(
-        scale=params["scale"],
-        interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
-        p=1,
-    )
+def _build_perspective(params: dict[str, Any]) -> Any:
+    size = params["input_size"]
+
+    def warp(image: Any, **_kwargs: Any) -> Any:
+        coefficients = sample_inverse_perspective(size, params["scale"], pixel_center=True)
+        matrix = np.asarray([*coefficients, 1.0]).reshape(3, 3)
+        return cv2.warpPerspective(image, matrix, (size, size), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP)
+
+    return albumentations.Lambda(image=warp, p=1)
 
 
 def _build_elastic(params: dict[str, Any]) -> Any | None:
@@ -234,7 +239,7 @@ def _build_erasing(params: dict[str, Any]) -> Any | None:
 
 def _build_jpeg_compression(params: dict[str, Any]) -> Any | None:
     return albumentations.ImageCompression(
-        quality_range=(params["quality"], params["quality"]),
+        quality_range=tuple(params["quality_range"]),
         p=1,
     )
 
@@ -270,9 +275,11 @@ def _build_motion_blur(params: dict[str, Any]) -> Any | None:
 
 
 def _build_clahe(params: dict[str, Any]) -> Any | None:
-    return albumentations.CLAHE(
-        clip_range=params["clip_limit"],
-        tile_grid_size=params["tile_grid_size"],
+    return albumentations.OneOf(
+        [
+            albumentations.CLAHE(clip_range=(value, value), tile_grid_size=params["tile_grid_size"], p=1)
+            for value in params["clip_limits"]
+        ],
         p=1,
     )
 
@@ -317,10 +324,11 @@ def _build_gaussian_illumination(_params: dict[str, Any]) -> Any | None:
 
 
 def _build_hue(params: dict[str, Any]) -> Any | None:
-    return albumentations.HueSaturationValue(
-        hue_shift_range=_symmetric_range(params["hue"]),
-        sat_shift_range=(0, 0),
-        val_shift_range=(0, 0),
+    return albumentations.ColorJitter(
+        brightness_range=(1, 1),
+        contrast_range=(1, 1),
+        saturation_range=(1, 1),
+        hue_range=tuple(angle / 360 for angle in params["hue_degrees"]),
         p=1,
     )
 
@@ -352,17 +360,19 @@ def _build_salt_and_pepper(params: dict[str, Any]) -> Any | None:
 
 
 def _build_saturation(params: dict[str, Any]) -> Any | None:
-    sat_shift_range = _symmetric_range(params["saturation_factor"] * 255)
-    return albumentations.HueSaturationValue(
+    return albumentations.ColorJitter(
         p=1,
-        hue_shift_range=(0, 0),
-        sat_shift_range=sat_shift_range,
-        val_shift_range=(0, 0),
+        brightness_range=(1, 1),
+        contrast_range=(1, 1),
+        hue_range=(0, 0),
+        saturation_range=_range(1 + params["saturation_factor"]),
     )
 
 
 def _build_snow(params: dict[str, Any]) -> Any | None:
-    return albumentations.RandomSnow(p=1, snow_point_range=params["snow_point_range"])
+    return albumentations.RandomSnow(
+        p=1, snow_point_range=params["snow_point_range"], brightness_coeff=params["brightness"]
+    )
 
 
 def _build_optical_distortion(params: dict[str, Any]) -> Any | None:

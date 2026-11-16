@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import random
+from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
 import torch
 import torchvision.transforms.v2 as tv_transforms
 from torch import nn
-from torchvision.io import decode_jpeg, encode_jpeg
+from torchvision.io import ImageReadMode, decode_jpeg, encode_jpeg
 
-from augbench.implementations.gpu_normalize import GpuBatchNormalize
 from augbench.implementations.recipe_stages import collatable_prefix, normalization_stats, transform_specs
 from augbench.implementations.torchvision_impl import create_transform
 from augbench.recipes.runtime import UnsupportedRecipeError
@@ -21,45 +22,66 @@ def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
 
 
 class _GpuBatchRecipe(nn.Module):
-    def __init__(self, *, tail: nn.Module | None, recipe: RecipeSpec) -> None:
+    def __init__(self, recipe: RecipeSpec) -> None:
         super().__init__()
         mean, std = normalization_stats(recipe)
-        self._tail = tail
-        self._batch_normalize = GpuBatchNormalize(mean=mean, std=std)
+        self._batch_normalize = tv_transforms.Normalize(mean=mean, std=std, inplace=True)
 
     def forward(self, batch: torch.Tensor) -> torch.Tensor:
+        if batch.device.type != "cuda":
+            raise RuntimeError("GPU normalization requires a CUDA batch")
         if batch.dtype == torch.uint8:
             batch = batch.to(dtype=torch.float16).div_(255.0)
         elif batch.is_floating_point():
             batch = batch.to(dtype=torch.float16)
         else:
             raise TypeError(f"TorchVision GPU transforms require uint8 or floating input, got {batch.dtype}")
-        if self._tail is not None:
-            batch = torch.stack([self._tail(sample) for sample in batch], dim=0)
         return self._batch_normalize(batch)
 
 
-class _SplitRecipe(nn.Module):
-    def __init__(self, *, cpu_transform: nn.Module, gpu_transform: nn.Module) -> None:
+class _CudaRecipe(nn.Module):
+    def __init__(
+        self,
+        *,
+        prefix: nn.Module,
+        tail: nn.Module | None,
+        jpeg_quality: tuple[int, int] | None,
+        recipe: RecipeSpec,
+    ) -> None:
         super().__init__()
-        self.cpu_transform = cpu_transform
-        self.gpu_transform = gpu_transform
+        self.prefix = prefix
+        self.tail = tail
+        self.jpeg_quality = jpeg_quality
+        self.normalize = _GpuBatchRecipe(recipe)
 
-    def forward(self, image: torch.Tensor) -> torch.Tensor:
-        return self.cpu_transform(image)
+    def forward(self, encoded: list[bytes | torch.Tensor]) -> torch.Tensor:
+        jpeg_tensors = [
+            torch.frombuffer(bytearray(image), dtype=torch.uint8) if isinstance(image, bytes) else image
+            for image in encoded
+        ]
+        images = decode_jpeg(jpeg_tensors, mode=ImageReadMode.RGB, device="cuda")
+        batch = torch.stack([self.prefix(image) for image in images])
+        if self.jpeg_quality is not None:
+            batch = _jpeg_round_trip(batch, self.jpeg_quality)
+        elif self.tail is not None:
+            batch = batch.to(dtype=torch.float16).div_(255.0)
+            batch = torch.stack([self.tail(image) for image in batch])
+        return self.normalize(batch)
 
 
-class _CudaJpegBatch(nn.Module):
-    def __init__(self, quality: int, recipe: RecipeSpec) -> None:
-        super().__init__()
-        self.quality = quality
-        mean, std = normalization_stats(recipe)
-        self.normalize = GpuBatchNormalize(mean=mean, std=std)
-
-    def forward(self, batch: torch.Tensor) -> torch.Tensor:
-        encoded = encode_jpeg(list(batch.unbind()), quality=self.quality)
-        decoded = decode_jpeg([item.cpu() for item in encoded], device=batch.device)
-        return self.normalize(torch.stack(decoded))
+def _jpeg_round_trip(batch: torch.Tensor, quality_range: tuple[int, int]) -> torch.Tensor:
+    groups: dict[int, list[int]] = defaultdict(list)
+    for index in range(batch.shape[0]):
+        quality = random.randint(*quality_range)  # noqa: S311 - augmentation RNG.
+        groups[quality].append(index)
+    order = []
+    encoded = []
+    for quality, indices in groups.items():
+        encoded.extend(encode_jpeg([batch[index] for index in indices], quality=quality))
+        order.extend(indices)
+    sizes = [image.numel() for image in encoded]
+    decoded = decode_jpeg(list(torch.cat(encoded).cpu().split(sizes)), mode=ImageReadMode.RGB, device=batch.device)
+    return torch.stack([image for _, image in sorted(zip(order, decoded, strict=True))])
 
 
 class _DeferredCpuRecipe(nn.Module):
@@ -67,9 +89,8 @@ class _DeferredCpuRecipe(nn.Module):
 
     def __init__(self, *, transforms: tuple[nn.Module, ...], recipe: RecipeSpec) -> None:
         super().__init__()
-        mean, std = normalization_stats(recipe)
         self.cpu_transform = tv_transforms.Compose(list(transforms))
-        self.gpu_transform = GpuBatchNormalize(mean=mean, std=std)
+        self.gpu_transform = _GpuBatchRecipe(recipe)
 
 
 def build_recipe(recipe: RecipeSpec, implementation_id: str) -> nn.Module:
@@ -77,21 +98,17 @@ def build_recipe(recipe: RecipeSpec, implementation_id: str) -> nn.Module:
         transforms = tuple(_transform(spec, recipe.recipe_id) for spec in transform_specs(recipe))
         return _DeferredCpuRecipe(transforms=transforms, recipe=recipe)
     if implementation_id == "torchvision_gpu":
-        cpu_specs, gpu_specs = collatable_prefix(recipe)
-        cpu_transforms = tuple(_transform(spec, recipe.recipe_id) for spec in cpu_specs)
-        cpu_transform = tv_transforms.Compose(list(cpu_transforms))
-        if len(gpu_specs) == 1 and gpu_specs[0].name == "JpegCompression":
-            return _SplitRecipe(
-                cpu_transform=cpu_transform,
-                gpu_transform=_CudaJpegBatch(int(gpu_specs[0].params["quality"]), recipe),
-            )
-        gpu_transforms = tuple(_transform(spec, recipe.recipe_id) for spec in gpu_specs)
-        return _SplitRecipe(
-            cpu_transform=cpu_transform,
-            gpu_transform=_GpuBatchRecipe(
-                tail=tv_transforms.Compose(list(gpu_transforms)) if gpu_transforms else None,
-                recipe=recipe,
-            ),
+        prefix, tail = collatable_prefix(recipe)
+        jpeg_quality = None
+        if len(tail) == 1 and tail[0].name == "JpegCompression":
+            low, high = tail[0].params["quality_range"]
+            jpeg_quality = (low, high)
+            tail = ()
+        return _CudaRecipe(
+            prefix=tv_transforms.Compose([_transform(spec, recipe.recipe_id) for spec in prefix]),
+            tail=tv_transforms.Compose([_transform(spec, recipe.recipe_id) for spec in tail]) if tail else None,
+            jpeg_quality=jpeg_quality,
+            recipe=recipe,
         )
     raise UnsupportedRecipeError(f"{implementation_id!r} is not a TorchVision implementation")
 

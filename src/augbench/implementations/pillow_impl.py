@@ -18,6 +18,7 @@ from augbench.implementations.geometry import (
     centered_inverse_affine,
     centered_padding,
     emboss_kernel,
+    sample_inverse_perspective,
     x_shear_matrix,
 )
 
@@ -38,23 +39,6 @@ def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
 
 def _pil_interp(name: str) -> int:
     return Image.Resampling.BILINEAR if name == "bilinear" else Image.Resampling.NEAREST
-
-
-def _affine_coeffs(angle_deg: float, tx: float, ty: float, scale: float, shear_deg: float) -> tuple[float, ...]:
-    """Build PIL AFFINE inverse-mapping coefficients (input = M * output)."""
-    import math
-
-    angle = math.radians(angle_deg)
-    shear = math.tan(math.radians(shear_deg))
-    cos_angle, sin_angle = math.cos(angle) / scale, math.sin(angle) / scale
-    return (
-        cos_angle,
-        sin_angle + shear * cos_angle,
-        -tx / scale,
-        -sin_angle,
-        cos_angle + shear * sin_angle,
-        -ty / scale,
-    )
 
 
 def create_transform(spec: TransformSpec) -> Any | None:
@@ -109,17 +93,17 @@ def _build_pad(params: dict[str, Any]) -> Any | None:
     return lambda img: ImageOps.expand(img, border=params["padding"], fill=params["fill"])
 
 
-def _build_affine(params: dict[str, Any]) -> Any | None:
-    tx, ty = params["shift"]
-    shear = params["shear"][0] if isinstance(params["shear"], tuple | list) else params["shear"]
-    coeffs = _affine_coeffs(params["angle"], tx, ty, params["scale"], shear)
-    return lambda img: img.transform(
-        img.size,
-        Image.Transform.AFFINE,
-        coeffs,
-        resample=_pil_interp(params["interpolation"]),
-        fillcolor=params["fill"],
-    )
+def _build_perspective(params: dict[str, Any]) -> Any:
+    def warp(image: Image.Image) -> Image.Image:
+        a, b, c, d, e, f, g, h = sample_inverse_perspective(params["input_size"], params["scale"], pixel_center=False)
+        return ImageOps.expand(image, border=1, fill=0).transform(
+            image.size,
+            Image.Transform.PERSPECTIVE,
+            (a + g, b + h, c + 1, d + g, e + h, f + 1, g, h),
+            resample=Image.Resampling.BILINEAR,
+        )
+
+    return warp
 
 
 def _build_shear(params: dict[str, Any]) -> Any | None:
@@ -349,7 +333,7 @@ def _build_emboss(params: dict[str, Any]) -> Any:
 def _build_shift_scale_rotate(params: dict[str, Any]) -> Any:
     center = params["input_size"] / 2
     a, b, tx, d, e, ty = centered_inverse_affine(
-        (center, center), params["angle"], params["scale"], tuple(params["shift"])
+        (center, center), params["angle"], params["scale"], tuple(params["shift"]), tuple(params.get("shear", (0, 0)))
     )
 
     def warp(image: Image.Image) -> Image.Image:
@@ -376,19 +360,22 @@ def _build_unsharp_mask(params: dict[str, Any]) -> Any | None:
     return _unsharp_mask
 
 
-def _build_enhance_edge(_params: dict[str, Any]) -> Any | None:
-    return lambda img: img.filter(ImageFilter.EDGE_ENHANCE_MORE)
+def _build_enhance(params: dict[str, Any]) -> Any:
+    filter_ = ImageFilter.EDGE_ENHANCE_MORE if params["mode"] == "edge" else ImageFilter.DETAIL
 
+    def enhance(image: Image.Image) -> Image.Image:
+        alpha = random.uniform(*params["alpha_range"])
+        return Image.blend(image, image.filter(filter_), alpha)
 
-def _build_enhance_detail(_params: dict[str, Any]) -> Any | None:
-    return lambda img: img.filter(ImageFilter.DETAIL)
+    return enhance
 
 
 def _build_jpeg_compression(params: dict[str, Any]) -> Any | None:
-    quality = params["quality"]
+    low, high = params["quality_range"]
 
     def _jpeg(img: Image.Image) -> Image.Image:
         buf = io.BytesIO()
+        quality = random.randint(low, high)
         img.save(buf, format="JPEG", quality=quality)
         buf.seek(0)
         return Image.open(buf).copy()
@@ -423,7 +410,8 @@ _TRANSFORM_BUILDERS = {
     "Transpose": _build_transpose,
     "Rotate": _build_rotate,
     "Pad": _build_pad,
-    "Affine": _build_affine,
+    "Affine": _build_shift_scale_rotate,
+    "Perspective": _build_perspective,
     "Shear": _build_shear,
     "Brightness": _build_brightness,
     "Contrast": _build_contrast,
@@ -438,7 +426,7 @@ _TRANSFORM_BUILDERS = {
     "MedianBlur": _build_median_blur,
     "Blur": _build_blur,
     "UnsharpMask": _build_unsharp_mask,
-    "EnhanceEdge": _build_enhance_edge,
-    "EnhanceDetail": _build_enhance_detail,
+    "EnhanceEdge": _build_enhance,
+    "EnhanceDetail": _build_enhance,
     "JpegCompression": _build_jpeg_compression,
 }

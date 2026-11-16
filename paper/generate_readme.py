@@ -17,6 +17,7 @@ from PIL import Image
 
 from augbench.run_config import FamilyRunConfig
 from paper.generate_results import (
+    _COMMON_RECIPE_RATIO_PATHS,
     AX,
     PILLOW_ALLSIMD,
     RUN_ID,
@@ -59,7 +60,10 @@ def main() -> None:
         (destination / "run.json").write_text(run.model_dump_json(indent=2) + "\n")
         (destination / "results.json").write_text(
             json.dumps(
-                {**export_results(data, run, ax_run), "figures": export_figures(staging, captions)},
+                {
+                    **export_results(data, run, ax_run, data.supplemental_runs),
+                    "figures": export_figures(staging, captions),
+                },
                 indent=2,
                 allow_nan=False,
             )
@@ -93,6 +97,7 @@ def export_results(
     data: _PaperData,
     run: RunRecord,
     ax_run: RunRecord | None = None,
+    supplemental_runs: tuple[RunRecord, ...] = (),
 ) -> dict[str, object]:
     libraries = [
         {
@@ -185,7 +190,8 @@ def export_results(
         "schema_version": 2,
         "run": run.model_dump(mode="json"),
         **({"ax_run": ax_run.model_dump(mode="json")} if ax_run else {}),
-        "is_published_run": ax_run is None and run.run_id == RUN_ID,
+        "supplemental_runs": [source.model_dump(mode="json") for source in supplemental_runs],
+        "is_published_run": ax_run is None and not supplemental_runs and run.run_id == RUN_ID,
         "measurement_count": sum(map(len, data.groups.values())),
         "gpu_memory_poll_ms": _single(
             {record.gpu_memory.poll_interval_ms for records in data.groups.values() for record in records}
@@ -296,6 +302,30 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
                 ),
             ]
         )
+    ratio_paths = _COMMON_RECIPE_RATIO_PATHS
+    lines.extend(
+        [
+            "",
+            "### Throughput ratio on each shared recipe",
+            "",
+            (
+                "Each value is the path's median throughput across three seeds divided by AX's median "
+                "for that recipe. A value above 1.00 means that path delivered batches faster than AX."
+            ),
+            "",
+            "| Shared recipe | " + " | ".join(label for _, label in ratio_paths) + " |",
+            "| --- | " + " | ".join("---:" for _ in ratio_paths) + " |",
+        ]
+    )
+    for index, recipe in enumerate(data.recipes, start=1):
+        if recipe.recipe_id not in data.common:
+            continue
+        key = f"R{index:02d}"
+        ratios = [
+            data.speed[(implementation, recipe.recipe_id)] / data.speed[(AX, recipe.recipe_id)]
+            for implementation, _ in ratio_paths
+        ]
+        lines.append(f"| {key} {recipe.augmentation_id} | " + " | ".join(f"{value:.2f}" for value in ratios) + " |")
     lines.extend(
         [
             "",
@@ -327,7 +357,8 @@ def _workload_lines(data: _PaperData, run: RunRecord, config: FamilyRunConfig) -
         "",
         (
             f"Machine: `{run.hardware['machine_type']}`, `{run.hardware['accelerator']}`. "
-            f"Output: CUDA `float16` BCHW `{shape}`. Dataset: {config.dataset.item_count:,} selected files. "
+            f"Output: CUDA `float16` BCHW `{shape}`. "
+            f"Dataset: first {config.dataset.item_count:,} lexicographically sorted ImageNet Val JPEGs. "
             f"Seeds: {', '.join(map(str, execution.seeds))}. "
             f"Workers: {execution.num_workers}; prefetch setting: {execution.prefetch_factor}; "
             f"persistent workers: {str(execution.persistent_workers).lower()}; "

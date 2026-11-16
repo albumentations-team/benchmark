@@ -48,6 +48,15 @@ PAIRWISE = (
     ("Pillow", ("pillow_cpu",)),
     ("DALI", ("dali_gpu",)),
 )
+_COMMON_RECIPE_RATIO_PATHS = (
+    ("dali_gpu", "DALI"),
+    ("kornia_cpu", "Kornia CPU"),
+    ("kornia_gpu", "Kornia GPU"),
+    ("pillow_cpu", "Pillow"),
+    (PILLOW_ALLSIMD[0], "Pillow-AllSIMD"),
+    ("torchvision_cpu", "TorchVision CPU"),
+    ("torchvision_gpu", "TorchVision GPU"),
+)
 RGB_2D_COVERAGE_DOMAINS = frozenset({"dropout_or_multi_image", "geometry", "pixel"})
 
 
@@ -79,6 +88,7 @@ class _PaperData:
     comparisons: tuple[tuple[str, tuple[str, ...]], ...]
     common: tuple[str, ...]
     pairwise: dict[str, list[_PairwiseRow]]
+    supplemental_runs: tuple[RunRecord, ...] = ()
 
 
 def main() -> None:
@@ -94,9 +104,10 @@ def main() -> None:
     _write_csv(args.output / "recipe-results.csv", data)
     _write_recipe_catalog(args.output / "recipes.tex", data.recipes)
     _write_recipe_results(args.output / "recipe-results.tex", data)
+    _write_common_recipe_ratios(args.output / "common-recipe-ratios.tex", data)
     _write_versions(args.output / "versions.tex", data)
     _write_coverage(args.output, root / "catalog/operations.yaml")
-    _write_sources(args.output / "sources.tex", run, ax_run)
+    _write_sources(args.output / "sources.tex", run, ax_run, data.supplemental_runs)
 
 
 def add_run_arguments(parser: argparse.ArgumentParser) -> None:
@@ -105,6 +116,14 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--recipes", type=Path, help="full run's catalog; defaults to the repository catalog")
     parser.add_argument(
         "--ax-run", nargs=3, type=Path, metavar=("MANIFEST", "CELLS", "RECIPES"), help="optional AX-only rerun"
+    )
+    parser.add_argument(
+        "--supplemental-run",
+        nargs=3,
+        action="append",
+        type=Path,
+        metavar=("MANIFEST", "CELLS", "RECIPES"),
+        help="another immutable run with complementary implementation cells",
     )
 
 
@@ -123,15 +142,52 @@ def load_report(args: argparse.Namespace, root: Path) -> tuple[_PaperData, RunRe
     if run.run_id == INVALID_DALI_FLIP_RUN:
         raise ValueError("this run contains incorrect DALI VerticalFlip measurements")
     recipes = _run_catalog(run, args.recipes or root / config.recipes)
-    records = load_run_results(args.cells, run, recipes)
+    supplemental_inputs = getattr(args, "supplemental_run", None) or []
+    ax_run_inputs = getattr(args, "ax_run", None)
+    if supplemental_inputs and ax_run_inputs:
+        raise ValueError("supplemental implementation runs and an AX replacement run cannot be combined")
+    records = load_run_results(args.cells, run, recipes, allow_partial=bool(supplemental_inputs))
+    supplemental_runs = []
+    for manifest, cells, catalog_path in supplemental_inputs:
+        supplemental = RunRecord.model_validate_json(manifest.read_bytes())
+        _require_compatible_workload(supplemental, run)
+        supplemental_catalog = _run_catalog(supplemental, catalog_path)
+        records.extend(load_run_results(cells, supplemental, supplemental_catalog, allow_partial=True))
+        supplemental_runs.append(supplemental)
+    if supplemental_runs:
+        _validate_combined_matrix(records, run, recipes)
     ax_run = None
-    if args.ax_run:
-        ax_run, ax_records = _load_ax_run(args.ax_run, run)
+    if ax_run_inputs:
+        ax_run, ax_records = _load_ax_run(ax_run_inputs, run)
         records = [record for record in records if record.cell.implementation != AX] + ax_records
-    data = _prepare(records, recipes.recipes)
+    data = _prepare(records, recipes.recipes, tuple(supplemental_runs))
     if not data.common:
         raise ValueError("the selected results have no recipes shared by all paths")
     return data, run, ax_run
+
+
+def _require_compatible_workload(supplemental: RunRecord, primary: RunRecord) -> None:
+    primary_config = {key: value for key, value in primary.family_config.items() if key != "measurements"}
+    supplemental_config = {key: value for key, value in supplemental.family_config.items() if key != "measurements"}
+    if (
+        supplemental_config != primary_config
+        or supplemental.hardware != primary.hardware
+        or supplemental.inputs.dataset_archive_sha256 != primary.inputs.dataset_archive_sha256
+        or supplemental.inputs.recipe_catalog_sha256 != primary.inputs.recipe_catalog_sha256
+        or supplemental.inputs.environment_lock_sha256 != primary.inputs.environment_lock_sha256
+    ):
+        raise ValueError("supplemental run must use the same workload, hardware, recipes, and package locks")
+
+
+def _validate_combined_matrix(records: Sequence[ResultRecord], run: RunRecord, recipes: RecipeCatalog) -> None:
+    config = FamilyRunConfig.model_validate(run.family_config)
+    expected = {
+        (cell.implementation, cell.recipe_id, cell.seed)
+        for cell in build_matrix(run_id=run.run_id, config=config, recipes=recipes)
+    }
+    found = [(record.cell.implementation, record.cell.recipe_id, record.cell.seed) for record in records]
+    if set(found) != expected or len(found) != len(expected):
+        raise ValueError("combined source runs do not form one complete RGB matrix without duplicate cells")
 
 
 def _load_ax_run(inputs: Sequence[Path], run: RunRecord) -> tuple[RunRecord, list[ResultRecord]]:
@@ -149,17 +205,21 @@ def _load_ax_run(inputs: Sequence[Path], run: RunRecord) -> tuple[RunRecord, lis
     return ax_run, load_run_results(cells, ax_run, recipes)
 
 
-def load_run_results(cells_directory: Path, run: RunRecord, recipes: RecipeCatalog) -> list[ResultRecord]:
+def load_run_results(
+    cells_directory: Path, run: RunRecord, recipes: RecipeCatalog, *, allow_partial: bool = False
+) -> list[ResultRecord]:
     identity = build_run_record(family_config=run.family_config, inputs=run.inputs, hardware=run.hardware)
     if identity != run:
         raise ValueError("run manifest does not match its immutable identity")
     cells = build_matrix(run_id=run.run_id, config=FamilyRunConfig.model_validate(run.family_config), recipes=recipes)
     records = [
-        decode_result(path.read_bytes(), expected_cell_id=path.stem) for path in sorted(cells_directory.glob("*.json"))
+        decode_result(path.read_bytes(), expected_cell_id=path.stem)
+        for path in sorted(cells_directory.glob("*.json"))
+        if path.name != "run.json"
     ]
     found = {record.cell_id for record in records}
     expected = {cell.cell_id for cell in cells}
-    if found != expected:
+    if (not allow_partial and found != expected) or (allow_partial and not found <= expected):
         raise ValueError("results do not match the complete selected run matrix")
     config = run.family_config
     output = config["output"]
@@ -174,7 +234,11 @@ def load_run_results(cells_directory: Path, run: RunRecord, recipes: RecipeCatal
     return records
 
 
-def _prepare(records: Sequence[ResultRecord], recipes: tuple[RecipeSpec, ...]) -> _PaperData:
+def _prepare(
+    records: Sequence[ResultRecord],
+    recipes: tuple[RecipeSpec, ...],
+    supplemental_runs: tuple[RunRecord, ...] = (),
+) -> _PaperData:
     groups: dict[tuple[str, str], list[ResultRecord]] = defaultdict(list)
     for record in records:
         groups[(record.cell.implementation, record.cell.recipe_id)].append(record)
@@ -203,6 +267,7 @@ def _prepare(records: Sequence[ResultRecord], recipes: tuple[RecipeSpec, ...]) -
         comparisons,
         ordered,
         _pairwise(speed, memory, support, comparisons),
+        supplemental_runs,
     )
 
 
@@ -443,7 +508,9 @@ def _write_versions(path: Path, data: _PaperData) -> None:
     _write_tex(path, lines)
 
 
-def _write_sources(path: Path, run: RunRecord, ax_run: RunRecord | None) -> None:
+def _write_sources(
+    path: Path, run: RunRecord, ax_run: RunRecord | None, supplemental_runs: Sequence[RunRecord] = ()
+) -> None:
     lines: list[str] = []
     for label, source in (("Full", run), ("AX", ax_run or run)):
         lines.extend(
@@ -452,6 +519,13 @@ def _write_sources(path: Path, run: RunRecord, ax_run: RunRecord | None) -> None
                 rf"\newcommand{{\{label}SourceRevision}}{{{source.inputs.git_commit}}}",
             )
         )
+    details = [
+        rf"\item[Correction {index}] \texttt{{\expandafter\seqsplit\expandafter{{{source.run_id}}}}}\\"
+        rf"Source \texttt{{\expandafter\seqsplit\expandafter{{{source.inputs.git_commit}}}}}."
+        for index, source in enumerate(supplemental_runs, start=1)
+    ] or [r"\item[Correction runs] none"]
+    details_tex = "\n".join(details)
+    lines.append(rf"\newcommand{{\SupplementalRunDetails}}{{{details_tex}}}")
     _write_tex(path, lines)
 
 
@@ -557,21 +631,68 @@ def _write_recipe_results(path: Path, data: _PaperData) -> None:
     _write_tex(path, lines)
 
 
+def _write_common_recipe_ratios(path: Path, data: _PaperData) -> None:
+    abbreviations = {
+        "Kornia CPU": "K-CPU",
+        "Kornia GPU": "K-GPU",
+        "Pillow": "PIL",
+        "Pillow-AllSIMD": "PIL-SIMD",
+        "TorchVision CPU": "TV-CPU",
+        "TorchVision GPU": "TV-GPU",
+    }
+    columns = tuple(
+        (implementation, abbreviations.get(label, label)) for implementation, label in _COMMON_RECIPE_RATIO_PATHS
+    )
+    headers = " & ".join([r"\textbf{Recipe}", *(rf"\textbf{{{label}}}" for _, label in columns)])
+    lines = [
+        r"\begin{longtable}{P{3.6cm}rrrrrrr}",
+        (
+            r"\caption{Median throughput for each recipe divided by the AX median for that recipe. "
+            r"Each median uses three seeds.}\label{tab:common-throughput}\\"
+        ),
+        headers + r" \\ \midrule",
+        r"\endfirsthead",
+        headers + r" \\ \midrule",
+        r"\endhead",
+    ]
+    for index, recipe in enumerate(data.recipes, start=1):
+        if recipe.recipe_id not in data.common:
+            continue
+        key = f"R{index:02d}"
+        name = rf"\hyperlink{{{key}}}{{{key} {_name(recipe.augmentation_id)}}}"
+        ratios = [
+            data.speed[(implementation, recipe.recipe_id)] / data.speed[(AX, recipe.recipe_id)]
+            for implementation, _ in columns
+        ]
+        lines.append(name + " & " + " & ".join(f"{value:.2f}\\(\\times\\)" for value in ratios) + r" \\")
+    lines.extend([r"\bottomrule", r"\end{longtable}"])
+    _write_tex(path, lines)
+
+
 def _write_coverage(output: Path, path: Path) -> None:
     catalog = yaml.safe_load(path.read_text())
     operations = [item for item in catalog["operations"] if item["domain"] in RGB_2D_COVERAGE_DOMAINS]
-    counts = {"albumentationsx": len(operations)}
+    names = {
+        "albumentationsx": "AlbumentationsX",
+        "kornia": "Kornia",
+        "torchvision": "TorchVision",
+        "pillow": "Pillow",
+        "dali": "DALI",
+    }
+    counts = dict.fromkeys(names, 0)
+    counts["albumentationsx"] = len(operations)
     mappings = []
-    for library in ("kornia", "torchvision", "pillow"):
-        statuses = {operation["support"][library]["status"] for operation in operations}
-        if not statuses <= {"direct", "none"}:
-            raise ValueError(f"unexpected {library} coverage status: {statuses}")
-        counts[library] = sum(operation["support"][library]["status"] == "direct" for operation in operations)
     for operation in operations:
         cells = [_name(operation["operation_id"])]
-        cells.extend(_name(operation["support"][lib]["api"] or "---") for lib in ("kornia", "torchvision", "pillow"))
+        for library in ("kornia", "torchvision", "pillow", "dali"):
+            match = operation["support"].get(library, {"api": None, "status": "none"})
+            status = match["status"]
+            if status not in {"direct", "composed", "approximate", "none"}:
+                raise ValueError(f"unexpected {library} coverage status: {status}")
+            counts[library] += status in {"direct", "composed"}
+            suffix = {"composed": " [composed]", "approximate": " [approx.]"}.get(status, "")
+            cells.append(_name(match["api"] or "---") + suffix)
         mappings.append(" & ".join(cells) + r" \\")
-    names = {"albumentationsx": "AlbumentationsX", "kornia": "Kornia", "torchvision": "TorchVision", "pillow": "Pillow"}
     _write_tex(
         output / "coverage.tex",
         (rf"{names[lib]} & {count} & {catalog['versions'][lib]} \\" for lib, count in counts.items()),

@@ -21,6 +21,8 @@ def validate_rgb_recipes(config: FamilyRunConfig, recipes: RecipeCatalog) -> Non
 def _validate_recipe(config: FamilyRunConfig, recipe: RecipeSpec) -> None:
     if recipe.channels != config.output.channels:
         raise ValueError(f"recipe {recipe.recipe_id} has the wrong channel count")
+    if any(stage.stochastic and stage.randomness_scope != "per-image" for stage in recipe.stages):
+        raise ValueError(f"RGB recipe {recipe.recipe_id} must sample stochastic stages per image")
     stages = {stage.operation_id: stage.parameters for stage in recipe.stages}
     tensor = stages.get("ToTensor")
     if not isinstance(tensor, dict) or tensor.get("dtype") != config.output.dtype:

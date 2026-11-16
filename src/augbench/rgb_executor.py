@@ -99,7 +99,7 @@ class RGBCellExecutor:
             if cell.implementation == "dali_gpu":
                 throughput, output = self._execute_dali(adapter, recipe, sources, cell.seed)
             else:
-                throughput, output = self._execute_dataloader(adapter, runtime, sources)
+                throughput, output = self._execute_dataloader(adapter, runtime, sources, cell.seed)
         finally:
             memory = monitor.stop()
         return ResultRecord(
@@ -125,7 +125,7 @@ class RGBCellExecutor:
         if cell.implementation == "dali_gpu":
             self._preflight_dali(adapter, recipe, sources, cell.seed)
         else:
-            self._preflight_dataloader(adapter, runtime, sources)
+            self._preflight_dataloader(adapter, runtime, sources, cell.seed)
 
     def compile_implementation(self, implementation: str) -> None:
         """Build every catalog recipe declared for one implementation."""
@@ -139,6 +139,7 @@ class RGBCellExecutor:
         adapter: AugmentationAdapter,
         runtime: RecipeRuntime,
         sources: Sequence[Any],
+        seed: int,
     ) -> tuple[Any, OutputObservation]:
         dataset = RecipeDataset(items=sources, adapter=adapter, runtime=runtime)
         loader = TorchDataLoaderSource(
@@ -149,8 +150,9 @@ class RGBCellExecutor:
                 prefetch_factor=self._config.execution.prefetch_factor,
                 persistent_workers=self._config.execution.persistent_workers,
                 pin_memory=True,
-                seed=0,
+                seed=seed,
                 host_batch_transform=runtime.host_batch_transform,
+                collate_fn=list if runtime.batch_input_on_host else None,
             ),
         )
         consumer = ReadyGpuBatchConsumer(runtime=runtime, expected_channels=self._config.output.channels)
@@ -176,6 +178,7 @@ class RGBCellExecutor:
         adapter: AugmentationAdapter,
         runtime: RecipeRuntime,
         sources: Sequence[Any],
+        seed: int,
     ) -> None:
         dataset = RecipeDataset(items=sources, adapter=adapter, runtime=runtime)
         loader = TorchDataLoaderSource(
@@ -186,8 +189,9 @@ class RGBCellExecutor:
                 prefetch_factor=1,
                 persistent_workers=False,
                 pin_memory=True,
-                seed=0,
+                seed=seed,
                 host_batch_transform=runtime.host_batch_transform,
+                collate_fn=list if runtime.batch_input_on_host else None,
             ),
         )
         consumer = ReadyGpuBatchConsumer(runtime=runtime, expected_channels=self._config.output.channels)

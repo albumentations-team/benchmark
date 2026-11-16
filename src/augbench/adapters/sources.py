@@ -31,5 +31,11 @@ def load_torchvision_rgb(source: SourceRef) -> Any:
     return decode_image(str(source.path), mode=ImageReadMode.RGB)
 
 
+def load_torchvision_jpeg(source: SourceRef) -> bytes:
+    return source.path.read_bytes()
+
+
 def load_kornia_rgb(source: SourceRef) -> Any:
-    return load_torchvision_rgb(source).float().div_(255.0)
+    from kornia.io import ImageLoadType, load_image
+
+    return load_image(source.path, ImageLoadType.RGB32)
