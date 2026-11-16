@@ -35,6 +35,10 @@ reports the earlier seven-path experiment.
 
 1314 measurements across 438 implementation–recipe pairs, with 3 seeds per pair. See the [per-seed results and manifests](docs/generated/results.json).
 
+![Ready batches per second and peak process GPU memory on 34 common recipes. Each metric takes the median across seeds, then across recipes. The dashed line marks AX's batch rate.](docs/generated/common-summary.png)
+
+### Mean per-recipe throughput ratios
+
 All rows below use the same 34 recipes. Throughput is the arithmetic mean of per-recipe ratios: each path's median over 3 seeds divided by AX's median for that recipe. GPU memory is the median of those recipes' peak-memory medians.
 
 | Measured path | Version | Mean throughput / AX (higher is faster) | Peak process GPU memory (MiB, lower is better) |
@@ -52,21 +56,9 @@ Across 46 shared recipes, Pillow-AllSIMD was 1.66× as fast as Pillow on average
 
 Each implementation ran in its own process. Peak VRAM includes the CUDA state that process retains. The per-seed baseline before pipeline construction is in the machine-readable results.
 
-### Per-recipe throughput
+### AlbumentationsX against each library
 
-Each cell shows the ratio of seed medians for the recipe. AX images/s gives the absolute scale. Color shows the ratio on a logarithmic scale. See the adapter differences below.
-
-![Per-recipe throughput ratios and absolute AX throughput](docs/generated/common-heatmap.png)
-
-### Throughput and GPU memory on the common recipe set
-
-![Mean relative throughput on 34 common recipes](docs/generated/common-mean-bars.png)
-
-![Median peak process GPU memory on 34 common recipes](docs/generated/common-memory-bars.png)
-
-### Broader pairwise comparisons
-
-Each chart uses the exact recipe intersection of the paths it shows. Recipe sets differ between charts, so their averages cannot rank all libraries together.
+Each chart uses the recipes shared by every path it shows. Compare rows within each chart.
 
 ![AX vs Kornia on 67 shared recipes](docs/generated/pairwise-kornia.png)
 
@@ -76,15 +68,6 @@ Each chart uses the exact recipe intersection of the paths it shows. Recipe sets
 
 ![AX vs DALI on 51 shared recipes](docs/generated/pairwise-dali.png)
 
-The counts below include recipes supported by only one competing path. AX wins when it exceeds every available competing path. Ratios and memory differences use the fastest competitor per recipe; exact ties select the first path in the comparison.
-
-| Competitor | Shared recipes | AX faster | Median competitor / AX throughput | Median competitor - AX GPU memory (MiB) |
-| --- | ---: | ---: | ---: | ---: |
-| Kornia | 67 | 66 | 0.56× | +272 |
-| TorchVision | 44 | 38 | 0.87× | -18 |
-| Pillow | 46 | 41 | 0.89× | -74 |
-| DALI | 51 | 0 | 1.16× | +1,468 |
-
 ### Measurement settings
 
 Machine: `g2-standard-16`, `nvidia-l4`. Output: CUDA `float16` BCHW `256x3x224x224`. Dataset: 10,000 selected files. Seeds: 137, 138, 139. Workers: 15; prefetch setting: 2; persistent workers: true; dataset prewarm: true.
@@ -93,7 +76,7 @@ Warm-up batches: 1. Throughput measures 32 batches (8,192 images), ending after 
 
 GPU memory is sampled by NVML every 50 ms from before pipeline construction through final synchronization and cleanup in the same pass. The peak includes process and library allocations. Shorter peaks may be missed; CPU and model memory are not measured.
 
-![Throughput and GPU-memory measurement windows](docs/generated/boundary.png)
+![When a batch arrives late, the GPU sits idle and completes fewer steps in the same time.](docs/generated/batch-wait.png)
 
 <!-- END GENERATED RESULTS -->
 

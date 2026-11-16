@@ -90,14 +90,7 @@ def main() -> None:
     data, run, ax_run = load_report(args, root)
     args.output.mkdir(parents=True, exist_ok=True)
     _write_metrics(args.output / "metrics.tex", data)
-    _write_heatmap(args.output / "common-heatmap.tex", data)
-    _write_mean_bars(
-        args.output / "common-mean-bars.tex",
-        _mean_ratios(data, [implementation for implementation, _ in data.implementations]),
-    )
-    _write_memory_bars(args.output / "common-memory-bars.tex", data)
-    for family, paths in data.comparisons:
-        _write_mean_bars(args.output / f"pairwise-{family.lower()}.tex", _mean_ratios(data, [AX, *paths]))
+    write_plot_inputs(args.output, data)
     _write_csv(args.output / "recipe-results.csv", data)
     _write_recipe_catalog(args.output / "recipes.tex", data.recipes)
     _write_recipe_results(args.output / "recipe-results.tex", data)
@@ -268,24 +261,30 @@ def _write_metrics(path: Path, data: _PaperData) -> None:
         "RecipeCount": str(len(data.recipes)),
         "CommonRecipeCount": str(len(data.common)),
         "CommonMeanDaliRatio": f"{common_means['dali_gpu']:.2f}",
-        "CommonRatioAxisMax": str(_ratio_axis_max(common_means)),
-        "MemoryAxisMax": str(_memory_axis_max(common_memories)),
     }
-    for implementation, label in data.implementations:
-        command = "AllSIMD" if implementation == PILLOW_ALLSIMD[0] else label.replace(" ", "")
-        metrics[f"CommonSpeed{command}"] = (
-            f"{median(data.speed[(implementation, recipe)] for recipe in data.common):,.0f}"
-        )
-        metrics[f"CommonMemory{command}"] = f"{common_memories[implementation]:,.0f}"
+    batch_size = _single({group[0].output.shape[0] for group in data.groups.values()})
+    metrics.update(_common_headline_metrics(data, common_memories, batch_size))
+    crop = "RandomCrop224+Normalize+ToTensor"
+    for implementation, label in ((AX, "AX"), ("dali_gpu", "DALI")):
+        if (implementation, crop) in data.speed:
+            metrics[f"Crop{label}BatchRate"] = f"{data.speed[implementation, crop] / batch_size:.1f}"
     for family, paths in data.comparisons:
         compared = [AX, *paths]
         metrics[f"Plot{family}Shared"] = str(len(_shared_recipes(data, compared)))
-        metrics[f"Plot{family}AxisMax"] = str(_ratio_axis_max(_mean_ratios(data, compared)))
     for family, rows in data.pairwise.items():
         metrics[f"Pair{family}Shared"] = str(len(rows))
         metrics[f"Pair{family}Wins"] = str(sum(row.ratio < 1 for row in rows))
         if family == "DALI":
             metrics["PairDALIFaster"] = str(sum(row.ratio > 1 for row in rows))
+            observations = [
+                (ax, dali)
+                for row in rows
+                for ax, dali in zip(data.groups[AX, row.recipe], data.groups["dali_gpu", row.recipe], strict=True)
+            ]
+            metrics["PairDALISeedCount"] = str(len(observations))
+            metrics["PairDALISeedFaster"] = str(
+                sum(dali.throughput.value > ax.throughput.value for ax, dali in observations)
+            )
         metrics[f"Pair{family}Ratio"] = f"{median(row.ratio for row in rows):.2f}"
         metrics[f"Pair{family}MemoryDelta"] = f"{median(row.memory_delta for row in rows):+,.0f}"
     metrics["MemoryPollMs"] = str(
@@ -305,31 +304,31 @@ def _write_metrics(path: Path, data: _PaperData) -> None:
     _write_tex(path, (rf"\newcommand{{\{command}}}{{{value}}}" for command, value in metrics.items()))
 
 
-def _write_heatmap(path: Path, data: _PaperData) -> None:
-    ratios = [
-        data.speed[(implementation, recipe)] / data.speed[(AX, recipe)]
-        for recipe in data.common
-        for implementation, _ in data.implementations[1:]
-    ]
-    limit = max(1, math.ceil(max(abs(math.log2(value)) for value in ratios)))
-    ax_column = len(data.implementations) - 0.35
-    lines = [rf"\def\HeatLimit{{{limit}}}"]
-    for y, recipe in enumerate(data.common):
-        label = (
-            recipe.removesuffix("+Normalize+ToTensor")
-            .replace("RandomCrop224", "Crop")
-            .replace("Resize224", "Resize")
-            .replace("+", " + ")
-        )
-        key = _recipe_key(recipe, data.recipes)
-        lines.append(rf"\node[anchor=east,font=\small] at (-0.65,{y}) {{\hyperlink{{{key}}}{{{key}}} {label}}};")
-        lines.append(rf"\node[font=\small] at ({ax_column:.2f},{y}) {{{data.speed[(AX, recipe)]:,.0f}}};")
-        for x, (implementation, _) in enumerate(data.implementations[1:]):
-            ratio = data.speed[(implementation, recipe)] / data.speed[(AX, recipe)]
-            color = "faster" if ratio >= 1 else "slower"
-            shade = abs(math.log2(ratio)) / limit * 65
-            lines.append(rf"\HeatCell{{{x}}}{{{y}}}{{{ratio:.2f}}}{{{color}!{shade:.2f}!white}}")
-    _write_tex(path, lines)
+def _common_headline_metrics(data: _PaperData, common_memories: Mapping[str, float], batch_size: int) -> dict[str, str]:
+    metrics = {
+        "CommonDALIFastest": str(
+            sum(
+                all(
+                    data.speed["dali_gpu", recipe] > data.speed[other, recipe]
+                    for other, _ in data.implementations
+                    if other != "dali_gpu"
+                )
+                for recipe in data.common
+            )
+        ),
+    }
+    for implementation, command in ((AX, "AlbumentationsX"), ("dali_gpu", "DALIGPU")):
+        speed = median(data.speed[implementation, recipe] for recipe in data.common)
+        memory = common_memories[implementation]
+        metrics[f"CommonMemory{command}"] = f"{memory:,.0f}"
+        metrics[f"CommonBatchRate{command}"] = f"{speed / batch_size:.1f}"
+        baselines = [
+            [result.gpu_memory.baseline_mib for result in data.groups[implementation, recipe]] for recipe in data.common
+        ]
+        if all(value is not None for group in baselines for value in group):
+            baseline = median(median(value for value in group if value is not None) for group in baselines)
+            metrics[f"CommonBaseline{command}"] = f"{baseline:,.0f}"
+    return metrics
 
 
 def _shared_recipes(data: _PaperData, implementations: Sequence[str]) -> tuple[str, ...]:
@@ -338,6 +337,71 @@ def _shared_recipes(data: _PaperData, implementations: Sequence[str]) -> tuple[s
         for recipe in data.recipes
         if all((implementation, recipe.recipe_id) in data.speed for implementation in implementations)
     )
+
+
+def write_plot_inputs(output: Path, data: _PaperData) -> None:
+    batch_size = _single({group[0].output.shape[0] for group in data.groups.values()})
+    labels = dict(data.implementations)
+    labels.update(pillow_cpu="Pillow", pillow_allsimd_cpu="Pillow-AllSIMD (fast)", dali_gpu="DALI")
+    rates = {
+        path: median(data.speed[path, recipe] for recipe in data.common) / batch_size
+        for path, _ in data.implementations
+    }
+    memories = _common_memories(data)
+    ordered = sorted(rates, key=rates.__getitem__)
+    lines = [
+        rf"\def\DeliveryTopRow{{{len(ordered) - 1}}}",
+        rf"\def\DeliveryAXRate{{{rates[AX]:.8f}}}",
+        r"\def\DeliveryRows{%",
+    ]
+    for row, path in enumerate(ordered):
+        color = _rate_color(rates[path], rates[AX])
+        lines.append(
+            rf"\DeliveryRow{{{row}}}{{{_tex(labels[path])}}}{{{rates[path]:.8f}}}{{{memories[path]}}}{{{color}}}"
+        )
+    _write_tex(output / "delivery-rows.tex", [*lines, "}"])
+    _write_library_comparisons(output, data, batch_size)
+
+
+def _rate_color(rate: float, ax_rate: float) -> str:
+    if rate == ax_rate:
+        return "ratereference"
+    return "rateabove" if rate > ax_rate else "ratebelow"
+
+
+def _write_library_comparisons(output: Path, data: _PaperData, batch_size: int) -> None:
+    labels = dict(data.implementations)
+    labels.update(pillow_allsimd_cpu="Pillow-AllSIMD (fast)", dali_gpu="DALI")
+    for family, paths in data.comparisons:
+        compared = (AX, *paths)
+        recipes = _shared_recipes(data, compared)
+        keys = ", ".join(_recipe_key(recipe, data.recipes) for recipe in recipes)
+        rates = {path: median(data.speed[path, recipe] for recipe in recipes) / batch_size for path in compared}
+        ordered = sorted(compared, key=rates.__getitem__, reverse=True)
+        lines = [
+            rf"\def\ComparisonRecipes{{{keys}}}",
+            rf"\def\ComparisonTopRow{{{len(ordered) - 1}}}",
+            r"\def\ComparisonRows{%",
+        ]
+        for row, path in enumerate(reversed(ordered)):
+            rate = rates[path]
+            memory = median(data.memory[path, recipe] for recipe in recipes)
+            color = _rate_color(rate, rates[AX])
+            result = "" if path == AX else _recipe_winner(data, path, labels[path], recipes)
+            lines.append(
+                rf"\ComparisonBar{{{row}}}{{{_tex(labels[path])}}}{{{rate:.8f}}}"
+                rf"{{{memory:,.0f}}}{{{color}}}{{{_tex(result)}}}"
+            )
+        _write_tex(output / f"comparison-{family.lower()}.tex", [*lines, "}"])
+
+
+def _recipe_winner(data: _PaperData, path: str, label: str, recipes: Sequence[str]) -> str:
+    ax_wins = sum(data.speed[AX, recipe] > data.speed[path, recipe] for recipe in recipes)
+    path_wins = sum(data.speed[path, recipe] > data.speed[AX, recipe] for recipe in recipes)
+    if ax_wins == path_wins:
+        return f"{ax_wins} wins each" if ax_wins else "All recipes tied"
+    winner = "AX" if ax_wins > path_wins else label
+    return f"{winner} faster on {max(ax_wins, path_wins)}/{len(recipes)}"
 
 
 def pillow_allsimd_ratios(data: _PaperData) -> tuple[tuple[str, ...], list[float]]:
@@ -353,60 +417,11 @@ def _mean_ratios(data: _PaperData, implementations: Sequence[str]) -> dict[str, 
     }
 
 
-def _write_mean_bars(path: Path, means: dict[str, float]) -> None:
-    labels = dict((*IMPLEMENTATIONS, PILLOW_ALLSIMD))
-    ordered = sorted(means, key=lambda implementation: means[implementation], reverse=True)
-    lines: list[str] = []
-    for index, implementation in enumerate(ordered):
-        label = labels[implementation]
-        value = means[implementation]
-        y = len(ordered) - index - 1
-        color = "faster!65!white" if value > 1 else "slower!55!white"
-        display_label = f"{label} CPU" if implementation == AX else label
-        if implementation == AX:
-            color = "gray!45"
-        lines.extend(
-            (
-                rf"\fill[{color}] (0,{y - 0.27:.2f}) rectangle ({value:.10f},{y + 0.27:.2f});",
-                rf"\node[anchor=east,font=\small] at (-0.03,{y}) {{{display_label}}};",
-                rf"\node[anchor=west,font=\small] at ({value + 0.02:.10f},{y}) {{{value:.2f}$\times$}};",
-            )
-        )
-    _write_tex(path, lines)
-
-
 def _common_memories(data: _PaperData) -> dict[str, float]:
     return {
         implementation: median(data.memory[(implementation, recipe)] for recipe in data.common)
         for implementation, _ in data.implementations
     }
-
-
-def _ratio_axis_max(means: Mapping[str, float]) -> float:
-    return max(1.5, math.ceil(max(means.values()) * 4) / 4)
-
-
-def _memory_axis_max(memories: Mapping[str, float]) -> int:
-    return math.ceil(max(memories.values()) / 500) * 500
-
-
-def _write_memory_bars(path: Path, data: _PaperData) -> None:
-    values = _common_memories(data)
-    ordered = sorted(data.implementations, key=lambda item: values[item[0]])
-    lines: list[str] = []
-    for index, (implementation, label) in enumerate(ordered):
-        value = values[implementation]
-        y = len(ordered) - index - 1
-        color = "gray!45" if implementation == AX else "memorycolor!55!white"
-        display_label = f"{label} CPU" if implementation == AX else label
-        lines.extend(
-            (
-                rf"\fill[{color}] (0,{y - 0.27:.2f}) rectangle ({value:.10f},{y + 0.27:.2f});",
-                rf"\node[anchor=east,font=\small] at (-60,{y}) {{{display_label}}};",
-                rf"\node[anchor=west,font=\small] at ({value + 40:.10f},{y}) {{{value:,.0f}}};",
-            ),
-        )
-    _write_tex(path, lines)
 
 
 def _single[T](values: set[T]) -> T:

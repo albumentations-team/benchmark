@@ -310,17 +310,19 @@ def test_machine_export_uses_selected_run_and_the_readme_aggregates(
 
 
 def test_figure_export_records_exact_generated_image_bytes_and_dimensions(tmp_path: Path) -> None:
-    path = tmp_path / "common-mean-bars.png"
+    path = tmp_path / "common-summary.png"
+    captions = {"common-summary": "Throughput and peak GPU memory"}
     Image.new("RGB", (120, 80), "white").save(path)
 
-    figures = readme.export_figures(tmp_path)
+    figures = readme.export_figures(tmp_path, captions)
 
     assert figures == {
-        "common-mean-bars": {
+        "common-summary": {
+            "caption": captions["common-summary"],
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             "width": 120,
             "height": 80,
         }
     }
     Image.new("RGB", (120, 80), "black").save(path)
-    assert readme.export_figures(tmp_path)["common-mean-bars"]["sha256"] != figures["common-mean-bars"]["sha256"]
+    assert readme.export_figures(tmp_path, captions)["common-summary"]["sha256"] != figures["common-summary"]["sha256"]
