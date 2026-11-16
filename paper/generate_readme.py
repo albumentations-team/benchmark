@@ -22,19 +22,17 @@ from paper.generate_results import (
     RUN_ID,
     _common_memories,
     _mean_ratios,
-    _memory_axis_max,
-    _ratio_axis_max,
     _shared_recipes,
     _single,
-    _write_heatmap,
-    _write_mean_bars,
-    _write_memory_bars,
     add_run_arguments,
     load_report,
     pillow_allsimd_ratios,
+    write_plot_inputs,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from augbench.run_records import RunRecord
     from paper.generate_results import _PaperData
 
@@ -48,12 +46,12 @@ def main() -> None:
     add_run_arguments(parser)
     args = parser.parse_args()
     data, run, ax_run = load_report(args, root)
-    config = FamilyRunConfig.model_validate(run.family_config)
+    captions = figure_captions(data)
     readme = root / "README.md"
     updated = replace_results(readme.read_text(), readme_results(data, run))
     with tempfile.TemporaryDirectory(prefix="augbench-readme-") as directory:
         staging = Path(directory)
-        render_figures(staging, root / "paper/figures.tex", data, config)
+        render_figures(staging, root / "paper", data)
         destination = root / "docs/generated"
         destination.mkdir(parents=True, exist_ok=True)
         for figure in staging.glob("*.png"):
@@ -61,7 +59,7 @@ def main() -> None:
         (destination / "run.json").write_text(run.model_dump_json(indent=2) + "\n")
         (destination / "results.json").write_text(
             json.dumps(
-                {**export_results(data, run, ax_run), "figures": export_figures(staging)},
+                {**export_results(data, run, ax_run), "figures": export_figures(staging, captions)},
                 indent=2,
                 allow_nan=False,
             )
@@ -70,12 +68,14 @@ def main() -> None:
         readme.write_text(updated)
 
 
-def export_figures(directory: Path) -> dict[str, dict[str, str | int]]:
+def export_figures(directory: Path, captions: Mapping[str, str]) -> dict[str, dict[str, str | int]]:
     figures: dict[str, dict[str, str | int]] = {}
-    for path in sorted(directory.glob("*.png")):
+    for name, caption in captions.items():
+        path = directory / f"{name}.png"
         with Image.open(path) as image:
             width, height = image.size
-        figures[path.stem] = {
+        figures[name] = {
+            "caption": caption,
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             "width": width,
             "height": height,
@@ -182,7 +182,7 @@ def export_results(
                 "NVML peaks include a different process lifetime."
             )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "run": run.model_dump(mode="json"),
         **({"ax_run": ax_run.model_dump(mode="json")} if ax_run else {}),
         "is_published_run": ax_run is None and run.run_id == RUN_ID,
@@ -214,6 +214,7 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
     labels = dict(data.implementations)
     labels[AX] = "AlbumentationsX CPU"
     count = len(data.common)
+    captions = figure_captions(data)
     isolated_workers = _isolated_workers(data)
     pillow_variant_note = None
     if any(implementation == PILLOW_ALLSIMD[0] for implementation, _ in data.implementations):
@@ -242,6 +243,10 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
             f"implementation\N{EN DASH}recipe pairs, with {len(execution.seeds)} seeds per pair. "
             "See the [per-seed results and manifests](docs/generated/results.json)."
         ),
+        "",
+        _image("common-summary", captions["common-summary"]),
+        "",
+        "### Mean per-recipe throughput ratios",
         "",
         (
             f"All rows below use the same {count} recipes. Throughput is the arithmetic mean of per-recipe ratios: "
@@ -294,60 +299,20 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
     lines.extend(
         [
             "",
-            "### Per-recipe throughput",
+            "### AlbumentationsX against each library",
             "",
-            (
-                "Each cell shows the ratio of seed medians for the recipe. AX images/s gives the absolute scale. "
-                "Color shows the ratio on a logarithmic scale. See the adapter differences below."
-            ),
-            "",
-            _image("common-heatmap", "Per-recipe throughput ratios and absolute AX throughput"),
-            "",
-            "### Throughput and GPU memory on the common recipe set",
-            "",
-            _image("common-mean-bars", f"Mean relative throughput on {count} common recipes"),
-            "",
-            _image("common-memory-bars", f"Median peak process GPU memory on {count} common recipes"),
-            "",
-            "### Broader pairwise comparisons",
-            "",
-            (
-                "Each chart uses the exact recipe intersection of the paths it shows. "
-                "Recipe sets differ between charts, so their averages cannot rank all libraries together."
-            ),
+            "Each chart uses the recipes shared by every path it shows. Compare rows within each chart.",
         ],
     )
-    for family, paths in data.comparisons:
-        shared_count = len(_shared_recipes(data, [AX, *paths]))
-        lines.extend(["", _image(f"pairwise-{family.lower()}", f"AX vs {family} on {shared_count} shared recipes")])
-    lines.extend(
-        [
-            "",
-            (
-                "The counts below include recipes supported by only one competing path. "
-                "AX wins when it exceeds every available competing path. Ratios and memory differences "
-                "use the fastest competitor per recipe; exact ties select the first path in the comparison."
-            ),
-            "",
-            (
-                "| Competitor | Shared recipes | AX faster | Median competitor / AX throughput | "
-                "Median competitor - AX GPU memory (MiB) |"
-            ),
-            "| --- | ---: | ---: | ---: | ---: |",
-        ],
-    )
-    for family, rows in data.pairwise.items():
-        lines.append(
-            f"| {family} | {len(rows)} | {sum(row.ratio < 1 for row in rows)} | "
-            f"{median(row.ratio for row in rows):.2f}\N{MULTIPLICATION SIGN} | "
-            f"{median(row.memory_delta for row in rows):+,.0f} |"
-        )
+    for family, _ in data.comparisons:
+        name = f"pairwise-{family.lower()}"
+        lines.extend(["", _image(name, captions[name])])
     lines.extend(
         [
             "",
             *_workload_lines(data, run, config),
             "",
-            _image("boundary", "Throughput and GPU-memory measurement windows"),
+            _image("batch-wait", captions["batch-wait"]),
         ]
     )
     return "\n".join(lines)
@@ -387,39 +352,43 @@ def _image(name: str, description: str) -> str:
     return f"![{description}](docs/generated/{name}.png)"
 
 
-def render_figures(output: Path, style: Path, data: _PaperData, config: FamilyRunConfig) -> None:
+def figure_captions(data: _PaperData) -> dict[str, str]:
+    captions = {
+        "batch-wait": "When a batch arrives late, the GPU sits idle and completes fewer steps in the same time.",
+        "common-summary": (
+            f"Ready batches per second and peak process GPU memory on {len(data.common)} common recipes. "
+            "Each metric takes the median across seeds, then across recipes. The dashed line marks AX's batch rate."
+        ),
+    }
+    for family, paths in data.comparisons:
+        count = len(_shared_recipes(data, [AX, *paths]))
+        captions[f"pairwise-{family.lower()}"] = f"AX vs {family} on {count} shared recipes"
+    return captions
+
+
+def render_figures(output: Path, paper_root: Path, data: _PaperData) -> None:
     generated = output / "generated"
     generated.mkdir()
-    _write_heatmap(generated / "common-heatmap.tex", data)
-    _write_memory_bars(generated / "common-memory-bars.tex", data)
-    memory_limit = _memory_axis_max(_common_memories(data))
+    write_plot_inputs(generated, data)
     commands = {
-        "boundary": rf"\InputBoundary[{'prewarmed bytes' if config.execution.prewarm_dataset else 'compressed bytes'}]"
-        rf"{{{config.execution.measured_batches}}}",
-        "common-heatmap": rf"\CommonHeatmap[{int(PILLOW_ALLSIMD in data.implementations)}]{{{len(data.common)}}}",
-        "common-memory-bars": rf"\MemoryPlot[{memory_limit}]{{{len(data.implementations)}}}",
+        "batch-wait": r"\input{batch-wait.tex}",
+        "common-summary": r"\input{delivery-plot.tex}",
+        **{f"pairwise-{family.lower()}": rf"\LibraryComparison{{{family.lower()}}}" for family, _ in data.comparisons},
     }
-    comparisons = {"common-mean-bars": [implementation for implementation, _ in data.implementations]}
-    comparisons.update({f"pairwise-{family.lower()}": [AX, *paths] for family, paths in data.comparisons})
-    for name, paths in comparisons.items():
-        means = _mean_ratios(data, paths)
-        _write_mean_bars(generated / f"{name}.tex", means)
-        limit = _ratio_axis_max(means)
-        commands[name] = rf"\MeanRatioPlot[{limit}]{{{name}.tex}}{{{len(paths)}}}"
-    shutil.copyfile(style, output / "figures.tex")
+    for filename in ("batch-wait.tex", "delivery-plot.tex", "library-comparison.tex", "plot-colors.tex"):
+        shutil.copyfile(paper_root / filename, output / filename)
     source = output / "readme-figures.tex"
     source.write_text(
         "\n".join(
             [
                 r"\documentclass[11pt]{article}",
                 r"\usepackage[T1]{fontenc}",
-                r"\usepackage{tikz,hyperref}",
-                r"\hypersetup{hidelinks}",
-                r"\usetikzlibrary{arrows.meta,positioning}",
+                r"\usepackage{tikz}",
                 r"\usepackage[active,tightpage]{preview}",
                 r"\PreviewEnvironment{tikzpicture}",
                 r"\setlength{\PreviewBorder}{8pt}",
-                r"\input{figures.tex}",
+                r"\input{plot-colors.tex}",
+                r"\input{library-comparison.tex}",
                 r"\begin{document}",
                 *commands.values(),
                 r"\end{document}",

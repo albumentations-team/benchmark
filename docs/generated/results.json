@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "run": {
     "schema_version": 1,
     "run_id": "1e7c6db29a2cc0da95eee8f9fce0806f5eb4c5e0c541e1defc784f2f56864d68",
@@ -17701,45 +17701,41 @@
     "Each implementation ran in its own process. The baseline is sampled before pipeline construction."
   ],
   "figures": {
-    "boundary": {
-      "sha256": "348577234298fd8830e046f6c02dfde93a3ddbdf1dae2a0b9b20c4ce114ad433",
-      "width": 1039,
-      "height": 343
+    "batch-wait": {
+      "caption": "When a batch arrives late, the GPU sits idle and completes fewer steps in the same time.",
+      "sha256": "cd715d6b8f64e001d5107e777c5a602fc815242aff141555d400dea9ad3f0641",
+      "width": 1062,
+      "height": 365
     },
-    "common-heatmap": {
-      "sha256": "1994d92a6876bdd166405af02205d074079e58c19873ffc406ec126c44b022f8",
-      "width": 1197,
-      "height": 1306
-    },
-    "common-mean-bars": {
-      "sha256": "371dc334fd8a9fb4ee549464748e31427efe7de8c0d319db659d366aad0239b6",
-      "width": 1202,
-      "height": 484
-    },
-    "common-memory-bars": {
-      "sha256": "f796789db937411cde483ef10027f1655bf2b8225ff13c7f89eaaf247bcd22fa",
-      "width": 1134,
-      "height": 484
-    },
-    "pairwise-dali": {
-      "sha256": "f95a3ce2f28d4aecb4aa01c2f6b8c0229ed135519e3aaa48646a8f6e9cdc01ae",
-      "width": 1153,
-      "height": 221
+    "common-summary": {
+      "caption": "Ready batches per second and peak process GPU memory on 34 common recipes. Each metric takes the median across seeds, then across recipes. The dashed line marks AX's batch rate.",
+      "sha256": "64f8e6dff60ebbcffaabc80bb393de3bb4e005f2043c58c34b3cb01ddf562375",
+      "width": 1209,
+      "height": 491
     },
     "pairwise-kornia": {
-      "sha256": "cd2103558beee428e829231308f6464278769d90b727a1329f14f789f65d8687",
-      "width": 1153,
-      "height": 264
-    },
-    "pairwise-pillow": {
-      "sha256": "caa22a5b7e658147a8addc75afe4c722489f984ab81268d42aa0edc48a480509",
-      "width": 1202,
-      "height": 264
+      "caption": "AX vs Kornia on 67 shared recipes",
+      "sha256": "182365dd23819e6c284b9bb9c5a5ce6242157d48983018b8340e677a608634a1",
+      "width": 1058,
+      "height": 269
     },
     "pairwise-torchvision": {
-      "sha256": "3d3f13fe9e44bc449f0db1e9cbba92013ed2193494fe182fbfe15bfe85757c8e",
-      "width": 1153,
-      "height": 264
+      "caption": "AX vs TorchVision on 44 shared recipes",
+      "sha256": "282cf0a5ad5cb28a0077340e7cadae3f6aad7b40bcc8ee6382fcefd491740c13",
+      "width": 1058,
+      "height": 269
+    },
+    "pairwise-pillow": {
+      "caption": "AX vs Pillow on 46 shared recipes",
+      "sha256": "98cc54f777897b07b447a135cde07466aa867f3352a2f218a006c4f2d445f541",
+      "width": 1058,
+      "height": 269
+    },
+    "pairwise-dali": {
+      "caption": "AX vs DALI on 51 shared recipes",
+      "sha256": "09dfb4e77f84a24f15ba90a8106c2316883f2e6a585d73f5fe3d34b43cf96280",
+      "width": 1082,
+      "height": 221
     }
   }
 }

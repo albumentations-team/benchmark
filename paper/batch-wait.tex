@@ -1,0 +1,53 @@
+\begin{tikzpicture}[
+  x=1.38cm,y=0.72cm,
+  row label/.style={anchor=east,inner xsep=0pt,font=\small},
+  heading/.style={anchor=west,font=\small\bfseries,inner xsep=0pt},
+  outcome/.style={anchor=east,font=\small\bfseries,inner xsep=0pt},
+  prepare/.style={fill=black!10},
+  compute/.style={fill=blue!54!black},
+  waiting/.style={fill=orange!28,draw=black!55,densely dashed},
+]
+\draw[black!48,densely dotted] (9,-0.27) -- (9,4.57);
+
+\node[heading] at (0,5.00) {Batches ready in time};
+\node[outcome] at (9,5.00) {3 steps completed};
+\node[row label] at (-0.20,4.13) {Batch prep};
+\node[row label] at (-0.20,3.13) {GPU};
+
+\foreach \start/\finish/\batch in {0/2.4/2,2.4/4.8/3}{
+  \path[prepare] (\start,3.84) rectangle (\finish,4.42);
+  \node[font=\small] at ({(\start+\finish)/2},4.13) {Prepare batch \batch};
+}
+\draw[white] (2.4,3.84) -- (2.4,4.42);
+\foreach \start/\finish/\batch in {0/3/1,3/6/2,6/9/3}{
+  \path[compute] (\start,2.84) rectangle (\finish,3.42);
+  \node[font=\small,white] at ({(\start+\finish)/2},3.13) {Train on batch \batch};
+}
+\foreach \division in {3,6}{
+  \draw[white] (\division,2.84) -- (\division,3.42);
+}
+
+\node[heading] at (0,2.35) {Batches arrive late};
+\node[outcome] at (9,2.35) {2 steps completed};
+\node[row label] at (-0.20,1.55) {Batch prep};
+\node[row label] at (-0.20,0.38) {GPU};
+
+\foreach \start/\finish/\batch in {0/4.5/2,4.5/9/3}{
+  \path[prepare] (\start,1.26) rectangle (\finish,1.84);
+  \node[font=\small] at ({(\start+\finish)/2},1.55) {Prepare batch \batch};
+}
+\draw[white] (4.5,1.26) -- (4.5,1.84);
+\draw[->,black!70] (4.5,1.25) -- (4.5,0.68);
+\node[anchor=west,font=\scriptsize,inner xsep=3pt] at (4.5,0.97) {Batch 2 ready};
+\foreach \start/\finish/\batch in {0/3/1,4.5/7.5/2}{
+  \path[compute] (\start,0.09) rectangle (\finish,0.67);
+  \node[font=\small,white] at ({(\start+\finish)/2},0.38) {Train on batch \batch};
+}
+\foreach \start/\finish in {3/4.5,7.5/9}{
+  \path[waiting] (\start,0.09) rectangle (\finish,0.67);
+  \node[font=\small] at ({(\start+\finish)/2},0.38) {GPU idle};
+}
+
+\draw[->,black!55] (0,-0.27) -- (9,-0.27)
+  node[anchor=north east,font=\small,inner xsep=0pt] {Time};
+\end{tikzpicture}

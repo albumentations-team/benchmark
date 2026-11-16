@@ -1,10 +1,13 @@
 # RGB input-pipeline preprint
 
-The [current manuscript](main.tex) compares eight JPEG-to-CUDA paths, including
-AlbumentationsX 2.6.3 and Pillow-AllSIMD in fast mode. The
-[September preprint](https://arxiv.org/abs/2609.06635) reports the earlier
-seven-path experiment. The [results CSV](generated/recipe-results.csv) retains
-all three seed observations for each reported implementation and recipe.
+[*From JPEG to CUDA Batch*](main.tex) compares batch delivery and peak
+process GPU memory across eight input paths. Separate comparisons with
+DALI, Pillow, Kornia, and TorchVision use the recipes shared by all paths in
+each comparison. The appendices list the recipe sets, full results,
+coverage, and reproduction details. The
+[results CSV](generated/recipe-results.csv) retains all three seed
+observations per recipe and implementation. The
+[September preprint](https://arxiv.org/abs/2609.06635) covers seven paths.
 
 ## Build the PDF
 
@@ -48,7 +51,10 @@ uv run python -m paper.generate_readme "${run_args[@]}"
 ```
 
 The second command also needs `pdflatex` with TikZ and `preview`, and
-Poppler's `pdftocairo`.
+Poppler's `pdftocairo`. Both commands use the same TikZ drawings and plot
+data. LaTeX embeds the drawings as vectors in the paper. The README and
+website use PNGs from `docs/generated/`; the export lists each image's
+caption, dimensions, and checksum. The website converts those PNGs to WebP.
 
 The [interim November report](https://github.com/albumentations-team/benchmark/blob/863c9a7eb4bd13eedf3f3abbe2b5ff735e76f31c/paper/README.md#regenerate-the-results)
 has its own commands and source manifests at that revision.
