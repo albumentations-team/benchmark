@@ -332,13 +332,15 @@ def _runtime_metadata(adapter: AugmentationAdapter) -> dict[str, str]:
     try:
         import torch
 
-        device = torch.cuda.get_device_name(0)
+        device = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "unknown"
     except (ImportError, RuntimeError):
         device = "unknown"
     metadata = {"library_version": version, "cuda_device": device, "worker_scope": "implementation"}
     if package == "pillow_allsimd":
         fast, kernels = pillow_allsimd_runtime()
         metadata.update(simd_kernels=kernels, pillow_mode="fast" if fast else "exact")
+    if adapter.implementation_id == "torchvision_gpu":
+        metadata["jpeg_decoder_version"] = importlib.metadata.version("torchcodec")
     return metadata
 
 

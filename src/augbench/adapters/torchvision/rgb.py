@@ -1,5 +1,5 @@
 from augbench.adapters.runtime import Placement, PythonModuleAdapter, PythonModuleAdapterConfig
-from augbench.adapters.sources import load_torchvision_jpeg, load_torchvision_rgb
+from augbench.adapters.sources import load_jpeg_bytes, load_torchvision_rgb
 
 
 def create_adapter(implementation_id: str) -> PythonModuleAdapter:
@@ -9,8 +9,8 @@ def create_adapter(implementation_id: str) -> PythonModuleAdapter:
             implementation_id=implementation_id,
             recipe_module="augbench.implementations.torchvision_pipeline_impl",
             placement=placement,
-            source_id="torchvision-jpeg-bytes" if placement == "cuda" else "torchvision-io",
+            source_id="torchcodec-cuda-jpeg" if placement == "cuda" else "torchvision-io",
             batch_input_on_host=placement == "cuda",
         ),
-        load_source=load_torchvision_jpeg if placement == "cuda" else load_torchvision_rgb,
+        load_source=load_jpeg_bytes if placement == "cuda" else load_torchvision_rgb,
     )

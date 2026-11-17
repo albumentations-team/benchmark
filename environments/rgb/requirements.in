@@ -15,4 +15,5 @@ simplejpeg
 stringzilla
 threadpoolctl
 torch
+torchcodec
 torchvision

@@ -93,7 +93,10 @@ def test_rgb_native_normalize_receives_one_cuda_float16_batch(
     samples = [torch.full((3, 224, 224), value, dtype=torch.uint8) for value in (64, 192)]
     if runtime.batch_input_on_host:
         io = pytest.importorskip("torchvision.io")
-        batch = io.encode_jpeg(samples)
+        assert runtime.sample_transform is None
+        assert runtime.host_batch_transform is None
+        samples[1] = torch.full((3, 240, 200), 192, dtype=torch.uint8)
+        batch = [bytes(encoded.tolist()) for encoded in io.encode_jpeg(samples)]
     else:
         assert runtime.sample_transform is not None
         if is_kornia:

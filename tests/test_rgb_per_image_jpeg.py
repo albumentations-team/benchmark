@@ -8,16 +8,31 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def test_torchvision_gpu_jpeg_bytes_collate_in_worker(tmp_path: Path) -> None:
+def test_gpu_jpeg_reader_keeps_stored_orientation(tmp_path: Path) -> None:
+    image = pytest.importorskip("PIL.Image")
+    from augbench.adapters.sources import SourceRef, load_jpeg_bytes
+
+    pixels = image.new("RGB", (48, 32), color=(41, 79, 137))
+    reference = tmp_path / "reference.JPEG"
+    source = tmp_path / "rotated.JPEG"
+    exif = image.Exif()
+    exif[274] = 6
+    pixels.save(reference)
+    pixels.save(source, exif=exif)
+
+    assert load_jpeg_bytes(SourceRef(source)) == reference.read_bytes()
+
+
+def test_jpeg_bytes_collate_in_worker(tmp_path: Path) -> None:
     pytest.importorskip("torch")
     image = pytest.importorskip("PIL.Image")
     from torch.utils.data import DataLoader
 
-    from augbench.adapters.sources import SourceRef, load_torchvision_jpeg
+    from augbench.adapters.sources import SourceRef, load_jpeg_bytes
 
     source = tmp_path / "sample.JPEG"
     image.new("RGB", (48, 32), color=(41, 79, 137)).save(source)
-    encoded = load_torchvision_jpeg(SourceRef(source))
+    encoded = load_jpeg_bytes(SourceRef(source))
     batches = DataLoader([encoded] * 16, batch_size=16, num_workers=1, collate_fn=list)
     batch = next(iter(batches))
 
@@ -31,6 +46,7 @@ def test_grouped_torchvision_jpeg_preserves_sample_order(device: str, monkeypatc
     io = pytest.importorskip("torchvision.io")
     if device == "cuda" and not torch.cuda.is_available():
         pytest.skip("requires CUDA")
+    codec = pytest.importorskip("torchcodec.decoders")
     from augbench.implementations import torchvision_pipeline_impl as pipeline
 
     generator = torch.Generator().manual_seed(137)
@@ -40,7 +56,7 @@ def test_grouped_torchvision_jpeg_preserves_sample_order(device: str, monkeypatc
     picks = iter(qualities)
     monkeypatch.setattr(pipeline.random, "randint", lambda _low, _high: next(picks))
     expected = torch.stack(
-        [io.decode_jpeg(io.encode_jpeg(image, quality).cpu(), device=device) for quality in qualities]
+        [codec.decode_jpeg(io.encode_jpeg(image, quality).cpu(), device=device) for quality in qualities]
     )
     actual = pipeline._jpeg_round_trip(batch, (30, 90))
     torch.testing.assert_close(actual, expected)

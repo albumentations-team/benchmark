@@ -124,12 +124,12 @@ AX CPU & SimpleJPEG & Augment; transfer uint8 & Batch InputNormalizer \\
 Pillow CPU & Pillow & Augment; transfer uint8 & Normalize \\
 Pillow-AllSIMD (fast) & AllSIMD & Augment; transfer uint8 & Normalize \\
 TorchVision CPU & TorchVision I/O & Augment; transfer uint8 & Normalize \\
-TorchVision GPU & Batched NVJPEG & Read encoded JPEG bytes & Decode on CUDA; transform per image; stack; normalize \\
+TorchVision GPU & TorchCodec, hardware nvJPEG & Read encoded JPEG bytes & Decode on CUDA; transform per image; stack; normalize \\
 Kornia CPU & Kornia Rust reader & Augment in FP32; transfer FP16 & Normalize \\
 Kornia GPU & Kornia Rust reader & Decode; shape prefix in FP32; transfer FP16 & Augment; normalize \\
 DALI GPU & Mixed CPU/GPU & Native reader; DALI manages transfer & Augment and normalize in native graph \\
 \end{tabularx}
-\caption{Execution paths~\cite{albumentationsx,pillow,torchvision,kornia,dali}.
+\caption{Execution paths~\cite{albumentationsx,pillow,torchvision,torchcodec,kornia,dali}.
 Throughput includes each path's decoder and its placement of operations.
 Each path returns a normalized CUDA float16 batch.}
 \label{tab:paths}
@@ -144,9 +144,12 @@ pixels or identical work. Crop offsets, padding, interpolation, and
 arithmetic can differ. Appendix~\ref{app:recipes} gives the parameters
 and Appendix~\ref{app:semantics} documents the differences.
 
-The report combines three immutable runs with the same dataset, recipes,
-hardware settings, and package locks. Each cell retains its source run and
-cell ID. Appendix~\ref{app:reproduce} lists the manifests.
+Three immutable runs form the base matrix. A fourth replaces the
+TorchVision GPU results with a run using TorchCodec and hardware JPEG
+decoding. All runs use the same dataset, recipes, machine configuration,
+and measurement window. The replacement adds TorchCodec to the RGB
+package lock. Each cell retains its source run and cell ID.
+Appendix~\ref{app:reproduce} lists the manifests.
 
 \section{Throughput on the same recipes}
 
@@ -175,7 +178,7 @@ equal to its median peak. AX's median baseline was
 \label{sec:library-comparisons}
 
 Each comparison uses the recipes measured by every path shown in that
-figure. These sets extend the 34 recipes shared by all eight paths.
+figure. These sets extend the \CommonRecipeCount{} recipes shared by all eight paths.
 The bars show median batch rate, with median peak process GPU memory
 alongside. The last column says who was faster on more recipes and gives
 the count. For each recipe, the comparison
@@ -195,7 +198,7 @@ shows how the two paths differ in decoding and placement of operations.
 \begin{figure}[H]
 \centering
 \LibraryComparison{dali}
-\caption{DALI was faster on all \PlotDALIShared{} recipes measured by both DALI and AX.}
+\caption{DALI was faster on \PairDALIFaster{} of \PlotDALIShared{} recipes measured by both DALI and AX.}
 \end{figure}
 
 \subsection{AX vs Pillow}
@@ -210,7 +213,7 @@ Pillow mapping in this benchmark.
 Pillow-AllSIMD delivered \AllSIMDMedianRatio\(\times\) Pillow's batch rate
 at the median across these recipes and \AllSIMDMedianBlurRatio\(\times\) on
 MedianBlur (R27). Dithering (R65) is an exception to AX's usual lead here.
-AX, Pillow, and Pillow-AllSIMD delivered 3.4, 9.5, and 14.0 batches/s,
+AX, Pillow, and Pillow-AllSIMD delivered 3.5, 9.6, and 12.3 batches/s,
 respectively. AX diffuses error in floating point, while both Pillow
 paths use integer error terms. The resulting pixels can differ
 (Appendix~\ref{app:semantics}).
@@ -231,38 +234,39 @@ Kornia path. The two Kornia paths use the same JPEG decoder. The GPU
 path forms a collatable shape on the CPU, then runs the remaining image
 operations after transfer (Table~\ref{tab:paths}).
 
-For Elastic (R10), AX and Kornia deliver 11.8 batches/s and 3.2 batches/s
-on CPU, respectively. Kornia GPU delivers 9.1 batches/s on that recipe.
+For Elastic (R10), AX and Kornia deliver 11.8 batches/s and 3.1 batches/s
+on CPU, respectively. Kornia GPU delivers 9.3 batches/s on that recipe.
 The Elastic settings were calibrated by displacement magnitude and
 spatial scale, and the implementations still produce different fields.
 
 \begin{figure}[H]
 \centering
 \LibraryComparison{kornia}
-\caption{AX was faster than Kornia on nearly all \PlotKorniaShared{} shared recipes.}
+\caption{AX was faster than both Kornia paths on all \PlotKorniaShared{} shared recipes.}
 \end{figure}
 
 \subsection{AX vs TorchVision}
 
-AX beat both TorchVision paths on most shared recipes. The
-\PlotTorchVisionShared{} common recipes include geometry, color
-operations, GaussianBlur, Equalize, and JPEG compression. MedianBlur and
-CLAHE have no measured TorchVision mapping in this benchmark. The CPU
-and GPU paths both use TorchVision I/O, and the GPU path runs enough
-geometry on the CPU to form a batch before transfer.
+TorchVision GPU uses TorchCodec 0.17.0 and the L4's JPEG engines. The
+TorchVision CPU path uses TorchVision I/O and runs the image transforms
+before transfer. The two paths share \PlotTorchVisionShared{} recipes with
+AX, including geometry, color operations, and JPEG compression.
 
-On GaussianNoise (R16), TorchVision went from 4.8 batches/s on CPU to
-17.2 on GPU, compared with 13.1 for AX. On Equalize (R22), TorchVision
-went from 11.7 batches/s on CPU to 6.5 on GPU, with AX at 15.7. These
-are full input pipeline rates. On Elastic (R10), TorchVision GPU delivered
-about 0.09 batches/s on all three seeds, versus an AX median of 11.8.
-The Elastic mappings align two displacement statistics and can still
-produce different fields (Appendix~\ref{app:semantics}).
+The update from the earlier hybrid JPEG path increased TorchVision GPU's
+throughput on all 44 of its recipes, with a median paired speedup of
+\(5.69\times\). On RandomCrop224 (R02), TorchVision GPU delivered
+17.4 batches/s, AX delivered 17.3, and TorchVision CPU delivered 16.1.
+On Elastic (R10), TorchVision GPU delivered about 0.09 batches/s in
+both decoder configurations. AX delivered 11.8 batches/s on that
+recipe. The Elastic mappings align two displacement statistics and can
+still produce different fields (Appendix~\ref{app:semantics}).
 
 \begin{figure}[H]
 \centering
 \LibraryComparison{torchvision}
-\caption{AX led both TorchVision paths on most of the \PlotTorchVisionShared{} shared recipes.}
+\caption{TorchVision GPU delivers 10.2 batches/s at the median over
+\PlotTorchVisionShared{} shared recipes. AX leads both TorchVision paths
+on most recipes in this set.}
 \end{figure}
 
 \section{Use the results in a training job}
@@ -328,10 +332,12 @@ Normalization uses RGB means \((0.485,0.456,0.406)\) and standard deviations
 CUDA placement, FP16 type, and BCHW output. The catalog's \texttt{ToTensor}
 stage describes this output contract.
 
-TorchVision GPU reads JPEG bytes in DataLoader workers, decodes each batch with
-NVJPEG, applies crop and other shape-forming transforms to each decoded image,
-then stacks the results. Kornia GPU uses its Rust JPEG reader and runs the
-shape-forming prefix on CPU because source images can have different sizes.
+TorchVision GPU reads JPEG bytes in DataLoader workers. The main process
+decodes the list with TorchCodec and hardware nvJPEG, applies the image
+transforms separately on CUDA, and stacks the results. We observed
+JPEG engine activity during the run after making the installed driver's
+\texttt{libnvcuvid.so.1} available to the worker. Kornia GPU uses its Rust
+JPEG reader and forms the collatable shape in DataLoader workers.
 
 TorchVision GPU transforms draw random parameters per image. JPEG compression
 draws a quality from 30 through 90 independently for each image, groups equal
@@ -515,7 +521,7 @@ and validate that the report matrix is complete.
 \end{tabular}
 \caption{Implementation versions recorded in the cells. The locks pin
 PyTorch 2.15.0, Triton 3.9.0, SimpleJPEG 1.9.0, and the OpenCV Python wheel
-5.0.0.93.}
+5.0.0.93. The TorchVision GPU replacement adds TorchCodec 0.17.0.}
 \end{table}
 
 The benchmark used Python 3.13.14 on

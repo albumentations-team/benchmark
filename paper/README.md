@@ -32,24 +32,30 @@ and code-archive SHA-256 values. GCS access depends on bucket permissions.
 | Primary RGB source, 492 cells | `03b5fd6c6fab74fd1029fc88012e03cb4b51d0a2e3c4b8be59ead6928efae6ee` |
 | GPU correction, 534 cells | `9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3` |
 | DALI and Pillow-AllSIMD correction, 297 cells | `32825567918e566a56b11057388185be4085e381f4194495529fe29e0a8897f8` |
+| TorchVision GPU with TorchCodec and hardware nvJPEG, 132 replacement cells | `d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067` |
 
-The three manifests contain complementary implementation cells. Together
-they cover the complete 1,323-cell matrix. The generator validates each cell
-against its own immutable manifest, then checks that the combined set has no
-missing or duplicate implementation, recipe, and seed combinations. All three
-runs use the same recipes, dataset, machine configuration, and package locks.
+The first three runs assemble the complete 1,323-cell matrix. The fourth
+run replaces all 132 TorchVision GPU cells. All four runs share the same
+recipes, dataset, machine configuration, and measurement window. The
+replacement adds TorchCodec to the RGB lock. The generator verifies both
+lock checksums, checks that TorchCodec is the only entry added, and
+validates the replacement cells against their own manifest.
 
 The GCS root is `gs://imagenet_validation/augmentation-benchmark`.
 Manifests and cells are under `runs/<run_id>/`. The source archive is
 `code/<code_archive_sha256>/source.tar.gz`.
 
 Place each run's manifest, cells, and extracted recipe catalog in separate
-directories. Run from the repository root:
+directories. Also extract `environments/rgb/lock.txt` from the primary and
+TorchVision GPU source archives into their respective directories. Run from
+the repository root:
 
 ```bash
 run_args=(--run primary/run.json --cells primary/cells --recipes primary/rgb.yaml
           --supplemental-run gpu/run.json gpu/cells gpu/rgb.yaml
-          --supplemental-run dali-pillow/run.json dali-pillow/cells dali-pillow/rgb.yaml)
+          --supplemental-run dali-pillow/run.json dali-pillow/cells dali-pillow/rgb.yaml
+          --torchvision-gpu-run torchcodec/run.json torchcodec/cells torchcodec/rgb.yaml
+            primary/lock.txt torchcodec/lock.txt)
 uv run python -m paper.generate_results "${run_args[@]}"
 uv run python -m paper.generate_readme "${run_args[@]}"
 ```

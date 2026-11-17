@@ -859,6 +859,213 @@
         "python_version": "3.13.14"
       },
       "access_order": "seeded-random-without-replacement"
+    },
+    {
+      "schema_version": 1,
+      "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+      "family_config": {
+        "cloud": "configs/cloud/gcp-l4.yaml",
+        "coverage_catalog": "catalog/operations.yaml",
+        "dataset": {
+          "access_order": "seeded-random-without-replacement",
+          "archive_member_prefix": "val/",
+          "archive_member_suffix": ".JPEG",
+          "archive_sha256": "1a97eafff044ac04b5f222fa83a6a20d5f9946f053fee86fa4f1ce030c64c8a2",
+          "archive_uri": "gs://imagenet_validation/imagenet/val.tar",
+          "item_count": 10000,
+          "selection": "first-sorted"
+        },
+        "execution": {
+          "batch_size": 256,
+          "measured_batches": 32,
+          "num_workers": 15,
+          "persistent_workers": true,
+          "prefetch_factor": 2,
+          "prewarm_dataset": true,
+          "seeds": [
+            137,
+            138,
+            139
+          ],
+          "warmup_batches": 1
+        },
+        "family": "rgb",
+        "implementations": [
+          "albumentationsx_cpu",
+          "pillow_cpu",
+          "torchvision_cpu",
+          "torchvision_gpu",
+          "kornia_cpu",
+          "kornia_gpu",
+          "dali_gpu",
+          "pillow_allsimd_cpu"
+        ],
+        "measurements": {
+          "CenterCrop+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "LetterBox+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "LongestMaxSize+RandomCrop224+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "Pad+RandomCrop224+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "PadIfNeeded+RandomCrop224+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Affine+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+AutoContrast+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Brightness+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+ChannelShuffle+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+ColorJiggle+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+ColorJitter+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Contrast+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Elastic+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Equalize+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Erasing+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+GaussianBlur+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+GaussianNoise+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Grayscale+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+HorizontalFlip+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Hue+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Invert+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+JpegCompression+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Perspective+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+PhotoMetricDistort+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Posterize+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+RandomGamma+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+RandomRotate90+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Rotate+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Sharpen+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Shear+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Solarize+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+Transpose+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomCrop224+VerticalFlip+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomResizedCrop+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "RandomScale+RandomCrop224+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "Resize224+ChannelSwap+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "Resize224+CoarseDropout+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "Resize224+CropAndPad+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "Resize224+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "Resize224+RandomSizedCrop+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "Resize224+ShiftScaleRotate+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "Resize256+Crop+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ],
+          "SmallestMaxSize+RandomCrop224+Normalize+ToTensor": [
+            "torchvision_gpu"
+          ]
+        },
+        "normalization": "gpu",
+        "output": {
+          "channels": 3,
+          "device": "cuda",
+          "dtype": "float16",
+          "height": 224,
+          "layout": "BCHW",
+          "width": 224
+        },
+        "recipes": "catalog/recipes/rgb.yaml",
+        "schema_version": 1
+      },
+      "inputs": {
+        "git_commit": "1fae2c2e8b20d36169a4be6f08abbbabd6390361",
+        "code_archive_sha256": "5a6a6d1d7b7adb5ae53784d063e4a207be3305e36bbe769d4d86919fe3fffdf7",
+        "dataset_archive_sha256": "1a97eafff044ac04b5f222fa83a6a20d5f9946f053fee86fa4f1ce030c64c8a2",
+        "recipe_catalog_sha256": "0a263bd00f0c4259708adb0e27a2b2ede5964d02b28f7628486795479f679d33",
+        "environment_lock_sha256": {
+          "pillow_allsimd": "d6d279fadead4b30426d96f4dfbfcdf77c4ae876b91d44915b20e20b1996cf8a",
+          "rgb": "15212266bddffb4bd943250de0a107955c2d34d71754dc2202c9a2599b9eeaf5"
+        }
+      },
+      "hardware": {
+        "accelerator": "nvidia-l4",
+        "boot_disk_size_gib": "350",
+        "boot_disk_type": "pd-balanced",
+        "image": "projects/deeplearning-platform-release/global/images/common-cu129-ubuntu-2204-nvidia-580-v20260730",
+        "machine_type": "g2-standard-16",
+        "provisioning_model": "STANDARD",
+        "python_version": "3.13.14"
+      },
+      "access_order": "seeded-random-without-replacement"
     }
   ],
   "is_published_run": false,
@@ -1027,39 +1234,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 482.38074787862456,
-            "min": 481.73383306858926,
-            "max": 483.06445599325986
+            "median": 3424.65786782678,
+            "min": 3190.4995249356953,
+            "max": 3488.634858269309
           },
           "gpu_memory": {
-            "median": 1036.0,
-            "min": 940.0,
-            "max": 1072.0
+            "median": 1158.0625,
+            "min": 1134.0625,
+            "max": 1302.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "4b8eafec6d3afa639020a44b9fd0d9e7b452acde294f2429df0113673cbced26",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 481.73383306858926,
-              "gpu_memory_peak_mib": 1036.0,
-              "gpu_memory_baseline_mib": 332.0
+              "cell_id": "8c3ff1ee844220c65737c40bb65189bf212c1d20c9720745cf441f051e5fa17e",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3190.4995249356953,
+              "gpu_memory_peak_mib": 1158.0625,
+              "gpu_memory_baseline_mib": 326.0625
             },
             {
               "seed": 138,
-              "cell_id": "b59a5ccda5e8d0af2ad1543498f571fb875bf871fe9c52e0cd48223d4c031ffc",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 483.06445599325986,
-              "gpu_memory_peak_mib": 940.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "6bc84c189e1548f384ded667598ea3f1985ca900f55138af84c35f987cecde38",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3488.634858269309,
+              "gpu_memory_peak_mib": 1134.0625,
+              "gpu_memory_baseline_mib": 530.0625
             },
             {
               "seed": 139,
-              "cell_id": "bb12a92dd93aff26fbbe64989467d4cea18c0089c2c498e5765e5cc5edc97731",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 482.38074787862456,
-              "gpu_memory_peak_mib": 1072.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "fa6c9dfa6b5516830d9a1c4bc3d58333df28a04956d80f74c2889e3896fac819",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3424.65786782678,
+              "gpu_memory_peak_mib": 1302.0625,
+              "gpu_memory_baseline_mib": 602.0625
             }
           ]
         },
@@ -1337,39 +1544,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 495.33207152107707,
-            "min": 495.1686543394002,
-            "max": 497.44095925202964
+            "median": 4464.350066334053,
+            "min": 4397.380284314346,
+            "max": 4665.158379732353
           },
           "gpu_memory": {
-            "median": 806.0,
-            "min": 790.0,
-            "max": 810.0
+            "median": 1036.0625,
+            "min": 1020.0625,
+            "max": 1040.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "fceba5691b6417fc19d224efefd7bc8031e8c67717e04194a561933aa0d5ba6e",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 497.44095925202964,
-              "gpu_memory_peak_mib": 790.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "8062541d10e906e7cff99fc2fbe2ba50479ca5b41d6d65f3200f8c5ddf5e3e9e",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 4397.380284314346,
+              "gpu_memory_peak_mib": 1020.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "61278475e7270326ec429e4dd0fafcdfec836fb64a01ea94779accec9427e1a5",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 495.33207152107707,
-              "gpu_memory_peak_mib": 810.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "b68074818c15f1e057f81998b6fa74c50c545bc6b8f9b53fc10c3eb2b78a0ed6",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 4665.158379732353,
+              "gpu_memory_peak_mib": 1040.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "74a627587010bd89ee3327c6ad63083f86322aff2127cf8659bdeb73e3c5af48",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 495.1686543394002,
-              "gpu_memory_peak_mib": 806.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "6874c588564d025d7e4ab4ebee3a3b54a08f27d7766a319ac2f5b404b8c8462f",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 4464.350066334053,
+              "gpu_memory_peak_mib": 1036.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -1647,39 +1854,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 455.6474236207253,
-            "min": 453.7380937408572,
-            "max": 455.7015140939917
+            "median": 2335.893029266048,
+            "min": 2305.36825702498,
+            "max": 2387.9960190462352
           },
           "gpu_memory": {
-            "median": 858.0,
-            "min": 850.0,
-            "max": 860.0
+            "median": 1088.0625,
+            "min": 1080.0625,
+            "max": 1090.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "7ea2ccc4b6dae07679bd303be25335420231cd0106108ad57cd6aad2885a7bc7",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 455.6474236207253,
-              "gpu_memory_peak_mib": 850.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "b54aa1fc1004ec573909b6097d679469b4af86558650d6eab351317d94c5e14a",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2387.9960190462352,
+              "gpu_memory_peak_mib": 1080.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "b14ae3eb085a16bfc285e4fd5558e8542a247910d3d71d6f7196cca500894be5",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 455.7015140939917,
-              "gpu_memory_peak_mib": 860.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "ecbf685cc8a11f00c78af59c4cfd69e2d1c6b8fe5a21576caa662fe71ea2a04d",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2335.893029266048,
+              "gpu_memory_peak_mib": 1090.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "a7583b4c4fe3fd1cd1e16b60f0d837c53ddd90aeed4f9c218511e373a34f0bee",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 453.7380937408572,
-              "gpu_memory_peak_mib": 858.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "d8c93c0a93f864088949d055f423ee48303ed2794dd8b4e4230b1dbd6ad72311",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2305.36825702498,
+              "gpu_memory_peak_mib": 1088.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -1957,39 +2164,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 484.49581969327187,
-            "min": 482.9380569825544,
-            "max": 486.33490508210014
+            "median": 3644.51080696842,
+            "min": 3412.6225793191293,
+            "max": 3695.385325909328
           },
           "gpu_memory": {
-            "median": 880.0,
-            "min": 866.0,
-            "max": 884.0
+            "median": 1110.0625,
+            "min": 1096.0625,
+            "max": 1114.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "0614057ff0807080e08a50c1e24ced608250b3aa76ea0f94f71850994a083e36",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 484.49581969327187,
-              "gpu_memory_peak_mib": 866.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "3c20bf4b0e54e3862e50271f10c3b9f5e91c3c5b25f177f129ab12641866d48d",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3695.385325909328,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "c536b5446d17e8705ffe88fa81d1ad0b89401fbfb9d91b32be53b92250d2185c",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 486.33490508210014,
-              "gpu_memory_peak_mib": 884.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "01a8ee9b7fdc8b6c72068b8f9b777bfe1eebe4be67a50e2668db38d74f2d8ec6",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3644.51080696842,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "001c52342c6dc602e504c8fd78715e23429af71a05e7b2f089eedb9ff43bd236",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 482.9380569825544,
-              "gpu_memory_peak_mib": 880.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "d01e50280524bc82e979b26c539f62c36f4499af86814cac24bdc12b70c88878",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3412.6225793191293,
+              "gpu_memory_peak_mib": 1110.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -2267,39 +2474,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 484.30341413992073,
-            "min": 480.91273515694917,
-            "max": 486.1578400398386
+            "median": 3495.4052624746473,
+            "min": 3493.792198504166,
+            "max": 3653.6088159375868
           },
           "gpu_memory": {
-            "median": 880.0,
-            "min": 866.0,
-            "max": 884.0
+            "median": 1110.0625,
+            "min": 1096.0625,
+            "max": 1114.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "fccb48858db3d4928588db617f3b831f362b7169405082d748b1d4f58c5f217e",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 486.1578400398386,
-              "gpu_memory_peak_mib": 866.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "ca30743f16bfe34fc3d2d52cbde6a7b8321846f407f566aac3b0da62a858e9b7",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3493.792198504166,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "5a2f98b9df534b4864212f267e1c58470a4cdd1895a30f2991236f93904ac125",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 484.30341413992073,
-              "gpu_memory_peak_mib": 884.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "9b155505212cc06599db3e705925c0f2233d85082c314568485f9a81af91b141",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3495.4052624746473,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "89f807bc4fd9905c0a694e2298eea77645a1f623f63e3ead02d39f48ca56bcd3",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 480.91273515694917,
-              "gpu_memory_peak_mib": 880.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "a89fd27b5027c30cb9ef522c80330b5f5c76462dc9c379dcebb8df6158233a40",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3653.6088159375868,
+              "gpu_memory_peak_mib": 1110.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -2577,39 +2784,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 476.87174798957443,
-            "min": 473.1391168164191,
-            "max": 477.93967146159486
+            "median": 3147.338463582324,
+            "min": 3065.4104320349,
+            "max": 3245.8621235944415
           },
           "gpu_memory": {
-            "median": 1004.0,
-            "min": 968.0,
-            "max": 1054.0
+            "median": 1234.0625,
+            "min": 1198.0625,
+            "max": 1284.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "8373ee74af297d70b560b8e57a68555d48fcd441955ec3cdefc3ddc9bbea356b",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 476.87174798957443,
-              "gpu_memory_peak_mib": 968.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "3afc878832184766df9a278b28e7d76a98f5c83a8d5ade783677a4d3f34485d3",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3245.8621235944415,
+              "gpu_memory_peak_mib": 1198.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "89ee8507d5b1920bf263fd317498a6f61caaa03b673c0bc43467a4e0d00f65fe",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 477.93967146159486,
-              "gpu_memory_peak_mib": 1054.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "ece602b77f1fcb91ac436c46dbe8bd4a29b2e114db2f4257629e3a6f75a52099",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3065.4104320349,
+              "gpu_memory_peak_mib": 1284.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "539cdf4a92c24e03a21542a1b3b03a9912281451dcffc1f38e7c4c9769732bc0",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 473.1391168164191,
-              "gpu_memory_peak_mib": 1004.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "632fb63d9330509b6f1bd3dc9706fddaca751b6bdf1f8bc5c09f8e6f01a8f0ed",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3147.338463582324,
+              "gpu_memory_peak_mib": 1234.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -2887,39 +3094,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 385.661361558439,
-            "min": 385.1825825153363,
-            "max": 385.6954740941725
+            "median": 1245.2645781818337,
+            "min": 1216.9214300420117,
+            "max": 1254.0717535649594
           },
           "gpu_memory": {
-            "median": 882.0,
-            "min": 866.0,
-            "max": 884.0
+            "median": 1112.0625,
+            "min": 1096.0625,
+            "max": 1114.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "f4b0725784d6fb61b0bf116f3ca0a5c2b68a44a908dea654061662ca6f7bbeee",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 385.1825825153363,
-              "gpu_memory_peak_mib": 866.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "afba2d0272d8eb57bc2cb8f1df8f59a472e1e0b237fe4fe50d6adb96c47e1957",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1245.2645781818337,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "b272240e141bdf98017ce8e7a0ee21d9a7cfe4e80d7e58788fa8fd63a4c975b1",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 385.6954740941725,
-              "gpu_memory_peak_mib": 884.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "053edfce5a19cc2859f82bc7b8af6649302a6e3353e7f0095513470fb2bdf911",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1254.0717535649594,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "d4e7bbeb66ffdd7e7e385c447701f32d7285a5eb46588ba37a688cbf25fcfbb8",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 385.661361558439,
-              "gpu_memory_peak_mib": 882.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "7495e11431093221879945d5e8666daa6db298e674f7b8abf7491f4795ec4a2a",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1216.9214300420117,
+              "gpu_memory_peak_mib": 1112.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -3197,39 +3404,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 389.43825464696863,
-            "min": 388.52533043448483,
-            "max": 390.02938891346935
+            "median": 1280.2473383847237,
+            "min": 1278.932093899755,
+            "max": 1298.6487710612848
           },
           "gpu_memory": {
-            "median": 882.0,
-            "min": 866.0,
-            "max": 886.0
+            "median": 1112.0625,
+            "min": 1096.0625,
+            "max": 1116.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "5bdd6175d3fbcb9254af091e48ab2eded77be89969f6696d7116aec084c899a0",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 388.52533043448483,
-              "gpu_memory_peak_mib": 866.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "39f469e92990a772b44e54942d332252071e73f260078a83aceb8b80fdb3090c",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1278.932093899755,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "7f241c99d5c818b7eed07bcb56cf777b84fd5255d1fda311a4ef1a006d123761",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 390.02938891346935,
-              "gpu_memory_peak_mib": 886.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "08a4b8aae901ac9589d388ac08646019ba8e9cc1da9eb66af0552a034473f8a7",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1298.6487710612848,
+              "gpu_memory_peak_mib": 1116.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "53154c646ef63b1753e81a9200ed98fc42683cbaff0fbb10c5f370b144c2d085",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 389.43825464696863,
-              "gpu_memory_peak_mib": 882.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "6d13c0284fcd4c9018b33f7cfd22e918410dee18376e7ad210678cb042e0b763",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1280.2473383847237,
+              "gpu_memory_peak_mib": 1112.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -3507,39 +3714,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 388.37466599472305,
-            "min": 387.73940481562715,
-            "max": 389.0418369791486
+            "median": 1261.9067348993647,
+            "min": 1258.4121830143763,
+            "max": 1279.803874255614
           },
           "gpu_memory": {
-            "median": 882.0,
-            "min": 866.0,
-            "max": 886.0
+            "median": 1112.0625,
+            "min": 1096.0625,
+            "max": 1116.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "fdaf36a6b712106f3847eb8f00de7fc09bdd94a9385d447bd8124c218e2825cd",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 388.37466599472305,
-              "gpu_memory_peak_mib": 866.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "6aebd4bd3e6ba45c02e1c27429eac9d22c44bd864f684ad1d83e36aae1da2bb0",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1258.4121830143763,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "3d6e5727ff45e6c0059395954516ab8ae8087714c39fdc99789efb87bd08c5a6",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 387.73940481562715,
-              "gpu_memory_peak_mib": 886.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "4c0d4063100b6f1e0191da4bc630769d485c3bdde2a9b2fa6e6a866ab43416eb",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1279.803874255614,
+              "gpu_memory_peak_mib": 1116.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "ac32719eb4e4c5a2c8a27f7ba6d245a76a5c72b5bce8c1cff5408b2909e8d4de",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 389.0418369791486,
-              "gpu_memory_peak_mib": 882.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "528337ba09ef736ea24324724c22cf7b48c013e7c9a6b317c417ee99cda2aba3",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1261.9067348993647,
+              "gpu_memory_peak_mib": 1112.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -3779,39 +3986,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 21.202377687963917,
-            "min": 21.200679715666276,
-            "max": 21.24842136090743
+            "median": 22.24321818501305,
+            "min": 22.09449456515456,
+            "max": 22.2443219941386
           },
           "gpu_memory": {
-            "median": 902.0,
-            "min": 888.0,
-            "max": 902.0
+            "median": 1132.0625,
+            "min": 1118.0625,
+            "max": 1132.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "7160067226472bfc6b87140a6e476406d4ba848cf5eb0845386fd4a3e3139d81",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 21.200679715666276,
-              "gpu_memory_peak_mib": 888.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "64ff7ccdc5fea0af255620ce915e827e018a0f941e2b03febc3330978556b743",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 22.2443219941386,
+              "gpu_memory_peak_mib": 1118.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "e7d4b40bc695d059c9e0053c6819ee46b88dad5cd3ddba6f160ef0ff9e69ff55",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 21.24842136090743,
-              "gpu_memory_peak_mib": 902.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "3a9545508d512d4bf5201d1639e4faad8fd2717583a88283a169871fc1a1fb58",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 22.24321818501305,
+              "gpu_memory_peak_mib": 1132.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "2259d7ea3f350776e2e03e82337fb0982c43e543a55c7afd7cc51d07889377cd",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 21.202377687963917,
-              "gpu_memory_peak_mib": 902.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "8a92937dfc0256c8976ff5ac513f50bd9aa699430b3dee829a3da4caffddd334",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 22.09449456515456,
+              "gpu_memory_peak_mib": 1132.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -3975,39 +4182,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 305.52351423283,
-            "min": 305.31391817554083,
-            "max": 305.7135380747255
+            "median": 689.1074337596119,
+            "min": 685.4297482773808,
+            "max": 691.5031824759709
           },
           "gpu_memory": {
-            "median": 884.0,
-            "min": 868.0,
-            "max": 888.0
+            "median": 1114.0625,
+            "min": 1098.0625,
+            "max": 1118.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "8f44cade6c3717e211f774aa8064c7938eac22c40215204a4234ababb0f8e354",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 305.7135380747255,
-              "gpu_memory_peak_mib": 868.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "d3495164450136d8d34f19ef0a052112cc39bcb8f448d94400174b86d95beb9d",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 691.5031824759709,
+              "gpu_memory_peak_mib": 1098.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "c8b556f9d2a799f75a2d1f722321ce5689c62dbc271ed5bcd1540285626ec5f5",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 305.52351423283,
-              "gpu_memory_peak_mib": 888.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "4b3c70934c9c2e2fd8ea0424393973b9e48b87ad5caa2f398b753ba8dcbc78dc",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 685.4297482773808,
+              "gpu_memory_peak_mib": 1118.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "c810c48a848476740b2976a366759e46c69594b17c3cd3e33b8aead8042fd233",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 305.31391817554083,
-              "gpu_memory_peak_mib": 884.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "07bc0f35c3d7de39c9b769470a96519b7adaa651e1f77c6fed35e1a464714e01",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 689.1074337596119,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -4247,39 +4454,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 472.66669602115655,
-            "min": 469.5631057459618,
-            "max": 473.99954315944524
+            "median": 2867.151652368643,
+            "min": 2813.115190810175,
+            "max": 2924.3486879856814
           },
           "gpu_memory": {
-            "median": 880.0,
-            "min": 866.0,
-            "max": 884.0
+            "median": 1110.0625,
+            "min": 1096.0625,
+            "max": 1114.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "1d1b1853d924b1baa12a312107dfb13c1df2a903fae059aa3c7c721a4abc79df",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 472.66669602115655,
-              "gpu_memory_peak_mib": 866.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "a55eff7a4a7ec4de8f7e5e5afc1fe73e55b3b5a3bf149bf68e1539b04fa8576b",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2813.115190810175,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "e6fbf6000c729f45393bbb9916167c958674859f79453b31f97dff12d71d7c0b",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 473.99954315944524,
-              "gpu_memory_peak_mib": 884.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "bc08b3c24491c20f1805376f60a27de78b69358f1dbce9dff6cedc25cf9b569f",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2924.3486879856814,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "0b8abd94c04915e1e5554d6914a4cd3c319843c8197ba2f67e33394f9df2e452",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 469.5631057459618,
-              "gpu_memory_peak_mib": 880.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "77bcf649c6b21970747b1cb6dd25123e402547a417b23d0f1c44bf6bb32f4e6e",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2867.151652368643,
+              "gpu_memory_peak_mib": 1110.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -4557,39 +4764,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 481.00815770875727,
-            "min": 475.7399423458176,
-            "max": 481.4104145597155
+            "median": 3151.9179521158976,
+            "min": 3112.548231470186,
+            "max": 3393.9289532287075
           },
           "gpu_memory": {
-            "median": 816.0,
-            "min": 802.0,
-            "max": 818.0
+            "median": 1046.0625,
+            "min": 1032.0625,
+            "max": 1048.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "ddf5d8d7b416a06aba922f0de1db25c31a407928103f8ac374513b5a146b3024",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 481.00815770875727,
-              "gpu_memory_peak_mib": 802.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "fb18ade07605b2253388414d8c655313ec153d3feccabdb17af35b41950d7371",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3112.548231470186,
+              "gpu_memory_peak_mib": 1032.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "e7190799967227354b25f540a509a0e1d4b9d5abe74aa26dcba1cc4def634421",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 481.4104145597155,
-              "gpu_memory_peak_mib": 818.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "34f661c14209ea13f43583d7cf383dbaff6dd9cd4847f8ff706fed6ef0128e12",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3393.9289532287075,
+              "gpu_memory_peak_mib": 1048.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "c153bed5e2bb86ca80b79937c28b3128b9dd98cd0f4c9c8066364ce7889736f6",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 475.7399423458176,
-              "gpu_memory_peak_mib": 816.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "02c03866ce0abec525562e9d94a382120338f6750d9627b0afd4653943de60b9",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3151.9179521158976,
+              "gpu_memory_peak_mib": 1046.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -5101,39 +5308,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 434.0271282215005,
-            "min": 433.735396964274,
-            "max": 434.6092648863014
+            "median": 1904.0923950086583,
+            "min": 1839.7050149247882,
+            "max": 1906.6782498456457
           },
           "gpu_memory": {
-            "median": 882.0,
-            "min": 866.0,
-            "max": 884.0
+            "median": 1112.0625,
+            "min": 1096.0625,
+            "max": 1114.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "b9ecd3b1a88339b95ea9aab21f74013d60a2d1af55548b5897f3f47300030cd2",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 434.6092648863014,
-              "gpu_memory_peak_mib": 866.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "4ca7b23ea0f9aac6c68ab991bc617a98bf98c46c7d184f25ce1fc4c5de99d0be",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1904.0923950086583,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "3fe309d4eab88dcea5139b1be5abc87c8ca1c6fb0d5114164d97882eb0814870",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 434.0271282215005,
-              "gpu_memory_peak_mib": 884.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "fb0b8afdbcfb87918b02a4bae1d36c092a2e2225c2e144da4a7fcfa020ae71c8",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1906.6782498456457,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "c92429b2ffcd35b957edfb09b2b2b8bcf22a9ac33ace4b7cf2cc28ecb044e71d",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 433.735396964274,
-              "gpu_memory_peak_mib": 882.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "40845fbc0288afbb0fb2e7eea35ad768906a58116e9d7b460eabf0d98bfb7d08",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1839.7050149247882,
+              "gpu_memory_peak_mib": 1112.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -5373,39 +5580,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 473.99588699870594,
-            "min": 469.6552896124478,
-            "max": 476.53429915540823
+            "median": 3131.591065966842,
+            "min": 3113.6865177206582,
+            "max": 3199.506622330986
           },
           "gpu_memory": {
-            "median": 882.0,
-            "min": 866.0,
-            "max": 886.0
+            "median": 1112.0625,
+            "min": 1096.0625,
+            "max": 1116.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "5bc07d945c00d5a1f442358948c8cd9bd4e0a3f1b650662861ea3b1b344575bc",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 476.53429915540823,
-              "gpu_memory_peak_mib": 866.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "f28dadb4be491b6306c4630e4e75e755bc512d3941a98f95f55ef74fcee91dff",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3113.6865177206582,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "aaaaf96f7a9cb2ded1aeb4e4731490d5f575087490a316d6663b34a320cd2340",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 473.99588699870594,
-              "gpu_memory_peak_mib": 886.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "38b619fbb3530ba257aa468c72fbb744bae2739250abf833351a92a1e2a46b3c",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3199.506622330986,
+              "gpu_memory_peak_mib": 1116.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "7641d65859a28b935c5b85df178d853913d2d1baf60eb4344cd565f04c982a94",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 469.6552896124478,
-              "gpu_memory_peak_mib": 882.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "ae39179dc54c9798760bde39640f1b98421d1fd22b21a5bd6fe2fb2aa67719ff",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3131.591065966842,
+              "gpu_memory_peak_mib": 1112.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -5645,39 +5852,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 485.27292610201124,
-            "min": 480.59765877356386,
-            "max": 485.3665384792326
+            "median": 3482.847244951914,
+            "min": 3380.4461293353384,
+            "max": 3518.837970425887
           },
           "gpu_memory": {
-            "median": 880.0,
-            "min": 866.0,
-            "max": 884.0
+            "median": 1110.0625,
+            "min": 1096.0625,
+            "max": 1114.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "bce8bb93b171eb3994378ef9f7c48a09f29d95dbdf90b5e942ece54a3ca6b406",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 485.3665384792326,
-              "gpu_memory_peak_mib": 866.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "b8cd9b085362cb146258f9b257ae3770583871c295b9b3407b0b07a158339821",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3518.837970425887,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "8b24ea73a9503d774d92315b9ec68dbbf67e0e6a28475caa8e12c6bfb001eda8",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 485.27292610201124,
-              "gpu_memory_peak_mib": 884.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "0a11735d0025ebdfac06078e096d28fa540f125161c318911f9141dffd7b0f20",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3482.847244951914,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "b485c4cda0b8e6fbc67386a7cf2da9213fb8fb165470e106e4a214f99b51e3ee",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 480.59765877356386,
-              "gpu_memory_peak_mib": 880.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "f36fc7100036af69b24458ca6799945b9062582b7b96c4861d8d05427d966f69",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3380.4461293353384,
+              "gpu_memory_peak_mib": 1110.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -5955,39 +6162,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 475.77233908822205,
-            "min": 475.3348331501214,
-            "max": 477.9533569105555
+            "median": 3074.517166773265,
+            "min": 3032.085605382261,
+            "max": 3080.201620898957
           },
           "gpu_memory": {
-            "median": 880.0,
-            "min": 866.0,
-            "max": 884.0
+            "median": 1110.0625,
+            "min": 1096.0625,
+            "max": 1114.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "9128810e8a0a7dd66a49b2efbd471de659cc7d1eb7674e7831a27281550b0e30",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 477.9533569105555,
-              "gpu_memory_peak_mib": 866.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "8515569b2fd974547735fffb712fe016bfa2eb209645a4e996a3141bfda7f2e8",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3032.085605382261,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "9391dfdc114608a5acff2709fb8a33b8f288348c51d40bc15be3e545df8e6d07",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 475.3348331501214,
-              "gpu_memory_peak_mib": 884.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "2ff61c8d8fa298c92ac7f797e4a68e3ace9194724856152695206bb794741a3c",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3074.517166773265,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "53e34592914063e9354dd4d27cfa825ddfe608b06302ba0572c06d8f6254a311",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 475.77233908822205,
-              "gpu_memory_peak_mib": 880.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "a61d9c144ca0ba66b1c1498cebb032a529447de6cef8095e31c959f1c1266510",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3080.201620898957,
+              "gpu_memory_peak_mib": 1110.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -6265,39 +6472,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 477.52706938350804,
-            "min": 476.5751917578005,
-            "max": 481.63781556281145
+            "median": 3167.6206203762094,
+            "min": 3113.80720628389,
+            "max": 3240.7342509282003
           },
           "gpu_memory": {
-            "median": 882.0,
-            "min": 866.0,
-            "max": 884.0
+            "median": 1112.0625,
+            "min": 1096.0625,
+            "max": 1114.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "f266cc8cd067bed382f52315f60e113c81f4cac63cca792143bf5a5c311202c1",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 476.5751917578005,
-              "gpu_memory_peak_mib": 866.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "0a6dde245a473037f27e844fe46dcd160f2f07549279f3710ed905d9d90fa7e3",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3167.6206203762094,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "2d998e81529a63a290c4cd631822384a9624d70ace4e36502cf0cc57ae273527",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 481.63781556281145,
-              "gpu_memory_peak_mib": 884.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "e52290551d623fd71d63d9bb2a37dfc13aa61a6382ddedd79d42be40d745f33b",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3240.7342509282003,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "22f78311c788132f07c7a4616d8cff1ee93e50509d0cf30549771c6c21ac868e",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 477.52706938350804,
-              "gpu_memory_peak_mib": 882.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "09628153d49e14df22d7e5cdb642ef1f46faa88194bae1a8528e19497d9079e3",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3113.80720628389,
+              "gpu_memory_peak_mib": 1112.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -6537,39 +6744,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 438.61096552896146,
-            "min": 437.1306089807309,
-            "max": 439.4507801227057
+            "median": 1940.8390709816545,
+            "min": 1824.897707444124,
+            "max": 2022.5425332115983
           },
           "gpu_memory": {
-            "median": 882.0,
-            "min": 866.0,
-            "max": 886.0
+            "median": 1112.0625,
+            "min": 1096.0625,
+            "max": 1116.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "5c9376d680509b6e011aa6a669f8a95adc56989f567012a0081baf0ce957d089",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 438.61096552896146,
-              "gpu_memory_peak_mib": 866.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "6fa5aca71625dacbf753716d99224fcb3237e551d6eabd7496cc92e6d32ee779",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1940.8390709816545,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "4bc5de20fddde80cde83940a43d4e3ad84f560ee88bb7a196ae9268ffeed1fdd",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 439.4507801227057,
-              "gpu_memory_peak_mib": 886.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "ac1b7ddef9fbe84bf2ab7f9bb2382a754e14af59793c9a0c09698fbe2f691e1b",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2022.5425332115983,
+              "gpu_memory_peak_mib": 1116.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "195f2e17ea92a6d179097faf15ae116c7d8e198ee83c0c32e837e002e1d57884",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 437.1306089807309,
-              "gpu_memory_peak_mib": 882.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "9aca2568cb22bb34c075747dce6feff88444ca40093be29480cf412bd821e37a",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1824.897707444124,
+              "gpu_memory_peak_mib": 1112.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -6771,39 +6978,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 454.8694316283635,
-            "min": 453.0136211747939,
-            "max": 455.8143515966477
+            "median": 2343.822114302148,
+            "min": 2313.8292707488763,
+            "max": 2347.1389399327136
           },
           "gpu_memory": {
-            "median": 880.0,
-            "min": 866.0,
-            "max": 884.0
+            "median": 1110.0625,
+            "min": 1096.0625,
+            "max": 1114.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "9ba46056e4d59c6b82ed7fc146422bb16491b1902c71fb2e7535f0cd7f25010c",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 455.8143515966477,
-              "gpu_memory_peak_mib": 866.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "b96b432296e5b2abb3c9026dc0eb6876a8a268d98d667ed8f27b972af75044dd",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2313.8292707488763,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "2b745c877d6d96727004a1471bea760f9411ab3652aca639956f3057ab579ded",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 453.0136211747939,
-              "gpu_memory_peak_mib": 884.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "a9768397d4cb5878c25ec95791f253a21602a128a74e020a1824d470b8946cd2",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2343.822114302148,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "61f4147ba64be52e5af23ba3ff18865d05c56e5e769fd68f2ea58091892fcb83",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 454.8694316283635,
-              "gpu_memory_peak_mib": 880.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "a2ba6eb1b8b630ab47f5ab624f9dd4e4b76e1e13f45d20e96c1f567f07946f05",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2347.1389399327136,
+              "gpu_memory_peak_mib": 1110.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -7043,39 +7250,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 390.13518515152407,
-            "min": 389.78076703724963,
-            "max": 390.70617419539974
+            "median": 1293.1835320769453,
+            "min": 1292.71509619944,
+            "max": 1299.0359409482924
           },
           "gpu_memory": {
-            "median": 880.0,
-            "min": 866.0,
-            "max": 884.0
+            "median": 1110.0625,
+            "min": 1096.0625,
+            "max": 1114.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "e672326e629c87d4388616c8b394ffa58aeeb1ace568d048cd0cb75c644cb259",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 390.13518515152407,
-              "gpu_memory_peak_mib": 866.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "9f3fec73b3d6a183be689ac60caafbbecb482309a0b4aa972f124f8840cc5a67",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1293.1835320769453,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "a22321002d39c27bb15a6285b4fc4231047ac82cf8c2c3f5e17ccc59d60f2ae3",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 390.70617419539974,
-              "gpu_memory_peak_mib": 884.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "b34a01984d03d49eb72eb124e791d68b976e01f630d445125d4d70750e75d43b",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1299.0359409482924,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "b2ee134629ce16d5b8d09ea40f0cb5a3f4747dc5b22b131fbb7e21500c474108",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 389.78076703724963,
-              "gpu_memory_peak_mib": 880.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "1fbc2ca728bef908f86fbf5c90c1dd515fd2448c9c4cef4ad05073a1ef798dba",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1292.71509619944,
+              "gpu_memory_peak_mib": 1110.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -7315,39 +7522,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 438.4893325004334,
-            "min": 437.33231285368714,
-            "max": 438.7914148728738
+            "median": 1932.1827948827079,
+            "min": 1887.2881989494044,
+            "max": 1987.5426161605849
           },
           "gpu_memory": {
-            "median": 880.0,
-            "min": 866.0,
-            "max": 884.0
+            "median": 1110.0625,
+            "min": 1096.0625,
+            "max": 1114.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "4b495ae2c24810d273cc6b94af15bac4b902a0d3518ce08071e41c45ef2799c6",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 438.4893325004334,
-              "gpu_memory_peak_mib": 866.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "e2aa09f8dc44da3eb97c2bb84b884bcea45b46d2ece58f4ecd6dcf2174fca068",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1932.1827948827079,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "399c901e65b2e5ff8f68941a68d34f2945b613927f0fccc66604c13c0ad372ef",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 438.7914148728738,
-              "gpu_memory_peak_mib": 884.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "48f3eb7b1041ffc16ea7c1ee1b78bacd3b7d30a80beaf2655cacaaa719c03b38",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1987.5426161605849,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "bf4b9258f2a526a9d50ad365ec54bdd4260b37bf23066d610723a43db86cd98c",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 437.33231285368714,
-              "gpu_memory_peak_mib": 880.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "f96142ba9f1ca0a1134606dd8d1a89437d6ccc481f04cd98ba1cad0fba307b99",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1887.2881989494044,
+              "gpu_memory_peak_mib": 1110.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -7587,39 +7794,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 396.96451469850734,
-            "min": 396.7469698695132,
-            "max": 397.9687563717696
+            "median": 2359.6881930142636,
+            "min": 2239.484127482975,
+            "max": 2392.556333409086
           },
           "gpu_memory": {
-            "median": 2472.0,
-            "min": 1604.0,
-            "max": 3224.0
+            "median": 1102.0625,
+            "min": 1086.0625,
+            "max": 1124.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "a18e6f88f38072531a92b4c2a35cecb5e759643f9c1ce4f3aecab04bec7cff86",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 396.96451469850734,
-              "gpu_memory_peak_mib": 1604.0,
-              "gpu_memory_baseline_mib": 408.0
+              "cell_id": "f7c14c07fbf7589d8b9de91e6679d51ea8ce1d65749860aae35743b61a2044c5",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2239.484127482975,
+              "gpu_memory_peak_mib": 1086.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "2392b406b5278ba1013c881e8f3e48cfa8c15af38a2f41f64c3a0ad3e7e8d6ec",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 397.9687563717696,
-              "gpu_memory_peak_mib": 2472.0,
-              "gpu_memory_baseline_mib": 1156.0
+              "cell_id": "594202b4781c3ccfcf35242d4da88b48a14bf25077e905fcf55e1d495bd160e9",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2392.556333409086,
+              "gpu_memory_peak_mib": 1124.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "7fe98b5eb9b4276c3a45eafb53473b105541b244b0b7ae7a0d5225685aa13cb8",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 396.7469698695132,
-              "gpu_memory_peak_mib": 3224.0,
-              "gpu_memory_baseline_mib": 1986.0
+              "cell_id": "057e47145387b460669ece137d47438c6c3bf0498a11f126b8f5e09e745f4f65",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2359.6881930142636,
+              "gpu_memory_peak_mib": 1102.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -7897,39 +8104,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 486.65884469031135,
-            "min": 485.4911390894689,
-            "max": 488.82648088786226
+            "median": 3820.5037069238715,
+            "min": 3704.3024909107935,
+            "max": 3980.3227091241624
           },
           "gpu_memory": {
-            "median": 3340.0,
-            "min": 3326.0,
-            "max": 3344.0
+            "median": 1110.0625,
+            "min": 1096.0625,
+            "max": 1114.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "0feb667863d31ce22131d62f99f87df44272f580658d708dc02a71bfb1db5e2f",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 486.65884469031135,
-              "gpu_memory_peak_mib": 3326.0,
-              "gpu_memory_baseline_mib": 2760.0
+              "cell_id": "a16d4e0b71f44d837a184f7e40fb4616be56160ebfe3068538a4b57aa71c08f2",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3980.3227091241624,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "adfa49007ea96bdcf65f1caf73914155635a69fbfda664b189201162be6f25cd",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 488.82648088786226,
-              "gpu_memory_peak_mib": 3344.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "5b4a1db7beb5bea467d2e8ebeea32d939748dff190f288141a9d4b89489ff9e8",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3704.3024909107935,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "f0fa42c106ccd8738a955867cd5bfa257366bad666c1c5724f401f44ee59fa63",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 485.4911390894689,
-              "gpu_memory_peak_mib": 3340.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "a795a7638f310657e9c93b0d965a2daeead9a85df003273e3fc510b3772e654e",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3820.5037069238715,
+              "gpu_memory_peak_mib": 1110.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -8839,39 +9046,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 485.0253819531498,
-            "min": 483.83475227670993,
-            "max": 487.0636293350108
+            "median": 3562.4852821346026,
+            "min": 3394.8504927669287,
+            "max": 3593.286547470002
           },
           "gpu_memory": {
-            "median": 3340.0,
-            "min": 3326.0,
-            "max": 3344.0
+            "median": 1110.0625,
+            "min": 1096.0625,
+            "max": 1114.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "7314a50a00116c5a18baa33ceabba1982ba42830020e5abf7fa20c25594ec0d1",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 485.0253819531498,
-              "gpu_memory_peak_mib": 3326.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "24ed171f91f52d664fb2975bdfea844b813e7fbeebd76b6847259bddf163781a",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3562.4852821346026,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "17d9e595bb66e78a07114f3624f8568898d3a4ba73bea66906321331c9054ff4",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 487.0636293350108,
-              "gpu_memory_peak_mib": 3344.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "feb22fd35ec900ecab95392f41c9d61d0ae1a143cfe480b7e3863f08b6cd16b0",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3593.286547470002,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "5a2dbb4c0e214afd58bcc3737c19de724544e0483d45ccf817eac3868b69ceae",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 483.83475227670993,
-              "gpu_memory_peak_mib": 3340.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "e28f9f30f9d6c91506c85076826d7c2c35e67bb6084728636d77b0e78927dceb",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3394.8504927669287,
+              "gpu_memory_peak_mib": 1110.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -9149,39 +9356,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 468.0071914949342,
-            "min": 466.8270601930167,
-            "max": 468.1981751356897
+            "median": 2675.6873493927355,
+            "min": 2649.724477576486,
+            "max": 2778.180915085781
           },
           "gpu_memory": {
-            "median": 3340.0,
-            "min": 3326.0,
-            "max": 3344.0
+            "median": 1110.0625,
+            "min": 1096.0625,
+            "max": 1114.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "cd825ee83d183a5c9774e5772c555e21254e3ebb482d4257d1b2e0bd3fe8a473",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 468.1981751356897,
-              "gpu_memory_peak_mib": 3326.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "54d7bfb2673fb670afe1ffdbb929c2eac4dd2554f3fe7f90c8133bca6ca75035",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2778.180915085781,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "f7986d8eb672e286f5a2a3f3626c30bffae46f20ff0fdb48c67119dc4cf06df6",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 468.0071914949342,
-              "gpu_memory_peak_mib": 3344.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "91e57c57c6668a84ff7a911ac352ab91523553c1a7823500e5e47550ca6bd741",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2675.6873493927355,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "3e77b181c33bf0e8b1fcc42adc54f4d5583bf87d9671c42cce5b704b5b37b42c",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 466.8270601930167,
-              "gpu_memory_peak_mib": 3340.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "cc45c4686cc6859954f3c981590b961c5fae5333e79a99961e7a3961faa83513",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2649.724477576486,
+              "gpu_memory_peak_mib": 1110.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -10249,39 +10456,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 331.2819557298655,
-            "min": 330.7925461520582,
-            "max": 331.93701393294043
+            "median": 838.4841066388803,
+            "min": 837.8151045709346,
+            "max": 841.5588545998061
           },
           "gpu_memory": {
-            "median": 3344.0,
-            "min": 3328.0,
-            "max": 3346.0
+            "median": 1114.0625,
+            "min": 1098.0625,
+            "max": 1116.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "c7dbd115b0bc494c8b83496e0eac1ea124f5db70cda22cdfd002379b1009d3ad",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 330.7925461520582,
-              "gpu_memory_peak_mib": 3328.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "196d664ef105b74aca72c8b5747030054cd27b5574a8a837c90684c62e088f80",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 838.4841066388803,
+              "gpu_memory_peak_mib": 1098.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "05a9df076d0c96aa7361013d48921330dc20ee8d900711bbc49418c2fda23c75",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 331.93701393294043,
-              "gpu_memory_peak_mib": 3346.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "8ae92f7ce58a1deeff3a51312d50c1973955ff454f18566d4edba88406327e59",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 837.8151045709346,
+              "gpu_memory_peak_mib": 1116.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "c74a82a01b55e36662948c885b4276d2e2569ced416a330f24af93f3f61aaa30",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 331.2819557298655,
-              "gpu_memory_peak_mib": 3344.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "39cc2fb40d4e66df46facac550f6e87ea7830472100271cdc3ec8ee6bb61670a",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 841.5588545998061,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -11633,39 +11840,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 410.0054045288745,
-            "min": 409.40969847053987,
-            "max": 410.504282807621
+            "median": 1526.3870097042616,
+            "min": 1487.1230674372111,
+            "max": 1526.46084944596
           },
           "gpu_memory": {
-            "median": 3342.0,
-            "min": 3326.0,
-            "max": 3346.0
+            "median": 1112.0625,
+            "min": 1096.0625,
+            "max": 1116.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "ad4a4ed2f04f6722d1d58881ec6e374a84f06d13f76f68cb9f7c6a358916a1c5",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 409.40969847053987,
-              "gpu_memory_peak_mib": 3326.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "02e4ca32539a2a12abbe620c268b9b84fcfe3d55bc82d3c85c781c631d042639",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1487.1230674372111,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "e004e4c6e4569e47ff80fdc8614f211bc5c36f8e02b87cb7867ebafcd1373966",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 410.0054045288745,
-              "gpu_memory_peak_mib": 3346.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "9ea180f384edf0c98e2632fbdc2971e5683290770c44853a9720db579219a2eb",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1526.46084944596,
+              "gpu_memory_peak_mib": 1116.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "65782a6cd7e1758b0115da67d51ca7e06ce05c07414c006cbba3f3756adccef9",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 410.504282807621,
-              "gpu_memory_peak_mib": 3342.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "ddfbfd04874d11fcd752702bb18234ddda208478bd86bbd2e659ebfbfd2e8749",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1526.3870097042616,
+              "gpu_memory_peak_mib": 1112.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -12025,39 +12232,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 293.4558369166469,
-            "min": 293.065158122773,
-            "max": 294.16559352215944
+            "median": 634.6687744111532,
+            "min": 631.5485201585902,
+            "max": 637.3165747282585
           },
           "gpu_memory": {
-            "median": 3344.0,
-            "min": 3328.0,
-            "max": 3348.0
+            "median": 1114.0625,
+            "min": 1098.0625,
+            "max": 1118.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "91fd923b4d617361351682052e035d8c62bd067aae0d4e5358eada2e0e39db9f",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 293.4558369166469,
-              "gpu_memory_peak_mib": 3328.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "38b7e54ccb7551eb34e98986709f89fcb79e24c23c2c67aa085f4721dfe4a0d6",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 634.6687744111532,
+              "gpu_memory_peak_mib": 1098.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "e0e796ddb6afb77bfc29686df2c480457637ca6e8486a0bcdcd2952061208bab",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 293.065158122773,
-              "gpu_memory_peak_mib": 3348.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "a8bd6c2046b5f60094413769439d017456a1ecbbec8cab43870da308b76d52eb",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 631.5485201585902,
+              "gpu_memory_peak_mib": 1118.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "342ffb027faee91da2fcd2c196c497ca1e6262fa87677fd369014fd7d3710a0a",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 294.16559352215944,
-              "gpu_memory_peak_mib": 3344.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "06342d2b516119f8fb73995f1ef5dd86a3992c5001fde13c8149d6753d51f3fb",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 637.3165747282585,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         }
@@ -12145,39 +12352,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 305.27271917014184,
-            "min": 303.9480549764253,
-            "max": 306.04959013824487
+            "median": 687.4976022608591,
+            "min": 686.2824528869788,
+            "max": 688.5218285260637
           },
           "gpu_memory": {
-            "median": 3344.0,
-            "min": 3328.0,
-            "max": 3348.0
+            "median": 1114.0625,
+            "min": 1098.0625,
+            "max": 1118.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "0a9677819eac9e031392273971e83e95ea0ddf8c4e43f4b86eb936467446182d",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 306.04959013824487,
-              "gpu_memory_peak_mib": 3328.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "846c4e1cfd871863ae200f1650d299bb2f719a1bf1fb67bb8e95d615be032685",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 686.2824528869788,
+              "gpu_memory_peak_mib": 1098.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "de6cd32ecce3d4fded25ec3817d85592ecb7648aa3a2c7d0909e2fca953d45f0",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 305.27271917014184,
-              "gpu_memory_peak_mib": 3348.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "098d90eb3aeb078a6eaa4c8f87588bcd915704c8d6ecc320b9d937873c5cad89",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 687.4976022608591,
+              "gpu_memory_peak_mib": 1118.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "73e1da8be1608e73c0efc491e23f5ed66b567818ad759e480d3a2175e38c4f83",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 303.9480549764253,
-              "gpu_memory_peak_mib": 3344.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "eb7dc3997c598b82a1b1db4fa2a04b028253cdc83bb6436bc7dd1409de4567e6",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 688.5218285260637,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -12417,39 +12624,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 463.6962613446648,
-            "min": 461.5972312452683,
-            "max": 464.5384676253223
+            "median": 2492.030009973325,
+            "min": 2461.1389206303916,
+            "max": 2564.1702045574634
           },
           "gpu_memory": {
-            "median": 3636.0,
-            "min": 3544.0,
-            "max": 3674.0
+            "median": 1406.0625,
+            "min": 1314.0625,
+            "max": 1444.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "809358ddae830c6d1b3d57456ffe5491af15e1333fbe522133f8e79bef66338d",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 461.5972312452683,
-              "gpu_memory_peak_mib": 3636.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "ef44cf9d8995474fa8212a1c67e50e9b69abb756abb50d64c049a529592b3768",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2564.1702045574634,
+              "gpu_memory_peak_mib": 1406.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "a69ac8c4e7b3eb8f9a9d606ca803b2e34573a28a4c95dff9467b2b16f6f651cc",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 464.5384676253223,
-              "gpu_memory_peak_mib": 3544.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "7e3cf5a91a10799a11cd0d23c30df86cc14af435895426fdf5fe9b9b05586d8d",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2492.030009973325,
+              "gpu_memory_peak_mib": 1314.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "f1352faff6871e5e2aca996a4e8e5863d46a668b00b8d0da3d478771a4c79026",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 463.6962613446648,
-              "gpu_memory_peak_mib": 3674.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "29f6dab29bb38a4a501f6a5b52dcb778e0055692b23f04a42ac085e4d8f6da3a",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2461.1389206303916,
+              "gpu_memory_peak_mib": 1444.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -12727,39 +12934,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 464.9528816369421,
-            "min": 464.22453080968205,
-            "max": 465.02824626668854
+            "median": 2592.573459962163,
+            "min": 2538.2975323022765,
+            "max": 2609.048340352996
           },
           "gpu_memory": {
-            "median": 3770.0,
-            "min": 3654.0,
-            "max": 3826.0
+            "median": 1540.0625,
+            "min": 1424.0625,
+            "max": 1596.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "43156eaa4817cfb6f846e1e5da5118e005608cc03bf5a5bdecc1f12f70f05228",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 464.9528816369421,
-              "gpu_memory_peak_mib": 3826.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "dab15d32baa055934e5f96b078e066da09e38e6de567c63613365956d182bbc8",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2538.2975323022765,
+              "gpu_memory_peak_mib": 1596.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "bbe9a91f57a30f4e2964b4d375e87428476ea790b2a2492c2bcd96edf09b5066",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 465.02824626668854,
-              "gpu_memory_peak_mib": 3654.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "1b3b6332d08ab1ca680672d57ec9743c9ddd21128ea84c73ae29dc4834c6bde6",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2592.573459962163,
+              "gpu_memory_peak_mib": 1424.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "9792a360a86ffc4e49506d567c4231ed437c8177c5eab7f486c8988d081e63b4",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 464.22453080968205,
-              "gpu_memory_peak_mib": 3770.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "e657d79e56724e03512caa58f54451681d4faed3b40f4dd6d251495c76c36380",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2609.048340352996,
+              "gpu_memory_peak_mib": 1540.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -13037,39 +13244,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 493.267738922595,
-            "min": 490.0481253717704,
-            "max": 493.5803611490729
+            "median": 4167.730679354879,
+            "min": 4032.2174687658803,
+            "max": 4349.543140304961
           },
           "gpu_memory": {
-            "median": 3266.0,
-            "min": 3250.0,
-            "max": 3270.0
+            "median": 1036.0625,
+            "min": 1020.0625,
+            "max": 1040.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "beaa87ef937a53ce58a0ce91d89326a835cd2faaf62e3a48880829f9a0847fbb",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 493.5803611490729,
-              "gpu_memory_peak_mib": 3250.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "aeaf005bb7c71e69e467b42dd7f6426914eb740d13c0da0a93c3c03735e4348c",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 4032.2174687658803,
+              "gpu_memory_peak_mib": 1020.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "70d8bdfee538b3bc1c81c3a559ec4676abab009e7dc28f6280b15c0bf8fb0a34",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 493.267738922595,
-              "gpu_memory_peak_mib": 3270.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "75083651674850332afc39bfdc9d038177f7a685cc11eb7ab763954a05b68a0b",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 4349.543140304961,
+              "gpu_memory_peak_mib": 1040.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "f02d9561e1fb39779992d5db6b3f91fd3c7d1bdbbe6b4421a285e8ce7ed69786",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 490.0481253717704,
-              "gpu_memory_peak_mib": 3266.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "303fc3d4106517bfed63c9946307c053891b388eb15b8f61be1b5ab629354c1f",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 4167.730679354879,
+              "gpu_memory_peak_mib": 1036.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -13347,39 +13554,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 484.90615472944313,
-            "min": 484.63549305650827,
-            "max": 490.07781504124216
+            "median": 3840.258631218159,
+            "min": 3804.507261334696,
+            "max": 3904.1460802743886
           },
           "gpu_memory": {
-            "median": 3340.0,
-            "min": 3326.0,
-            "max": 3344.0
+            "median": 1110.0625,
+            "min": 1096.0625,
+            "max": 1114.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "da2f65a56c64046b810f2c3fde86b8ef280f087909c74aed513181836410089a",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 484.63549305650827,
-              "gpu_memory_peak_mib": 3326.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "6d58c16cadf8412798cc72131b658636bbc5ac6860d8892092e3fe020e9ac528",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3904.1460802743886,
+              "gpu_memory_peak_mib": 1096.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "0acda5c62bc619dbefa2d18a5b7a182645063f723b7b1e6ea24c98be7f3d2ed2",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 490.07781504124216,
-              "gpu_memory_peak_mib": 3344.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "28635887d2b484a30a18758e1330ea4d7e4d360d5bb41c36d2d8318e8dd11e51",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3840.258631218159,
+              "gpu_memory_peak_mib": 1114.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "0c7b3e2b7dd9bd271ba23fa98b9da09749e62d0172eae371f345c5e1f20c4e70",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 484.90615472944313,
-              "gpu_memory_peak_mib": 3340.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "294f5721f646ff27075fec5d6c8738718386f4a804e69000a97193b29d7fcf96",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3804.507261334696,
+              "gpu_memory_peak_mib": 1110.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -14137,39 +14344,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 501.84851649552485,
-            "min": 499.82516857532255,
-            "max": 504.1286584494435
+            "median": 5996.956623574654,
+            "min": 5962.315458803076,
+            "max": 6076.002326311406
           },
           "gpu_memory": {
-            "median": 3266.0,
-            "min": 3250.0,
-            "max": 3270.0
+            "median": 1036.0625,
+            "min": 1020.0625,
+            "max": 1040.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "fc7a3c031e547a121fa8cdab173ec30ad43d77c8c266301b7830326f91ed09d1",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 501.84851649552485,
-              "gpu_memory_peak_mib": 3250.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "58cdcf8a0d890cec65468b2cbd116280a0f10d43dd1c6f70ce34a71843e7359a",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 5996.956623574654,
+              "gpu_memory_peak_mib": 1020.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "5ccc345338eba788f0cc17b44398fa2c613947c70ade232794a149df0172e0ed",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 504.1286584494435,
-              "gpu_memory_peak_mib": 3270.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "b773cc7890b47ee98720eedfced475e561f3223ec4a5429b2e8de3fe81e5a73e",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 5962.315458803076,
+              "gpu_memory_peak_mib": 1040.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "808b2526adabc7fbfd755c85e2dfde4c386e93f79c7de02ea56a1d395116fd1c",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 499.82516857532255,
-              "gpu_memory_peak_mib": 3266.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "b479f15408e0f363761d34b069211c0d1d1ce5e87f2ad380e3650c554b09fed7",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 6076.002326311406,
+              "gpu_memory_peak_mib": 1036.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -14447,39 +14654,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 477.88472103195846,
-            "min": 475.7729757246726,
-            "max": 478.9316040547548
+            "median": 3302.281517719933,
+            "min": 3278.1782812103775,
+            "max": 3302.7116807819443
           },
           "gpu_memory": {
-            "median": 3604.0,
-            "min": 3508.0,
-            "max": 3640.0
+            "median": 1374.0625,
+            "min": 1278.0625,
+            "max": 1410.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "014c1213818423863dd1bb7dee3cce20f5c34a571b70d2ecc8c68468d36310e4",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 478.9316040547548,
-              "gpu_memory_peak_mib": 3604.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "b977cc4266b44266a8760449df888001e741a35ec9c32f38814ab5570ce4fd02",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3302.281517719933,
+              "gpu_memory_peak_mib": 1374.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "a6acf830dcd1bfc7a212b7e108f941156c06d91cb73a40089c31a7926a93a23a",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 477.88472103195846,
-              "gpu_memory_peak_mib": 3508.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "54d63239932fb577770aba03c2a4a9c310b215c2e0f9bc5c879acde58136dffc",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3302.7116807819443,
+              "gpu_memory_peak_mib": 1278.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "8e94938de3dee2ba4597ed4f30147a2343cdfbb2a9baa39ff76e02e8f7fab433",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 475.7729757246726,
-              "gpu_memory_peak_mib": 3640.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "30960b5b02475cd80eac4eaf95bda1cca07861bd4d72433dcb2027b2deed4b10",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3278.1782812103775,
+              "gpu_memory_peak_mib": 1410.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -14757,39 +14964,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 469.7997875934328,
-            "min": 468.7526623936697,
-            "max": 470.6346666157978
+            "median": 2835.4415493114434,
+            "min": 2821.854714585528,
+            "max": 2837.771128064887
           },
           "gpu_memory": {
-            "median": 3618.0,
-            "min": 3524.0,
-            "max": 3654.0
+            "median": 1388.0625,
+            "min": 1294.0625,
+            "max": 1424.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "8def9fadf37b99724eb958e2af331e124932caec05ab7332d2e0ae5ba85dbb53",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 468.7526623936697,
-              "gpu_memory_peak_mib": 3618.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "51e6c5151e1cfa5035be5845bb709755fd30f467ecb26be5edb11c6554cc2378",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2835.4415493114434,
+              "gpu_memory_peak_mib": 1388.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "82d02af0573f0d29ab78211a60afc03955558ad3899195dd71078f04fcda836f",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 469.7997875934328,
-              "gpu_memory_peak_mib": 3524.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "a522e65522ad8fb3a32b2efab486f86de69ab9b9a8de5c0ea5eea98ce4b87721",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2837.771128064887,
+              "gpu_memory_peak_mib": 1294.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "790f9f14eaca581159d7fdec644aa5dc4cf1ba41158b10be27ef68e894207abf",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 470.6346666157978,
-              "gpu_memory_peak_mib": 3654.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "b8c14c0347f77840d10435bcc0686000b09bfb10edf0653e39c360efab6f4572",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2821.854714585528,
+              "gpu_memory_peak_mib": 1424.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -15067,39 +15274,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 467.2516560132031,
-            "min": 464.45578129942925,
-            "max": 467.2582414882084
+            "median": 2762.479753682292,
+            "min": 2697.9839971950864,
+            "max": 2785.904953032082
           },
           "gpu_memory": {
-            "median": 3494.0,
-            "min": 3400.0,
-            "max": 3532.0
+            "median": 1264.0625,
+            "min": 1170.0625,
+            "max": 1302.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "b18bbdbc94175d84b3ad17f43736fe956b7ce5c7b25243b874f96c7df36b666e",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 464.45578129942925,
-              "gpu_memory_peak_mib": 3494.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "92fc6855cd1d810b2c2d74c6b993c060cb385c051b7562e77f1fe28e5225ee4d",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2697.9839971950864,
+              "gpu_memory_peak_mib": 1264.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "b7ccc8a2c8712b7469383c696f90dae08f04ddd454117cc38abab915bfdc921c",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 467.2582414882084,
-              "gpu_memory_peak_mib": 3400.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "6c6bcba675fb2ef4cd27aece71752bcf1b50adedf29262cf3fe53caf08925e1e",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2762.479753682292,
+              "gpu_memory_peak_mib": 1170.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "117793e90585b9425cdb73556fe665ed06d0c887a3bca24dc1ca2b29e532738b",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 467.2516560132031,
-              "gpu_memory_peak_mib": 3532.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "e4247461d9049507eca24793809ee72393a784b062569c279e00002af455729c",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2785.904953032082,
+              "gpu_memory_peak_mib": 1302.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -15377,39 +15584,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 491.1900656190421,
-            "min": 490.86731385831223,
-            "max": 493.43798519817733
+            "median": 4014.4932182904713,
+            "min": 3980.607744389389,
+            "max": 4327.927680514455
           },
           "gpu_memory": {
-            "median": 3266.0,
-            "min": 3250.0,
-            "max": 3270.0
+            "median": 1036.0625,
+            "min": 1020.0625,
+            "max": 1040.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "561185ab906336ee0935c4ce669993627a0a4e831763ed05a66dfcd16c77155a",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 490.86731385831223,
-              "gpu_memory_peak_mib": 3250.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "85a1d288dd4718ecaf66cd950934e2358fa71e42e03c0aa8610f4bffe39dd819",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 4327.927680514455,
+              "gpu_memory_peak_mib": 1020.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "8b5520472da679287c9939bf4b9512b498478be3af87dd049c7329523d3cb5dc",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 493.43798519817733,
-              "gpu_memory_peak_mib": 3270.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "53f3c09ef757eae0b4614043db1be1ce0697ba94976a539fb0f43cc67e6e2437",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 3980.607744389389,
+              "gpu_memory_peak_mib": 1040.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "27398c42de685110909d891a7432f0ea8b9d13d993a3b8a0001e4b001864a426",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 491.1900656190421,
-              "gpu_memory_peak_mib": 3266.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "cf47d4d8b5d86fcdb181dab4311394b509b5a2372938b5e9706649764e7ef052",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 4014.4932182904713,
+              "gpu_memory_peak_mib": 1036.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -15687,39 +15894,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 464.98761313640466,
-            "min": 463.80217216041694,
-            "max": 465.7717927054659
+            "median": 2636.2941992436827,
+            "min": 2565.084662317999,
+            "max": 2637.6210310418455
           },
           "gpu_memory": {
-            "median": 3618.0,
-            "min": 3524.0,
-            "max": 3654.0
+            "median": 1388.0625,
+            "min": 1294.0625,
+            "max": 1424.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "751dac423bccf6322e630ab0ac3278080271212d28702b69b0dcf63bc3d9b516",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 464.98761313640466,
-              "gpu_memory_peak_mib": 3618.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "92604d6d9b81b454cd2424fc0a42e735b532ecc86fd057e6b88c86f87de6cede",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2565.084662317999,
+              "gpu_memory_peak_mib": 1388.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "de99b6e4a86da3e77f799c4e4f4ef4bfe41ea56a047aa2d4390e42d07bf5d154",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 465.7717927054659,
-              "gpu_memory_peak_mib": 3524.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "bfe8b344064b5121f3910a4141ae48bff51305ac5f4359a0336496180aa92ee2",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2637.6210310418455,
+              "gpu_memory_peak_mib": 1294.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "657ccf465118ec2e55ad00bc98f152047ee51dccf5f2460306f7d71878f8ae4b",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 463.80217216041694,
-              "gpu_memory_peak_mib": 3654.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "86106f01453f686c87bf69e1ab75de919690b08d50e47a23759d34740afcdd58",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2636.2941992436827,
+              "gpu_memory_peak_mib": 1424.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -16667,39 +16874,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 463.99106338531016,
-            "min": 461.42676833990265,
-            "max": 464.22886306234176
+            "median": 2611.675498568265,
+            "min": 2558.3170239376623,
+            "max": 2660.8683616637054
           },
           "gpu_memory": {
-            "median": 3810.0,
-            "min": 3692.0,
-            "max": 3874.0
+            "median": 1580.0625,
+            "min": 1462.0625,
+            "max": 1644.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "c6dadca77b364a5c4bf049a1b5fc5becd2baf10a06db3ddcc1788f225b6a6c40",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 464.22886306234176,
-              "gpu_memory_peak_mib": 3810.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "9f5adad6035e6b0358a3a0df378d8fd9aa60b20b5edff537618901131e12a4e5",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2558.3170239376623,
+              "gpu_memory_peak_mib": 1580.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "7d8537096029fe6b9e686ce87e3ca85c753069780973303adf29f913457cff87",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 463.99106338531016,
-              "gpu_memory_peak_mib": 3692.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "f078712196b1283d1074f4a79dda11f628e2601fc1ce8815c21b36d3162fcf17",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2611.675498568265,
+              "gpu_memory_peak_mib": 1462.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "10afebc272633ed0cf20d4d1251f4e2d13445c10f59eadf5994a84012da51179",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 461.42676833990265,
-              "gpu_memory_peak_mib": 3874.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "bc9bb947e7ee867e2ef1a71f30c047c3a243bcadc26197bd95e501aa7d26a71a",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2660.8683616637054,
+              "gpu_memory_peak_mib": 1644.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -16977,39 +17184,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 440.0526800922364,
-            "min": 439.91679784866216,
-            "max": 440.9228692474625
+            "median": 2019.7067556351494,
+            "min": 1997.9879115424185,
+            "max": 2028.9585868459847
           },
           "gpu_memory": {
-            "median": 3618.0,
-            "min": 3526.0,
-            "max": 3656.0
+            "median": 1388.0625,
+            "min": 1296.0625,
+            "max": 1426.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "7132b19f73211c038e35d6a4bb7d6bbd349c01261d9e9d47a8c3985e1ecd346a",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 439.91679784866216,
-              "gpu_memory_peak_mib": 3618.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "f1274730f1fa820470915e80277c33b553c1ec405b39a26ce024b68a0099432c",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1997.9879115424185,
+              "gpu_memory_peak_mib": 1388.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "ee603f9716828f53261d523971ecad8e549c9e47da613a7b9d0ad63e2b57431a",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 440.9228692474625,
-              "gpu_memory_peak_mib": 3526.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "51a2b0fc519c2ef7f7fb83ca4dfe202883d801f7f98831e08b656b32fab2431f",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2028.9585868459847,
+              "gpu_memory_peak_mib": 1296.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "a3c4469bef59e6b1ecd845b1bf54ea795387d21256b9d022858f160639cf5455",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 440.0526800922364,
-              "gpu_memory_peak_mib": 3656.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "20208aea61588a49790cbbd175008e2f0d2441553fbfb93505afabed0275a2ea",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 2019.7067556351494,
+              "gpu_memory_peak_mib": 1426.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -17287,39 +17494,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 433.6164907913645,
-            "min": 429.92084637661503,
-            "max": 434.1130052366934
+            "median": 1897.4569843496536,
+            "min": 1886.231748356084,
+            "max": 1915.9576962863816
           },
           "gpu_memory": {
-            "median": 3618.0,
-            "min": 3524.0,
-            "max": 3654.0
+            "median": 1388.0625,
+            "min": 1294.0625,
+            "max": 1424.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "237b40f5b6afa4a26ecc5e08bddbac677540540675e22181a72850cb3ed58839",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 433.6164907913645,
-              "gpu_memory_peak_mib": 3618.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "92ff763a9b3bbee6d51475987559301b92dc7af0f01ae7dadf071441e2785437",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1897.4569843496536,
+              "gpu_memory_peak_mib": 1388.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "7240797c78f3cde24655f7afa3806c05a7559eeb27e4519b61bc3bc419f1fced",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 429.92084637661503,
-              "gpu_memory_peak_mib": 3524.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "33eb60e2ef511c9443a787f07a89ce084341e30bedaf751b018bb754b663b8ce",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1886.231748356084,
+              "gpu_memory_peak_mib": 1294.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "748133d50c16983762b15d3d10cf32fa4bccc7d27975cf7894342f1e0ce81ec9",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 434.1130052366934,
-              "gpu_memory_peak_mib": 3654.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "00a377fbe723f932aa86d239c836002168d789dfb4031321c7fd314f7ffde4e9",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1915.9576962863816,
+              "gpu_memory_peak_mib": 1424.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -17913,39 +18120,39 @@
         },
         "torchvision_gpu": {
           "throughput": {
-            "median": 399.22584696891334,
-            "min": 398.6450196320691,
-            "max": 399.7602526308253
+            "median": 1352.235079965178,
+            "min": 1342.2138058906853,
+            "max": 1367.8557244904084
           },
           "gpu_memory": {
-            "median": 3618.0,
-            "min": 3526.0,
-            "max": 3656.0
+            "median": 1388.0625,
+            "min": 1296.0625,
+            "max": 1426.0625
           },
           "observations": [
             {
               "seed": 137,
-              "cell_id": "f69aa3431c4105efd3497749fd1a52df0a0dac7b3139733dd3f8beffd7bd4f8e",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 399.22584696891334,
-              "gpu_memory_peak_mib": 3618.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "690dbd429b80871ba0cefe4ef2b37a9ae70cf8ba99f6ab6bb82033094add50ab",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1342.2138058906853,
+              "gpu_memory_peak_mib": 1388.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 138,
-              "cell_id": "460503083a6dbe1435fb6d413c4f776f0cccdbaf72cadc676147d55b5548eba5",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 399.7602526308253,
-              "gpu_memory_peak_mib": 3526.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "1144fec734bb3644aa2cd7a66144934ae22ab24a6887351c5e89e7adf88ddbcd",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1352.235079965178,
+              "gpu_memory_peak_mib": 1296.0625,
+              "gpu_memory_baseline_mib": 638.0625
             },
             {
               "seed": 139,
-              "cell_id": "d22fa5fea305544cc2c6eec989a414c95649b1aeefe686939e7254e04fd28cdd",
-              "run_id": "9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3",
-              "throughput_images_s": 398.6450196320691,
-              "gpu_memory_peak_mib": 3656.0,
-              "gpu_memory_baseline_mib": 2868.0
+              "cell_id": "2e83b2d41f482207adde313758e26dee87dc9312562cfadab512b1a8b75cf896",
+              "run_id": "d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067",
+              "throughput_images_s": 1367.8557244904084,
+              "gpu_memory_peak_mib": 1426.0625,
+              "gpu_memory_baseline_mib": 638.0625
             }
           ]
         },
@@ -18162,8 +18369,8 @@
         },
         {
           "id": "torchvision_gpu",
-          "mean_relative_throughput": 0.10559061046943095,
-          "median_gpu_memory_mib": 3266.0
+          "mean_relative_throughput": 0.6487528925642926,
+          "median_gpu_memory_mib": 1112.0625
         },
         {
           "id": "kornia_cpu",
@@ -18337,8 +18544,8 @@
         },
         {
           "id": "torchvision_gpu",
-          "mean_relative_throughput": 0.10178034692106067,
-          "median_gpu_memory_mib": 1754.0
+          "mean_relative_throughput": 0.586755005156848,
+          "median_gpu_memory_mib": 1112.0625
         }
       ]
     },
@@ -18549,31 +18756,31 @@
     },
     "common-summary": {
       "caption": "Ready batches per second and peak process GPU memory on 35 common recipes. Each metric takes the median across seeds, then across recipes. The dashed line marks AX's batch rate.",
-      "sha256": "31399db58856c70ac134dea9b9cb22c4202ee99591afa847fe80b94161e3fcb4",
-      "width": 1209,
+      "sha256": "93d6b3d1f30d61ad3da905c0aef514472ab0192d02b121723ad3d1dcbd3b1995",
+      "width": 1159,
       "height": 491
     },
     "pairwise-kornia": {
       "caption": "AX vs Kornia on 67 shared recipes",
-      "sha256": "3ebf6f13f06006c8b3f0e765a3b1e16bd85302e9b39f7a3ff96a7931d149349c",
+      "sha256": "ba397f6f848c5bd692d949997682c09298fd03b5ef7ba785648bda0b5c08be12",
       "width": 1058,
       "height": 269
     },
     "pairwise-torchvision": {
       "caption": "AX vs TorchVision on 44 shared recipes",
-      "sha256": "3bb250f57c042b1ba7ef0fac1083dfa68ab54d6fb6664087f2b35a140aa841ad",
+      "sha256": "22aae0cf718f627f0f8602062350fa692bc6295b42a002602bc448358470f4fa",
       "width": 1058,
       "height": 269
     },
     "pairwise-pillow": {
       "caption": "AX vs Pillow on 47 shared recipes",
-      "sha256": "d10c019b1a9777ba87d25eefa7cfcce55a50cbec90a8ee6c98ab62e45ef2b609",
+      "sha256": "6197bde3db0817e20891950d35251445ef2404570da550ad6593fea65cf283f4",
       "width": 1058,
       "height": 269
     },
     "pairwise-dali": {
       "caption": "AX vs DALI on 52 shared recipes",
-      "sha256": "461bb7d6bd7a4fc2910c22b5840c0019432cbd9c6c6813ad8baf12c3dd564b6f",
+      "sha256": "19552821b899a8930e92173101fede560e8f1a14a6570fa2d6eb23faeaa7f76b",
       "width": 1082,
       "height": 221
     }
