@@ -113,6 +113,10 @@ def _run_implementation(
 
 def _launch_worker(argv: list[str], implementation: str, dataset_files: str, allsimd_site: Path) -> None:
     env = os.environ.copy()
+    media_dir = env.pop("AUGBENCH_NVIDIA_MEDIA_DIR", "")
+    if implementation == "torchvision_gpu" and media_dir:
+        library_path = env.get("LD_LIBRARY_PATH")
+        env["LD_LIBRARY_PATH"] = os.pathsep.join((media_dir, library_path)) if library_path else media_dir
     if implementation == "albumentationsx_cpu":
         env.update(dict.fromkeys(_AX_THREAD_ENV, "1"))
     else:

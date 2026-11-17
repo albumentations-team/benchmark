@@ -16,15 +16,23 @@ The 8-bit format describes the decoded source. A library can convert it to the d
 
 ## Why use native readers and decoders?
 
-The reader and decoder affect the time a user waits for a batch. Sharing one decoder would hide differences such as decoding on CUDA or decoding just the region a crop needs. The current adapters use each library's reader where available, including Kornia's Rust-backed reader and TorchVision's batched CUDA JPEG decoder. When a library provides image transforms without its own JPEG reader, the path specifies its decoder explicitly. AlbumentationsX uses SimpleJPEG.
+The reader and decoder affect the time a user waits for a batch. AlbumentationsX uses SimpleJPEG. Both Kornia paths use the `kornia-rs` reader, and TorchVision GPU uses TorchCodec for CUDA JPEG decoding. The frozen run records which decoder produced each result.
 
 We use native decode-and-crop when it can produce the requested crop. For example, the DALI adapter supplies one window per image for a fixed-size random crop and adds centered zero padding on short axes. For a random resized crop, it uses the decoder's random crop followed by resize. The decode optimization still has to preserve the recipe's crop size, sampling, and padding. [Execution paths](benchmark_execution_contract.md#timing-boundary) · [DALI ROI decoding](https://docs.nvidia.com/deeplearning/dali/archives/dali_2_4_0/user-guide/operations/nvidia.dali.fn.decoders.image_slice.html)
+
+## Why do TorchVision GPU and Kornia GPU use different JPEG pipelines?
+
+Both use DataLoader. In TorchVision GPU, workers read JPEG bytes and the main process passes them to TorchCodec in one CUDA call. TorchVision can crop decoded `uint8` images before stacking and converting the batch to FP16. When we enabled the L4's hardware JPEG decoder for TorchCodec, `RandomCrop224` went from 495 to 4,198 images/s in a three-seed comparison. The subsequent 44-recipe run measured 4,464 images/s on the same recipe.
+
+In Kornia GPU, workers use `kornia-rs` to decode and apply the crop or resize needed to form a batch. The GPU runs the remaining augmentations and Normalize. We tried TorchCodec with the same hardware decoder and moved Kornia's shape-forming transforms to CUDA. In that trial, Kornia received each full image in FP32 before crop. On `RandomCrop224`, the trial delivered 423 images/s versus 2,255 images/s with CPU decode and crop, and median process peak VRAM rose from 464 to 1,440 MiB. This comparison measures the combined effect of the decoder and crop placement. We kept the established Kornia path for the benchmark.
+
+These are medians across three seeds on a Standard GCP L4 with batch size 256 and 15 workers. The relevant runs are `df3a0bb0c948` (TorchCodec hardware comparison), `d1235938fea1` (full TorchVision GPU), `9c2a6d0b5446` (Kornia CPU decode and crop), and `cbf8f5f31dbf` (Kornia CUDA decode and crop). [Execution paths](benchmark_execution_contract.md#timing-boundary)
 
 ## Why apply TorchVision GPU transforms per image?
 
 The recipes require an independent random draw for each image. A single call to a transform such as TorchVision v2 `RandomResizedCrop` on a batch tensor samples one set of crop parameters for that call. Images in the same batch would therefore share the crop. The adapter calls the transform separately for each image. This also lets it crop or resize variable-sized decoded images before stacking them. Two independent draws can still happen to select the same parameters.
 
-Batching is appropriate when it preserves that independence. TorchVision can decode the input JPEGs in one CUDA call and normalize the assembled batch in one call. For JPEG recompression, the adapter draws an integer quality from 30 through 90 for each image, groups images that drew the same quality for encoding, and restores their original order after decoding. The CUDA encoder accepts one quality per call. [TorchVision v2 transform source](https://docs.pytorch.org/vision/stable/_modules/torchvision/transforms/v2/_transform.html) · [CUDA JPEG encoding](https://docs.pytorch.org/vision/0.29/generated/torchvision.io.encode_jpeg.html) · [Benchmark adapter](../src/augbench/implementations/torchvision_pipeline_impl.py)
+Batching is appropriate when it preserves that independence. TorchCodec decodes the input JPEGs in one CUDA call, and TorchVision normalizes the assembled batch in one call. For JPEG recompression, the adapter draws an integer quality from 30 through 90 for each image, groups images that drew the same quality for encoding, and restores their original order after decoding. The CUDA encoder accepts one quality per call. [TorchVision v2 transform source](https://docs.pytorch.org/vision/stable/_modules/torchvision/transforms/v2/_transform.html) · [CUDA JPEG encoding](https://docs.pytorch.org/vision/0.29/generated/torchvision.io.encode_jpeg.html) · [Benchmark adapter](../src/augbench/implementations/torchvision_pipeline_impl.py)
 
 ## Why disable antialiasing for bilinear resize?
 

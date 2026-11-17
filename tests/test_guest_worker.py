@@ -86,6 +86,27 @@ def test_other_implementations_start_without_thread_overrides(
     assert "OPENCV_FOR_THREADS_NUM" not in env
 
 
+@pytest.mark.parametrize(
+    ("implementation", "library_path"),
+    [
+        ("torchvision_gpu", "/media:/cuda"),
+        ("kornia_gpu", "/cuda"),
+        ("torchvision_cpu", "/cuda"),
+        ("kornia_cpu", "/cuda"),
+        ("dali_gpu", "/cuda"),
+    ],
+)
+def test_only_torchcodec_workers_get_staged_nvidia_media(
+    implementation: str, library_path: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("AUGBENCH_NVIDIA_MEDIA_DIR", "/media")
+    monkeypatch.setenv("LD_LIBRARY_PATH", "/cuda")
+    with patch("augbench.guest_worker.subprocess.run") as run:
+        _launch_worker([], implementation, "[]", Path("/allsimd"))
+
+    assert run.call_args.kwargs["env"]["LD_LIBRARY_PATH"] == library_path
+
+
 def test_preflight_compiles_each_implementation_and_runs_one_batch_per_recipe() -> None:
     request = _request(cell_ids=("0" * 64,))
     first = CellKey(

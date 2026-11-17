@@ -229,6 +229,32 @@ def test_full_report_rejects_measurement_selection(tmp_path: Path, selected_run:
         paper.load_report(Namespace(run=manifest), tmp_path)
 
 
+@pytest.mark.parametrize("change_torch", [False, True])
+def test_torchvision_gpu_replacement_allows_only_addition_of_torchcodec(
+    tmp_path: Path, selected_run: RunRecord, *, change_torch: bool
+) -> None:
+    old_lock = tmp_path / "rgb.lock"
+    new_lock = tmp_path / "decoder.lock"
+    old_lock.write_bytes(b"torch==2.15.0\ntorchvision==0.29.2\n")
+    torch_version = "2.14.0" if change_torch else "2.15.0"
+    new_lock.write_bytes(f"torch=={torch_version}\ntorchcodec==0.17.0\ntorchvision==0.29.2\n".encode())
+    runs = [
+        selected_run.model_copy(
+            update={
+                "inputs": selected_run.inputs.model_copy(
+                    update={"environment_lock_sha256": {"rgb": hashlib.sha256(lock.read_bytes()).hexdigest()}}
+                )
+            }
+        )
+        for lock in (old_lock, new_lock)
+    ]
+    if change_torch:
+        with pytest.raises(ValueError, match="sole change"):
+            paper._torchcodec_lock_version(*runs, old_lock, new_lock)
+    else:
+        assert paper._torchcodec_lock_version(*runs, old_lock, new_lock) == "0.17.0"
+
+
 def test_published_export_flag_excludes_ax_rerun(paper_data: paper._PaperData, selected_run: RunRecord) -> None:
     published = selected_run.model_copy(update={"run_id": paper.RUN_ID})
 

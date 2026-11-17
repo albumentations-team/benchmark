@@ -27,6 +27,49 @@ ensure_uv() {
   command -v uv >/dev/null 2>&1
 }
 
+requires_nvidia_media() {
+  python3 -c '
+import json, sys
+config = json.load(open(sys.argv[1], encoding="utf-8"))["run"]["family_config"]
+measurements = config.get("measurements")
+selected = config["implementations"] if measurements is None else [
+    implementation for implementations in measurements.values() for implementation in implementations
+]
+sys.exit("torchvision_gpu" not in selected)
+' "$REQUEST_PATH"
+}
+
+stage_nvidia_media() {
+  local driver library installed media_dir temporary
+  driver="$(nvidia-smi --id=0 --query-gpu=driver_version --format=csv,noheader)"
+  if [[ ! "$driver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    printf 'Unexpected NVIDIA driver version: %s\n' "$driver" >&2
+    return 1
+  fi
+  library="libnvcuvid.so.$driver"
+  installed="$(ldconfig -p | awk '$1 == "libnvcuvid.so.1" && !found {print $NF; found=1}')"
+  if [[ -n "$installed" && "$(basename "$(readlink -f "$installed")")" == "$library" ]]; then
+    printf 'Using NVIDIA media library %s\n' "$installed"
+    return
+  fi
+
+  # nvJPEG needs this driver library for the fixed-function JPEG engines.
+  media_dir="$STATE_ROOT/nvidia-media"
+  mkdir -p "$media_dir"
+  if [[ ! -s "$media_dir/$library" ]]; then
+    temporary="$(mktemp -d "$STATE_ROOT/downloads/nvidia-media.XXXXXX")"
+    curl --fail --silent --show-error --location --retry 3 --max-time 180 \
+      "https://us.download.nvidia.com/tesla/$driver/NVIDIA-Linux-x86_64-$driver.run" \
+      --output "$temporary/driver.run"
+    sh "$temporary/driver.run" --extract-only --target "$temporary/extracted"
+    install -m 0755 "$temporary/extracted/$library" "$media_dir/$library"
+    rm -rf "$temporary"
+  fi
+  ln -sfn "$library" "$media_dir/libnvcuvid.so.1"
+  export AUGBENCH_NVIDIA_MEDIA_DIR="$media_dir"
+  printf 'Using NVIDIA media library %s\n' "$media_dir/$library"
+}
+
 download_verified() {
   local uri="$1"
   local expected="$2"
@@ -109,6 +152,10 @@ exec > >(tee -a "$LOG_PATH") 2>&1
 ensure_uv
 request_uri="$(curl --fail --silent --show-error --header 'Metadata-Flavor: Google' "$METADATA_URL")"
 gcloud storage cp --quiet "$request_uri" "$REQUEST_PATH"
+
+if requires_nvidia_media; then
+  stage_nvidia_media
+fi
 
 code_uri="$(request_field code_archive_uri)"
 code_sha256="$(request_field run.inputs.code_archive_sha256)"

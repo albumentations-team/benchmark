@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 import torch
 import torchvision.transforms.v2 as tv_transforms
 from torch import nn
-from torchvision.io import ImageReadMode, decode_jpeg, encode_jpeg
+from torchvision.io import encode_jpeg
 
 from augbench.implementations.recipe_stages import collatable_prefix, normalization_stats, transform_specs
 from augbench.implementations.torchvision_impl import create_transform
@@ -55,11 +55,9 @@ class _CudaRecipe(nn.Module):
         self.normalize = _GpuBatchRecipe(recipe)
 
     def forward(self, encoded: list[bytes | torch.Tensor]) -> torch.Tensor:
-        jpeg_tensors = [
-            torch.frombuffer(bytearray(image), dtype=torch.uint8) if isinstance(image, bytes) else image
-            for image in encoded
-        ]
-        images = decode_jpeg(jpeg_tensors, mode=ImageReadMode.RGB, device="cuda")
+        from torchcodec.decoders import decode_jpeg
+
+        images = decode_jpeg(encoded, mode="RGB", device="cuda")
         batch = torch.stack([self.prefix(image) for image in images])
         if self.jpeg_quality is not None:
             batch = _jpeg_round_trip(batch, self.jpeg_quality)
@@ -70,6 +68,8 @@ class _CudaRecipe(nn.Module):
 
 
 def _jpeg_round_trip(batch: torch.Tensor, quality_range: tuple[int, int]) -> torch.Tensor:
+    from torchcodec.decoders import decode_jpeg
+
     groups: dict[int, list[int]] = defaultdict(list)
     for index in range(batch.shape[0]):
         quality = random.randint(*quality_range)  # noqa: S311 - augmentation RNG.
@@ -80,7 +80,7 @@ def _jpeg_round_trip(batch: torch.Tensor, quality_range: tuple[int, int]) -> tor
         encoded.extend(encode_jpeg([batch[index] for index in indices], quality=quality))
         order.extend(indices)
     sizes = [image.numel() for image in encoded]
-    decoded = decode_jpeg(list(torch.cat(encoded).cpu().split(sizes)), mode=ImageReadMode.RGB, device=batch.device)
+    decoded = decode_jpeg(list(torch.cat(encoded).cpu().split(sizes)), mode="RGB", device=batch.device)
     return torch.stack([image for _, image in sorted(zip(order, decoded, strict=True))])
 
 

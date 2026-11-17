@@ -74,12 +74,13 @@ The table describes new runs. Each completed run retains the implementation in i
 | Pillow-AllSIMD CPU (fast) | Same code with the Pillow-AllSIMD wheel in a separate process | Convert to `float16` and normalize |
 | TorchVision CPU | `torchvision.io`, `uint8` recipe, pinned H2D transfer in `uint8` | Convert the batch to `float16` and apply `torchvision.transforms.v2.Normalize` |
 | Kornia CPU | `kornia.io.load_image` with `kornia-rs`, CPU recipe in `float32`, cast the host batch to `float16`, pinned H2D transfer | Apply `kornia.enhance.Normalize` to the `float16` batch |
-| TorchVision GPU | `torchvision.io.read_file` reads variable-length JPEG byte tensors | Batched CUDA JPEG decode, per-image crop/resize and augmentation, then batch FP16 Normalize |
-| Kornia GPU | `kornia.io.load_image` with `kornia-rs`, minimum CPU stages in `float32` to produce samples that can be batched, cast the host batch to `float16`, pinned H2D transfer | Remaining stages, then `kornia.enhance.Normalize` on the `float16` batch |
+| TorchVision GPU | DataLoader workers read JPEG bytes and remove EXIF metadata to preserve the stored pixel orientation | TorchCodec decodes the batch with nvJPEG, TorchVision applies transforms per image, then normalizes the FP16 batch |
+| Kornia GPU | DataLoader workers decode with `kornia.io.load_image` and `kornia-rs` and apply the shape-forming stages in FP32. The assembled FP16 batch uses pinned H2D transfer. | Apply remaining transforms and `kornia.enhance.Normalize` to the FP16 batch |
 | DALI GPU | Native file reader and mixed JPEG decoder | Native DALI graph and `float16` normalization |
 
-Source JPEGs vary in size. TorchVision GPU decodes a list on CUDA and applies its
-shape-forming stages per image before stacking. Kornia GPU forms collatable samples on the CPU.
+Source JPEGs vary in size. TorchVision GPU passes a list of JPEG bytes to TorchCodec,
+then applies its shape-forming stages on the GPU per image before stacking. Kornia GPU
+forms collatable samples in DataLoader workers.
 CPU paths complete the image operations before transfer. The `Resize` recipe has one image operation, `Resize(224)`,
 followed by GPU normalization and output preparation. Recipes such as `Pad` and
 `LongestMaxSize` list the subsequent crop explicitly.
@@ -158,7 +159,9 @@ rule, plus the package lock, recipe catalog, and hardware config. It then:
    VM.
 5. On the VM, downloads the code, raw dataset, and cached RGB environment once, verifies the
    Pillow-AllSIMD lock and wheel, extracts the first 10,000 sorted `val/*.JPEG` files, and
-   prewarms them. Each implementation runs in its own process. It checks one batch through CUDA
+   prewarms them. If the run measures TorchVision GPU, bootstrap makes the installed NVIDIA
+   driver's `libnvcuvid.so.1` available to that worker. Each
+   implementation runs in its own process. It checks one batch through CUDA
    output per recipe, then runs the missing cells with the configured 15 workers. For preflight,
    paths other than DALI use one temporary DataLoader worker. DALI uses its native graph.
 6. Writes an immutable GCS object immediately after each cell.
@@ -182,6 +185,11 @@ settings. Each observation keeps its source run and cell IDs. For an invalid res
 corrected recipe, freeze a correction run covering the affected implementation–recipe pairs
 and all three seeds. Validate the replacement cells before regenerating the report. Keep the
 original cells for reproduction.
+
+The report's TorchVision GPU replacement uses a lock that adds TorchCodec to
+the primary RGB environment. The generator verifies both lock checksums,
+requires all other entries to match, and replaces the complete TorchVision
+GPU selection. [Reproduction instructions](../paper/README.md#regenerate-the-results)
 
 For a targeted run, `measurements` lists the implementation IDs to measure for each
 recipe. The catalog still records full support. The paper generators take a complete

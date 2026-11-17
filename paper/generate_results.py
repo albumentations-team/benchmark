@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 RUN_ID = "3f8e2e315710528399b8e82e2359ab85c58c809644595b68a92fb9d83492cc8c"
 INVALID_DALI_FLIP_RUN = "75bc062fe770cfec3d857f401e16366deb01f6582c8645e952930e3cd3d788fb"
 AX = "albumentationsx_cpu"
+TORCHVISION_GPU = "torchvision_gpu"
 PILLOW_ALLSIMD = ("pillow_allsimd_cpu", "Pillow-AllSIMD CPU (fast)")
 IMPLEMENTATIONS = (
     (AX, "AlbumentationsX"),
@@ -125,6 +126,13 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
         metavar=("MANIFEST", "CELLS", "RECIPES"),
         help="another immutable run with complementary implementation cells",
     )
+    parser.add_argument(
+        "--torchvision-gpu-run",
+        nargs=5,
+        type=Path,
+        metavar=("MANIFEST", "CELLS", "RECIPES", "PRIMARY_LOCK", "DECODER_LOCK"),
+        help="replace all TorchVision GPU cells with a TorchCodec run and verify both RGB locks",
+    )
 
 
 def _run_catalog(run: RunRecord, path: Path) -> RecipeCatalog:
@@ -151,11 +159,18 @@ def load_report(args: argparse.Namespace, root: Path) -> tuple[_PaperData, RunRe
     for manifest, cells, catalog_path in supplemental_inputs:
         supplemental = RunRecord.model_validate_json(manifest.read_bytes())
         _require_compatible_workload(supplemental, run)
+        if supplemental.inputs.environment_lock_sha256 != run.inputs.environment_lock_sha256:
+            raise ValueError("complementary runs must use the same package locks")
         supplemental_catalog = _run_catalog(supplemental, catalog_path)
         records.extend(load_run_results(cells, supplemental, supplemental_catalog, allow_partial=True))
         supplemental_runs.append(supplemental)
     if supplemental_runs:
         _validate_combined_matrix(records, run, recipes)
+    if torchvision_inputs := getattr(args, "torchvision_gpu_run", None):
+        decoder_run, decoder_records = _load_torchvision_gpu_run(torchvision_inputs, run, recipes)
+        records = [record for record in records if record.cell.implementation != TORCHVISION_GPU] + decoder_records
+        _validate_combined_matrix(records, run, recipes)
+        supplemental_runs.append(decoder_run)
     ax_run = None
     if ax_run_inputs:
         ax_run, ax_records = _load_ax_run(ax_run_inputs, run)
@@ -174,9 +189,51 @@ def _require_compatible_workload(supplemental: RunRecord, primary: RunRecord) ->
         or supplemental.hardware != primary.hardware
         or supplemental.inputs.dataset_archive_sha256 != primary.inputs.dataset_archive_sha256
         or supplemental.inputs.recipe_catalog_sha256 != primary.inputs.recipe_catalog_sha256
-        or supplemental.inputs.environment_lock_sha256 != primary.inputs.environment_lock_sha256
     ):
-        raise ValueError("supplemental run must use the same workload, hardware, recipes, and package locks")
+        raise ValueError("source runs must use the same workload, hardware, and recipes")
+
+
+def _load_torchvision_gpu_run(
+    inputs: Sequence[Path], primary: RunRecord, primary_catalog: RecipeCatalog
+) -> tuple[RunRecord, list[ResultRecord]]:
+    manifest, cells, catalog, primary_lock, decoder_lock = inputs
+    replacement = RunRecord.model_validate_json(manifest.read_bytes())
+    _require_compatible_workload(replacement, primary)
+    expected = {
+        recipe.recipe_id: [TORCHVISION_GPU]
+        for recipe in primary_catalog.recipes
+        if TORCHVISION_GPU in recipe.supported_implementations
+    }
+    if replacement.family_config.get("measurements") != expected:
+        raise ValueError("replacement must select exactly all TorchVision GPU recipes")
+
+    version = _torchcodec_lock_version(primary, replacement, primary_lock, decoder_lock)
+    records = load_run_results(cells, replacement, _run_catalog(replacement, catalog))
+    if any(record.runtime.get("jpeg_decoder_version") != version for record in records):
+        raise ValueError("TorchVision GPU cells must record the locked TorchCodec version")
+    return replacement, records
+
+
+def _torchcodec_lock_version(primary: RunRecord, replacement: RunRecord, primary_lock: Path, decoder_lock: Path) -> str:
+    base_hashes = primary.inputs.environment_lock_sha256
+    decoder_hashes = replacement.inputs.environment_lock_sha256
+    original = primary_lock.read_bytes()
+    updated = decoder_lock.read_bytes()
+    if (
+        hashlib.sha256(original).hexdigest() != base_hashes.get("rgb")
+        or hashlib.sha256(updated).hexdigest() != decoder_hashes.get("rgb")
+        or {key: value for key, value in base_hashes.items() if key != "rgb"}
+        != {key: value for key, value in decoder_hashes.items() if key != "rgb"}
+    ):
+        raise ValueError("supplied RGB locks must match the manifests and other package locks must agree")
+
+    matches = list(re.finditer(rb"(?m)^torchcodec==([^\s]+)[^\n]*\n(?:[ \t]+[^\n]*\n)*", updated))
+    if len(matches) != 1:
+        raise ValueError("replacement RGB lock must add exactly one TorchCodec entry")
+    match = matches[0]
+    if updated[: match.start()] + updated[match.end() :] != original:
+        raise ValueError("TorchCodec must be the sole change to the RGB lock")
+    return match[1].decode()
 
 
 def _validate_combined_matrix(records: Sequence[ResultRecord], run: RunRecord, recipes: RecipeCatalog) -> None:

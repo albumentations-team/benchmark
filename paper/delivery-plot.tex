@@ -1,7 +1,8 @@
 \input{generated/delivery-rows.tex}
+\def\DeliveryRateScale{0.177}
 \newcommand{\DeliveryRow}[5]{%
-  \pgfmathsetmacro{\ratepos}{4.0+0.218*#3}%
-  \pgfmathsetmacro{\mempos}{10.1+0.00159*#4}%
+  \pgfmathsetmacro{\ratepos}{4.0+\DeliveryRateScale*#3}%
+  \pgfmathsetmacro{\mempos}{9.4+0.0017*#4}%
   \node[anchor=west] at (0,#1) {#2};
   \fill[#5] (4.0,#1-0.15) rectangle (\ratepos,#1+0.15);
   \node[anchor=west,xshift=2pt,font=\small,fill=white,inner sep=1pt] at (\ratepos,#1)
@@ -12,18 +13,18 @@
 }
 \begin{tikzpicture}[x=1cm,y=0.64cm]
 \node[anchor=west,font=\small\bfseries] at (4.0,\DeliveryTopRow+1.1) {Ready batches/s};
-\node[anchor=west,font=\small\bfseries] at (10.1,\DeliveryTopRow+1.1) {Peak process GPU memory (MiB)};
-\foreach \tick in {0,5,10,15,20}{
-  \pgfmathsetmacro{\pos}{4.0+0.218*\tick}
+\node[anchor=west,font=\small\bfseries] at (9.4,\DeliveryTopRow+1.1) {Peak process GPU memory (MiB)};
+\foreach \tick in {0,5,10,15,20,25}{
+  \pgfmathsetmacro{\pos}{4.0+\DeliveryRateScale*\tick}
   \draw[black!12] (\pos,-0.48) -- (\pos,\DeliveryTopRow+0.52);
   \node[anchor=north,font=\footnotesize,text=black!75] at (\pos,-0.63) {\tick};
 }
-\foreach \tick in {0,1000,2000,3000,3500}{
-  \pgfmathsetmacro{\pos}{10.1+0.00159*\tick}
+\foreach \tick in {0,1000,2000,3000}{
+  \pgfmathsetmacro{\pos}{9.4+0.0017*\tick}
   \draw[black!12] (\pos,-0.48) -- (\pos,\DeliveryTopRow+0.52);
   \node[anchor=north,font=\footnotesize,text=black!75] at (\pos,-0.63) {\tick};
 }
-\pgfmathsetmacro{\axratepos}{4.0+0.218*\DeliveryAXRate}
+\pgfmathsetmacro{\axratepos}{4.0+\DeliveryRateScale*\DeliveryAXRate}
 \draw[black!38,densely dashed] (\axratepos,-0.48) -- (\axratepos,\DeliveryTopRow+0.52);
 \DeliveryRows
 \end{tikzpicture}
