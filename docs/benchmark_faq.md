@@ -14,19 +14,55 @@ JPEG input for RGB classification is a common workload with a large set of compa
 
 The 8-bit format describes the decoded source. A library can convert it to the dtype its operators expect, and every path delivers the same FP16 output. A workload that starts with FP32 or FP16 arrays changes which readers can participate, how many bytes move, and which kernels run. Nine-channel images, video, volumes, and sequences of volumes also need their own sample format, recipes, and batch size. Those comparisons have yet to be run. [RGB workload configuration](../configs/families/rgb.yaml) · [Requirements for a new workload](benchmark_execution_contract.md#adding-a-benchmark-family)
 
-## Why use native readers and decoders?
+## JPEG decoders
 
-The reader and decoder affect the time a user waits for a batch. AlbumentationsX uses SimpleJPEG. Both Kornia paths use the `kornia-rs` reader, and TorchVision GPU uses TorchCodec for CUDA JPEG decoding. The frozen run records which decoder produced each result.
+### How do we choose a decoder?
 
-We use native decode-and-crop when it can produce the requested crop. For example, the DALI adapter supplies one window per image for a fixed-size random crop and adds centered zero padding on short axes. For a random resized crop, it uses the decoder's random crop followed by resize. The decode optimization still has to preserve the recipe's crop size, sampling, and padding. [Execution paths](benchmark_execution_contract.md#timing-boundary) · [DALI ROI decoding](https://docs.nvidia.com/deeplearning/dali/archives/dali_2_4_0/user-guide/operations/nvidia.dali.fn.decoders.image_slice.html)
+We start with the reader provided by the library or its I/O stack. This lets a path use features such as batch decoding on CUDA or cropping during decode. For a library that takes decoded images, we choose a loader that supplies the dtype and layout its transforms consume.
 
-## Why do TorchVision GPU and Kornia GPU use different JPEG pipelines?
+When we test multiple valid options for a path, we keep the one that delivers the highest measured throughput from JPEG on disk to a normalized CUDA batch. We record peak process VRAM in the same pass. The recipe's crop size, interpolation, sampling, padding, and output contract still apply when we change the decoder or move a stage between CPU and GPU. [Timing boundary and output contract](benchmark_execution_contract.md#timing-boundary)
 
-Both use DataLoader. In TorchVision GPU, workers read JPEG bytes and the main process passes them to TorchCodec in one CUDA call. TorchVision can crop decoded `uint8` images before stacking and converting the batch to FP16. When we enabled the L4's hardware JPEG decoder for TorchCodec, `RandomCrop224` went from 495 to 4,198 images/s in a three-seed comparison. The subsequent 44-recipe run measured 4,464 images/s on the same recipe.
+| Benchmark path | Selected JPEG reader and decoder |
+| --- | --- |
+| AlbumentationsX CPU | SimpleJPEG in the benchmark loader. It supplies RGB `uint8` NumPy arrays to AX. |
+| Pillow and Pillow-AllSIMD | Each wheel's own JPEG decoder through the Pillow image API. |
+| TorchVision CPU | `torchvision.io.decode_image` on the CPU. |
+| TorchVision GPU | TorchCodec batch decoding through nvJPEG on the L4. |
+| Kornia CPU and GPU | `kornia.io.load_image` with `kornia-rs` on the CPU. |
+| DALI GPU | DALI's file reader and mixed JPEG decoder, with decode-and-crop where the recipe allows it. |
 
-In Kornia GPU, workers use `kornia-rs` to decode and apply the crop or resize needed to form a batch. The GPU runs the remaining augmentations and Normalize. We tried TorchCodec with the same hardware decoder and moved Kornia's shape-forming transforms to CUDA. In that trial, Kornia received each full image in FP32 before crop. On `RandomCrop224`, the trial delivered 423 images/s versus 2,255 images/s with CPU decode and crop, and median process peak VRAM rose from 464 to 1,440 MiB. This comparison measures the combined effect of the decoder and crop placement. We kept the established Kornia path for the benchmark.
+The comparisons below use warm-cache ImageNet JPEGs on a Standard GCP `g2-standard-16` with one NVIDIA L4. Each configuration uses 256 images per batch and reports the median across three seeds. The frozen run identifies the exact decoder, code, and settings for each measurement. [Fixed RGB workload](benchmark_execution_contract.md#fixed-rgb-workload) · [Published result manifests](generated/results.json)
 
-These are medians across three seeds on a Standard GCP L4 with batch size 256 and 15 workers. The relevant runs are `df3a0bb0c948` (TorchCodec hardware comparison), `d1235938fea1` (full TorchVision GPU), `9c2a6d0b5446` (Kornia CPU decode and crop), and `cbf8f5f31dbf` (Kornia CUDA decode and crop). [Execution paths](benchmark_execution_contract.md#timing-boundary)
+### Why keep SimpleJPEG for AlbumentationsX?
+
+With SimpleJPEG, DataLoader workers decode and augment RGB on the CPU. The GPU receives the assembled `uint8` batch after Resize or Crop, about 36.75 MiB for 256 images at 224×224. With TorchCodec and nvJPEG, a batch of JPEGs decodes on the GPU. CPU workers need the full-resolution RGB back before running the same AX transform. That reverse transfer carries about 162 MiB per batch, and the finished host batch still goes to the GPU for normalization. [AX image loader](../src/augbench/datasets/loaders.py) · [AX stage profile](https://console.cloud.google.com/storage/browser/imagenet_validation/augmentation-benchmark/runs/d94b2030d357c541c4f07a878fb74fa055d0be0c1b5fe689adbd1461c6781bb0?project=albumentations)
+
+In a direct `Resize(224)` A/B, SimpleJPEG delivered **4,805 images/s** at **404 MiB** peak VRAM. The nvJPEG path delivered **2,883 images/s** at **1,098 MiB**, about 40% lower throughput. Both paths used AX Resize on the CPU and the same GPU normalization. The SimpleJPEG path used 15 DataLoader processes. The nvJPEG path used a batch decoder and 15 CPU threads for reading and augmentation, so the comparison covers the full input pipelines. [Direct AX decoder A/B](https://console.cloud.google.com/storage/browser/imagenet_validation/augmentation-benchmark/runs/562ca6f032a2d97cfed4a157a58aa12f6cca1dd3d40e391e8e925d4a233e0709?project=albumentations)
+
+We also packed the decoded images into one GPU buffer and copied that buffer into pinned host memory. The GPU-to-CPU stage runs from decoder return until the frames are ready for CPU transforms, including the time spent packing. Both copy modes used the same JPEG order and AX operations within each recipe. The `RandomCrop224` comparison also paired the crop windows. [Resize copy comparison](https://console.cloud.google.com/storage/browser/imagenet_validation/augmentation-benchmark/runs/cf21229c8f9af55023e60930dae6576fd76e309fe142fad9f29b8237aec8ac4b?project=albumentations) · [RandomCrop224 copy comparison](https://console.cloud.google.com/storage/browser/imagenet_validation/augmentation-benchmark/runs/a9c0a417c44fb478b12877e9a84dbdd187fdb0898fa844062041356998ade4f3?project=albumentations)
+
+| AX recipe with nvJPEG | Copies per batch | GPU-to-CPU stage, ms/batch | End-to-end images/s | Peak process VRAM, MiB |
+| --- | ---: | ---: | ---: | ---: |
+| Resize | 256 | 23.6 | 2,960 | 1,098 |
+| Resize | 1 | 18.3 | 3,016 | 1,410 |
+| RandomCrop224 | 256 | 46.8 | 3,029 | 1,098 |
+| RandomCrop224 | 1 | 26.5 | 3,170 | 1,410 |
+
+Packing improved throughput by 1.9% on Resize and 4.7% on `RandomCrop224` and raised peak VRAM by 312 MiB for both recipes. SimpleJPEG remains the selected AX decoder.
+
+### Why do TorchVision GPU and Kornia GPU use different JPEG pipelines?
+
+TorchVision benefits from GPU decode because its transforms can consume the decoded `uint8` CUDA tensors directly. DataLoader workers read JPEG bytes and remove the EXIF orientation metadata so decoding preserves the stored pixel orientation. The main process passes the JPEGs to TorchCodec in one batch call. TorchVision applies Resize or Crop on the GPU, stacks the resulting 224×224 images, and normalizes the FP16 batch. This path keeps decoded RGB on the GPU from decode through normalization. [TorchVision adapter](../src/augbench/implementations/torchvision_pipeline_impl.py) · [TorchCodec JPEG decoding](https://meta-pytorch.org/torchcodec/stable/generated_examples/decoding/image_decoding.html)
+
+On `RandomCrop224`, the earlier hybrid path using `torchvision.io.decode_jpeg` delivered **495 images/s**. The targeted run with TorchCodec and hardware nvJPEG delivered **4,198 images/s**. The subsequent 44-recipe TorchVision GPU run measured **4,464 images/s** on `RandomCrop224` and **3,425 images/s** on Resize. We use the TorchCodec path for TorchVision GPU. [Earlier TorchVision run](https://console.cloud.google.com/storage/browser/imagenet_validation/augmentation-benchmark/runs/9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3?project=albumentations) · [Targeted TorchCodec run](https://console.cloud.google.com/storage/browser/imagenet_validation/augmentation-benchmark/runs/df3a0bb0c948f7e418d1a2f93a830d1b71917c70983c16f63e73210b3b4e8bab?project=albumentations) · [Full TorchVision GPU run](https://console.cloud.google.com/storage/browser/imagenet_validation/augmentation-benchmark/runs/d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067?project=albumentations)
+
+Kornia GPU uses `kornia-rs` to decode on the CPU. Workers crop or resize the FP32 images to make them stackable, and the assembled batch is converted to FP16 before the pinned transfer. The GPU runs any remaining transforms and normalizes the batch. In the TorchCodec trial, we moved crop to CUDA as well. Each decoded full-resolution image was converted to FP32 on the GPU before Kornia cropped it, increasing the amount of data handled on the GPU before the spatial dimensions shrank. [Kornia I/O](https://kornia.readthedocs.io/en/stable/io.html) · [Kornia adapter](../src/augbench/implementations/kornia_pipeline_impl.py)
+
+On `RandomCrop224`, the native Kornia path delivered **2,255 images/s** at **464 MiB** peak VRAM. The TorchCodec and CUDA crop trial delivered **423 images/s** at **1,440 MiB**. The trial measures the combined effect of switching the decoder, moving the crop, and converting full-resolution tensors on the GPU. We kept CPU decode and shape preparation for Kornia GPU. [Kornia native path](https://console.cloud.google.com/storage/browser/imagenet_validation/augmentation-benchmark/runs/9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3?project=albumentations) · [Kornia CUDA decode and crop trial](https://console.cloud.google.com/storage/browser/imagenet_validation/augmentation-benchmark/runs/cbf8f5f31dbfd3138343afe9d6b43b16095b8a9473b6c5dcb0db1c79b14d9fe2?project=albumentations)
+
+### When does DALI crop during JPEG decoding?
+
+We use DALI's region-of-interest decoder when the recipe starts with a compatible crop. For `RandomCrop224`, the adapter supplies a separate window for each image and adds centered zero padding on short axes. For `RandomResizedCrop`, DALI samples the crop in the decoder and resizes the result. [DALI execution path](benchmark_execution_contract.md#timing-boundary) · [DALI region-of-interest decoding](https://docs.nvidia.com/deeplearning/dali/user-guide/docs/operations/nvidia.dali.fn.decoders.image_slice.html)
 
 ## Why apply TorchVision GPU transforms per image?
 
