@@ -3,6 +3,7 @@
 import random
 from collections.abc import Callable
 from functools import partial
+from math import isqrt, pi
 from typing import Any
 
 import kornia
@@ -11,16 +12,18 @@ import torch
 import torch.nn.functional as torch_functional
 
 from augbench.implementations.geometry import (
+    affine_axis_ranges,
     aspect_size,
     centered_inverse_affine,
     centered_inverse_perspective,
     centered_padding,
     emboss_kernel,
-    x_shear_matrix,
 )
-from augbench.implementations.specs import TransformSpec
+from augbench.implementations.specs import TransformSpec, channel_orders, odd_kernel_sizes, parameter_range
 
 LIBRARY = "kornia"
+
+_TPS_POINTS_PER_AXIS = 2
 
 
 class _TensorOperation(torch.nn.Module):
@@ -139,12 +142,16 @@ def _build_colorize(params: dict[str, Any]) -> Any:
 
 
 class _Emboss(torch.nn.Module):
-    def __init__(self, alpha: float, strength: float) -> None:
+    def __init__(self, alpha: tuple[float, float], strength: tuple[float, float]) -> None:
         super().__init__()
-        self.register_buffer("kernel", torch.tensor(emboss_kernel(alpha, strength)).reshape(1, 3, 3))
+        self._alpha = alpha
+        self._strength = strength
 
     def forward(self, image: torch.Tensor) -> torch.Tensor:
-        return kornia.filters.filter2d(image, self.kernel.to(image)).clamp_(0, 1)
+        alpha = _sample_uniform(image, self._alpha)
+        strength = _sample_uniform(image, self._strength)
+        kernel = torch.stack(emboss_kernel(alpha, strength), dim=-1).reshape(-1, 3, 3)
+        return kornia.filters.filter2d(image, kernel.to(dtype=image.dtype)).clamp_(0, 1)
 
 
 class _RandomJigsawWithPad(torch.nn.Module):
@@ -161,39 +168,6 @@ class _RandomJigsawWithPad(torch.nn.Module):
         if pad_height or pad_width:
             image = torch_functional.pad(image, (0, pad_width, 0, pad_height))
         return self.jigsaw(image)[..., :height, :width]
-
-
-class _FixedAffine(torch.nn.Module):
-    def __init__(
-        self,
-        *,
-        angle_degrees: float,
-        translation: tuple[float, float],
-        scale_factor: float,
-        shear: tuple[float, float],
-    ) -> None:
-        super().__init__()
-        self.register_buffer("angle", torch.tensor([angle_degrees], dtype=torch.float32))
-        self.register_buffer("translation", torch.tensor([translation], dtype=torch.float32))
-        self.register_buffer("scale_factor", torch.tensor([[scale_factor, scale_factor]], dtype=torch.float32))
-        self.register_buffer("shear", torch.tensor([shear], dtype=torch.float32))
-
-    def forward(self, image: torch.Tensor) -> torch.Tensor:
-        batch_size = int(image.shape[0])
-        angle = self.angle.to(image)
-        translation = self.translation.to(image)
-        scale_factor = self.scale_factor.to(image)
-        shear = self.shear.to(image)
-        transform = kornia.geometry.transform.Affine(
-            angle=angle.expand(batch_size),
-            translation=translation.expand(batch_size, -1),
-            scale_factor=scale_factor.expand(batch_size, -1),
-            shear=shear.expand(batch_size, -1),
-            mode="bilinear",
-            padding_mode="zeros",
-            align_corners=True,
-        )
-        return transform(image)
 
 
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
@@ -222,16 +196,41 @@ def _build_auto_contrast(_params: dict[str, Any]) -> Any | None:
     return kornia_augmentation.RandomAutoContrast(p=1)
 
 
-def _build_blur(params: dict[str, Any]) -> Any | None:
-    return kornia_augmentation.RandomBoxBlur(
-        p=1,
-        kernel_size=(params["kernel_size"], params["kernel_size"]),
-        border_type=params["border_mode"],
+def _sample_uniform(image: torch.Tensor, bounds: tuple[float, float]) -> torch.Tensor:
+    return torch.empty(image.shape[0], device=image.device, dtype=torch.float32).uniform_(*bounds)
+
+
+def _build_sized_filter(
+    sizes: range, apply: Callable[[torch.Tensor, tuple[int, int]], torch.Tensor]
+) -> torch.nn.Module:
+    def blur(image: torch.Tensor) -> torch.Tensor:
+        if image.shape[0] == 1:
+            size = random.choice(sizes)  # noqa: S311 - augmentation RNG.
+            return apply(image, (size, size))
+        choices = torch.randint(len(sizes), (image.shape[0],), device="cpu")
+        result = torch.empty_like(image)
+        for index, size in enumerate(sizes):
+            indices = (choices == index).nonzero().flatten()
+            if indices.numel():
+                indices = indices.to(image.device)
+                group = image.index_select(0, indices)
+                result.index_copy_(0, indices, apply(group, (size, size)))
+        return result
+
+    return _TensorOperation(blur)
+
+
+def _build_blur(params: dict[str, Any]) -> Any:
+    return _build_sized_filter(
+        odd_kernel_sizes(params["kernel_size"]), partial(kornia.filters.box_blur, border_type=params["border_mode"])
     )
 
 
-def _build_brightness(params: dict[str, Any]) -> Any | None:
-    return kornia.enhance.AdjustBrightnessAccumulative(1 + params["brightness_limit"][0])
+def _build_brightness(params: dict[str, Any]) -> Any:
+    bounds = parameter_range(params["brightness_limit"])
+    return _TensorOperation(
+        lambda image: kornia.enhance.adjust_brightness_accumulative(image, 1 + _sample_uniform(image, bounds))
+    )
 
 
 def _build_channel_dropout(_params: dict[str, Any]) -> Any | None:
@@ -242,10 +241,24 @@ def _build_channel_shuffle(_params: dict[str, Any]) -> Any | None:
     return kornia_augmentation.RandomChannelShuffle(p=1)
 
 
+def _build_channel_swap(params: dict[str, Any]) -> Any:
+    orders = channel_orders(params)
+    if len(orders) == 1:
+        return _TensorOperation(lambda image: image[:, orders[0], ...])
+    table = torch.tensor(orders, dtype=torch.long)
+
+    def swap(image: torch.Tensor) -> torch.Tensor:
+        choices = torch.randint(len(orders), (image.shape[0],), device=image.device)
+        indices = table.to(image.device)[choices, :, None, None]
+        return image.gather(dim=1, index=indices.expand_as(image))
+
+    return _TensorOperation(swap)
+
+
 def _build_clahe(params: dict[str, Any]) -> Any | None:
     levels = params["clip_limits"]
     return _DiscreteClahe(
-        clip_limit=(float(levels[0]), float(levels[-1] + 1)), grid_size=tuple(params["tile_grid_size"])
+        clip_limit=(float(levels[0]), float(levels[-1] + 1)), grid_size=tuple(params["tile_grid_size"]), p=1
     )
 
 
@@ -256,8 +269,11 @@ class _DiscreteClahe(kornia_augmentation.RandomClahe):
         return parameters
 
 
-def _build_contrast(params: dict[str, Any]) -> Any | None:
-    return kornia.enhance.AdjustContrastWithMeanSubtraction(1 + params["contrast_limit"][0])
+def _build_contrast(params: dict[str, Any]) -> Any:
+    bounds = parameter_range(params["contrast_limit"])
+    return _TensorOperation(
+        lambda image: kornia.enhance.adjust_contrast_with_mean_subtraction(image, 1 + _sample_uniform(image, bounds))
+    )
 
 
 def _build_equalize(_params: dict[str, Any]) -> Any | None:
@@ -265,9 +281,9 @@ def _build_equalize(_params: dict[str, Any]) -> Any | None:
 
 
 def _build_random_gamma(params: dict[str, Any]) -> Any | None:
-    gamma = params["gamma"] / 100
+    low, high = parameter_range(params["gamma"])
     return kornia_augmentation.RandomGamma(
-        gamma=(gamma, gamma),
+        gamma=(low / 100, high / 100),
         p=1,
     )
 
@@ -275,7 +291,7 @@ def _build_random_gamma(params: dict[str, Any]) -> Any | None:
 def _build_gaussian_blur(params: dict[str, Any]) -> Any | None:
     return kornia_augmentation.RandomGaussianBlur(
         kernel_size=tuple(params["kernel_size"]),
-        sigma=(params["sigma"], params["sigma"]),
+        sigma=parameter_range(params["sigma"]),
         p=1,
     )
 
@@ -335,12 +351,8 @@ def _build_jpeg_compression(params: dict[str, Any]) -> Any | None:
     return _TensorOperation(compress)
 
 
-def _build_median_blur(params: dict[str, Any]) -> Any | None:
-    kernel_size = params["blur_limit"]
-    return kornia_augmentation.RandomMedianBlur(
-        kernel_size=(kernel_size, kernel_size),
-        p=1,
-    )
+def _build_median_blur(params: dict[str, Any]) -> Any:
+    return _build_sized_filter(odd_kernel_sizes(params["blur_limit"]), kornia.filters.median_blur)
 
 
 def _build_motion_blur(params: dict[str, Any]) -> Any | None:
@@ -380,7 +392,46 @@ def _build_plasma_shadow(params: dict[str, Any]) -> Any | None:
     )
 
 
-def _build_rain(params: dict[str, Any]) -> Any | None:
+class _Rain(kornia_augmentation.RandomRain):
+    def __init__(self, height: int, thickness: int, brightness: float) -> None:
+        count = height // 3
+        rows = height // 8 + 1
+        super().__init__(number_of_drops=(count, count), drop_height=(rows, rows), drop_width=(0, 19), p=1)
+        self._brightness = brightness
+        # OpenCV's thick lines use a disk around the centerline. Keep only maximal rectangles in the disk.
+        radius = 0 if thickness == 1 else (thickness + 1) // 2
+        half_widths = {isqrt(radius**2 - y**2): y for y in range(radius + 1)}
+        self._footprint = tuple((2 * y + 1, 2 * x + 1) for x, y in half_widths.items())
+
+    def generate_parameters(self, shape: tuple[int, ...]) -> dict[str, torch.Tensor]:
+        params = super().generate_parameters(shape)
+        # AX's continuous slant in [-10, 10] lands on integer offsets -10 through +9.
+        slant = params["drop_width_factor"] - 10
+        params["drop_width_factor"] = slant + slant.sign()
+        return params
+
+    def apply_transform(
+        self,
+        image: torch.Tensor,
+        params: dict[str, torch.Tensor],
+        flags: dict[str, Any],
+        transform: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        centerlines = super().apply_transform(torch.zeros_like(image[:, :1]), params, flags, transform)
+        overlay = torch.zeros_like(centerlines)
+        for h, w in self._footprint:
+            thick = torch_functional.max_pool2d(centerlines, (h, w), stride=1, padding=(h // 2, w // 2))
+            torch.maximum(overlay, thick, out=overlay)
+        softened = kornia.filters.box_blur(overlay, 7)
+        result = (image + softened).clamp_(0, 1)
+        if self._brightness != 1:
+            result.mul_(self._brightness)
+        return result
+
+
+def _build_rain(params: dict[str, Any]) -> Any:
+    if "input_height" in params:
+        return _Rain(params["input_height"], params["drop_width"], params["brightness_coefficient"])
     return kornia_augmentation.RandomRain(
         drop_width=(params["drop_width"], params["drop_width"]),
         drop_height=(params["drop_height"], params["drop_height"]),
@@ -405,8 +456,11 @@ def _build_salt_and_pepper(params: dict[str, Any]) -> Any | None:
     )
 
 
-def _build_saturation(params: dict[str, Any]) -> Any | None:
-    return kornia.enhance.AdjustSaturationWithGraySubtraction(1 + params["saturation_factor"])
+def _build_saturation(params: dict[str, Any]) -> Any:
+    bounds = parameter_range(params["saturation_factor"])
+    return _TensorOperation(
+        lambda image: kornia.enhance.adjust_saturation_with_gray_subtraction(image, 1 + _sample_uniform(image, bounds))
+    )
 
 
 def _build_sharpen(params: dict[str, Any]) -> Any:
@@ -432,34 +486,40 @@ def _build_snow(params: dict[str, Any]) -> Any | None:
     )
 
 
-def _build_solarize(params: dict[str, Any]) -> Any | None:
-    return _TensorOperation(partial(kornia.enhance.solarize, thresholds=params["threshold"]))
+def _build_solarize(params: dict[str, Any]) -> Any:
+    bounds = parameter_range(params["threshold"])
+    return _TensorOperation(lambda image: kornia.enhance.solarize(image, thresholds=_sample_uniform(image, bounds)))
 
 
-def _build_affine(params: dict[str, Any]) -> Any | None:
-    size = params["input_size"]
-    center = (size - 1) / 2
-    inverse = centered_inverse_affine(
-        (center, center), params["angle"], params["scale"], tuple(params["shift"]), tuple(params["shear"])
-    )
-    matrix = torch.tensor(inverse, dtype=torch.float32).reshape(1, 2, 3)
-    forward = kornia.geometry.transform.invert_affine_transform(matrix)
+def _build_affine(params: dict[str, Any]) -> Any:
+    angles = parameter_range(params["angle"])
+    scales = parameter_range(params["scale"])
+    (min_x, max_x), (min_y, max_y) = affine_axis_ranges(params["shift"])
+    shear = affine_axis_ranges(params["shear"]) if "shear" in params else None
 
     def warp(image: torch.Tensor) -> torch.Tensor:
-        return kornia.geometry.transform.warp_affine(
-            image.float(), forward.to(image.device).expand(image.shape[0], -1, -1), (size, size), align_corners=True
-        ).to(image.dtype)
+        height, width = image.shape[-2:]
+        center = ((width - 1) / 2, (height - 1) / 2)
+        angle = _sample_uniform(image, angles) * (pi / 180)
+        scale = _sample_uniform(image, scales)
+        batch_shape = (image.shape[0],)
+        x = torch.randint(min_x, max_x + 1, batch_shape, device=image.device)
+        y = torch.randint(min_y, max_y + 1, batch_shape, device=image.device)
+        slopes: tuple[float | torch.Tensor, float | torch.Tensor] = (0.0, 0.0)
+        if shear is not None:
+            shear_x, shear_y = shear
+            slopes = (
+                (_sample_uniform(image, shear_x) * (pi / 180)).tan(),
+                (_sample_uniform(image, shear_y) * (pi / 180)).tan(),
+            )
+        inverse = centered_inverse_affine(center, (angle.sin(), angle.cos()), scale, (x, y), slopes)
+        matrix = torch.stack(inverse, dim=-1).reshape(-1, 2, 3)
+        forward = kornia.geometry.transform.invert_affine_transform(matrix)
+        return kornia.geometry.transform.warp_affine(image.float(), forward, (height, width), align_corners=True).to(
+            image.dtype
+        )
 
     return _TensorOperation(warp)
-
-
-def _build_shift_scale_rotate(params: dict[str, Any]) -> Any:
-    return _FixedAffine(
-        angle_degrees=params["angle"],
-        translation=tuple(params["shift"]),
-        scale_factor=params["scale"],
-        shear=(0, 0),
-    )
 
 
 def _build_random_crop224(params: dict[str, Any]) -> Any | None:
@@ -480,12 +540,21 @@ class _CenteredRandomCrop(torch.nn.Module):
         return self.crop(image)
 
 
-def _build_elastic(params: dict[str, Any]) -> Any | None:
-    return kornia_augmentation.RandomElasticTransform(
-        p=1,
-        sigma=(params["sigma"], params["sigma"]),
-        alpha=(params["kornia_alpha"], params["kornia_alpha"]),
-    )
+class _ElasticTransform(kornia_augmentation.RandomElasticTransform):
+    def __init__(self, amplitude: tuple[float, float], sigma: float) -> None:
+        super().__init__(p=1, sigma=(sigma, sigma), alpha=(amplitude[1], amplitude[1]))
+        self._strength = (amplitude[0] / amplitude[1], 1.0) if amplitude[1] else (1.0, 1.0)
+
+    def generate_parameters(self, shape: tuple[int, ...]) -> dict[str, torch.Tensor]:
+        params = super().generate_parameters(shape)
+        noise = params["noise"]
+        multiplier = _sample_uniform(noise, self._strength).reshape(-1, 1, 1, 1)
+        noise.mul_(multiplier)
+        return params
+
+
+def _build_elastic(params: dict[str, Any]) -> Any:
+    return _ElasticTransform(parameter_range(params["kornia_alpha"]), params["sigma"])
 
 
 def _build_erasing(params: dict[str, Any]) -> Any | None:
@@ -498,13 +567,25 @@ def _build_erasing(params: dict[str, Any]) -> Any | None:
     )
 
 
-def _build_optical_distortion(_params: dict[str, Any]) -> Any | None:
-    return kornia.augmentation.RandomFisheye(
-        center_x=torch.tensor([-0.3, 0.3]),
-        center_y=torch.tensor([-0.3, 0.3]),
-        gamma=torch.tensor([0.9, 1.1]),
-        p=1,
-    )
+def _build_optical_distortion(params: dict[str, Any]) -> Any:
+    if params["mode"] != "fisheye":
+        raise ValueError(f"Kornia optical distortion requires fisheye mode, got {params['mode']!r}")
+    limit = params["distort_limit"]
+    bounds = parameter_range(limit) if isinstance(limit, (list, tuple)) else (-limit, limit)
+
+    def warp(image: torch.Tensor) -> torch.Tensor:
+        height, width = image.shape[-2:]
+        cx, cy = width / 2, height / 2
+        x = torch.arange(width, device=image.device, dtype=torch.float32) - cx
+        y = torch.arange(height, device=image.device, dtype=torch.float32)[:, None] - cy
+        k = _sample_uniform(image, bounds).reshape(-1, 1, 1)
+        radius_squared = (x.square() + y.square()) / (cx**2 + cy**2)
+        scale = 1 + k * radius_squared
+        return kornia.geometry.transform.remap(image.float(), cx + x * scale, cy + y * scale, align_corners=True).to(
+            image.dtype
+        )
+
+    return _TensorOperation(warp)
 
 
 def _build_horizontal_flip(_params: dict[str, Any]) -> Any | None:
@@ -557,37 +638,41 @@ def _build_rotate(params: dict[str, Any]) -> Any | None:
     )
 
 
-def _build_shear(params: dict[str, Any]) -> Any | None:
-    return _FixedXShear(float(params["shear"]))
+def _build_shear(params: dict[str, Any]) -> Any:
+    angles = parameter_range(params["shear"])
 
-
-class _FixedXShear(torch.nn.Module):
-    def __init__(self, degrees: float) -> None:
-        super().__init__()
-        self._degrees = degrees
-
-    def forward(self, image: torch.Tensor) -> torch.Tensor:
+    def shear(image: torch.Tensor) -> torch.Tensor:
         height, width = image.shape[-2:]
-        matrix = torch.tensor(
-            x_shear_matrix(self._degrees, (height - 1) / 2),
-            dtype=torch.float32,
-            device=image.device,
-        ).reshape(1, 2, 3)
-        return kornia.geometry.transform.warp_affine(
-            image.float(),
-            matrix.expand(image.shape[0], -1, -1),
-            (height, width),
-            mode="bilinear",
-            padding_mode="zeros",
-            align_corners=True,
-        ).to(image.dtype)
+        slope = (_sample_uniform(image, angles) * (pi / 180)).tan()
+        zero = torch.zeros_like(slope)
+        one = torch.ones_like(slope)
+        matrix = torch.stack((one, slope, -slope * ((height - 1) / 2), zero, one, zero), dim=-1).reshape(-1, 2, 3)
+        return kornia.geometry.transform.warp_affine(image.float(), matrix, (height, width), align_corners=True).to(
+            image.dtype
+        )
+
+    return _TensorOperation(shear)
 
 
-def _build_thin_plate_spline(params: dict[str, Any]) -> Any | None:
-    return kornia_augmentation.RandomThinPlateSpline(
-        scale=params["distortion_scale"],
-        p=1,
-    )
+class _ThinPlateSpline(kornia_augmentation.RandomThinPlateSpline):
+    def __init__(self, std_fraction: float) -> None:
+        super().__init__(scale=0, align_corners=False, p=1)
+        self._std = 2 * std_fraction
+
+    def generate_parameters(self, shape: tuple[int, ...]) -> dict[str, torch.Tensor]:
+        batch, _, height, width = shape
+        anchors = torch.tensor([[-1, -1], [-1, 1], [1, -1], [1, 1], [0, 0]], device=self.device, dtype=torch.float32)
+        # AX anchors are at 0, W/2 and W in continuous pixel coordinates.
+        offset = anchors.new_tensor((1 / width, 1 / height))
+        dst = (anchors + offset).expand(batch, -1, -1)
+        src = dst + torch.randn(dst.shape, device=dst.device, dtype=dst.dtype) * self._std
+        return {"src": src, "dst": dst}
+
+
+def _build_thin_plate_spline(params: dict[str, Any]) -> Any:
+    if params["num_control_points"] != _TPS_POINTS_PER_AXIS:
+        raise ValueError("Kornia ThinPlateSpline requires four corners and a center point")
+    return _ThinPlateSpline(params["distortion_scale"] / 10)
 
 
 def _build_vertical_flip(_params: dict[str, Any]) -> Any | None:
@@ -610,7 +695,7 @@ def _build_normalize(_params: dict[str, Any]) -> Any | None:
 
 def _build_posterize(params: dict[str, Any]) -> Any | None:
     return kornia_augmentation.RandomPosterize(
-        bits=float(params["bits"]),
+        bits=parameter_range(params["bits"]),
         p=1,
     )
 
@@ -677,9 +762,9 @@ _TRANSFORM_BUILDERS = {
     "RandomSizedCrop": _build_random_sized_crop,
     "CoarseDropout": _build_coarse_dropout,
     "Colorize": _build_colorize,
-    "Emboss": lambda params: _Emboss(params["alpha"], params["strength"]),
-    "ShiftScaleRotate": _build_shift_scale_rotate,
-    "ChannelSwap": lambda _: _TensorOperation(kornia.color.rgb_to_bgr),
+    "Emboss": lambda params: _Emboss(parameter_range(params["alpha"]), parameter_range(params["strength"])),
+    "ShiftScaleRotate": _build_affine,
+    "ChannelSwap": _build_channel_swap,
     "Transpose": lambda _: _TensorOperation(lambda image: image.transpose(-2, -1)),
     "Morphological": lambda params: _Morphological(params["operation"]),
     "Elastic": _build_elastic,

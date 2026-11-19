@@ -15,12 +15,13 @@ from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 from augbench.implementations.geometry import (
     aspect_size,
-    centered_inverse_affine,
     centered_padding,
     emboss_kernel,
+    sample_inverse_affine,
     sample_inverse_perspective,
     x_shear_matrix,
 )
+from augbench.implementations.specs import channel_orders, odd_kernel_sizes, parameter_range
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -107,10 +108,10 @@ def _build_perspective(params: dict[str, Any]) -> Any:
 
 
 def _build_shear(params: dict[str, Any]) -> Any | None:
-    angle = float(params["shear"])
+    angle_range = parameter_range(params["shear"])
 
     def shear(img: Image.Image) -> Image.Image:
-        a, b, tx, d, e, ty = x_shear_matrix(-angle, img.height / 2)
+        a, b, tx, d, e, ty = x_shear_matrix(-random.uniform(*angle_range), img.height / 2)
         # Padding supplies the zero-valued neighbors used by the other samplers.
         return ImageOps.expand(img, border=1, fill=0).transform(
             img.size,
@@ -123,20 +124,19 @@ def _build_shear(params: dict[str, Any]) -> Any | None:
     return shear
 
 
-def _build_brightness(params: dict[str, Any]) -> Any | None:
-    limit = params["brightness_limit"]
-    factor = 1.0 + float(limit[0] if isinstance(limit, (list, tuple)) else limit)
-    return lambda img: ImageEnhance.Brightness(img).enhance(factor)
+def _build_brightness(params: dict[str, Any]) -> Any:
+    bounds = parameter_range(params["brightness_limit"])
+    return lambda img: ImageEnhance.Brightness(img).enhance(1 + random.uniform(*bounds))
 
 
-def _build_contrast(params: dict[str, Any]) -> Any | None:
-    limit = params["contrast_limit"]
-    factor = 1.0 + float(limit[0] if isinstance(limit, (list, tuple)) else limit)
-    return lambda img: ImageEnhance.Contrast(img).enhance(factor)
+def _build_contrast(params: dict[str, Any]) -> Any:
+    bounds = parameter_range(params["contrast_limit"])
+    return lambda img: ImageEnhance.Contrast(img).enhance(1 + random.uniform(*bounds))
 
 
-def _build_saturation(params: dict[str, Any]) -> Any | None:
-    return lambda img: ImageEnhance.Color(img).enhance(1.0 + params["saturation_factor"])
+def _build_saturation(params: dict[str, Any]) -> Any:
+    bounds = parameter_range(params["saturation_factor"])
+    return lambda img: ImageEnhance.Color(img).enhance(1 + random.uniform(*bounds))
 
 
 def _build_auto_contrast(_params: dict[str, Any]) -> Any | None:
@@ -155,27 +155,29 @@ def _build_invert(_params: dict[str, Any]) -> Any | None:
     return ImageOps.invert
 
 
-def _build_posterize(params: dict[str, Any]) -> Any | None:
-    return lambda img: ImageOps.posterize(img, int(params["bits"]))
+def _build_posterize(params: dict[str, Any]) -> Any:
+    bounds = parameter_range(params["bits"])
+    return lambda img: ImageOps.posterize(img, random.randint(*bounds))
 
 
-def _build_solarize(params: dict[str, Any]) -> Any | None:
-    return lambda img: ImageOps.solarize(img, int(params["threshold"] * 255))
+def _build_solarize(params: dict[str, Any]) -> Any:
+    bounds = parameter_range(params["threshold"])
+    return lambda img: ImageOps.solarize(img, int(random.uniform(*bounds) * 255))
 
 
-def _build_gaussian_blur(params: dict[str, Any]) -> Any | None:
-    return lambda img: img.filter(ImageFilter.GaussianBlur(radius=params["sigma"]))
+def _build_gaussian_blur(params: dict[str, Any]) -> Any:
+    bounds = parameter_range(params["sigma"])
+    return lambda img: img.filter(ImageFilter.GaussianBlur(radius=random.uniform(*bounds)))
 
 
-def _build_median_blur(params: dict[str, Any]) -> Any | None:
-    size = params["blur_limit"]
-    size = size if size % 2 == 1 else size + 1
-    return lambda img: img.filter(ImageFilter.MedianFilter(size=size))
+def _build_median_blur(params: dict[str, Any]) -> Any:
+    sizes = odd_kernel_sizes(params["blur_limit"])
+    return lambda img: img.filter(ImageFilter.MedianFilter(size=random.choice(sizes)))
 
 
-def _build_blur(params: dict[str, Any]) -> Any | None:
-    blur = ImageFilter.BoxBlur(radius=(params["kernel_size"] - 1) / 2)
-    return lambda img: img.filter(blur)
+def _build_blur(params: dict[str, Any]) -> Any:
+    sizes = odd_kernel_sizes(params["kernel_size"])
+    return lambda img: img.filter(ImageFilter.BoxBlur(radius=(random.choice(sizes) - 1) / 2))
 
 
 def _build_center_crop(params: dict[str, Any]) -> Any:
@@ -230,10 +232,13 @@ def _build_pad_if_needed(params: dict[str, Any]) -> Any:
     return pad
 
 
-def _build_channel_swap(_params: dict[str, Any]) -> Any:
+def _build_channel_swap(params: dict[str, Any]) -> Any:
+    orders = channel_orders(params)
+
     def swap(image: Image.Image) -> Image.Image:
-        red, green, blue = image.split()
-        return Image.merge("RGB", (blue, green, red))
+        channels = image.split()
+        order = random.choice(orders) if len(orders) > 1 else orders[0]
+        return Image.merge("RGB", tuple(channels[index] for index in order))
 
     return swap
 
@@ -268,9 +273,15 @@ def _build_rgb_shift(params: dict[str, Any]) -> Any:
 
 
 def _build_random_gamma(params: dict[str, Any]) -> Any:
-    gamma = params["gamma"] / 100
-    table = [int(255 * (value / 255) ** gamma) for value in range(256)] * 3
-    return lambda image: image.point(table)
+    bounds = parameter_range(params["gamma"])
+    levels = tuple(value / 255 for value in range(256))
+
+    def gamma(image: Image.Image) -> Image.Image:
+        exponent = random.uniform(*bounds) / 100
+        table = [int(255 * level**exponent) for level in levels]
+        return image.point(table * 3)
+
+    return gamma
 
 
 def _build_colorize(params: dict[str, Any]) -> Any:
@@ -325,18 +336,20 @@ def _build_coarse_dropout(params: dict[str, Any]) -> Any:
 
 
 def _build_emboss(params: dict[str, Any]) -> Any:
-    kernel = emboss_kernel(params["alpha"], params["strength"])
-    pillow_kernel = ImageFilter.Kernel((3, 3), kernel[6:] + kernel[3:6] + kernel[:3], scale=1)
-    return lambda image: image.filter(pillow_kernel)
+    alpha = parameter_range(params["alpha"])
+    strength = parameter_range(params["strength"])
+
+    def emboss(image: Image.Image) -> Image.Image:
+        kernel = emboss_kernel(random.uniform(*alpha), random.uniform(*strength))
+        return image.filter(ImageFilter.Kernel((3, 3), kernel[6:] + kernel[3:6] + kernel[:3], scale=1))
+
+    return emboss
 
 
-def _build_shift_scale_rotate(params: dict[str, Any]) -> Any:
-    center = params["input_size"] / 2
-    a, b, tx, d, e, ty = centered_inverse_affine(
-        (center, center), params["angle"], params["scale"], tuple(params["shift"]), tuple(params.get("shear", (0, 0)))
-    )
-
+def _build_affine(params: dict[str, Any]) -> Any:
     def warp(image: Image.Image) -> Image.Image:
+        center = (image.width / 2, image.height / 2)
+        a, b, tx, d, e, ty = sample_inverse_affine(center, params)
         return ImageOps.expand(image, border=1, fill=0).transform(
             image.size,
             Image.Transform.AFFINE,
@@ -403,14 +416,14 @@ _TRANSFORM_BUILDERS = {
     "RandomSizedCrop": _build_random_sized_crop,
     "CoarseDropout": _build_coarse_dropout,
     "Emboss": _build_emboss,
-    "ShiftScaleRotate": _build_shift_scale_rotate,
+    "ShiftScaleRotate": _build_affine,
     "RandomRotate90": _build_random_rotate90,
     "HorizontalFlip": _build_horizontal_flip,
     "VerticalFlip": _build_vertical_flip,
     "Transpose": _build_transpose,
     "Rotate": _build_rotate,
     "Pad": _build_pad,
-    "Affine": _build_shift_scale_rotate,
+    "Affine": _build_affine,
     "Perspective": _build_perspective,
     "Shear": _build_shear,
     "Brightness": _build_brightness,

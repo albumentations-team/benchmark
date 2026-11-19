@@ -78,9 +78,15 @@ We request bilinear resampling without an antialiasing filter in these recipes. 
 
 ## How do we choose equivalent recipes across libraries?
 
-Start with the desired image effect. Match the geometry, interpolation, boundary fill, probability of applying the operation, and parameter distribution wherever they affect the work. For example, the current Affine recipe specifies the same scale, rotation, shear, and translation so every path performs the full warp. Library-native compositions are useful when an API lacks a single operator for the requested effect. Shared seeds align the input order. Each library draws its own parameters from the declared distribution.
+Use the native AlbumentationsX recipe as the reference. Match its geometry, interpolation, boundary fill, probability of applying the operation, and parameter distribution in the other adapters. For example, the current Affine recipe specifies the same scale, rotation, shear, and translation so every path performs the full warp. Library-native compositions are useful when an API lacks a single operator for the requested effect. Shared seeds align the input order. Each library draws its own parameters from the declared distribution.
 
 Pixel rounding and some native algorithms still differ. The contract calls out consequential differences. For example, JPEG quality 50 is the same nominal setting for a codec and a JPEG artifact simulator, but it does not guarantee the same distortion. If a path changes what is measured, its comparison needs new observations under the corrected recipe. [Recipe catalog](../catalog/recipes/rgb.yaml) · [Aggregation rules](benchmark_execution_contract.md#aggregation)
+
+### How do we match Rain and ThinPlateSpline to AlbumentationsX?
+
+**Rain (R41).** On a 224×224 crop, AlbumentationsX draws 74 streaks with a 28-pixel vertical displacement and a nominal 5-pixel line thickness. It blurs the rain layer with a 7×7 box filter, then adds it to the image. Kornia's default draws 1,000–2,000 thin lines and writes their color directly into the image. We set Kornia's density, height, and slant to match the AX recipe, then thicken, blur, and add its rain layer. In a CPU check over 24 black crops, AX and Kornia each changed about 54% of pixels and raised the mean level by about 57 and 56 points on a 0–255 scale. [AX adapter](../src/augbench/implementations/albumentationsx_impl.py) · [Kornia adapter](../src/augbench/implementations/kornia_impl.py)
+
+**ThinPlateSpline (R47).** AX draws Gaussian offsets at four corners and the center, with standard deviation equal to 5% of the crop dimension, or 11.2 px on a 224×224 crop. Kornia now draws from that same distribution and fits its native spline from the fixed output anchors to the perturbed input coordinates. Both adapters draw inside the transform. In a CPU check with 24 sets of identical anchor offsets, their dense sampling maps agreed to less than 0.001 px RMS. Interpolation and rounding can still differ. [Recipe catalog](../catalog/recipes/rgb.yaml) · [Kornia adapter](../src/augbench/implementations/kornia_impl.py)
 
 ## Why normalize on the GPU and return FP16?
 

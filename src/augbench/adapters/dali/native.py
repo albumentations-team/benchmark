@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from itertools import permutations
+from math import pi
 from typing import TYPE_CHECKING, Any, Protocol
 
 from augbench.implementations.geometry import (
+    affine_axis_ranges,
     centered_inverse_affine,
     centered_inverse_perspective,
     emboss_kernel,
-    x_shear_matrix,
 )
+from augbench.implementations.specs import channel_orders, odd_kernel_sizes, parameter_range
 from augbench.recipes.runtime import UnsupportedRecipeError
 
 if TYPE_CHECKING:
@@ -273,10 +275,8 @@ def _apply_random_scale(data: Any, params: dict[str, Any], _height: int, _width:
     )
 
 
-def _apply_channel_swap(data: Any, _params: dict[str, Any], _height: int, _width: int) -> Any:
-    from nvidia.dali import fn, types
-
-    return fn.color_space_conversion(data, image_type=types.RGB, output_type=types.BGR)
+def _apply_channel_swap(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
+    return _permute_channels(data, channel_orders(params))
 
 
 def _apply_grayscale(data: Any, _params: dict[str, Any], _height: int, _width: int) -> Any:
@@ -287,14 +287,20 @@ def _apply_grayscale(data: Any, _params: dict[str, Any], _height: int, _width: i
 
 
 def _apply_channel_shuffle(data: Any, _params: dict[str, Any], _height: int, _width: int) -> Any:
+    return _permute_channels(data, tuple(permutations(range(3))))
+
+
+def _permute_channels(data: Any, orders: tuple[tuple[int, ...], ...]) -> Any:
     from nvidia.dali import fn, types
 
-    choices = list(range(6))
+    if orders == ((2, 1, 0),):
+        return fn.color_space_conversion(data, image_type=types.RGB, output_type=types.BGR)
+
+    choices = list(range(len(orders)))
     order = fn.random.uniform(values=choices, shape=[1], dtype=types.INT32)
     channels = []
-    channel_permutations = tuple(permutations(range(3)))
     for channel_index in range(3):
-        values = [permutation[channel_index] for permutation in channel_permutations]
+        values = [permutation[channel_index] for permutation in orders]
         start = fn.lookup_table(order, keys=choices, values=values, dtype=types.INT32)
         channels.append(fn.slice(data, start, (1,), axes=(2,), normalized_anchor=False, normalized_shape=False))
     return fn.cat(*channels, axis=2)
@@ -330,32 +336,50 @@ def _apply_invert(data: Any, _params: dict[str, Any], _height: int, _width: int)
 
 
 def _apply_posterize(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
-    mask = (255 << (8 - _integer(params, "bits"))) & 255
-    return _byte_lookup(data, [value & mask for value in range(256)])
+    from nvidia.dali import fn, types
+
+    low, high = parameter_range(params["bits"])
+    masks = [(255 << (8 - bits)) & 255 for bits in range(low, high + 1)]
+    mask = fn.random.uniform(values=masks, dtype=types.UINT8, device=data.device)
+    return data & mask
 
 
 def _apply_solarize(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
-    threshold = 255 * _number(params, "threshold")
-    return _byte_lookup(data, [value if value < threshold else 255 - value for value in range(256)])
+    from nvidia.dali import fn, types
+
+    threshold = 255 * _uniform(params["threshold"], device=data.device)
+    keep = fn.cast(data < threshold, dtype=types.UINT8)
+    return fn.cast(data * keep + (255 - data) * (1 - keep), dtype=types.UINT8)
 
 
 def _apply_random_gamma(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
-    gamma = _number(params, "gamma") / 100
-    return _byte_lookup(data, [int(255 * (value / 255) ** gamma) for value in range(256)])
+    from nvidia.dali import fn, math, types
+
+    gamma = _uniform(params["gamma"], device=data.device) / 100
+    return fn.cast(math.floor(255 * math.pow(data / 255.0, gamma)), dtype=types.UINT8)
 
 
 def _apply_median_blur(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
-    from nvidia.dali import fn
+    from nvidia.dali import fn, types
 
-    size = _integer(params, "blur_limit")
-    return fn.experimental.median_blur(data, window_size=(size, size))
+    size = fn.random.uniform(values=list(odd_kernel_sizes(params["blur_limit"])), dtype=types.INT32)
+    return fn.experimental.median_blur(data, window_size=fn.stack(size, size))
 
 
 def _apply_blur(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
     from nvidia.dali import fn, types
 
-    size = _integer(params, "kernel_size")
-    kernel = types.Constant([1 / (size * size)] * (size * size), shape=[size, size], dtype=types.FLOAT)
+    sizes = list(odd_kernel_sizes(params["kernel_size"]))
+    size = fn.random.uniform(values=sizes, dtype=types.INT32)
+    ones = types.Constant(1.0, shape=(sizes[-1], sizes[-1]))
+    kernel = fn.slice(
+        ones,
+        types.Constant([0, 0], dtype=types.INT32),
+        fn.stack(size, size),
+        axes=(0, 1),
+        normalized_anchor=False,
+        normalized_shape=False,
+    ) / (size * size)
     return fn.filter(data, kernel, border="reflect_101")
 
 
@@ -391,28 +415,17 @@ def _apply_coarse_dropout(data: Any, params: dict[str, Any], _height: int, _widt
 
 
 def _apply_emboss(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
-    from nvidia.dali import fn, types
+    from nvidia.dali import fn
 
-    kernel = emboss_kernel(_number(params, "alpha"), _number(params, "strength"))
-    return fn.filter(data, types.Constant(list(kernel), shape=[3, 3], dtype=types.FLOAT), border="reflect_101")
+    values = emboss_kernel(_uniform(params["alpha"]), _uniform(params["strength"]))
+    kernel = fn.reshape(fn.stack(*values), shape=[3, 3])
+    return fn.filter(data, kernel, border="reflect_101")
 
 
 def _apply_pixel_spread(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
     from nvidia.dali import fn
 
     return fn.jitter(data, nDegree=2 * _integer(params, "radius"), fill_value=0)
-
-
-def _apply_shift_scale_rotate(data: Any, params: dict[str, Any], height: int, width: int) -> Any:
-    from nvidia.dali import fn, types
-
-    x, y = _number_list(params, "shift")
-    matrix = centered_inverse_affine(
-        (width / 2, height / 2), _number(params, "angle"), _number(params, "scale"), (x, y)
-    )
-    return fn.warp_affine(
-        data, matrix=list(matrix), size=(height, width), inverse_map=True, fill_value=0, interp_type=types.INTERP_LINEAR
-    )
 
 
 def _apply_colorize(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
@@ -509,29 +522,44 @@ def _apply_rotate(data: Any, params: dict[str, Any], _output_height: int, _outpu
 
 
 def _apply_affine(data: Any, params: dict[str, Any], output_height: int, output_width: int) -> Any:
-    from nvidia.dali import fn
+    from nvidia.dali import fn, math, types
 
-    x, y = _number_list(params, "shift")
-    sx, sy = _number_list(params, "shear")
+    x_range, y_range = affine_axis_ranges(params["shift"])
+    x = fn.random.uniform(values=list(range(x_range[0], x_range[1] + 1)), dtype=types.INT32)
+    y = fn.random.uniform(values=list(range(y_range[0], y_range[1] + 1)), dtype=types.INT32)
+    sx = sy = 0.0
+    if "shear" in params:
+        sx_range, sy_range = affine_axis_ranges(params["shear"])
+        sx = math.tan(_uniform(sx_range) * (pi / 180))
+        sy = math.tan(_uniform(sy_range) * (pi / 180))
+    angle = _uniform(params["angle"]) * (pi / 180)
     matrix = centered_inverse_affine(
-        (output_width / 2, output_height / 2), _number(params, "angle"), _number(params, "scale"), (x, y), (sx, sy)
+        (output_width / 2, output_height / 2),
+        (math.sin(angle), math.cos(angle)),
+        _uniform(params["scale"]),
+        (x, y),
+        (sx, sy),
     )
     return fn.warp_affine(
         data,
-        matrix=list(matrix),
+        fn.stack(*matrix),
         size=(output_height, output_width),
         inverse_map=True,
         fill_value=params.get("fill", 0),
-        interp_type=_interpolation(params.get("interpolation")),
+        interp_type=_interpolation(params.get("interpolation", "bilinear")),
     )
 
 
 def _apply_shear(data: Any, params: dict[str, Any], output_height: int, output_width: int) -> Any:
-    from nvidia.dali import fn, types
+    from nvidia.dali import fn, math, types
 
+    slope = -math.tan(_uniform(params["shear"]) * (pi / 180))
+    zero = types.Constant(0.0)
+    one = types.Constant(1.0)
+    matrix = fn.stack(one, slope, -slope * (output_height / 2), zero, one, zero)
     return fn.warp_affine(
         data,
-        matrix=list(x_shear_matrix(-_number(params, "shear"), output_height / 2)),
+        matrix,
         size=(output_height, output_width),
         inverse_map=True,
         fill_value=0,
@@ -558,12 +586,11 @@ def _apply_perspective(data: Any, params: dict[str, Any], _height: int, _width: 
 def _apply_brightness(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
     from nvidia.dali import fn
 
-    limit = _number_list(params, "brightness_limit")
-    return fn.brightness_contrast(data, brightness=1.0 + limit[0])
+    return fn.brightness_contrast(data, brightness=1.0 + _uniform(params["brightness_limit"]))
 
 
 def _apply_contrast(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
-    return _contrast(data, 1 + _number_list(params, "contrast_limit")[0])
+    return _contrast(data, 1 + _uniform(params["contrast_limit"], device=data.device))
 
 
 def _apply_color_jitter(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
@@ -598,7 +625,7 @@ def _apply_hue(data: Any, params: dict[str, Any], _output_height: int, _output_w
 
 
 def _apply_saturation(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
-    return _saturation(data, 1 + _number(params, "saturation_factor"))
+    return _saturation(data, 1 + _uniform(params["saturation_factor"], device=data.device))
 
 
 def _contrast(data: Any, factor: Any) -> Any:
@@ -645,7 +672,7 @@ def _apply_gaussian_blur(data: Any, params: dict[str, Any], _output_height: int,
 
     return fn.gaussian_blur(
         data,
-        sigma=_number(params, "sigma"),
+        sigma=_uniform(params["sigma"]),
         window_size=tuple(_integer_list(params, "kernel_size")),
     )
 
@@ -707,7 +734,7 @@ _STAGE_HANDLERS = {
     "CoarseDropout": _apply_coarse_dropout,
     "Emboss": _apply_emboss,
     "PixelSpread": _apply_pixel_spread,
-    "ShiftScaleRotate": _apply_shift_scale_rotate,
+    "ShiftScaleRotate": _apply_affine,
     "Colorize": _apply_colorize,
     "Morphological": _apply_morphological,
     "RandomResizedCrop": _apply_random_resized_crop,
@@ -754,12 +781,13 @@ def _interpolation(value: Any) -> Any:
     return types.INTERP_NN if value == "nearest" else types.INTERP_LINEAR
 
 
-def _uniform(value: Any) -> Any:
-    from nvidia.dali import fn
+def _uniform(value: Any, *, device: str = "cpu") -> Any:
+    from nvidia.dali import fn, types
 
-    if isinstance(value, list):
-        return fn.random.uniform(range=(float(value[0]), float(value[1])))
-    return float(value)
+    low, high = parameter_range(value)
+    if low == high:
+        return types.Constant(float(low), device=device)
+    return fn.random.uniform(range=(float(low), float(high)), device=device)
 
 
 def _number(params: dict[str, Any], name: str) -> float:

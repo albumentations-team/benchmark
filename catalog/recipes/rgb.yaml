@@ -1,5 +1,5 @@
 schema_version: 1
-recipe_set_id: rgb-comparable-2026-11-16
+recipe_set_id: rgb-per-image-2026-11-19
 family: rgb
 recipes:
 - recipe_id: Resize224+Normalize+ToTensor
@@ -307,7 +307,7 @@ recipes:
       angle_range:
       - -45
       - 45
-      interpolation: nearest
+      interpolation: bilinear
       mode: constant
       fill: 0
     stochastic: true
@@ -358,20 +358,23 @@ recipes:
     randomness_scope: per-image
   - operation_id: Affine
     parameters:
-      angle: 25.0
-      shift:
-      - 20
-      - 20
-      scale: 2.0
-      shear:
-      - 10.0
+      angle:
+      - -15.0
       - 15.0
+      shift:
+        x: [-12, 12]
+        y: [-12, 12]
+      scale:
+      - 0.75
+      - 1.25
+      shear:
+        x: [-8.0, 8.0]
+        y: [-8.0, 8.0]
       interpolation: bilinear
       mode: constant
       fill: 0
-      input_size: 224
-    stochastic: false
-    randomness_scope: deterministic
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -473,10 +476,14 @@ recipes:
   - operation_id: Elastic
     parameters:
       sigma: 5.0
-      torchvision_alpha: 32.0
-      kornia_alpha: 0.14285714285714285
+      torchvision_alpha:
+      - 16.0
+      - 32.0
+      kornia_alpha:
+      - 0.07142857142857142
+      - 0.14285714285714285
       displacement_range:
-      - 0.0097
+      - 0.00485
       - 0.0097
       control_grid_shape:
       - 29
@@ -715,12 +722,14 @@ recipes:
     randomness_scope: per-image
   - operation_id: GaussianBlur
     parameters:
-      sigma: 2.0
+      sigma:
+      - 0.8
+      - 2.0
       kernel_size:
       - 5
       - 5
-    stochastic: false
-    randomness_scope: deterministic
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -862,9 +871,11 @@ recipes:
     randomness_scope: per-image
   - operation_id: Posterize
     parameters:
-      bits: 4
-    stochastic: false
-    randomness_scope: deterministic
+      bits:
+      - 4
+      - 7
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -911,9 +922,11 @@ recipes:
     randomness_scope: per-image
   - operation_id: Solarize
     parameters:
-      threshold: 0.5
-    stochastic: false
-    randomness_scope: deterministic
+      threshold:
+      - 0.4
+      - 0.6
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -1203,9 +1216,11 @@ recipes:
     randomness_scope: per-image
   - operation_id: RandomGamma
     parameters:
-      gamma: 120
-    stochastic: false
-    randomness_scope: deterministic
+      gamma:
+      - 90
+      - 120
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -1292,9 +1307,11 @@ recipes:
     randomness_scope: per-image
   - operation_id: MedianBlur
     parameters:
-      blur_limit: 5
-    stochastic: false
-    randomness_scope: deterministic
+      blur_limit:
+      - 3
+      - 5
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -1430,10 +1447,10 @@ recipes:
   - operation_id: Brightness
     parameters:
       brightness_limit:
+      - -0.2
       - 0.2
-      - 0.2
-    stochastic: false
-    randomness_scope: deterministic
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -1481,10 +1498,10 @@ recipes:
   - operation_id: Contrast
     parameters:
       contrast_limit:
+      - -0.2
       - 0.2
-      - 0.2
-    stochastic: false
-    randomness_scope: deterministic
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -1531,10 +1548,12 @@ recipes:
     randomness_scope: per-image
   - operation_id: Blur
     parameters:
-      kernel_size: 5
+      kernel_size:
+      - 3
+      - 5
       border_mode: reflect
-    stochastic: false
-    randomness_scope: deterministic
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -1916,8 +1935,8 @@ recipes:
     randomness_scope: per-image
   - operation_id: Rain
     parameters:
+      input_height: 224
       drop_width: 5
-      drop_height: 20
       brightness_coefficient: 1.0
     stochastic: true
     randomness_scope: per-image
@@ -2005,9 +2024,11 @@ recipes:
     randomness_scope: per-image
   - operation_id: Saturation
     parameters:
-      saturation_factor: 0.5
-    stochastic: false
-    randomness_scope: deterministic
+      saturation_factor:
+      - -0.2
+      - 0.3
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -2092,7 +2113,9 @@ recipes:
     randomness_scope: per-image
   - operation_id: OpticalDistortion
     parameters:
-      distort_limit: 0.5
+      distort_limit:
+      - -0.5
+      - 0.5
       mode: fisheye
     stochastic: true
     randomness_scope: per-image
@@ -2133,9 +2156,11 @@ recipes:
     randomness_scope: per-image
   - operation_id: Shear
     parameters:
-      shear: 10
-    stochastic: false
-    randomness_scope: deterministic
+      shear:
+      - -10.0
+      - 10.0
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -2953,12 +2978,12 @@ recipes:
     randomness_scope: deterministic
   - operation_id: ChannelSwap
     parameters:
-      channel_order:
-      - 2
-      - 1
-      - 0
-    stochastic: false
-    randomness_scope: deterministic
+      channel_orders:
+      - [1, 0, 2]
+      - [2, 1, 0]
+      - [0, 2, 1]
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -3348,10 +3373,14 @@ recipes:
     randomness_scope: deterministic
   - operation_id: Emboss
     parameters:
-      alpha: 0.5
-      strength: 1.0
-    stochastic: false
-    randomness_scope: deterministic
+      alpha:
+      - 0.2
+      - 0.5
+      strength:
+      - 0.5
+      - 1.0
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -3436,14 +3465,17 @@ recipes:
     randomness_scope: deterministic
   - operation_id: ShiftScaleRotate
     parameters:
-      input_size: 224
-      angle: 12
-      scale: 1.125
+      angle:
+      - -12.0
+      - 12.0
+      scale:
+      - 0.875
+      - 1.125
       shift:
-      - 14
-      - -7
-    stochastic: false
-    randomness_scope: deterministic
+        x: [-14, 14]
+        y: [-7, 7]
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
