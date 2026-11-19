@@ -95,12 +95,21 @@ such as Pillow channel splitting and merging or a byte lookup table. Mosaic, ref
 histogram matching, and box-aware crops require a different input protocol. ModeFilter is outside
 the recipe selection. DALI's grid mask drops square patches, while AX GridMask drops stripes.
 
+Each stochastic stage samples independently for every image during recipe execution. A
+batched implementation may draw all its parameters in one call. When a native kernel takes
+one parameter for the whole call, the adapter may group images after drawing their parameters
+and restore the original image order. Sampling and any grouping run inside the input pipeline.
+
 DALI uses ROI JPEG decoding when a recipe starts with a compatible crop.
 `RandomCrop224` samples a separate window at native resolution for every image and adds
 centered zero padding where a dimension is too short. `RandomResizedCrop` samples separate windows
 inside the decoder and then resizes them. All readers use the pixel orientation stored in the file.
-`Blur` uses a 5×5 box in every measured path. AX, Kornia, and DALI reflect the boundary; the
-Pillow box filter repeats edge pixels. ChannelDropout zeros one uniformly sampled RGB channel.
+`Blur` samples a 3×3 or 5×5 box with equal probability for each image. AX, Kornia, and DALI
+reflect the boundary. The Pillow box filter repeats edge pixels. ChannelDropout zeros one
+uniformly sampled RGB channel.
+
+R63 (ChannelSwap) uniformly chooses which pair of RGB channels to exchange for
+each image. R12 (ChannelShuffle) uniformly chooses among all six channel orders.
 
 `Resize` (R01) and `RandomResizedCrop` (R03) use bilinear interpolation without antialiasing. AX
 uses OpenCV's `INTER_LINEAR`. DALI and TorchVision use `antialias=False`. Pillow and
@@ -109,12 +118,19 @@ automatically smooths when downsampling. Kornia uses `align_corners=False` for b
 Its `Resize` explicitly sets `antialias=False`, and its `RandomResizedCrop` slices the crop and
 resizes it without antialiasing. Crop selection and rounding may differ by library.
 
-For R10 (Elastic), the AX, TorchVision, and Kornia parameters are
-[matched by their displacement fields](rgb_elastic_calibration.md) at roughly 0.74 px RMS and a
+For R10 (Elastic), AX, TorchVision, and Kornia draw a new field and a uniform amplitude
+multiplier from 0.5 to 1.0 for each image. The upper endpoint uses the
+[calibrated displacement fields](rgb_elastic_calibration.md) at roughly 0.74 px RMS and a
 spatial scale of about 10 px. DALI and Pillow omit this recipe.
 
-R08 applies scale 2, rotation 25°, X/Y shears 10°/15°, and translation
-20 px on each axis as one centered bilinear warp. R09 uses a centered
+R07 (Rotate) samples an angle from −45° to +45° and performs one bilinear warp at
+the original crop size, with zero fill and no separate antialiasing pass.
+
+R08 (Affine) samples one isotropic scale from 0.75–1.25, a rotation from ±15°,
+two shears from ±8°, and two integer shifts from ±12 px independently for each image.
+The adapter applies the parameters in one centered bilinear warp. R73 (ShiftScaleRotate)
+uses the same geometry with scale 0.875–1.125, rotation ±12°, shifts ±14 and ±7 px, and zero
+shear. R09 uses a centered
 projective map with independent sign and a uniform magnitude in 0.05–0.10,
 divided by crop width, for each axis of each image.
 
@@ -127,9 +143,9 @@ calibrate distortion strength.
 ColorJitter recipes sample factors and operation order per image. DALI uses
 its native hue adjustment, an RGB-space approximation to HSV hue rotation.
 
-R46 (Shear) applies a fixed 10° X shear about the image center on all eight paths.
+R46 (Shear) samples an X shear angle `θ` uniformly from −10° to +10° for each image on all eight paths.
 In pixel-center coordinates its forward map is
-`x' = x + tan(10°) * (y - (height - 1) / 2)`, `y' = y`.
+`x' = x + tan(θ) * (y - (height - 1) / 2)`, `y' = y`.
 The output keeps the input size and uses bilinear sampling with zero-valued samples
 outside the frame. Pillow and Pillow-AllSIMD pad with one zero pixel before warping.
 TorchVision and Kornia use FP32 sampling in their GPU Shear stage and convert back to

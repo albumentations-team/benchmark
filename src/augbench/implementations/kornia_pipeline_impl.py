@@ -16,7 +16,15 @@ if TYPE_CHECKING:
 
 
 _FP32_GPU_STAGES = frozenset(
-    {"CoarseDropout", "CornerIllumination", "Erasing", "LinearIllumination", "Perspective", "ShiftScaleRotate"}
+    {
+        "CoarseDropout",
+        "CornerIllumination",
+        "Erasing",
+        "LinearIllumination",
+        "Perspective",
+        "ShiftScaleRotate",
+        "ThinPlateSpline",
+    }
 )
 
 

@@ -6,30 +6,16 @@ import albumentations
 import cv2
 import numpy as np
 
-from augbench.implementations.geometry import sample_inverse_perspective
-from augbench.implementations.specs import TransformSpec
+from augbench.implementations.geometry import affine_axis_ranges, sample_inverse_perspective
+from augbench.implementations.specs import TransformSpec, channel_orders, parameter_range
 
 LIBRARY = "albumentationsx"
-
-
-def _range(value: Any) -> tuple[Any, Any]:
-    if isinstance(value, tuple | list):
-        return (value[0], value[1])
-    return (value, value)
 
 
 def _symmetric_range(value: Any) -> tuple[Any, Any]:
     if isinstance(value, tuple | list):
         return (value[0], value[1])
     return (-value, value)
-
-
-def _affine_axis_ranges(value: Any) -> dict[str, tuple[Any, Any]]:
-    if isinstance(value, dict):
-        return value
-    if isinstance(value, tuple | list):
-        return {"x": _range(value[0]), "y": _range(value[1])}
-    return {"x": _range(value), "y": _range(value)}
 
 
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
@@ -100,15 +86,18 @@ def _build_rotate(params: dict[str, Any]) -> Any | None:
     )
 
 
-def _build_affine(params: dict[str, Any]) -> Any | None:
+def _build_affine(params: dict[str, Any]) -> Any:
+    x, y = affine_axis_ranges(params["shift"])
+    sx, sy = affine_axis_ranges(params.get("shear", (0.0, 0.0)))
     return albumentations.Affine(
-        rotate=_range(params["angle"]),
-        translate_px=_affine_axis_ranges(params["shift"]),
-        scale=_range(params["scale"]),
-        shear=_affine_axis_ranges([-value for value in params["shear"]]),
-        interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
-        border_mode=cv2.BORDER_CONSTANT if params["mode"] == "constant" else cv2.BORDER_REFLECT,
-        fill=params["fill"],
+        rotate=parameter_range(params["angle"]),
+        translate_px={"x": x, "y": y},
+        scale=parameter_range(params["scale"]),
+        keep_ratio=True,
+        shear={"x": (-sx[1], -sx[0]), "y": (-sy[1], -sy[0])},
+        interpolation=cv2.INTER_LINEAR if params.get("interpolation", "bilinear") == "bilinear" else cv2.INTER_NEAREST,
+        border_mode=cv2.BORDER_CONSTANT if params.get("mode", "constant") == "constant" else cv2.BORDER_REFLECT,
+        fill=params.get("fill", 0),
         p=1,
     )
 
@@ -126,7 +115,7 @@ def _build_perspective(params: dict[str, Any]) -> Any:
 
 def _build_elastic(params: dict[str, Any]) -> Any | None:
     return albumentations.ElasticTransform(
-        displacement_range=_range(params["displacement_range"]),
+        displacement_range=parameter_range(params["displacement_range"]),
         control_grid_shape=tuple(params["control_grid_shape"]),
         interpolation=cv2.INTER_LINEAR if params["interpolation"] == "bilinear" else cv2.INTER_NEAREST,
         p=1,
@@ -135,10 +124,10 @@ def _build_elastic(params: dict[str, Any]) -> Any | None:
 
 def _build_color_jitter(params: dict[str, Any]) -> Any | None:
     return albumentations.ColorJitter(
-        brightness_range=_range(params["brightness"]),
-        contrast_range=_range(params["contrast"]),
-        saturation_range=_range(params["saturation"]),
-        hue_range=_range(params["hue"]),
+        brightness_range=parameter_range(params["brightness"]),
+        contrast_range=parameter_range(params["contrast"]),
+        saturation_range=parameter_range(params["saturation"]),
+        hue_range=parameter_range(params["hue"]),
         p=1,
     )
 
@@ -174,7 +163,7 @@ def _build_rgbshift(params: dict[str, Any]) -> Any | None:
 def _build_gaussian_blur(params: dict[str, Any]) -> Any | None:
     return albumentations.GaussianBlur(
         blur_range=params["kernel_size"],
-        sigma_range=_range(params["sigma"]),
+        sigma_range=parameter_range(params["sigma"]),
         p=1,
     )
 
@@ -194,14 +183,14 @@ def _build_invert(_params: dict[str, Any]) -> Any | None:
 
 def _build_posterize(params: dict[str, Any]) -> Any | None:
     return albumentations.Posterize(
-        num_bits=_range(params["bits"]),
+        num_bits=parameter_range(params["bits"]),
         p=1,
     )
 
 
 def _build_solarize(params: dict[str, Any]) -> Any | None:
     return albumentations.Solarize(
-        threshold_range=(params["threshold"], params["threshold"]),
+        threshold_range=parameter_range(params["threshold"]),
         p=1,
     )
 
@@ -246,7 +235,7 @@ def _build_jpeg_compression(params: dict[str, Any]) -> Any | None:
 
 def _build_random_gamma(params: dict[str, Any]) -> Any | None:
     return albumentations.RandomGamma(
-        gamma_range=_range(params["gamma"]),
+        gamma_range=parameter_range(params["gamma"]),
         p=1,
     )
 
@@ -260,14 +249,14 @@ def _build_plankian_jitter(params: dict[str, Any]) -> Any | None:
 
 def _build_median_blur(params: dict[str, Any]) -> Any | None:
     return albumentations.MedianBlur(
-        blur_range=_range(params["blur_limit"]),
+        blur_range=parameter_range(params["blur_limit"]),
         p=1,
     )
 
 
 def _build_motion_blur(params: dict[str, Any]) -> Any | None:
     return albumentations.MotionBlur(
-        blur_range=_range(params["kernel_size"]),
+        blur_range=parameter_range(params["kernel_size"]),
         angle_range=params["angle_range"],
         direction_range=params["direction_range"],
         p=1,
@@ -302,7 +291,7 @@ def _build_contrast(params: dict[str, Any]) -> Any | None:
 
 def _build_blur(params: dict[str, Any]) -> Any | None:
     return albumentations.Blur(
-        blur_range=_range(params["kernel_size"]),
+        blur_range=parameter_range(params["kernel_size"]),
         p=1,
     )
 
@@ -311,16 +300,16 @@ def _build_channel_dropout(_params: dict[str, Any]) -> Any | None:
     return albumentations.ChannelDropout(dropout_ratio=1 / 3, fill=0, p=1)
 
 
-def _build_linear_illumination(_params: dict[str, Any]) -> Any | None:
-    return albumentations.Illumination(p=1, mode="linear", angle_range=(90, 90))
+def _build_linear_illumination(params: dict[str, Any]) -> Any | None:
+    return albumentations.Illumination(p=1, mode="linear", intensity_range=params["gain"], angle_range=(90, 90))
 
 
-def _build_corner_illumination(_params: dict[str, Any]) -> Any | None:
-    return albumentations.Illumination(p=1, mode="corner")
+def _build_corner_illumination(params: dict[str, Any]) -> Any | None:
+    return albumentations.Illumination(p=1, mode="corner", intensity_range=params["gain"])
 
 
-def _build_gaussian_illumination(_params: dict[str, Any]) -> Any | None:
-    return albumentations.Illumination(p=1, mode="gaussian")
+def _build_gaussian_illumination(params: dict[str, Any]) -> Any | None:
+    return albumentations.Illumination(p=1, mode="gaussian", intensity_range=params["gain"])
 
 
 def _build_hue(params: dict[str, Any]) -> Any | None:
@@ -365,7 +354,7 @@ def _build_saturation(params: dict[str, Any]) -> Any | None:
         brightness_range=(1, 1),
         contrast_range=(1, 1),
         hue_range=(0, 0),
-        saturation_range=_range(1 + params["saturation_factor"]),
+        saturation_range=tuple(1 + value for value in parameter_range(params["saturation_factor"])),
     )
 
 
@@ -383,10 +372,10 @@ def _build_optical_distortion(params: dict[str, Any]) -> Any | None:
 
 def _build_shear(params: dict[str, Any]) -> Any | None:
     # AX negates its shear angle when building the forward pixel matrix.
-    angle = -float(params["shear"])
+    low, high = parameter_range(params["shear"])
     return albumentations.Affine(
         p=1,
-        shear={"x": (angle, angle), "y": (0.0, 0.0)},
+        shear={"x": (-high, -low), "y": (0.0, 0.0)},
         interpolation=cv2.INTER_LINEAR,
         border_mode=cv2.BORDER_CONSTANT,
         fill=0,
@@ -455,8 +444,9 @@ def _build_pad_if_needed(params: dict[str, Any]) -> Any:
     )
 
 
-def _build_channel_swap(_params: dict[str, Any]) -> Any:
-    return albumentations.ChannelSwap(channel_order=(2, 1, 0), p=1)
+def _build_channel_swap(params: dict[str, Any]) -> Any:
+    swaps = [albumentations.ChannelSwap(channel_order=order, p=1) for order in channel_orders(params)]
+    return swaps[0] if len(swaps) == 1 else albumentations.OneOf(swaps, p=1)
 
 
 def _build_colorize(params: dict[str, Any]) -> Any:
@@ -497,25 +487,13 @@ def _build_coarse_dropout(params: dict[str, Any]) -> Any:
 
 
 def _build_emboss(params: dict[str, Any]) -> Any:
-    return albumentations.Emboss(alpha_range=_range(params["alpha"]), strength_range=_range(params["strength"]), p=1)
+    return albumentations.Emboss(
+        alpha_range=parameter_range(params["alpha"]), strength_range=parameter_range(params["strength"]), p=1
+    )
 
 
 def _build_pixel_spread(params: dict[str, Any]) -> Any:
     return albumentations.PixelSpread(radius=params["radius"], border_mode=cv2.BORDER_CONSTANT, p=1)
-
-
-def _build_shift_scale_rotate(params: dict[str, Any]) -> Any:
-    x, y = params["shift"]
-    size = params["input_size"]
-    return albumentations.ShiftScaleRotate(
-        shift_range_x=_range(x / size),
-        shift_range_y=_range(y / size),
-        scale_range=_range(params["scale"] - 1),
-        rotate_range=_range(params["angle"]),
-        border_mode=cv2.BORDER_CONSTANT,
-        fill=0,
-        p=1,
-    )
 
 
 def _build_random_rotate90(_params: dict[str, Any]) -> Any | None:
@@ -533,7 +511,7 @@ def _build_enhance_edge(params: dict[str, Any]) -> Any | None:
 def _build_unsharp_mask(params: dict[str, Any]) -> Any | None:
     return albumentations.UnsharpMask(
         blur_range=params["blur_limit"],
-        sigma_range=_range(params["sigma_limit"]),
+        sigma_range=parameter_range(params["sigma_limit"]),
         alpha_range=params["alpha"],
         threshold=params["threshold"],
         p=1,
@@ -557,7 +535,7 @@ _TRANSFORM_BUILDERS = {
     "CoarseDropout": _build_coarse_dropout,
     "Emboss": _build_emboss,
     "PixelSpread": _build_pixel_spread,
-    "ShiftScaleRotate": _build_shift_scale_rotate,
+    "ShiftScaleRotate": _build_affine,
     "RandomResizedCrop": _build_random_resized_crop,
     "HorizontalFlip": _build_horizontal_flip,
     "VerticalFlip": _build_vertical_flip,

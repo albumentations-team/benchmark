@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import io
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 
-from augbench.adapters.dali.native import _apply_erasing, _apply_pad, _decode_recipe_input
+from augbench.adapters.dali.native import _apply_erasing, _apply_pad, _apply_stage, _decode_recipe_input
+from augbench.recipes.load import load_recipe_catalog
 from augbench.recipes.models import RecipeStage
 
 if TYPE_CHECKING:
@@ -60,6 +62,41 @@ def test_pad_adds_a_border_to_each_image() -> None:
     for index, image in enumerate(images):
         expected = np.pad(image, ((10, 10), (10, 10), (0, 0)), constant_values=17)
         np.testing.assert_array_equal(output.at(index), expected)
+
+
+@pytest.mark.parametrize(
+    "operation",
+    [
+        "Affine",
+        "Shear",
+        "ShiftScaleRotate",
+        "Blur",
+        "GaussianBlur",
+        "Emboss",
+        "Brightness",
+        "Contrast",
+        "Saturation",
+        "Posterize",
+        "Solarize",
+        "RandomGamma",
+        "JpegCompression",
+        "ChannelSwap",
+    ],
+)
+def test_dali_samples_within_a_batch(operation: str) -> None:
+    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog" / "recipes" / "rgb.yaml")
+    recipe = next(recipe for recipe in catalog.recipes if recipe.augmentation_id == operation)
+    stage = next(stage for stage in recipe.stages if stage.operation_id == operation)
+    image = np.random.default_rng(137).integers(0, 256, (224, 224, 3), dtype=np.uint8)
+    with dali.Pipeline(batch_size=16, num_threads=1, device_id=None, seed=137) as pipeline:
+        data = fn.external_source(source=lambda: [image] * 16, layout="HWC")
+        pipeline.set_outputs(_apply_stage(data, stage, output_height=224, output_width=224))
+    pipeline.build()
+    (output,) = pipeline.run()
+
+    assert all(output.at(index).shape == image.shape for index in range(16))
+    assert all(output.at(index).dtype == image.dtype for index in range(16))
+    assert len({output.at(index).tobytes() for index in range(16)}) > 1
 
 
 @pytest.mark.parametrize(("scale", "ratio"), [((0.02, 0.33), (0.3, 3.3)), ((0.12, 0.13), (1.9, 2.0))])
