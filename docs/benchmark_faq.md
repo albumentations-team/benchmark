@@ -14,6 +14,24 @@ JPEG input for RGB classification is a common workload with a large set of compa
 
 The 8-bit format describes the decoded source. A library can convert it to the dtype its operators expect, and every path delivers the same FP16 output. A workload that starts with FP32 or FP16 arrays changes which readers can participate, how many bytes move, and which kernels run. Nine-channel images, video, volumes, and sequences of volumes also need their own sample format, recipes, and batch size. Those comparisons have yet to be run. [RGB workload configuration](../configs/families/rgb.yaml) · [Requirements for a new workload](benchmark_execution_contract.md#adding-a-benchmark-family)
 
+## Why compare augmentation libraries and preprocessing libraries?
+
+ImageNet-style classification passes one 8-bit RGB image to the augmentation pipeline. This benchmark excludes bounding boxes, masks, keypoints, and `additional_targets`. A pipeline that transforms annotations or multiple related inputs has additional work and needs its own comparison.
+
+AlbumentationsX, TorchVision, and Kornia offer higher-level augmentation APIs. For richer workloads, their ready-made transforms can keep images and supported annotations in sync, which reduces application code and the risk of mistakes. General-purpose dispatch and bookkeeping can also add overhead. We use stock AX transforms as the reference and adapt the TorchVision and Kornia paths to match their effect.
+
+Pillow, Pillow-AllSIMD, and DALI serve as preprocessing libraries in this benchmark. Their primitives let us build a narrower pipeline with fewer layers of dispatch. For an image-only workload, that can improve speed. A richer workload can require application code for sampling, annotation geometry, and coordinated transforms. That code takes time to write, test, and maintain. The timing rows measure the input pipeline. The API census records direct, composed, and approximate matches. [Workload and reference implementations](benchmark_execution_contract.md#rgb-workload-and-reference-implementations) · [API census](../catalog/operations.yaml)
+
+## What does one recipe test?
+
+Each recipe has one target transformation. In `RandomCrop224 → Rotate`, the crop brings each source image to 224×224, with zero padding on short axes when needed. Rotate is the target. Throughput includes crop, padding, and the rest of the JPEG-to-CUDA pipeline. The same pass records peak process GPU memory. A recipe can also finish size preparation after its target, as in `Pad → RandomCrop224`.
+
+In the Resize recipe, `Resize(224)` is itself the target and forms the required shape. The catalog records all preparation stages explicitly. [RGB recipe catalog](../catalog/recipes/rgb.yaml) · [Timing boundary](benchmark_execution_contract.md#timing-boundary)
+
+## Why measure Colorize on grayscale JPEGs?
+
+Colorize maps one intensity channel to RGB. The grayscale workload starts with one-channel JPEGs prepared offline from the same ImageNet validation images. The measured pipeline reads and decodes each grayscale JPEG, crops to 224×224 with padding when needed, runs Colorize, and normalizes the RGB batch on CUDA. Grayscale conversion takes place when the archive is built. The grayscale archive has its own checksum and run identity. [Grayscale recipe](../catalog/recipes/grayscale.yaml) · [Grayscale workload](benchmark_execution_contract.md#grayscale-colorize-workload)
+
 ## JPEG decoders
 
 ### How do we choose a decoder?
@@ -50,9 +68,13 @@ We also packed the decoded images into one GPU buffer and copied that buffer int
 
 Packing improved throughput by 1.9% on Resize and 4.7% on `RandomCrop224` and raised peak VRAM by 312 MiB for both recipes. SimpleJPEG remains the selected AX decoder.
 
+### How do we handle EXIF orientation?
+
+Dataset preparation removes EXIF APP1 headers once, as the selected JPEGs are extracted. Their compressed image data stays byte-for-byte identical, so every decoder receives the same stored pixel orientation. This covers Pillow, Pillow-AllSIMD, TorchVision, Kornia, DALI, and the AX decoder. TorchVision CPU and DALI also disable automatic orientation in their decoder calls. The prepared cache is shared across implementations and EXIF removal happens before timing. [Dataset preparation](../src/augbench/dataset_materialize.py) · [Data access contract](benchmark_execution_contract.md#data-access)
+
 ### Why do TorchVision GPU and Kornia GPU use different JPEG pipelines?
 
-TorchVision benefits from GPU decode because its transforms can consume the decoded `uint8` CUDA tensors directly. DataLoader workers read JPEG bytes and remove the EXIF orientation metadata so decoding preserves the stored pixel orientation. The main process passes the JPEGs to TorchCodec in one batch call. TorchVision applies Resize or Crop on the GPU, stacks the resulting 224×224 images, and normalizes the FP16 batch. This path keeps decoded RGB on the GPU from decode through normalization. [TorchVision adapter](../src/augbench/implementations/torchvision_pipeline_impl.py) · [TorchCodec JPEG decoding](https://meta-pytorch.org/torchcodec/stable/generated_examples/decoding/image_decoding.html)
+TorchVision benefits from GPU decode because its transforms can consume the decoded `uint8` CUDA tensors directly. DataLoader workers read the prepared JPEG bytes. The main process passes the JPEGs to TorchCodec in one batch call. TorchVision applies Resize or Crop on the GPU, stacks the equal-size images, and normalizes the FP16 batch. This path keeps decoded RGB on the GPU from decode through normalization. [TorchVision adapter](../src/augbench/implementations/torchvision_pipeline_impl.py) · [TorchCodec JPEG decoding](https://meta-pytorch.org/torchcodec/stable/generated_examples/decoding/image_decoding.html)
 
 On `RandomCrop224`, the earlier hybrid path using `torchvision.io.decode_jpeg` delivered **495 images/s**. The targeted run with TorchCodec and hardware nvJPEG delivered **4,198 images/s**. The subsequent 44-recipe TorchVision GPU run measured **4,464 images/s** on `RandomCrop224` and **3,425 images/s** on Resize. We use the TorchCodec path for TorchVision GPU. [Earlier TorchVision run](https://console.cloud.google.com/storage/browser/imagenet_validation/augmentation-benchmark/runs/9c2a6d0b54469dbd1f14833b54e7f4d0758a4242a25673ecdd2d13ff32fd64f3?project=albumentations) · [Targeted TorchCodec run](https://console.cloud.google.com/storage/browser/imagenet_validation/augmentation-benchmark/runs/df3a0bb0c948f7e418d1a2f93a830d1b71917c70983c16f63e73210b3b4e8bab?project=albumentations) · [Full TorchVision GPU run](https://console.cloud.google.com/storage/browser/imagenet_validation/augmentation-benchmark/runs/d1235938fea1d0333e5a503343b502e067644849dc659f5f2b28ef86a29cd067?project=albumentations)
 
@@ -78,19 +100,37 @@ We request bilinear resampling without an antialiasing filter in these recipes. 
 
 ## How do we choose equivalent recipes across libraries?
 
-Use the native AlbumentationsX recipe as the reference. Match its geometry, interpolation, boundary fill, probability of applying the operation, and parameter distribution in the other adapters. For example, the current Affine recipe specifies the same scale, rotation, shear, and translation so every path performs the full warp. Library-native compositions are useful when an API lacks a single operator for the requested effect. Shared seeds align the input order. Each library draws its own parameters from the declared distribution.
+Use the native AlbumentationsX recipe as the reference. Each AX stage calls a stock transform and lets its sampler run. TorchVision and Kornia run native operators with parameters chosen to approximate the AX effect. Their algorithms and their costs are part of the comparison. Pillow, Pillow-AllSIMD, and DALI can compose native primitives into the target effect.
 
-Pixel rounding and some native algorithms still differ. The contract calls out consequential differences. For example, JPEG quality 50 is the same nominal setting for a codec and a JPEG artifact simulator, but it does not guarantee the same distortion. If a path changes what is measured, its comparison needs new observations under the corrected recipe. [Recipe catalog](../catalog/recipes/rgb.yaml) · [Aggregation rules](benchmark_execution_contract.md#aggregation)
+Shared seeds align input order. The augmentation or its adapter draws parameters for each image during execution. For example, the TorchVision adapter selects a quarter-turn angle and passes it to native `rotate`. If the library lacks an operator for the target, the path is unsupported. This applies to Transpose, LetterBox, and Emboss in TorchVision and Kornia. R63 is called `RGB <-> BGR` because it always exchanges red and blue. R12 samples from all six RGB channel orders. [Recipe catalog](../catalog/recipes/rgb.yaml) · [Aggregation rules](benchmark_execution_contract.md#aggregation)
 
-### How do we match Rain and ThinPlateSpline to AlbumentationsX?
+The adapter inventory shows where TorchVision and Kornia add sampling, convert parameters, or change how images enter a native call. It also traces JPEG decoding, transfers, and normalization. [TorchVision and Kornia adapter inventory](torchvision_kornia_adapters.md)
 
-**Rain (R41).** On a 224×224 crop, AlbumentationsX draws 74 streaks with a 28-pixel vertical displacement and a nominal 5-pixel line thickness. It blurs the rain layer with a 7×7 box filter, then adds it to the image. Kornia's default draws 1,000–2,000 thin lines and writes their color directly into the image. We set Kornia's density, height, and slant to match the AX recipe, then thicken, blur, and add its rain layer. In a CPU check over 24 black crops, AX and Kornia each changed about 54% of pixels and raised the mean level by about 57 and 56 points on a 0–255 scale. [AX adapter](../src/augbench/implementations/albumentationsx_impl.py) · [Kornia adapter](../src/augbench/implementations/kornia_impl.py)
+### What did the calibration match?
 
-**ThinPlateSpline (R47).** AX draws Gaussian offsets at four corners and the center, with standard deviation equal to 5% of the crop dimension, or 11.2 px on a 224×224 crop. Kornia now draws from that same distribution and fits its native spline from the fixed output anchors to the perturbed input coordinates. Both adapters draw inside the transform. In a CPU check with 24 sets of identical anchor offsets, their dense sampling maps agreed to less than 0.001 px RMS. Interpolation and rounding can still differ. [Recipe catalog](../catalog/recipes/rgb.yaml) · [Kornia adapter](../src/augbench/implementations/kornia_impl.py)
+The figures below are CPU checks on 16 ImageNet validation crops at 224×224 with seed 137. For pixel effects, RMS measures how far the output moves from its own input, in 0–255 units. It does not measure pixel agreement between independent draws or throughput.
+
+| Recipe | Calibration and remaining differences |
+| --- | --- |
+| GaussianNoise (R16) | AX uses σ=0.44 and clips to uint8. Native Kornia uses σ=0.325. Pixel RMS was 82.7 for AX and 82.8 for Kornia. Kornia still leaves values outside the image range. |
+| CLAHE (R29) | AX applies CLAHE to Lab lightness. Kornia applies it per RGB channel with clip range 1.0–3.5, and DALI applies it to luma. AX and Kornia changed Lab lightness by an average of 7.5 and 7.2 units respectively. The mean Lab chroma shift was 0.7 and 7.5 units respectively. |
+| Corner and Gaussian Illumination (R35–36) | Kornia uses gain 0.006–0.12. Pixel RMS was 9.0 and 9.4 in AX and 8.8 and 9.2 in Kornia. The AX effects multiply pixel values. Kornia adds a field and can affect black pixels. |
+| PlasmaBrightness and PlasmaShadow (R38, R40) | Tuning the native Kornia intensity and shadow threshold gave mean absolute changes of 23.0 and 27.9. AX measured 22.7 and 28.5. Kornia can change each RGB channel separately for brightness and uses a thresholded mask for shadow. |
+| Rain (R41) | AX draws 74 thick, blurred additive streaks. Native Kornia overwrites pixels with 1,150 thin streaks of a similar length and slant. Pixel RMS was 73.5 in AX and 75.7 in Kornia. The streak texture differs. |
+| ThinPlateSpline (R47) | Both paths use four corners and the center. AX draws Gaussian offsets. Kornia uses its own uniform sampler with scale 0.173. Both give a per-axis anchor displacement standard deviation of about 11.2 px. The native warps preserve their own map conventions. |
+| Pillow blur and sharpness (R15, R32, R55–57) | The Pillow paths reflect-pad before filtering. GaussianBlur uses a sampled σ and a finite 5×5 kernel. At σ=2, both outputs matched on all 16 crops. At α=0.75, the edge and detail enhancement filters each differed by under 0.06 intensity units MAE. UnsharpMask at the five-tap setting and α=0.35 differed by 0.19 units. |
+
+JPEG quality is a control for the selected codec. Kornia maps the sampled nominal qualities 30, 70, and 90 to about 24, 63, and 89 to match the strength of AX's compression artifacts. Kornia's differentiable simulator and DALI's artifact simulator retain their own decoding and quantization behavior. [Recipe catalog](../catalog/recipes/rgb.yaml)
+
+For Perspective (R09), the sampled inner quadrilateral is the source. The native warp expands it into the output canvas. In a separate CPU check on 24 white inputs, AX, TorchVision, and Kornia all returned zero fully black pixels. With the previous corner order, TorchVision and Kornia left 20% and 22% of the canvas black. [Geometry contract](benchmark_execution_contract.md#timing-boundary)
+
+Some native operators differ substantially after tuning. Kornia PlasmaContrast exposes roughness and has no contrast-strength parameter. Its pixel RMS was 36.5 versus 5.6 in AX. Kornia Fisheye samples a radial exponent and always expands source coordinates outward. AX samples a signed radial coefficient. On the 16 crops, 27% of Kornia's output pixels were black versus 9% in AX. [Kornia adapter](../src/augbench/implementations/kornia_impl.py) · [Benchmark contract](benchmark_execution_contract.md#timing-boundary)
 
 ## Why normalize on the GPU and return FP16?
 
 Normalizing on the GPU gives every path the same final device and output contract. A path that augments `uint8` images on the CPU can transfer one byte per channel value, then convert and normalize on CUDA. The cost of making the normalized FP16 batch ready for the model stays in the measurement. Intermediate dtypes and arithmetic follow each implementation's documented path. [Execution paths](benchmark_execution_contract.md#timing-boundary)
+
+AX keeps each CPU sample in HWC `uint8`. Workers stack the images into a BHWC batch. Once the batch is on CUDA, one `permute` produces the BCHW view used by AX's `InputNormalizer`. The catalog's `Normalize` and `ToTensor` entries configure the batch result. The CPU image pipeline runs just the listed augmentations. [AX batch path](../src/augbench/implementations/albumentationsx_pipeline_impl.py)
 
 ## Why randomize image order after reading the files into RAM?
 

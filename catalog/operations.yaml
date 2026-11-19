@@ -292,7 +292,7 @@ operations:
       status: direct
     dali: {api: "color_space_conversion RGB to BGR", status: composed}
   benchmark_recipe_ids:
-  - ChannelSwap
+  - RGB <-> BGR
 - operation_id: ChromaticAberration
   domain: pixel
   module: albumentations.augmentations.pixel.color
@@ -554,8 +554,8 @@ operations:
       api: null
       status: none
     kornia:
-      api: filters.filter2d
-      status: direct
+      api: null
+      status: none
     pillow:
       api: ImageFilter.Kernel
       status: direct
@@ -735,8 +735,8 @@ operations:
       api: RandomGaussianBlur
       status: direct
     pillow:
-      api: ImageFilter.GaussianBlur
-      status: direct
+      api: ImageFilter.Kernel + reflection padding
+      status: composed
     dali: {api: "gaussian_blur", status: direct}
   benchmark_recipe_ids:
   - GaussianBlur
@@ -1313,8 +1313,8 @@ operations:
       api: RandomPerspective
       status: direct
     pillow:
-      api: null
-      status: none
+      api: Image.transform(PERSPECTIVE)
+      status: composed
     dali: {api: "experimental.warp_perspective", status: direct}
   benchmark_recipe_ids:
   - Perspective
@@ -1388,7 +1388,7 @@ operations:
     pillow:
       api: Image.effect_spread
       status: approximate
-    dali: {api: "jitter", status: approximate}
+    dali: {api: "uniform offsets + experimental.remap", status: composed}
   benchmark_recipe_ids:
   - PixelSpread
 - operation_id: PlanckianJitter

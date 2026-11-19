@@ -55,7 +55,7 @@ def build_run_record(
 
 class CellKey(_Record):
     run_id: Sha256
-    family: Literal["rgb"]
+    family: Literal["rgb", "grayscale"]
     implementation: str = Field(min_length=1)
     recipe_id: str = Field(min_length=1)
     seed: int

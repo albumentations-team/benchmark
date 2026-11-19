@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import random
+from math import exp, sqrt
 from typing import TYPE_CHECKING, Any
 
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
@@ -18,10 +19,10 @@ from augbench.implementations.geometry import (
     centered_padding,
     emboss_kernel,
     sample_inverse_affine,
-    sample_inverse_perspective,
+    sample_perspective_coefficients,
     x_shear_matrix,
 )
-from augbench.implementations.specs import channel_orders, odd_kernel_sizes, parameter_range
+from augbench.implementations.specs import odd_kernel_sizes, parameter_range
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -95,13 +96,17 @@ def _build_pad(params: dict[str, Any]) -> Any | None:
 
 
 def _build_perspective(params: dict[str, Any]) -> Any:
+    scale = tuple(params["scale"])
+    fill = params["fill"]
+
     def warp(image: Image.Image) -> Image.Image:
-        a, b, c, d, e, f, g, h = sample_inverse_perspective(params["input_size"], params["scale"], pixel_center=False)
-        return ImageOps.expand(image, border=1, fill=0).transform(
+        a, b, c, d, e, f, g, h = sample_perspective_coefficients(image.height, image.width, scale)
+        return ImageOps.expand(image, border=1, fill=fill).transform(
             image.size,
             Image.Transform.PERSPECTIVE,
             (a + g, b + h, c + 1, d + g, e + h, f + 1, g, h),
             resample=Image.Resampling.BILINEAR,
+            fillcolor=fill,
         )
 
     return warp
@@ -147,7 +152,9 @@ def _build_equalize(_params: dict[str, Any]) -> Any | None:
     return ImageOps.equalize
 
 
-def _build_grayscale(_params: dict[str, Any]) -> Any | None:
+def _build_grayscale(params: dict[str, Any]) -> Any | None:
+    if params["num_output_channels"] == 1:
+        return ImageOps.grayscale
     return lambda img: ImageOps.grayscale(img).convert("RGB")
 
 
@@ -167,7 +174,31 @@ def _build_solarize(params: dict[str, Any]) -> Any:
 
 def _build_gaussian_blur(params: dict[str, Any]) -> Any:
     bounds = parameter_range(params["sigma"])
-    return lambda img: img.filter(ImageFilter.GaussianBlur(radius=random.uniform(*bounds)))
+    size = params["kernel_size"][0]
+    radius = size // 2
+
+    def blur(image: Image.Image) -> Image.Image:
+        sigma = random.uniform(*bounds)
+        weights = [exp(-0.5 * (offset / sigma) ** 2) for offset in range(-radius, radius + 1)]
+        kernel = ImageFilter.Kernel((size, size), [y * x for y in weights for x in weights])
+        return _filter_with_reflection(image, kernel, radius)
+
+    return blur
+
+
+def _filter_with_reflection(image: Image.Image, filter_: ImageFilter.Filter, radius: int) -> Image.Image:
+    width, height = image.size
+    horizontal = Image.new(image.mode, (width + 2 * radius, height))
+    horizontal.paste(image, (radius, 0))
+    horizontal.paste(ImageOps.mirror(image.crop((1, 0, 1 + radius, height))), (0, 0))
+    horizontal.paste(ImageOps.mirror(image.crop((width - radius - 1, 0, width - 1, height))), (width + radius, 0))
+    padded_width = horizontal.width
+    padded = Image.new(image.mode, (padded_width, height + 2 * radius))
+    padded.paste(horizontal, (0, radius))
+    padded.paste(ImageOps.flip(horizontal.crop((0, 1, padded_width, 1 + radius))), (0, 0))
+    bottom = horizontal.crop((0, height - radius - 1, padded_width, height - 1))
+    padded.paste(ImageOps.flip(bottom), (0, height + radius))
+    return padded.filter(filter_).crop((radius, radius, width + radius, height + radius))
 
 
 def _build_median_blur(params: dict[str, Any]) -> Any:
@@ -177,7 +208,12 @@ def _build_median_blur(params: dict[str, Any]) -> Any:
 
 def _build_blur(params: dict[str, Any]) -> Any:
     sizes = odd_kernel_sizes(params["kernel_size"])
-    return lambda img: img.filter(ImageFilter.BoxBlur(radius=(random.choice(sizes) - 1) / 2))
+
+    def blur(image: Image.Image) -> Image.Image:
+        radius = random.choice(sizes) // 2
+        return _filter_with_reflection(image, ImageFilter.BoxBlur(radius), radius)
+
+    return blur
 
 
 def _build_center_crop(params: dict[str, Any]) -> Any:
@@ -233,11 +269,10 @@ def _build_pad_if_needed(params: dict[str, Any]) -> Any:
 
 
 def _build_channel_swap(params: dict[str, Any]) -> Any:
-    orders = channel_orders(params)
+    order = tuple(params["channel_order"])
 
     def swap(image: Image.Image) -> Image.Image:
         channels = image.split()
-        order = random.choice(orders) if len(orders) > 1 else orders[0]
         return Image.merge("RGB", tuple(channels[index] for index in order))
 
     return swap
@@ -285,7 +320,7 @@ def _build_random_gamma(params: dict[str, Any]) -> Any:
 
 
 def _build_colorize(params: dict[str, Any]) -> Any:
-    return lambda image: ImageOps.colorize(image.convert("L"), tuple(params["black"]), tuple(params["white"]))
+    return lambda image: ImageOps.colorize(image, tuple(params["black"]), tuple(params["white"]))
 
 
 def _build_dithering(_params: dict[str, Any]) -> Any:
@@ -362,23 +397,31 @@ def _build_affine(params: dict[str, Any]) -> Any:
 
 
 def _build_unsharp_mask(params: dict[str, Any]) -> Any | None:
-    blur_lo, blur_hi = params["blur_limit"]
-    alpha_lo, alpha_hi = params["alpha"]
+    sizes = odd_kernel_sizes(params["blur_limit"])
+    alpha = parameter_range(params["alpha"])
+    # Standard deviations of OpenCV's sigma=0 kernels for 3, 5 and 7 taps.
+    radii = {3: sqrt(0.5), 5: 1.0, 7: sqrt(1.875)}
 
     def _unsharp_mask(img: Image.Image) -> Image.Image:
-        radius = random.uniform(blur_lo / 2.0, blur_hi / 2.0)
-        percent = int(100 + random.uniform(alpha_lo, alpha_hi) * 200)
-        return img.filter(ImageFilter.UnsharpMask(radius=radius, percent=percent, threshold=params["threshold"]))
+        radius = radii[random.choice(sizes)]
+        percent = round(random.uniform(*alpha) * 100)
+        filter_ = ImageFilter.UnsharpMask(radius=radius, percent=percent, threshold=params["threshold"])
+        return _filter_with_reflection(img, filter_, radius=5)
 
     return _unsharp_mask
 
 
 def _build_enhance(params: dict[str, Any]) -> Any:
-    filter_ = ImageFilter.EDGE_ENHANCE_MORE if params["mode"] == "edge" else ImageFilter.DETAIL
+    preset = ImageFilter.EDGE_ENHANCE if params["mode"] == "edge" else ImageFilter.DETAIL
+    size, scale, offset, weights = preset.filterargs
+    center = len(weights) // 2
 
     def enhance(image: Image.Image) -> Image.Image:
         alpha = random.uniform(*params["alpha_range"])
-        return Image.blend(image, image.filter(filter_), alpha)
+        blended = [alpha * weight for weight in weights]
+        blended[center] += (1 - alpha) * scale
+        kernel = ImageFilter.Kernel(size, blended, scale=scale, offset=offset)
+        return _filter_with_reflection(image, kernel, radius=1)
 
     return enhance
 

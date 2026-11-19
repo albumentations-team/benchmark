@@ -5,12 +5,15 @@ from math import pi
 from typing import TYPE_CHECKING, Any, Protocol
 
 from augbench.implementations.geometry import (
+    PERSPECTIVE_JITTER_LIMIT,
     affine_axis_ranges,
     centered_inverse_affine,
-    centered_inverse_perspective,
     emboss_kernel,
+    inverse_perspective_coefficients,
+    perspective_corners,
+    perspective_edges_squared,
 )
-from augbench.implementations.specs import channel_orders, odd_kernel_sizes, parameter_range
+from augbench.implementations.specs import odd_kernel_sizes, parameter_range
 from augbench.recipes.runtime import UnsupportedRecipeError
 
 if TYPE_CHECKING:
@@ -27,6 +30,7 @@ class _Execution(Protocol):
     seed: int
     height: int
     width: int
+    jpeg_channels: int
 
 
 def supports_recipe(recipe: RecipeSpec) -> bool:
@@ -78,7 +82,7 @@ class DaliBatchSource:
                 random_shuffle=False,
                 name="Reader",
             )
-            data, stages = _decode_recipe_input(encoded, recipe.stages)
+            data, stages = _decode_recipe_input(encoded, recipe.stages, jpeg_channels=self._execution.jpeg_channels)
             for stage in stages:
                 data = _apply_stage(
                     data,
@@ -123,11 +127,15 @@ def _apply_stage(data: Any, stage: RecipeStage, *, output_height: int, output_wi
 
 
 def _decode_recipe_input(
-    encoded: Any, stages: Sequence[RecipeStage], *, device: str = "mixed"
+    encoded: Any, stages: Sequence[RecipeStage], *, device: str = "mixed", jpeg_channels: int = 3
 ) -> tuple[Any, Sequence[RecipeStage]]:
     from nvidia.dali import fn, types
 
-    decoder_args = {"device": device, "output_type": types.RGB, "adjust_orientation": False}
+    decoder_args = {
+        "device": device,
+        "output_type": types.GRAY if jpeg_channels == 1 else types.RGB,
+        "adjust_orientation": False,
+    }
     first = stages[0]
     params = first.parameters
     if first.operation_id == "RandomResizedCrop":
@@ -276,26 +284,30 @@ def _apply_random_scale(data: Any, params: dict[str, Any], _height: int, _width:
 
 
 def _apply_channel_swap(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
-    return _permute_channels(data, channel_orders(params))
+    from nvidia.dali import fn, types
+
+    order = _integer_list(params, "channel_order")
+    if order == [2, 1, 0]:
+        return fn.color_space_conversion(data, image_type=types.RGB, output_type=types.BGR)
+    channels = [
+        fn.slice(data, (index,), (1,), axes=(2,), normalized_anchor=False, normalized_shape=False) for index in order
+    ]
+    return fn.cat(*channels, axis=2)
 
 
-def _apply_grayscale(data: Any, _params: dict[str, Any], _height: int, _width: int) -> Any:
+def _apply_grayscale(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
     from nvidia.dali import fn, types
 
     gray = fn.color_space_conversion(data, image_type=types.RGB, output_type=types.GRAY)
+    if params["num_output_channels"] == 1:
+        return gray
     return fn.color_space_conversion(gray, image_type=types.GRAY, output_type=types.RGB)
 
 
 def _apply_channel_shuffle(data: Any, _params: dict[str, Any], _height: int, _width: int) -> Any:
-    return _permute_channels(data, tuple(permutations(range(3))))
-
-
-def _permute_channels(data: Any, orders: tuple[tuple[int, ...], ...]) -> Any:
     from nvidia.dali import fn, types
 
-    if orders == ((2, 1, 0),):
-        return fn.color_space_conversion(data, image_type=types.RGB, output_type=types.BGR)
-
+    orders = tuple(permutations(range(3)))
     choices = list(range(len(orders)))
     order = fn.random.uniform(values=choices, shape=[1], dtype=types.INT32)
     channels = []
@@ -422,20 +434,25 @@ def _apply_emboss(data: Any, params: dict[str, Any], _height: int, _width: int) 
     return fn.filter(data, kernel, border="reflect_101")
 
 
-def _apply_pixel_spread(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
-    from nvidia.dali import fn
+def _apply_pixel_spread(data: Any, params: dict[str, Any], height: int, width: int) -> Any:
+    from nvidia.dali import fn, types
 
-    return fn.jitter(data, nDegree=2 * _integer(params, "radius"), fill_value=0)
+    radius = _integer(params, "radius")
+    offsets = list(range(-radius, radius + 1))
+    dx = fn.random.uniform(values=offsets, shape=(height, width), dtype=types.FLOAT, device=data.device)
+    dy = fn.random.uniform(values=offsets, shape=(height, width), dtype=types.FLOAT, device=data.device)
+    x = types.Constant(list(range(width)), shape=(1, width), dtype=types.FLOAT, device=data.device)
+    y = types.Constant(list(range(height)), shape=(height, 1), dtype=types.FLOAT, device=data.device)
+    return fn.experimental.remap(data, x + dx, y + dy, interp=types.INTERP_NN, pixel_origin="center")
 
 
 def _apply_colorize(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
-    from nvidia.dali import fn, types
+    from nvidia.dali import fn
 
-    gray = fn.color_space_conversion(data, image_type=types.RGB, output_type=types.GRAY)
     black_values, white_values = _integer_list(params, "black"), _integer_list(params, "white")
     channels = [
         _byte_lookup(
-            gray,
+            data,
             [
                 int(black_values[index] + (white_values[index] - black_values[index]) * value / 255)
                 for value in range(256)
@@ -567,19 +584,19 @@ def _apply_shear(data: Any, params: dict[str, Any], output_height: int, output_w
     )
 
 
-def _apply_perspective(data: Any, params: dict[str, Any], _height: int, _width: int) -> Any:
-    from nvidia.dali import fn, types
+def _apply_perspective(data: Any, params: dict[str, Any], height: int, width: int) -> Any:
+    from nvidia.dali import fn, math, types
 
-    size = _integer(params, "input_size")
-    scale = tuple(_number_list(params, "scale"))
-
-    def sample_axis() -> Any:
-        return fn.random.uniform(range=scale) * fn.random.uniform(values=[-1.0, 1.0]) / size
-
-    coefficients = centered_inverse_perspective((size - 1) / 2, sample_axis(), sample_axis())
+    jitter = math.abs(fn.random.normal(shape=(4, 2)) * _uniform(params["scale"]))
+    jitter = jitter - math.floor(jitter / PERSPECTIVE_JITTER_LIMIT) * PERSPECTIVE_JITTER_LIMIT
+    corners = perspective_corners(tuple((jitter[i, 0], jitter[i, 1]) for i in range(4)), height, width)
+    widths, heights = perspective_edges_squared(corners)
+    sx = math.floor(math.sqrt(math.max(*widths))) / width**2
+    sy = math.floor(math.sqrt(math.max(*heights))) / height**2
+    coefficients = inverse_perspective_coefficients(corners, sx, sy)
     matrix = fn.reshape(fn.stack(*coefficients, types.Constant(1.0), axis=0), shape=[3, 3])
     return fn.experimental.warp_perspective(
-        data, matrix.gpu(), size=(size, size), pixel_origin="center", fill_value=[0]
+        data, matrix.gpu(), size=(height, width), pixel_origin="center", fill_value=[params["fill"]]
     )
 
 
@@ -643,22 +660,20 @@ def _saturation(data: Any, factor: Any) -> Any:
     return fn.cast(factor * data + (1 - factor) * gray, dtype=types.UINT8)
 
 
-def _apply_clahe(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
-    from nvidia.dali import fn
+def _apply_clahe(data: Any, params: dict[str, Any], height: int, width: int) -> Any:
+    from nvidia.dali import fn, math
 
     tiles_y, tiles_x = _integer_list(params, "tile_grid_size")
-    levels = _number_list(params, "clip_limits")
-    low, mid_low, mid_high, high = levels
-    choice = fn.random.uniform(values=levels)
-    if choice == low:
-        result = fn.clahe(data, clip_limit=low, tiles_x=tiles_x, tiles_y=tiles_y)
-    elif choice == mid_low:
-        result = fn.clahe(data, clip_limit=mid_low, tiles_x=tiles_x, tiles_y=tiles_y)
-    elif choice == mid_high:
-        result = fn.clahe(data, clip_limit=mid_high, tiles_x=tiles_x, tiles_y=tiles_y)
-    else:
-        result = fn.clahe(data, clip_limit=high, tiles_x=tiles_x, tiles_y=tiles_y)
-    return result
+    low, high = _number_list(params, "clip_range")
+    tile_height = (height + tiles_y - 1) // tiles_y
+    tile_width = (width + tiles_x - 1) // tiles_x
+    pixels_per_bin = tile_height * tile_width / 256
+    # DALI needs a static argument, but its histogram clamps to an integer count.
+    count = math.floor(_uniform(params["clip_range"]) * pixels_per_bin)
+    for threshold in range(int(low * pixels_per_bin), int(high * pixels_per_bin) + 1):
+        if count == threshold:
+            data = fn.clahe(data, clip_limit=(threshold + 0.5) / pixels_per_bin, tiles_x=tiles_x, tiles_y=tiles_y)
+    return data
 
 
 def _apply_equalize(data: Any, _params: dict[str, Any], _output_height: int, _output_width: int) -> Any:

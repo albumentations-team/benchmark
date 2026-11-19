@@ -22,7 +22,7 @@ def test_collate_preserves_pixels_from_a_reversed_numpy_view() -> None:
 
 
 class _Recipe:
-    recipe_id = "Resize224+Normalize+ToTensor"
+    recipe_id = "Resize224"
     supported_implementations = ("cpu_impl", "gpu_impl")
     stages = ()
 

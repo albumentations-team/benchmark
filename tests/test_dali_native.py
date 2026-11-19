@@ -7,7 +7,13 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 
-from augbench.adapters.dali.native import _apply_erasing, _apply_pad, _apply_stage, _decode_recipe_input
+from augbench.adapters.dali.native import (
+    _apply_erasing,
+    _apply_pad,
+    _apply_pixel_spread,
+    _apply_stage,
+    _decode_recipe_input,
+)
 from augbench.recipes.load import load_recipe_catalog
 from augbench.recipes.models import RecipeStage
 
@@ -64,6 +70,31 @@ def test_pad_adds_a_border_to_each_image() -> None:
         np.testing.assert_array_equal(output.at(index), expected)
 
 
+def test_dali_pixel_spread_shares_offsets_across_rgb_and_blacks_outside_pixels() -> None:
+    torch = pytest.importorskip("torch")
+    if not torch.cuda.is_available():
+        pytest.skip("DALI remap requires CUDA")
+
+    height, width, radius, samples = 32, 32, 2, 4
+    y, x = np.indices((height, width), dtype=np.int16) + 1
+    image = np.stack((x, y, x + y), axis=-1).astype(np.uint8)
+    with dali.Pipeline(batch_size=samples, num_threads=1, device_id=0, seed=137) as pipeline:
+        data = fn.external_source(source=lambda: [image] * samples, layout="HWC").gpu()
+        pipeline.set_outputs(_apply_pixel_spread(data, {"radius": radius}, height, width))
+    pipeline.build()
+    (device_output,) = pipeline.run()
+    output = device_output.as_cpu().as_array()
+
+    valid = output[..., 0] > 0
+    assert np.any(~valid)
+    assert np.all(valid[:, radius:-radius, radius:-radius])
+    assert np.all(output[~valid] == 0)
+    np.testing.assert_array_equal(output[..., 2], output[..., 0] + output[..., 1])
+    assert np.all(np.abs(output[..., 0] - x)[valid] <= radius)
+    assert np.all(np.abs(output[..., 1] - y)[valid] <= radius)
+    assert not np.array_equal(output[0], output[1])
+
+
 @pytest.mark.parametrize(
     "operation",
     [
@@ -80,7 +111,6 @@ def test_pad_adds_a_border_to_each_image() -> None:
         "Solarize",
         "RandomGamma",
         "JpegCompression",
-        "ChannelSwap",
     ],
 )
 def test_dali_samples_within_a_batch(operation: str) -> None:

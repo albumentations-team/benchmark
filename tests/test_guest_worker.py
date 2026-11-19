@@ -41,7 +41,7 @@ def test_guest_selects_only_the_requested_known_cells() -> None:
         run_id=request.run.run_id,
         family="rgb",
         implementation="pillow_cpu",
-        recipe_id="Resize224+Normalize+ToTensor",
+        recipe_id="Resize224",
         seed=137,
     )
     other = wanted.model_copy(update={"seed": 138})
