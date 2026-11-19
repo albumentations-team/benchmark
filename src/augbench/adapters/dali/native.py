@@ -542,7 +542,7 @@ def _apply_affine(data: Any, params: dict[str, Any], output_height: int, output_
     )
     return fn.warp_affine(
         data,
-        fn.stack(*matrix),
+        fn.reshape(fn.stack(*matrix), shape=(2, 3)),
         size=(output_height, output_width),
         inverse_map=True,
         fill_value=params.get("fill", 0),
@@ -556,10 +556,10 @@ def _apply_shear(data: Any, params: dict[str, Any], output_height: int, output_w
     slope = -math.tan(_uniform(params["shear"]) * (pi / 180))
     zero = types.Constant(0.0)
     one = types.Constant(1.0)
-    matrix = fn.stack(one, slope, -slope * (output_height / 2), zero, one, zero)
+    coefficients = fn.stack(one, slope, -slope * (output_height / 2), zero, one, zero)
     return fn.warp_affine(
         data,
-        matrix,
+        fn.reshape(coefficients, shape=(2, 3)),
         size=(output_height, output_width),
         inverse_map=True,
         fill_value=0,
