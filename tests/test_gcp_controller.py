@@ -73,7 +73,7 @@ def _cell(request: GuestRequest) -> CellKey:
         run_id=request.run.run_id,
         family="rgb",
         implementation="pillow_cpu",
-        recipe_id="Resize224+Normalize+ToTensor",
+        recipe_id="Resize224",
         seed=137,
     )
 

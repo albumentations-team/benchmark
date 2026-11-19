@@ -5,12 +5,16 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 from pathlib import Path  # noqa: TC003 - this module reads and hashes frozen files at runtime.
+from typing import TYPE_CHECKING
 
 from augbench.guest_request import GuestRequest
 from augbench.matrix import build_matrix
 from augbench.recipes.load import load_recipe_catalog
 from augbench.run_config import load_family_config, load_gcp_config
 from augbench.run_records import CellKey, RunInputs, RunRecord, build_run_record
+
+if TYPE_CHECKING:
+    from augbench.run_config import FamilyRunConfig
 
 
 @dataclass(frozen=True)
@@ -25,9 +29,11 @@ def build_frozen_rgb_run(
     repository_root: Path,
     git_commit: str,
     code_archive_sha256: str,
+    config: FamilyRunConfig | None = None,
 ) -> FrozenRgbRun:
     """Resolve repository inputs once; no historic epoch or suite is involved."""
-    config = load_family_config(repository_root / "configs/families/rgb.yaml")
+    if config is None:
+        config = load_family_config(repository_root / "configs/families/rgb.yaml")
     cloud = load_gcp_config(repository_root / config.cloud)
     recipes_path = repository_root / config.recipes
     lock_path = repository_root / "environments/rgb/lock.txt"

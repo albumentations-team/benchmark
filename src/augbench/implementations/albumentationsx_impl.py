@@ -4,10 +4,9 @@ from typing import Any
 
 import albumentations
 import cv2
-import numpy as np
 
-from augbench.implementations.geometry import affine_axis_ranges, sample_inverse_perspective
-from augbench.implementations.specs import TransformSpec, channel_orders, parameter_range
+from augbench.implementations.geometry import affine_axis_ranges
+from augbench.implementations.specs import TransformSpec, parameter_range
 
 LIBRARY = "albumentationsx"
 
@@ -103,14 +102,15 @@ def _build_affine(params: dict[str, Any]) -> Any:
 
 
 def _build_perspective(params: dict[str, Any]) -> Any:
-    size = params["input_size"]
-
-    def warp(image: Any, **_kwargs: Any) -> Any:
-        coefficients = sample_inverse_perspective(size, params["scale"], pixel_center=True)
-        matrix = np.asarray([*coefficients, 1.0]).reshape(3, 3)
-        return cv2.warpPerspective(image, matrix, (size, size), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP)
-
-    return albumentations.Lambda(image=warp, p=1)
+    return albumentations.Perspective(
+        scale=tuple(params["scale"]),
+        keep_size=True,
+        fit_output=False,
+        interpolation=cv2.INTER_LINEAR,
+        border_mode=cv2.BORDER_CONSTANT,
+        fill=params["fill"],
+        p=1,
+    )
 
 
 def _build_elastic(params: dict[str, Any]) -> Any | None:
@@ -128,16 +128,6 @@ def _build_color_jitter(params: dict[str, Any]) -> Any | None:
         contrast_range=parameter_range(params["contrast"]),
         saturation_range=parameter_range(params["saturation"]),
         hue_range=parameter_range(params["hue"]),
-        p=1,
-    )
-
-
-def _build_color_jiggle(params: dict[str, Any]) -> Any | None:
-    return albumentations.ColorJitter(
-        brightness_range=params["brightness"],
-        contrast_range=params["contrast"],
-        saturation_range=params["saturation"],
-        hue_range=params["hue"],
         p=1,
     )
 
@@ -211,13 +201,6 @@ def _build_equalize(params: dict[str, Any]) -> Any | None:
     return albumentations.Equalize(mode=params["mode"], p=1)
 
 
-def _build_normalize(_params: dict[str, Any]) -> Any | None:
-    # Normalization is a batch-level CUDA stage.  Returning no CPU
-    # transform here makes it impossible for an RGB recipe factory to
-    # accidentally put it back into a DataLoader worker.
-    return None
-
-
 def _build_erasing(params: dict[str, Any]) -> Any | None:
     return albumentations.Erasing(
         scale=params["scale"],
@@ -264,13 +247,7 @@ def _build_motion_blur(params: dict[str, Any]) -> Any | None:
 
 
 def _build_clahe(params: dict[str, Any]) -> Any | None:
-    return albumentations.OneOf(
-        [
-            albumentations.CLAHE(clip_range=(value, value), tile_grid_size=params["tile_grid_size"], p=1)
-            for value in params["clip_limits"]
-        ],
-        p=1,
-    )
+    return albumentations.CLAHE(clip_range=tuple(params["clip_range"]), tile_grid_size=params["tile_grid_size"], p=1)
 
 
 def _build_brightness(params: dict[str, Any]) -> Any | None:
@@ -445,19 +422,12 @@ def _build_pad_if_needed(params: dict[str, Any]) -> Any:
 
 
 def _build_channel_swap(params: dict[str, Any]) -> Any:
-    swaps = [albumentations.ChannelSwap(channel_order=order, p=1) for order in channel_orders(params)]
-    return swaps[0] if len(swaps) == 1 else albumentations.OneOf(swaps, p=1)
+    return albumentations.ChannelSwap(channel_order=tuple(params["channel_order"]), p=1)
 
 
 def _build_colorize(params: dict[str, Any]) -> Any:
-    return albumentations.Sequential(
-        [
-            albumentations.ToGray(num_output_channels=1, p=1),
-            albumentations.Colorize(
-                black_range=(params["black"], params["black"]), white_range=(params["white"], params["white"]), p=1
-            ),
-        ],
-        p=1,
+    return albumentations.Colorize(
+        black_range=(params["black"], params["black"]), white_range=(params["white"], params["white"]), p=1
     )
 
 
@@ -545,7 +515,7 @@ _TRANSFORM_BUILDERS = {
     "Perspective": _build_perspective,
     "Elastic": _build_elastic,
     "ColorJitter": _build_color_jitter,
-    "ColorJiggle": _build_color_jiggle,
+    "ColorJiggle": _build_color_jitter,
     "ChannelShuffle": _build_channel_shuffle,
     "Grayscale": _build_grayscale,
     "RGBShift": _build_rgbshift,
@@ -557,7 +527,7 @@ _TRANSFORM_BUILDERS = {
     "Sharpen": _build_sharpen,
     "AutoContrast": _build_auto_contrast,
     "Equalize": _build_equalize,
-    "Normalize": _build_normalize,
+    "Normalize": lambda _: None,
     "Erasing": _build_erasing,
     "JpegCompression": _build_jpeg_compression,
     "RandomGamma": _build_random_gamma,

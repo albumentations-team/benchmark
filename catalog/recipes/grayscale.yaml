@@ -1,0 +1,57 @@
+schema_version: 1
+recipe_set_id: grayscale-colorize-2026-11-19
+family: grayscale
+recipes:
+- recipe_id: RandomCrop224+Colorize
+  augmentation_id: Colorize
+  channels: 3
+  stages:
+  - operation_id: RandomCrop224
+    parameters:
+      height: 224
+      width: 224
+    stochastic: true
+    randomness_scope: per-image
+  - operation_id: Colorize
+    parameters:
+      black:
+      - 8
+      - 24
+      - 64
+      white:
+      - 255
+      - 238
+      - 192
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - pillow
+  - pillow_allsimd
+  - dali
+  - kornia
+  supported_implementations:
+  - albumentationsx_cpu
+  - pillow_cpu
+  - kornia_cpu
+  - kornia_gpu
+  - dali_gpu
+  - pillow_allsimd_cpu

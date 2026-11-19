@@ -124,7 +124,8 @@ def start_or_resume(
     request_key = f"runs/{request.run.run_id}/requests/{request_digest}.json"
     _publish_immutable(remote, request_key, _json_bytes(pending_request))
     request_uri = f"{cloud.gcs_base_uri.rstrip('/')}/{request_key}"
-    instance_name = f"augbench-rgb-{label_value}"
+    family = request.run.family_config["family"]
+    instance_name = f"augbench-{family}-{label_value}"
     zones = resolve_candidate_zones(
         configured_zones=cloud.zones,
         project=cloud.project,
@@ -146,7 +147,7 @@ def start_or_resume(
                 startup_script=startup_script,
                 max_run_duration_seconds=cloud.run_deadline_seconds,
                 provisioning_model=cloud.provisioning_model,
-                labels={"augbench": "1", "augbench-run": label_value, "augbench-family": "rgb"},
+                labels={"augbench": "1", "augbench-run": label_value, "augbench-family": family},
                 metadata={"augbench-request-uri": request_uri},
             ),
             executable=executable,

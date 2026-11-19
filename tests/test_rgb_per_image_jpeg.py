@@ -8,19 +8,17 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def test_gpu_jpeg_reader_keeps_stored_orientation(tmp_path: Path) -> None:
+def test_gpu_jpeg_reader_returns_file_bytes(tmp_path: Path) -> None:
     image = pytest.importorskip("PIL.Image")
     from augbench.adapters.sources import SourceRef, load_jpeg_bytes
 
     pixels = image.new("RGB", (48, 32), color=(41, 79, 137))
-    reference = tmp_path / "reference.JPEG"
     source = tmp_path / "rotated.JPEG"
     exif = image.Exif()
     exif[274] = 6
-    pixels.save(reference)
     pixels.save(source, exif=exif)
 
-    assert load_jpeg_bytes(SourceRef(source)) == reference.read_bytes()
+    assert load_jpeg_bytes(SourceRef(source)) == source.read_bytes()
 
 
 def test_jpeg_bytes_collate_in_worker(tmp_path: Path) -> None:

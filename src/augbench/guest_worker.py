@@ -18,7 +18,7 @@ from augbench.matrix import build_matrix
 from augbench.recipes.load import load_recipe_catalog
 from augbench.result_publisher import ResultPublisher
 from augbench.rgb_executor import RGBCellExecutor, pillow_allsimd_runtime
-from augbench.run_config import load_family_config
+from augbench.run_config import FamilyRunConfig, load_family_config
 
 _AX_THREAD_ENV = (
     "BLIS_NUM_THREADS",
@@ -36,7 +36,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from augbench.recipes.models import RecipeCatalog
-    from augbench.run_config import FamilyRunConfig
     from augbench.run_records import CellKey
 
 
@@ -44,7 +43,7 @@ def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--request", type=Path, required=True)
-    parser.add_argument("--family-config", type=Path, required=True)
+    parser.add_argument("--family-config", type=Path)
     parser.add_argument("--dataset-archive", type=Path, required=True)
     parser.add_argument("--dataset-cache", type=Path, required=True)
     parser.add_argument("--pillow-allsimd-site", type=Path, required=True)
@@ -52,7 +51,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     request = GuestRequest.model_validate_json(args.request.read_text(encoding="utf-8"))
-    config = load_family_config(args.family_config)
+    config = FamilyRunConfig.model_validate(request.run.family_config)
+    if args.family_config is not None and load_family_config(args.family_config) != config:
+        raise ValueError("family config differs from the frozen run")
     recipes = load_recipe_catalog(config.recipes)
     cells = select_pending_cells(
         request=request,

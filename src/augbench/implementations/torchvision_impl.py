@@ -1,6 +1,7 @@
 """TorchVision transform factories for the active RGB recipe catalog."""
 
 import random
+from math import sqrt
 from typing import Any
 
 import torch
@@ -10,10 +11,10 @@ from augbench.implementations.geometry import (
     affine_axis_ranges,
     aspect_size,
     centered_padding,
-    sample_inverse_affine,
-    sample_inverse_perspective,
+    perspective_edges_squared,
+    sample_perspective_source,
 )
-from augbench.implementations.specs import TransformSpec, channel_orders, parameter_range
+from augbench.implementations.specs import TransformSpec, parameter_range
 
 LIBRARY = "torchvision"
 
@@ -74,7 +75,7 @@ def _build_vertical_flip(_params: dict[str, Any]) -> Any | None:
 def _build_random_rotate90(params: dict[str, Any]) -> Any:
     def rotate(image: torch.Tensor) -> torch.Tensor:
         turns = random.randint(*params["times"])  # noqa: S311 - augmentation RNG.
-        return torch.rot90(image, turns, (-2, -1))
+        return tv_transforms.functional.rotate(image, 90 * turns)
 
     return tv_transforms.Lambda(rotate)
 
@@ -101,18 +102,6 @@ def _build_resize_by_side(params: dict[str, Any], *, cover: bool) -> Any:
     return tv_transforms.Lambda(resize)
 
 
-def _build_letter_box(params: dict[str, Any]) -> Any:
-    def letter_box(image: torch.Tensor) -> torch.Tensor:
-        height, width = image.shape[-2:]
-        height, width = aspect_size(height, width, params["height"])
-        resized = tv_transforms.functional.resize(image, [height, width], antialias=False)
-        return tv_transforms.functional.pad(
-            resized, list(centered_padding(height, width, params["height"], params["width"])), fill=0
-        )
-
-    return tv_transforms.Lambda(letter_box)
-
-
 def _build_pad_if_needed(params: dict[str, Any]) -> Any:
     def pad(image: torch.Tensor) -> torch.Tensor:
         height, width = image.shape[-2:]
@@ -132,13 +121,8 @@ def _build_random_scale(params: dict[str, Any]) -> Any:
 
 
 def _build_channel_swap(params: dict[str, Any]) -> Any:
-    orders = channel_orders(params)
-
-    def swap(image: torch.Tensor) -> torch.Tensor:
-        order = random.choice(orders) if len(orders) > 1 else orders[0]  # noqa: S311 - augmentation RNG.
-        return tv_transforms.functional.permute_channels(image, list(order))
-
-    return tv_transforms.Lambda(swap)
+    order = list(params["channel_order"])
+    return tv_transforms.Lambda(lambda image: tv_transforms.functional.permute_channels(image, order))
 
 
 def _build_gaussian_noise(params: dict[str, Any]) -> Any:
@@ -159,10 +143,6 @@ def _build_hue(params: dict[str, Any]) -> Any:
     return tv_transforms.ColorJitter(hue=tuple(angle / 360 for angle in params["hue_degrees"]))
 
 
-def _build_transpose(_params: dict[str, Any]) -> Any:
-    return tv_transforms.Lambda(lambda image: image.transpose(-2, -1))
-
-
 def _build_random_sized_crop(params: dict[str, Any]) -> Any:
     area = (params["crop_size"] / params["input_size"]) ** 2
     return tv_transforms.RandomResizedCrop(params["size"], scale=(area, area), ratio=(1.0, 1.0), antialias=False)
@@ -171,30 +151,6 @@ def _build_random_sized_crop(params: dict[str, Any]) -> Any:
 def _build_coarse_dropout(params: dict[str, Any]) -> Any:
     area = (params["hole_size"] / params["input_size"]) ** 2
     return tv_transforms.RandomErasing(scale=(area, area), ratio=(1.0, 1.0), value=0, p=1)
-
-
-def _build_shift_scale_rotate(params: dict[str, Any]) -> Any:
-    angles = parameter_range(params["angle"])
-    scales = parameter_range(params["scale"])
-    shift_x, shift_y = affine_axis_ranges(params["shift"])
-
-    def warp(image: torch.Tensor) -> torch.Tensor:
-        angle = random.uniform(*angles)  # noqa: S311 - augmentation RNG.
-        scale = random.uniform(*scales)  # noqa: S311 - augmentation RNG.
-        x = random.randint(*shift_x)  # noqa: S311 - augmentation RNG.
-        y = random.randint(*shift_y)  # noqa: S311 - augmentation RNG.
-        work = image.float() if image.is_floating_point() else image
-        return tv_transforms.functional.affine(
-            work,
-            angle=-angle,
-            translate=[x, y],
-            scale=scale,
-            shear=[0.0, 0.0],
-            interpolation=tv_transforms.InterpolationMode.BILINEAR,
-            fill=None,
-        ).to(image.dtype)
-
-    return tv_transforms.Lambda(warp)
 
 
 def _build_pad(params: dict[str, Any]) -> Any | None:
@@ -212,40 +168,40 @@ def _build_rotate(params: dict[str, Any]) -> Any | None:
 
 
 def _build_affine(params: dict[str, Any]) -> Any:
-    def warp(image: torch.Tensor) -> torch.Tensor:
-        height, width = image.shape[-2:]
-        inverse = sample_inverse_affine((width / 2, height / 2), params)
-        work = image.float() if image.is_floating_point() else image
-        return tv_transforms.functional.perspective(work, None, None, coefficients=[*inverse, 0.0, 0.0]).to(image.dtype)
-
-    return tv_transforms.Lambda(warp)
+    shift_x, shift_y = affine_axis_ranges(params["shift"])
+    shear = affine_axis_ranges(params["shear"]) if "shear" in params else None
+    input_size = params["input_size"]
+    return tv_transforms.RandomAffine(
+        degrees=parameter_range(params["angle"]),
+        translate=(max(map(abs, shift_x)) / input_size, max(map(abs, shift_y)) / input_size),
+        scale=parameter_range(params["scale"]),
+        shear=(*shear[0], *shear[1]) if shear is not None else None,
+        interpolation=tv_transforms.InterpolationMode.BILINEAR,
+        fill=None,
+    )
 
 
 def _build_shear(params: dict[str, Any]) -> Any:
-    bounds = parameter_range(params["shear"])
-
-    def shear(image: torch.Tensor) -> torch.Tensor:
-        angle = random.uniform(*bounds)  # noqa: S311 - augmentation RNG.
-        dtype = image.dtype
-        work = image.float() if image.is_floating_point() else image
-        return tv_transforms.functional.affine(
-            work,
-            angle=0.0,
-            translate=[0, 0],
-            scale=1.0,
-            shear=[-angle, 0.0],
-            interpolation=tv_transforms.InterpolationMode.BILINEAR,
-            fill=None,
-        ).to(dtype)
-
-    return tv_transforms.Lambda(shear)
+    return tv_transforms.RandomAffine(
+        degrees=0,
+        shear=parameter_range(params["shear"]),
+        interpolation=tv_transforms.InterpolationMode.BILINEAR,
+        fill=None,
+    )
 
 
 def _build_perspective(params: dict[str, Any]) -> Any:
+    scale = tuple(params["scale"])
+
     def warp(image: torch.Tensor) -> torch.Tensor:
-        coefficients = sample_inverse_perspective(params["input_size"], params["scale"], pixel_center=False)
-        work = image.float() if image.is_floating_point() else image
-        return tv_transforms.functional.perspective(work, None, None, coefficients=list(coefficients)).to(image.dtype)
+        height, width = image.shape[-2:]
+        corners = sample_perspective_source(height, width, scale)
+        widths, heights = perspective_edges_squared(corners)
+        out_width = round(width**2 / int(sqrt(max(widths))))
+        out_height = round(height**2 / int(sqrt(max(heights))))
+        source = [[round(x), round(y)] for x, y in corners]
+        destination = [[0, 0], [out_width, 0], [out_width, out_height], [0, out_height]]
+        return tv_transforms.functional.perspective(image, source, destination)
 
     return tv_transforms.Lambda(warp)
 
@@ -274,15 +230,6 @@ def _build_elastic(params: dict[str, Any]) -> Any:
 
 
 def _build_color_jitter(params: dict[str, Any]) -> Any | None:
-    return tv_transforms.ColorJitter(
-        brightness=params["brightness"],
-        contrast=params["contrast"],
-        saturation=params["saturation"],
-        hue=params["hue"],
-    )
-
-
-def _build_color_jiggle(params: dict[str, Any]) -> Any | None:
     return tv_transforms.ColorJitter(
         brightness=params["brightness"],
         contrast=params["contrast"],
@@ -332,8 +279,7 @@ def _build_solarize(params: dict[str, Any]) -> Any:
 def _build_sharpen(params: dict[str, Any]) -> Any:
     def sharpen(image: torch.Tensor) -> torch.Tensor:
         alpha = random.uniform(*params["alpha"])  # noqa: S311 - augmentation RNG.
-        padded = tv_transforms.functional.pad(image, [1], padding_mode="reflect")
-        return tv_transforms.functional.adjust_sharpness(padded, 1 + 13 * alpha)[..., 1:-1, 1:-1]
+        return tv_transforms.functional.adjust_sharpness(image, 1 + 13 * alpha)
 
     return tv_transforms.Lambda(sharpen)
 
@@ -344,10 +290,6 @@ def _build_auto_contrast(_params: dict[str, Any]) -> Any | None:
 
 def _build_equalize(_params: dict[str, Any]) -> Any | None:
     return tv_transforms.RandomEqualize(p=1)
-
-
-def _build_normalize(_params: dict[str, Any]) -> Any | None:
-    return None
 
 
 def _build_erasing(params: dict[str, Any]) -> Any | None:
@@ -399,19 +341,17 @@ _TRANSFORM_BUILDERS = {
     "CenterCrop": _build_center_crop,
     "Crop": _build_crop,
     "CropAndPad": _build_crop_and_pad,
-    "LetterBox": _build_letter_box,
     "PadIfNeeded": _build_pad_if_needed,
     "LongestMaxSize": lambda params: _build_resize_by_side(params, cover=False),
     "SmallestMaxSize": lambda params: _build_resize_by_side(params, cover=True),
     "RandomScale": _build_random_scale,
     "RandomSizedCrop": _build_random_sized_crop,
     "CoarseDropout": _build_coarse_dropout,
-    "ShiftScaleRotate": _build_shift_scale_rotate,
+    "ShiftScaleRotate": _build_affine,
     "ChannelSwap": _build_channel_swap,
     "GaussianNoise": _build_gaussian_noise,
     "RandomGamma": _build_random_gamma,
     "Hue": _build_hue,
-    "Transpose": _build_transpose,
     "RandomResizedCrop": _build_random_resized_crop,
     "HorizontalFlip": _build_horizontal_flip,
     "VerticalFlip": _build_vertical_flip,
@@ -423,7 +363,7 @@ _TRANSFORM_BUILDERS = {
     "Perspective": _build_perspective,
     "Elastic": _build_elastic,
     "ColorJitter": _build_color_jitter,
-    "ColorJiggle": _build_color_jiggle,
+    "ColorJiggle": _build_color_jitter,
     "ChannelShuffle": _build_channel_shuffle,
     "Grayscale": _build_grayscale,
     "GaussianBlur": _build_gaussian_blur,
@@ -433,7 +373,6 @@ _TRANSFORM_BUILDERS = {
     "Sharpen": _build_sharpen,
     "AutoContrast": _build_auto_contrast,
     "Equalize": _build_equalize,
-    "Normalize": _build_normalize,
     "Erasing": _build_erasing,
     "JpegCompression": _build_jpeg_compression,
     "Brightness": _build_brightness,

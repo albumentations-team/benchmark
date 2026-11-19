@@ -386,7 +386,7 @@ def _write_metrics(path: Path, data: _PaperData) -> None:
     }
     batch_size = _single({group[0].output.shape[0] for group in data.groups.values()})
     metrics.update(_common_headline_metrics(data, common_memories, batch_size))
-    crop = "RandomCrop224+Normalize+ToTensor"
+    crop = next((recipe.recipe_id for recipe in data.recipes if recipe.augmentation_id == "RandomCrop224"), "")
     for implementation, label in ((AX, "AX"), ("dali_gpu", "DALI")):
         if (implementation, crop) in data.speed:
             metrics[f"Crop{label}BatchRate"] = f"{data.speed[implementation, crop] / batch_size:.1f}"
