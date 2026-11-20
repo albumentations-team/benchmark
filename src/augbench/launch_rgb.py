@@ -13,8 +13,10 @@ from augbench.run_config import FamilyRunConfig, load_family_config, load_gcp_co
 from augbench.source_archive import create_clean_code_archive
 
 
-def launch_rgb(*, repository_root: Path, config: FamilyRunConfig | None = None) -> tuple[FrozenRgbRun, GcpLaunch]:
-    """Upload a clean code artifact and either resume or launch the one L4 VM."""
+def launch_rgb(
+    *, repository_root: Path, config: FamilyRunConfig | None = None, max_workers: int = 1, preflight_only: bool = False
+) -> tuple[FrozenRgbRun, GcpLaunch]:
+    """Freeze a clean source artifact and resume or launch the L4 workers."""
     if config is None:
         config = load_family_config(repository_root / "configs/families/rgb.yaml")
     cloud = load_gcp_config(repository_root / config.cloud)
@@ -36,11 +38,12 @@ def launch_rgb(*, repository_root: Path, config: FamilyRunConfig | None = None) 
     launch = start_or_resume(
         start=GcpStartRequest(
             cloud=cloud,
-            request=frozen.request,
+            request=frozen.request.model_copy(update={"preflight_only": preflight_only}),
             cells=frozen.cells,
             startup_script=repository_root / "infra/gcp/bootstrap.sh",
         ),
         dependencies=GcpControllerDependencies(remote=remote),
+        max_workers=max_workers,
     )
     return frozen, launch
 

@@ -51,15 +51,15 @@ fall outside the production benchmark.
 
 | Field | Value |
 | --- | --- |
-| Data | The first 10,000 `val/*.JPEG` files in lexicographic order from the SHA-256-verified ImageNet validation archive |
+| Data | All 50,000 `val/*.JPEG` files in lexicographic order from the SHA-256-verified ImageNet validation archive |
 | Recipes | 72 RGB recipes, each supported by at least two libraries |
 | Matrix | 421 supported implementation–recipe pairs × 3 seeds = 1,263 cells |
 | Seeds | 137, 138, 139 |
 | Batch size | 256 images |
-| Warm-up | 1 full batch outside the timer |
-| Measurement | 32 full batches, 8,192 images |
+| Warm-up | 30 full batches outside the timer |
+| Measurement | 100 full batches, 25,600 images |
 | Workers | 15, `persistent_workers=True`, `prefetch_factor=2`, `pin_memory=True` |
-| Hardware | One Standard `g2-standard-16` VM with one NVIDIA L4 in any eligible GCP zone |
+| Hardware | Up to 24 Standard `g2-standard-16` VMs, each with one NVIDIA L4 in an eligible GCP zone |
 
 All PyTorch DataLoader paths use `prefetch_factor=2`. Each worker can prepare up to two
 batches. The setting is fixed across libraries.
@@ -232,7 +232,7 @@ compressed image data into one shared cache while preserving the orientation of 
 The preparation version is part of the cache key. Every implementation reads the same prepared
 JPEGs, including TorchCodec, which normally applies EXIF orientation.
 
-After preparation, the VM reads all 10,000 JPEGs sequentially once outside the timed cells. All
+After preparation, the VM reads all 50,000 JPEGs sequentially once outside the timed cells. All
 implementations then use the same deterministic PCG64 permutation without replacement for each
 seed. PyTorch DataLoader adds no shuffle. DALI receives the same preordered file list.
 
@@ -250,10 +250,10 @@ rule, plus the package lock, recipe catalog, and hardware config. It then:
 1. Checks GCS for `runs/<run_id>/cells/*.json`.
 2. Validates each existing cell's contents and identity.
 3. Reuses an active VM with the same `augbench-run` label.
-4. Otherwise, looks for zones with `g2-standard-16` and L4 availability and creates one Standard
-   VM.
+4. Otherwise, looks for zones with `g2-standard-16` and L4 availability and creates Standard
+   VMs up to the requested worker limit (one by default).
 5. On the VM, downloads the code, raw dataset, and cached RGB environment once, verifies the
-   Pillow-AllSIMD lock and wheel, extracts the first 10,000 sorted `val/*.JPEG` files, and
+   Pillow-AllSIMD lock and wheel, extracts all 50,000 sorted `val/*.JPEG` files, and
    prewarms them. If the run measures TorchVision GPU, bootstrap makes the installed NVIDIA
    driver's `libnvcuvid.so.1` available to that worker. Each
    implementation runs in its own process. It checks one batch through CUDA
@@ -265,8 +265,11 @@ rule, plus the package lock, recipe catalog, and hardware config. It then:
 8. Before provisioning, removes only terminated or suspended `augbench` VMs so their boot disks
    release quota. Active VMs and GCS artifacts are preserved.
 
-On the VM, each implementation job runs through all its recipes and seeds in sequence. Jobs are
-never split by recipe, seed, duration, or arbitrary shard.
+With `augbench launch-rgb --max-workers 24`, the queue contains one job per implementation and seed: 24 jobs for the eight RGB paths and three seeds. Each job runs all supported recipes in a fresh process. A VM claims one job atomically in GCS and takes another after it finishes. Jobs never run concurrently on the same VM. All workers use the same frozen code, locks, dataset, and timing window.
+
+A resumed pool validates published cells and queues only missing cells. An active pool is reused without launching duplicates. Once its workers have stopped, resume creates a new claim namespace; failed claims from the previous attempt cannot hide unfinished cells. Failed jobs retain their bootstrap logs and are investigated before retrying.
+
+Run `augbench launch-rgb --preflight-only` on one L4 before starting the pool with a new environment. It checks one CUDA batch for every supported implementation–recipe pair, then measures the first selected recipe for each implementation with the full timing and memory window. These validation records go under `preflight/`, separate from production `cells/`. Production workers repeat preflight before measuring their jobs.
 
 ## Aggregation
 

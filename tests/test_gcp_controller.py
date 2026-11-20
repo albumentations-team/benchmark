@@ -184,3 +184,43 @@ def test_controller_never_launches_a_duplicate_active_vm(tmp_path: Path) -> None
 
     assert launch.status == "active"
     assert launch.instance_name == "augbench-rgb"
+
+
+def test_pool_workers_share_one_queue_and_have_distinct_vm_names(tmp_path: Path) -> None:
+    startup = tmp_path / "bootstrap.sh"
+    startup.write_text("#!/bin/bash\n")
+    request = _request()
+    first = _cell(request)
+    cells = (first, first.model_copy(update={"seed": 138}))
+    request = request.model_copy(update={"pending_cell_ids": tuple(cell.cell_id for cell in cells)})
+    commands: list[list[str]] = []
+
+    def runner(command: list[str]) -> subprocess.CompletedProcess[bytes]:
+        commands.append(command)
+        if command[2:4] == ["instances", "list"]:
+            return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+        if command[2:4] in (["accelerator-types", "list"], ["machine-types", "list"]):
+            return subprocess.CompletedProcess(command, 0, stdout=b"us-central1-a\n", stderr=b"")
+        if command[2:4] == ["instances", "create"]:
+            return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+        raise AssertionError(command)
+
+    remote = _Remote()
+    launch = start_or_resume(
+        start=GcpStartRequest(cloud=_cloud(), request=request, cells=cells, startup_script=startup),
+        dependencies=GcpControllerDependencies(remote=remote, runner=runner),
+        max_workers=24,
+    )
+    creates = [command for command in commands if command[2:4] == ["instances", "create"]]
+    assert len(creates) == 2
+    assert len({command[4] for command in creates}) == 2
+    assert len({next(arg for arg in command if arg.startswith("--metadata=")) for command in creates}) == 1
+    queue_requests = [
+        GuestRequest.model_validate_json(value)
+        for key, value in remote.objects.items()
+        if key.endswith("/request.json")
+    ]
+    assert len(queue_requests) == 1
+    assert queue_requests[0].run == request.run
+    assert queue_requests[0].pending_cell_ids == request.pending_cell_ids
+    assert len(launch.instances) == 2

@@ -14,9 +14,11 @@ from augbench.cloud.gcp.storage import GcloudObjectStore
 from augbench.dataset_access import prewarm_files
 from augbench.dataset_materialize import materialize_rgb_dataset
 from augbench.guest_request import GuestRequest
+from augbench.job_pool import claim_jobs
 from augbench.matrix import build_matrix
 from augbench.recipes.load import load_recipe_catalog
 from augbench.result_publisher import ResultPublisher
+from augbench.result_store import encode_result
 from augbench.rgb_executor import RGBCellExecutor, pillow_allsimd_runtime
 from augbench.run_config import FamilyRunConfig, load_family_config
 
@@ -70,13 +72,16 @@ def main(argv: list[str] | None = None) -> int:
         if config.execution.prewarm_dataset:
             prewarm_files(materialized.files)
         dataset_files = json.dumps([str(path) for path in materialized.files])
+        if request.pool_id is not None:
+            _run_pool(request, cells, argv, dataset_files, args.pillow_allsimd_site)
+            return 0
         pending_implementations = {cell.implementation for cell in cells}
         for implementation in config.implementations:
             if implementation in pending_implementations:
                 _launch_worker(argv, implementation, dataset_files, args.pillow_allsimd_site)
         return 0
 
-    _run_implementation(args.implementation, config, recipes, cells, request.gcs_base_uri)
+    _run_implementation(args.implementation, config, recipes, cells, request)
     return 0
 
 
@@ -85,7 +90,7 @@ def _run_implementation(
     config: FamilyRunConfig,
     recipes: RecipeCatalog,
     cells: tuple[CellKey, ...],
-    gcs_base_uri: str,
+    request: GuestRequest,
 ) -> None:
     cells = tuple(cell for cell in cells if cell.implementation == implementation)
     if not cells:
@@ -107,9 +112,31 @@ def _run_implementation(
     preflight_implementations(executor, cells)
     if implementation == "albumentationsx_cpu":
         _verify_ax_thread_limits()
-    publisher = ResultPublisher(GcloudObjectStore(base_uri=gcs_base_uri))
+    remote = GcloudObjectStore(base_uri=request.gcs_base_uri)
+    if request.preflight_only:
+        payload = encode_result(executor.execute(cells[0]))
+        remote.create_if_absent(f"runs/{request.run.run_id}/preflight/{implementation}.json", payload)
+        return
+    publisher = ResultPublisher(remote)
     for cell in cells:
         publisher.publish(executor.execute(cell))
+
+
+def _run_pool(
+    request: GuestRequest,
+    cells: tuple[CellKey, ...],
+    argv: list[str],
+    dataset_files: str,
+    allsimd_site: Path,
+) -> None:
+    remote = GcloudObjectStore(base_uri=request.gcs_base_uri)
+    job_path = Path(argv[argv.index("--request") + 1]).with_name("job-request.json")
+    job_argv = list(argv)
+    job_argv[job_argv.index("--request") + 1] = str(job_path)
+    for job in claim_jobs(request=request, cells=cells, remote=remote):
+        child = request.model_copy(update={"pool_id": None, "pending_cell_ids": tuple(cell.cell_id for cell in job)})
+        job_path.write_text(child.model_dump_json(), encoding="utf-8")
+        _launch_worker(job_argv, job[0].implementation, dataset_files, allsimd_site)
 
 
 def _launch_worker(argv: list[str], implementation: str, dataset_files: str, allsimd_site: Path) -> None:

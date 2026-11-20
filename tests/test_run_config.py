@@ -16,12 +16,12 @@ def test_rgb_config_defines_the_entire_runnable_contract() -> None:
     assert config.normalization == "gpu"
     assert config.output.device == "cuda"
     assert config.output.layout == "BCHW"
-    assert config.dataset.item_count == 10_000
+    assert config.dataset.item_count == 50_000
     assert config.dataset.archive_member_prefix == "val/"
     assert config.dataset.archive_member_suffix == ".JPEG"
     assert config.execution.batch_size == 256
-    assert config.execution.warmup_batches == 1
-    assert config.execution.measured_batches == 32
+    assert config.execution.warmup_batches == 30
+    assert config.execution.measured_batches == 100
     assert config.execution.seeds == (137, 138, 139)
     assert config.execution.num_workers == 15
     assert config.execution.prefetch_factor == 2
@@ -39,7 +39,7 @@ def test_rgb_config_defines_the_entire_runnable_contract() -> None:
     )
 
 
-def test_gcp_config_is_limited_to_one_standard_l4_vm() -> None:
+def test_gcp_config_requires_standard_l4_hardware() -> None:
     config = load_gcp_config(ROOT / "configs" / "cloud" / "gcp-l4.yaml")
 
     assert config.project == "albumentations"
