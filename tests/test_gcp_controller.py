@@ -110,6 +110,7 @@ def test_controller_creates_one_labeled_vm_for_missing_cells(tmp_path: Path) -> 
     )
 
     assert launch.status == "launched"
+    assert len(launch.instances) == 1
     create = next(command for command in commands if command[2:4] == ["instances", "create"])
     assert "--provisioning-model=STANDARD" in create
     assert "--labels=augbench=1,augbench-family=rgb,augbench-run=" + request.run.run_id[:12] in create

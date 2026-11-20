@@ -131,7 +131,7 @@ def start_or_resume(
         )
 
     pending_request = request.model_copy(update={"pending_cell_ids": tuple(cell.cell_id for cell in pending)})
-    if max_workers > 1:
+    if not pending_request.preflight_only:
         return _start_pool(start=start, dependencies=dependencies, request=pending_request, max_workers=max_workers)
     request_digest = hashlib.sha256(_json_bytes(pending_request)).hexdigest()
     request_key = f"runs/{request.run.run_id}/requests/{request_digest}.json"
