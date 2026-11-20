@@ -242,11 +242,10 @@ def _build_gaussian_illumination(params: dict[str, Any]) -> Any | None:
     )
 
 
-def _build_gaussian_noise(params: dict[str, Any]) -> Any | None:
-    return kornia_augmentation.RandomGaussianNoise(
-        mean=params["mean"],
-        std=params["kornia_std"],
-        p=1,
+def _build_gaussian_noise(params: dict[str, Any]) -> torch.nn.Sequential:
+    return torch.nn.Sequential(
+        kornia_augmentation.RandomGaussianNoise(mean=params["mean"], std=params["std"], p=1),
+        _TensorOperation(partial(torch.clamp_, min=0, max=1)),
     )
 
 
