@@ -265,7 +265,7 @@ rule, plus the package lock, recipe catalog, and hardware config. It then:
 8. Before provisioning, removes only terminated or suspended `augbench` VMs so their boot disks
    release quota. Active VMs and GCS artifacts are preserved.
 
-With `augbench launch-rgb --max-workers 24`, the queue contains one job per implementation and seed: 24 jobs for the eight RGB paths and three seeds. Each job runs all supported recipes in a fresh process. A VM claims one job atomically in GCS and takes another after it finishes. Jobs never run concurrently on the same VM. All workers use the same frozen code, locks, dataset, and timing window.
+With `augbench launch-rgb --max-workers 24`, the queue contains one job per implementation and seed: 24 jobs for the eight RGB paths and three seeds. Each job runs all supported recipes in a fresh process. A VM claims one job atomically in GCS and takes another after it finishes. Jobs never run concurrently on the same VM. All workers use the same frozen code, locks, dataset, and timing window. Each result records its worker hostname so cells can be traced to their VM.
 
 A resumed pool validates published cells and queues only missing cells. An active pool is reused without launching duplicates. Once its workers have stopped, resume creates a new claim namespace; failed claims from the previous attempt cannot hide unfinished cells. Failed jobs retain their bootstrap logs and are investigated before retrying.
 
