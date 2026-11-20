@@ -15,6 +15,7 @@ from pathlib import Path
 from statistics import fmean, median
 from typing import TYPE_CHECKING
 
+import numpy as np
 import yaml
 
 from augbench.matrix import build_matrix
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
     from augbench.recipes.models import RecipeCatalog, RecipeSpec
     from augbench.run_records import ResultRecord
 
-RUN_ID = "3f8e2e315710528399b8e82e2359ab85c58c809644595b68a92fb9d83492cc8c"
+RUN_ID = "8d20f12ba0833a29971aec166fa02a98fadd4a9faba013fe12ae7cd81caa920a"
 INVALID_DALI_FLIP_RUN = "75bc062fe770cfec3d857f401e16366deb01f6582c8645e952930e3cd3d788fb"
 AX = "albumentationsx_cpu"
 TORCHVISION_GPU = "torchvision_gpu"
@@ -90,6 +91,7 @@ class _PaperData:
     common: tuple[str, ...]
     pairwise: dict[str, list[_PairwiseRow]]
     supplemental_runs: tuple[RunRecord, ...] = ()
+    torchvision_seed_run: RunRecord | None = None
 
 
 def main() -> None:
@@ -108,7 +110,7 @@ def main() -> None:
     _write_common_recipe_ratios(args.output / "common-recipe-ratios.tex", data)
     _write_versions(args.output / "versions.tex", data)
     _write_coverage(args.output, root / "catalog/operations.yaml")
-    _write_sources(args.output / "sources.tex", run, ax_run, data.supplemental_runs)
+    _write_sources(args.output / "sources.tex", run, ax_run, data.supplemental_runs, data.torchvision_seed_run)
 
 
 def add_run_arguments(parser: argparse.ArgumentParser) -> None:
@@ -132,6 +134,13 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
         type=Path,
         metavar=("MANIFEST", "CELLS", "RECIPES", "PRIMARY_LOCK", "DECODER_LOCK"),
         help="replace all TorchVision GPU cells with a TorchCodec run and verify both RGB locks",
+    )
+    parser.add_argument(
+        "--torchvision-seeds",
+        nargs=2,
+        type=Path,
+        metavar=("MANIFEST", "CELLS"),
+        help="pool additional matched TorchVision GPU seeds with the primary observations",
     )
 
 
@@ -175,10 +184,49 @@ def load_report(args: argparse.Namespace, root: Path) -> tuple[_PaperData, RunRe
     if ax_run_inputs:
         ax_run, ax_records = _load_ax_run(ax_run_inputs, run)
         records = [record for record in records if record.cell.implementation != AX] + ax_records
-    data = _prepare(records, recipes.recipes, tuple(supplemental_runs))
+    seed_run, extra_records = _load_torchvision_seeds(getattr(args, "torchvision_seeds", None), run, recipes, records)
+    records.extend(extra_records)
+    data = _prepare(records, recipes.recipes, tuple(supplemental_runs), seed_run)
     if not data.common:
         raise ValueError("the selected results have no recipes shared by all paths")
     return data, run, ax_run
+
+
+def _load_torchvision_seeds(
+    inputs: Sequence[Path] | None,
+    primary: RunRecord,
+    recipes: RecipeCatalog,
+    primary_records: Sequence[ResultRecord],
+) -> tuple[RunRecord | None, list[ResultRecord]]:
+    if inputs is None:
+        return None, []
+    manifest, cells = inputs
+    repeat = RunRecord.model_validate_json(manifest.read_bytes())
+    primary_config = FamilyRunConfig.model_validate(primary.family_config)
+    repeat_config = FamilyRunConfig.model_validate(repeat.family_config)
+    seeds = repeat_config.execution.seeds
+    expected_config = primary_config.model_copy(
+        update={
+            "implementations": (TORCHVISION_GPU,),
+            "execution": primary_config.execution.model_copy(update={"seeds": seeds}),
+        }
+    )
+    if (
+        repeat_config != expected_config
+        or repeat.hardware != primary.hardware
+        or repeat.inputs != primary.inputs
+        or len(set(seeds)) != len(seeds)
+        or set(seeds).intersection(primary_config.execution.seeds)
+    ):
+        raise ValueError(
+            "Additional TorchVision GPU seeds must preserve the workload and inputs and use disjoint seeds"
+        )
+    original = [record for record in primary_records if record.cell.implementation == TORCHVISION_GPU]
+    if {record.run_id for record in original} != {primary.run_id}:
+        raise ValueError(
+            "Additional TorchVision GPU seeds require the original TorchVision GPU cells from the primary run"
+        )
+    return repeat, load_run_results(cells, repeat, recipes)
 
 
 def _require_compatible_workload(supplemental: RunRecord, primary: RunRecord) -> None:
@@ -295,6 +343,7 @@ def _prepare(
     records: Sequence[ResultRecord],
     recipes: tuple[RecipeSpec, ...],
     supplemental_runs: tuple[RunRecord, ...] = (),
+    torchvision_seed_run: RunRecord | None = None,
 ) -> _PaperData:
     groups: dict[tuple[str, str], list[ResultRecord]] = defaultdict(list)
     for record in records:
@@ -325,6 +374,7 @@ def _prepare(
         ordered,
         _pairwise(speed, memory, support, comparisons),
         supplemental_runs,
+        torchvision_seed_run,
     )
 
 
@@ -461,6 +511,18 @@ def _shared_recipes(data: _PaperData, implementations: Sequence[str]) -> tuple[s
     )
 
 
+def batch_rate_interval(data: _PaperData, implementation: str, recipes: Sequence[str]) -> tuple[float, float]:
+    groups = [data.groups[implementation, recipe] for recipe in recipes]
+    batch_size = groups[0][0].output.shape[0]
+    rates = np.asarray([[cell.throughput.value / batch_size for cell in group] for group in groups]).T
+    seed_count = len(rates)
+    # Each draw keeps all recipes from the same seed job together.
+    draws = np.random.default_rng(0).integers(seed_count, size=(10_000, seed_count))
+    rates_by_recipe = np.median(rates[draws], axis=1)
+    lower, upper = np.quantile(np.median(rates_by_recipe, axis=1), [0.025, 0.975])
+    return float(lower), float(upper)
+
+
 def write_plot_inputs(output: Path, data: _PaperData) -> None:
     batch_size = _single({group[0].output.shape[0] for group in data.groups.values()})
     labels = dict(data.implementations)
@@ -478,8 +540,10 @@ def write_plot_inputs(output: Path, data: _PaperData) -> None:
     ]
     for row, path in enumerate(ordered):
         color = _rate_color(rates[path], rates[AX])
+        low, high = batch_rate_interval(data, path, data.common)
         lines.append(
             rf"\DeliveryRow{{{row}}}{{{_tex(labels[path])}}}{{{rates[path]:.8f}}}{{{memories[path]}}}{{{color}}}"
+            rf"{{{low:.8f}}}{{{high:.8f}}}"
         )
     _write_tex(output / "delivery-rows.tex", [*lines, "}"])
     _write_library_comparisons(output, data, batch_size)
@@ -510,9 +574,10 @@ def _write_library_comparisons(output: Path, data: _PaperData, batch_size: int) 
             memory = median(data.memory[path, recipe] for recipe in recipes)
             color = _rate_color(rate, rates[AX])
             result = "" if path == AX else _recipe_winner(data, path, labels[path], recipes)
+            low, high = batch_rate_interval(data, path, recipes)
             lines.append(
                 rf"\ComparisonBar{{{row}}}{{{_tex(labels[path])}}}{{{rate:.8f}}}"
-                rf"{{{memory:,.0f}}}{{{color}}}{{{_tex(result)}}}"
+                rf"{{{memory:,.0f}}}{{{color}}}{{{_tex(result)}}}{{{low:.8f}}}{{{high:.8f}}}"
             )
         _write_tex(output / f"comparison-{family.lower()}.tex", [*lines, "}"])
 
@@ -566,21 +631,28 @@ def _write_versions(path: Path, data: _PaperData) -> None:
 
 
 def _write_sources(
-    path: Path, run: RunRecord, ax_run: RunRecord | None, supplemental_runs: Sequence[RunRecord] = ()
+    path: Path,
+    run: RunRecord,
+    ax_run: RunRecord | None,
+    supplemental_runs: Sequence[RunRecord] = (),
+    torchvision_seed_run: RunRecord | None = None,
 ) -> None:
-    lines: list[str] = []
-    for label, source in (("Full", run), ("AX", ax_run or run)):
-        lines.extend(
-            (
-                rf"\newcommand{{\{label}RunID}}{{{source.run_id}}}",
-                rf"\newcommand{{\{label}SourceRevision}}{{{source.inputs.git_commit}}}",
-            )
-        )
+    lines = [
+        rf"\newcommand{{\FullRunID}}{{{run.run_id}}}",
+        rf"\newcommand{{\FullSourceRevision}}{{{run.inputs.git_commit}}}",
+    ]
     details = [
         rf"\item[Correction {index}] \texttt{{\expandafter\seqsplit\expandafter{{{source.run_id}}}}}\\"
         rf"Source \texttt{{\expandafter\seqsplit\expandafter{{{source.inputs.git_commit}}}}}."
         for index, source in enumerate(supplemental_runs, start=1)
-    ] or [r"\item[Correction runs] none"]
+    ]
+    if ax_run:
+        details.append(
+            rf"\item[AX correction] \nolinkurl{{{ax_run.run_id}}}\\"
+            rf"Source \texttt{{{ax_run.inputs.git_commit}}}."
+        )
+    if torchvision_seed_run:
+        details.append(rf"\item[Additional TorchVision GPU seeds] \nolinkurl{{{torchvision_seed_run.run_id}}}")
     details_tex = "\n".join(details)
     lines.append(rf"\newcommand{{\SupplementalRunDetails}}{{{details_tex}}}")
     _write_tex(path, lines)
@@ -621,6 +693,7 @@ def _csv_row(group: list[ResultRecord], recipe: RecipeSpec, data: _PaperData) ->
                 f"gpu_memory_peak_mib_{seed}": record.gpu_memory.peak_mib,
                 f"gpu_memory_baseline_mib_{seed}": record.gpu_memory.baseline_mib,
                 f"gpu_memory_poll_ms_{seed}": record.gpu_memory.poll_interval_ms,
+                f"worker_hostname_{seed}": record.runtime.get("worker_hostname"),
             }
         )
     return row
@@ -633,8 +706,9 @@ def _write_csv(path: Path, data: _PaperData) -> None:
         for recipe in data.recipes
         if (implementation, recipe.recipe_id) in data.groups
     ]
+    fieldnames = list(dict.fromkeys(field for row in rows for field in row))
     with path.open("w", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0]), lineterminator="\n")
+        writer = csv.DictWriter(stream, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -705,7 +779,7 @@ def _write_common_recipe_ratios(path: Path, data: _PaperData) -> None:
         r"\begin{longtable}{P{3.6cm}rrrrrrr}",
         (
             r"\caption{Median throughput for each recipe divided by the AX median for that recipe. "
-            r"Each median uses three seeds.}\label{tab:common-throughput}\\"
+            r"Each median uses the available seeds for that path.}\label{tab:common-throughput}\\"
         ),
         headers + r" \\ \midrule",
         r"\endfirsthead",

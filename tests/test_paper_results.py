@@ -1,6 +1,7 @@
 import csv
 import hashlib
 from argparse import Namespace
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -94,6 +95,26 @@ def test_pairwise_uses_recipe_medians_and_memory_from_the_selected_path(paper_da
     assert (third.implementation, third.competitor_memory) == ("kornia_cpu", 2900)
 
 
+def test_batch_rate_interval_resamples_seed_jobs_together(paper_data: paper._PaperData) -> None:
+    recipes = tuple(recipe.recipe_id for recipe in paper_data.recipes[:2])
+    groups = dict(paper_data.groups)
+    for recipe, batch_rates in zip(recipes, [(1, 2, 3), (3, 2, 1)], strict=True):
+        records = groups[paper.AX, recipe]
+        groups[paper.AX, recipe] = [
+            record.model_copy(
+                update={
+                    "throughput": Throughput(
+                        completed_items=record.throughput.completed_items,
+                        duration_seconds=record.throughput.completed_items / (record.output.shape[0] * rate),
+                    ),
+                }
+            )
+            for record, rate in zip(records, batch_rates, strict=True)
+        ]
+
+    assert paper.batch_rate_interval(replace(paper_data, groups=groups), paper.AX, recipes) == (2, 2)
+
+
 def test_summary_aggregates_paired_ratios_and_differences(tmp_path: Path, paper_data: paper._PaperData) -> None:
     output = tmp_path / "metrics.tex"
     paper._write_metrics(output, paper_data)
@@ -159,7 +180,8 @@ def test_readme_updates_results_and_selection_without_replacing_manual_text(
     assert "| Pillow CPU | test | 0.53\N{MULTIPLICATION SIGN}" in before
     assert "| Pillow CPU | test | 1.07\N{MULTIPLICATION SIGN}" in after
     assert "[per-seed results and manifests](docs/generated/results.json)" in after
-    assert "![AX vs Kornia on 3 shared recipes](docs/generated/pairwise-kornia.png)" in after
+    assert "![AX vs Kornia on 3 shared recipes with 95% seed bootstrap intervals" in after
+    assert "](docs/generated/pairwise-kornia.png)" in after
     assert after.startswith("Cite this work.\n")
     assert after.endswith("\nInstructions.")
     assert readme.replace_results(after, readme.readme_results(changed, selected_run)) == after
@@ -266,6 +288,34 @@ def test_published_export_flag_excludes_ax_rerun(paper_data: paper._PaperData, s
 
     assert readme.export_results(paper_data, published)["is_published_run"] is True
     assert readme.export_results(paper_data, published, ax_run=selected_run)["is_published_run"] is False
+
+
+@pytest.mark.parametrize(("seeds", "measured_batches"), [([139, 140, 141], 100), ([140, 141, 142], 99)])
+def test_torchvision_seed_run_rejects_overlapping_seeds_or_changed_window(
+    tmp_path: Path,
+    selected_run: RunRecord,
+    seeds: list[int],
+    measured_batches: int,
+) -> None:
+    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
+    repeat = build_run_record(
+        family_config={
+            **selected_run.family_config,
+            "implementations": [paper.TORCHVISION_GPU],
+            "execution": {
+                **selected_run.family_config["execution"],
+                "seeds": seeds,
+                "measured_batches": measured_batches,
+            },
+        },
+        inputs=selected_run.inputs,
+        hardware=selected_run.hardware,
+    )
+    manifest = tmp_path / "run.json"
+    manifest.write_text(repeat.model_dump_json())
+
+    with pytest.raises(ValueError, match="preserve the workload and inputs and use disjoint seeds"):
+        paper._load_torchvision_seeds((manifest, tmp_path), selected_run, catalog, [])
 
 
 def test_selected_run_rejects_missing_foreign_or_tampered_results(

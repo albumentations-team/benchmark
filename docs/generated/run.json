@@ -1,33 +1,44 @@
 {
   "schema_version": 1,
-  "run_id": "03b5fd6c6fab74fd1029fc88012e03cb4b51d0a2e3c4b8be59ead6928efae6ee",
+  "run_id": "8d20f12ba0833a29971aec166fa02a98fadd4a9faba013fe12ae7cd81caa920a",
   "family_config": {
-    "cloud": "configs/cloud/gcp-l4.yaml",
-    "coverage_catalog": "catalog/operations.yaml",
+    "schema_version": 1,
+    "family": "rgb",
+    "output": {
+      "device": "cuda",
+      "channels": 3,
+      "height": 224,
+      "width": 224,
+      "dtype": "float16",
+      "layout": "BCHW"
+    },
+    "normalization": "gpu",
     "dataset": {
-      "access_order": "seeded-random-without-replacement",
+      "archive_uri": "gs://imagenet_validation/imagenet/val.tar",
+      "archive_sha256": "1a97eafff044ac04b5f222fa83a6a20d5f9946f053fee86fa4f1ce030c64c8a2",
       "archive_member_prefix": "val/",
       "archive_member_suffix": ".JPEG",
-      "archive_sha256": "1a97eafff044ac04b5f222fa83a6a20d5f9946f053fee86fa4f1ce030c64c8a2",
-      "archive_uri": "gs://imagenet_validation/imagenet/val.tar",
-      "item_count": 10000,
-      "selection": "first-sorted"
+      "item_count": 49999,
+      "selection": "first-sorted-non-cmyk",
+      "access_order": "seeded-random-without-replacement"
     },
+    "recipes": "catalog/recipes/rgb.yaml",
+    "coverage_catalog": "catalog/operations.yaml",
+    "cloud": "configs/cloud/gcp-l4.yaml",
     "execution": {
       "batch_size": 256,
-      "measured_batches": 32,
-      "num_workers": 15,
-      "persistent_workers": true,
-      "prefetch_factor": 2,
-      "prewarm_dataset": true,
+      "warmup_batches": 30,
+      "measured_batches": 100,
       "seeds": [
         137,
         138,
         139
       ],
-      "warmup_batches": 1
+      "num_workers": 15,
+      "prefetch_factor": 2,
+      "persistent_workers": true,
+      "prewarm_dataset": true
     },
-    "family": "rgb",
     "implementations": [
       "albumentationsx_cpu",
       "pillow_cpu",
@@ -37,36 +48,25 @@
       "kornia_gpu",
       "dali_gpu",
       "pillow_allsimd_cpu"
-    ],
-    "normalization": "gpu",
-    "output": {
-      "channels": 3,
-      "device": "cuda",
-      "dtype": "float16",
-      "height": 224,
-      "layout": "BCHW",
-      "width": 224
-    },
-    "recipes": "catalog/recipes/rgb.yaml",
-    "schema_version": 1
+    ]
   },
   "inputs": {
-    "git_commit": "3859d9333fba8cb70ab40aef5c456b7336cf06f4",
-    "code_archive_sha256": "66ae0e7f87c69e9b732db75be67cf9eec3e6a51d39aa35a7fd05b49ddcda1f00",
+    "git_commit": "f33c8ec6ec97ddf5e928da9d841ea078f651deb7",
+    "code_archive_sha256": "24fafd751ec7e61c6ab4bd532934d7719fc16a233db9f13e154779dfbf26d733",
     "dataset_archive_sha256": "1a97eafff044ac04b5f222fa83a6a20d5f9946f053fee86fa4f1ce030c64c8a2",
-    "recipe_catalog_sha256": "0a263bd00f0c4259708adb0e27a2b2ede5964d02b28f7628486795479f679d33",
+    "recipe_catalog_sha256": "2cbf6e7e1a030284dd5099bd2c15d408d2c067af8d84e1396d24226d4c896bf5",
     "environment_lock_sha256": {
-      "pillow_allsimd": "d6d279fadead4b30426d96f4dfbfcdf77c4ae876b91d44915b20e20b1996cf8a",
-      "rgb": "1cab616c0eb4372ef87c62dcd154be514238a89550589e773704355af3418cdc"
+      "rgb": "659acb1610cc97438cf7ee541985b2f196cd336579fcc49b730d345de6ec6202",
+      "pillow_allsimd": "d6d279fadead4b30426d96f4dfbfcdf77c4ae876b91d44915b20e20b1996cf8a"
     }
   },
   "hardware": {
-    "accelerator": "nvidia-l4",
-    "boot_disk_size_gib": "350",
-    "boot_disk_type": "pd-balanced",
-    "image": "projects/deeplearning-platform-release/global/images/common-cu129-ubuntu-2204-nvidia-580-v20260730",
     "machine_type": "g2-standard-16",
+    "accelerator": "nvidia-l4",
+    "image": "projects/deeplearning-platform-release/global/images/common-cu129-ubuntu-2204-nvidia-580-v20260730",
     "provisioning_model": "STANDARD",
+    "boot_disk_type": "pd-balanced",
+    "boot_disk_size_gib": "350",
     "python_version": "3.13.14"
   },
   "access_order": "seeded-random-without-replacement"

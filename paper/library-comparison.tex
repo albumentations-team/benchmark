@@ -1,9 +1,15 @@
 \def\ComparisonRateScale{0.155}
-\newcommand{\ComparisonBar}[6]{%
+\newcommand{\ComparisonBar}[8]{%
   \pgfmathsetmacro{\ratepos}{4.12+\ComparisonRateScale*#3}%
   \node[anchor=west] at (0,#1) {#2};
   \fill[#5] (4.12,#1-0.15) rectangle (\ratepos,#1+0.15);
-  \node[anchor=west,xshift=2pt,fill=white,inner sep=1pt] at (\ratepos,#1)
+  \pgfmathsetmacro{\lowerpos}{4.12+\ComparisonRateScale*#7}%
+  \pgfmathsetmacro{\upperpos}{4.12+\ComparisonRateScale*#8}%
+  \pgfmathsetmacro{\labelpos}{max(\ratepos,\upperpos)}%
+  \draw[memmark,semithick] (\lowerpos,#1-0.20) -- (\lowerpos,#1+0.20)
+    (\lowerpos,#1) -- (\upperpos,#1)
+    (\upperpos,#1-0.20) -- (\upperpos,#1+0.20);
+  \node[anchor=west,xshift=2pt,fill=white,inner sep=1pt] at (\labelpos,#1)
     {\pgfmathprintnumber[fixed,precision=1,fixed zerofill]{#3}};
   \node[anchor=east,inner xsep=0pt] at (10.68,#1) {#4};
   \node[anchor=west,inner xsep=0pt] at (11.38,#1) {#6};%

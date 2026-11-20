@@ -28,7 +28,7 @@ Defocus & --- & --- & --- & --- \\
 Dithering & --- & --- & Image.\allowbreak{}convert with Floyd-Steinberg & --- \\
 Downscale & --- & --- & --- & resize twice [composed] \\
 Elastic\allowbreak{}Transform & Random\allowbreak{}Elastic\allowbreak{}Transform & Elastic\allowbreak{}Transform & --- & --- \\
-Emboss & filters.\allowbreak{}filter2d & --- & Image\allowbreak{}Filter.\allowbreak{}Kernel & filter + emboss kernel [composed] \\
+Emboss & --- & --- & Image\allowbreak{}Filter.\allowbreak{}Kernel & filter + emboss kernel [composed] \\
 Enhance & --- & --- & Image\allowbreak{}Filter.\allowbreak{}EDGE\_\allowbreak{}ENHANCE\_\allowbreak{}MORE /\allowbreak{} Image\allowbreak{}Filter.\allowbreak{}DETAIL & --- \\
 Equalize & Random\allowbreak{}Equalize & Random\allowbreak{}Equalize & Image\allowbreak{}Ops.\allowbreak{}equalize & equalize \\
 Erasing & Random\allowbreak{}Erasing & Random\allowbreak{}Erasing & --- & erase \\
@@ -37,7 +37,7 @@ FDA & --- & --- & --- & --- \\
 Fancy\allowbreak{}PCA & --- & --- & --- & --- \\
 Film\allowbreak{}Grain & --- & --- & --- & --- \\
 Gauss\allowbreak{}Noise & Random\allowbreak{}Gaussian\allowbreak{}Noise & Gaussian\allowbreak{}Noise & --- & noise.\allowbreak{}gaussian \\
-Gaussian\allowbreak{}Blur & Random\allowbreak{}Gaussian\allowbreak{}Blur & Gaussian\allowbreak{}Blur & Image\allowbreak{}Filter.\allowbreak{}Gaussian\allowbreak{}Blur & gaussian\_\allowbreak{}blur \\
+Gaussian\allowbreak{}Blur & Random\allowbreak{}Gaussian\allowbreak{}Blur & Gaussian\allowbreak{}Blur & Image\allowbreak{}Filter.\allowbreak{}Kernel + reflection padding [composed] & gaussian\_\allowbreak{}blur \\
 Gibbs\allowbreak{}Ringing & --- & --- & --- & --- \\
 Glass\allowbreak{}Blur & --- & --- & --- & --- \\
 Grid\allowbreak{}Distortion & --- & --- & --- & --- \\
@@ -70,12 +70,12 @@ Optical\allowbreak{}Distortion & Random\allowbreak{}Fisheye & --- & --- & --- \\
 Overlay\allowbreak{}Elements & --- & --- & --- & --- \\
 Pad & --- & Pad & Image\allowbreak{}Ops.\allowbreak{}expand & pad /\allowbreak{} slice \\
 Pad\allowbreak{}If\allowbreak{}Needed & Pad\allowbreak{}To & Pad & Image\allowbreak{}Ops.\allowbreak{}expand & pad /\allowbreak{} slice \\
-Perspective & Random\allowbreak{}Perspective & Random\allowbreak{}Perspective & --- & experimental.\allowbreak{}warp\_\allowbreak{}perspective \\
+Perspective & Random\allowbreak{}Perspective & Random\allowbreak{}Perspective & Image.\allowbreak{}transform(\allowbreak{}PERSPECTIVE)\allowbreak{} [composed] & experimental.\allowbreak{}warp\_\allowbreak{}perspective \\
 Photo\allowbreak{}Metric\allowbreak{}Distort & --- & Random\allowbreak{}Photometric\allowbreak{}Distort & --- & --- \\
 Piecewise\allowbreak{}Affine & --- & --- & --- & --- \\
 Pixel\allowbreak{}Distribution\allowbreak{}Adaptation & --- & --- & --- & --- \\
 Pixel\allowbreak{}Dropout & --- & --- & --- & --- \\
-Pixel\allowbreak{}Spread & --- & --- & Image.\allowbreak{}effect\_\allowbreak{}spread [approx.] & jitter [approx.] \\
+Pixel\allowbreak{}Spread & --- & --- & Image.\allowbreak{}effect\_\allowbreak{}spread [approx.] & uniform offsets + experimental.\allowbreak{}remap [composed] \\
 Planckian\allowbreak{}Jitter & Random\allowbreak{}Planckian\allowbreak{}Jitter & --- & --- & --- \\
 Plasma\allowbreak{}Brightness\allowbreak{}Contrast & Random\allowbreak{}Plasma\allowbreak{}Brightness /\allowbreak{} Random\allowbreak{}Plasma\allowbreak{}Contrast & --- & --- & --- \\
 Plasma\allowbreak{}Shadow & Random\allowbreak{}Plasma\allowbreak{}Shadow & --- & --- & --- \\

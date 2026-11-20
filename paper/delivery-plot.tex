@@ -1,11 +1,17 @@
 \input{generated/delivery-rows.tex}
 \def\DeliveryRateScale{0.177}
-\newcommand{\DeliveryRow}[5]{%
+\newcommand{\DeliveryRow}[7]{%
   \pgfmathsetmacro{\ratepos}{4.0+\DeliveryRateScale*#3}%
   \pgfmathsetmacro{\mempos}{9.4+0.0017*#4}%
   \node[anchor=west] at (0,#1) {#2};
   \fill[#5] (4.0,#1-0.15) rectangle (\ratepos,#1+0.15);
-  \node[anchor=west,xshift=2pt,font=\small,fill=white,inner sep=1pt] at (\ratepos,#1)
+  \pgfmathsetmacro{\lowerpos}{4.0+\DeliveryRateScale*#6}%
+  \pgfmathsetmacro{\upperpos}{4.0+\DeliveryRateScale*#7}%
+  \pgfmathsetmacro{\labelpos}{max(\ratepos,\upperpos)}%
+  \draw[memmark,semithick] (\lowerpos,#1-0.20) -- (\lowerpos,#1+0.20)
+    (\lowerpos,#1) -- (\upperpos,#1)
+    (\upperpos,#1-0.20) -- (\upperpos,#1+0.20);
+  \node[anchor=west,xshift=2pt,font=\small,fill=white,inner sep=1pt] at (\labelpos,#1)
     {\pgfmathprintnumber[fixed,precision=1,fixed zerofill]{#3}};
   \fill[memmark] (\mempos,#1) circle[radius=2.15pt];
   \node[anchor=west,xshift=4pt,font=\small] at (\mempos,#1)

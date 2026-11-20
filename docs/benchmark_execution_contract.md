@@ -279,8 +279,13 @@ Add `--max-workers 8` to distribute this validation through the job queue. Valid
 
 ## Aggregation
 
+The published comparisons pool the three primary seeds and three additional seeds for TorchVision GPU.
+Other paths use the three primary seeds. The additional run preserves the other frozen inputs
+and has its own run ID. The throughput intervals resample complete seed jobs within each path,
+keeping the recipe set fixed. See the [regeneration commands](../paper/README.md#regenerate-the-results).
+
 Aggregate only after validating the entire matrix. Compare throughput and GPU memory row by row
-with the same family, recipe, seed policy, batch size, dataset, hardware, and timing boundary.
+with the same family, recipe, seed sampling policy, batch size, dataset, hardware, and timing boundary.
 Pairwise and all-library summaries use the exact intersection of supported recipes. The coverage
 census is separate. Unsupported operations never count as speed losses.
 
@@ -289,11 +294,6 @@ settings. Each observation keeps its source run and cell IDs. For an invalid res
 corrected recipe, freeze a correction run covering the affected implementation–recipe pairs
 and all three seeds. Validate the replacement cells before regenerating the report. Keep the
 original cells for reproduction.
-
-The report's TorchVision GPU replacement uses a lock that adds TorchCodec to
-the primary RGB environment. The generator verifies both lock checksums,
-requires all other entries to match, and replaces the complete TorchVision
-GPU selection. [Reproduction instructions](../paper/README.md#regenerate-the-results)
 
 For a targeted run, `measurements` lists the implementation IDs to measure for each
 recipe. The catalog still records full support. The paper generators take a complete
