@@ -26,10 +26,9 @@ from paper.generate_results import (
     _shared_recipes,
     _single,
     add_run_arguments,
+    batch_rate_interval,
     load_report,
     pillow_allsimd_ratios,
-    throughput_span,
-    torchvision_repeat_groups,
     write_plot_inputs,
 )
 
@@ -114,27 +113,6 @@ def _observation(record: ResultRecord) -> dict[str, str | int | float]:
     }
 
 
-def _export_repeat(data: _PaperData) -> dict[str, object]:
-    if data.torchvision_repeat is None:
-        return {}
-    run, cells = data.torchvision_repeat
-    return {
-        "torchvision_gpu_repeat": {
-            "run": run.model_dump(mode="json"),
-            "measurement_count": len(cells),
-            "recipes": [
-                {
-                    "id": recipe,
-                    "primary_span_percent": throughput_span(original),
-                    "repeat_span_percent": throughput_span(repeat),
-                    "observations": [_observation(record) for record in repeat],
-                }
-                for recipe, (original, repeat) in torchvision_repeat_groups(data).items()
-            ],
-        },
-    }
-
-
 def export_results(
     data: _PaperData,
     run: RunRecord,
@@ -175,6 +153,7 @@ def export_results(
     groups = [("all", tuple(implementation for implementation, _ in data.implementations))]
     groups.extend((family.lower(), (AX, *paths)) for family, paths in data.comparisons)
     summaries = []
+    batch_size = FamilyRunConfig.model_validate(run.family_config).execution.batch_size
     for name, implementations in groups:
         shared = _shared_recipes(data, implementations)
         means = _mean_ratios(data, implementations)
@@ -186,6 +165,10 @@ def export_results(
                     {
                         "id": implementation,
                         "mean_relative_throughput": means[implementation],
+                        "median_batches_per_second": (
+                            median(data.speed[implementation, recipe] for recipe in shared) / batch_size
+                        ),
+                        "batch_rate_bootstrap_interval": batch_rate_interval(data, implementation, shared),
                         "median_gpu_memory_mib": median(data.memory[(implementation, recipe)] for recipe in shared),
                     }
                     for implementation in implementations
@@ -225,7 +208,11 @@ def export_results(
         "summaries": summaries,
         "pairwise_comparisons": pairwise_comparisons,
         "measurement_notes": measurement_notes,
-        **_export_repeat(data),
+        **(
+            {"torchvision_seed_run": data.torchvision_seed_run.model_dump(mode="json")}
+            if data.torchvision_seed_run
+            else {}
+        ),
     }
 
 
@@ -239,7 +226,6 @@ def replace_results(readme: str, generated: str) -> str:
 
 def readme_results(data: _PaperData, run: RunRecord) -> str:
     config = FamilyRunConfig.model_validate(run.family_config)
-    execution = config.execution
     means = _mean_ratios(data, [implementation for implementation, _ in data.implementations])
     memories = _common_memories(data)
     labels = dict(data.implementations)
@@ -270,8 +256,8 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
         "## RGB results",
         "",
         (
-            f"{sum(map(len, data.groups.values()))} measurements across {len(data.groups)} "
-            f"implementation\N{EN DASH}recipe pairs, with {len(execution.seeds)} seeds per pair. "
+            f"{sum(map(len, data.groups.values())):,} measurements across {len(data.groups)} "
+            f"implementation\N{EN DASH}recipe pairs. "
             "See the [per-seed results and manifests](docs/generated/results.json)."
         ),
         "",
@@ -281,7 +267,7 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
         "",
         (
             f"All rows below use the same {count} recipes. Throughput is the arithmetic mean of per-recipe ratios: "
-            f"each path's median over {len(execution.seeds)} seeds divided by AX's median for that recipe. "
+            "each path's median across its seeds divided by AX's median for that recipe. "
             "GPU memory is the median of those recipes' peak-memory medians."
         ),
         "",
@@ -326,7 +312,7 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
             "### Throughput ratio on each shared recipe",
             "",
             (
-                "Each value is the path's median throughput across three seeds divided by AX's median "
+                "Each value is the path's median throughput across its seeds divided by AX's median "
                 "for that recipe. A value above 1.00 means that path delivered batches faster than AX."
             ),
             "",
@@ -357,42 +343,12 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
     lines.extend(
         [
             "",
-            *_repeat_lines(data, captions),
             *_workload_lines(data, run, config),
             "",
             _image("batch-wait", captions["batch-wait"]),
         ]
     )
     return "\n".join(lines)
-
-
-def _repeat_lines(data: _PaperData, captions: Mapping[str, str]) -> list[str]:
-    if not data.torchvision_repeat:
-        return []
-    run, cells = data.torchvision_repeat
-    seeds = ", ".join(map(str, run.family_config["execution"]["seeds"]))
-    groups = torchvision_repeat_groups(data)
-    original_seeds = ", ".join(str(record.cell.seed) for record in next(iter(groups.values()))[0])
-    original = [throughput_span(base) for base, _ in groups.values()]
-    repeat = [throughput_span(extra) for _, extra in groups.values()]
-    return [
-        "### TorchVision GPU repeatability",
-        "",
-        (
-            f"The repeat run adds {len(cells):,} measurements across {len(groups)} recipes with seeds {seeds}. "
-            f"The median throughput span across recipes was {median(repeat):.1f}% versus "
-            f"{median(original):.1f}% in the primary run. The largest span in the repeat was {max(repeat):.1f}%. "
-            "Each seed ran on a different VM, so the span includes variation from the data, transforms, and VM."
-        ),
-        "",
-        _image("torchvision-repeat", captions["torchvision-repeat"]),
-        "",
-        (
-            f"The cross-library tables use seeds {original_seeds}. "
-            "The values for all six seeds are in the [repeat CSV](paper/generated/torchvision-gpu-repeats.csv)."
-        ),
-        "",
-    ]
 
 
 def _workload_lines(data: _PaperData, run: RunRecord, config: FamilyRunConfig) -> list[str]:
@@ -402,6 +358,10 @@ def _workload_lines(data: _PaperData, run: RunRecord, config: FamilyRunConfig) -
     dataset = f"first {config.dataset.item_count:,} sorted ImageNet validation JPEGs"
     if config.dataset.selection == "first-sorted-non-cmyk":
         dataset = f"{config.dataset.item_count:,} non-CMYK ImageNet validation JPEGs with EXIF stripped before timing"
+    seeds = f"Seeds {', '.join(map(str, execution.seeds))} for all paths."
+    if data.torchvision_seed_run:
+        extra = ", ".join(map(str, data.torchvision_seed_run.family_config["execution"]["seeds"]))
+        seeds += f" TorchVision GPU also includes seeds {extra}."
     return [
         "### Measurement settings",
         "",
@@ -409,7 +369,7 @@ def _workload_lines(data: _PaperData, run: RunRecord, config: FamilyRunConfig) -
             f"Machine: `{run.hardware['machine_type']}`, `{run.hardware['accelerator']}`. "
             f"Output: CUDA `float16` BCHW `{shape}`. "
             f"Dataset: {dataset}. "
-            f"Seeds: {', '.join(map(str, execution.seeds))}. "
+            f"{seeds} "
             f"Workers: {execution.num_workers}; prefetch setting: {execution.prefetch_factor}; "
             f"persistent workers: {str(execution.persistent_workers).lower()}; "
             f"dataset prewarm: {str(execution.prewarm_dataset).lower()}."
@@ -438,16 +398,14 @@ def figure_captions(data: _PaperData) -> dict[str, str]:
         "batch-wait": "When a batch arrives late, the GPU sits idle and completes fewer steps in the same time.",
         "common-summary": (
             f"Ready batches per second and peak process GPU memory on {len(data.common)} common recipes. "
-            "Each metric takes the median across seeds, then across recipes. The dashed line marks AX's batch rate."
+            "Each metric takes the median across seeds, then across recipes. "
+            "Whiskers show the central 95% of batch-rate estimates from resampling whole seed jobs."
         ),
     }
     for family, paths in data.comparisons:
         count = len(_shared_recipes(data, [AX, *paths]))
-        captions[f"pairwise-{family.lower()}"] = f"AX vs {family} on {count} shared recipes"
-    if data.torchvision_repeat:
-        captions["torchvision-repeat"] = (
-            "TorchVision GPU throughput span in two groups of three seeds on L4. "
-            "Each point is one recipe. Span is the difference between maximum and minimum divided by the group median."
+        captions[f"pairwise-{family.lower()}"] = (
+            f"AX vs {family} on {count} shared recipes with 95% seed bootstrap intervals for batch rate."
         )
     return captions
 
@@ -462,9 +420,6 @@ def render_figures(output: Path, paper_root: Path, data: _PaperData) -> None:
         **{f"pairwise-{family.lower()}": rf"\LibraryComparison{{{family.lower()}}}" for family, _ in data.comparisons},
     }
     sources = ["batch-wait.tex", "delivery-plot.tex", "library-comparison.tex", "plot-colors.tex"]
-    if data.torchvision_repeat:
-        commands["torchvision-repeat"] = r"\input{torchvision-repeat-plot.tex}"
-        sources.append("torchvision-repeat-plot.tex")
     for filename in sources:
         shutil.copyfile(paper_root / filename, output / filename)
     source = output / "readme-figures.tex"

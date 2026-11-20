@@ -27,7 +27,6 @@
 \input{generated/coverage-metrics.tex}
 \input{plot-colors.tex}
 \input{library-comparison.tex}
-\input{generated/torchvision-repeat.tex}
 
 \title{From JPEG to CUDA Batch:\\Measuring RGB Input Pipeline Throughput}
 \author{Vladimir Iglovikov\\Albumentations LLC\\\texttt{vladimir@albumentations.ai}}
@@ -46,11 +45,6 @@ median of \CommonBatchRateDALIGPU{} batches/s and AlbumentationsX (AX) delivered
 \CommonBatchRateAlbumentationsX{}. DALI was fastest on \CommonDALIFastest{} of
 those recipes. Median peak process GPU memory was \CommonMemoryDALIGPU{} MiB
 for DALI and \CommonMemoryAlbumentationsX{} MiB for AX.
-\ifdefined\RepeatPoints
-Three additional TorchVision GPU seeds gave a median throughput span of
-\RepeatSeedSpan\% across its recipes, compared with \OriginalSeedSpan\% for the
-original three seeds.
-\fi
 \end{abstract}
 
 \section{Keep the next batch ready}
@@ -97,7 +91,8 @@ Input and access & 49,999 non-CMYK ImageNet validation JPEGs, sequentially prewa
 Output & GPU normalization to CUDA float16 BCHW, \(256\times3\times224\times224\) \\
 DataLoader paths & 15 persistent workers, pinned memory, prefetch factor 2 \\
 DALI & 15 pipeline threads, queue depth 2, native file reader and mixed decoder \\
-Timing and repeats & 30 warm-up batches, 100 measured batches, seeds 137, 138, 139 \\
+Timing and repeats & 30 warm-up batches, 100 measured batches, seeds 137--139\newline
+   TorchVision GPU also uses seeds 140--142 \\
 Machine & Standard \texttt{g2-standard-16}, one NVIDIA L4, 16 vCPUs, 64 GiB host memory \\
 \end{tabularx}
 \caption{Benchmark configuration. Google Cloud specifies Cascade Lake
@@ -153,10 +148,11 @@ and Appendix~\ref{app:semantics} documents the differences.
 The primary run measures \ProductionPairCount{} supported
 implementation--recipe pairs at seeds 137--139. A fresh process on one VM
 handles all recipes for each implementation and seed. A VM can run several
-such jobs in sequence. The repeat run measures only TorchVision GPU with
-seeds 140--142 using the same code, dataset, recipes, package locks, machine
-type, and measurement window. The primary run supplies the cross-library
-comparisons. Appendix~\ref{app:reproduce} lists the manifests.
+such jobs in sequence. The additional TorchVision GPU run covers the same
+42 recipes with seeds 140--142. It uses the same code, dataset, recipe
+catalog, package locks, machine type, and measurement window. The
+TorchVision GPU estimates pool all six seeds. Appendix~\ref{app:reproduce}
+lists the manifests.
 
 \section{Throughput on the same recipes}
 
@@ -171,7 +167,8 @@ ratio on the common set, recipe by recipe.
 \input{delivery-plot.tex}
 \caption{Batch rate and peak process GPU memory on \CommonRecipeCount{} shared
 recipes. Each metric takes the median across seeds, then across recipes.
-The dashed line marks AX. Teal shows higher rates and pale bars show lower rates.}
+The dashed line marks AX's batch rate. The whiskers show the central 95\%
+of bootstrap batch-rate estimates.}
 \label{fig:delivery}
 \end{figure}
 
@@ -189,9 +186,13 @@ Each comparison uses the recipes measured by every path shown in that
 figure. These sets extend the \CommonRecipeCount{} recipes shared by all eight paths.
 The bars show median batch rate, with median peak process GPU memory
 alongside. The last column says who was faster on more recipes and gives
-the count. For each recipe, the comparison
-uses the median of three seeds. Appendix~\ref{app:results} lists the
-exact recipe sets and results.
+the count. Each recipe uses the median across its observed seeds.
+For the batch-rate whiskers, we resample entire seed jobs within each
+path with replacement. Each draw recomputes the recipe medians and then
+takes their median across the fixed recipe set. We report the 2.5th and
+97.5th percentiles of 10,000 draws. With three or six jobs per path, the
+intervals summarize uncertainty conditional on the observed jobs.
+Appendix~\ref{app:results} lists the exact recipe sets and results.
 
 \subsection{AX vs DALI}
 
@@ -261,9 +262,9 @@ TorchVision CPU path uses TorchVision I/O and runs the image transforms
 before transfer. The two paths share \PlotTorchVisionShared{} recipes with
 AX, including geometry, color operations, and JPEG compression.
 
-On RandomCrop224 (R02), TorchVision GPU delivered 15.1 batches/s, AX
+On RandomCrop224 (R02), TorchVision GPU delivered 14.7 batches/s, AX
 delivered 12.6, and TorchVision CPU delivered 11.7. On Elastic (R10),
-TorchVision GPU delivered 0.087 batches/s and AX delivered 8.3. The Elastic
+TorchVision GPU delivered 0.086 batches/s and AX delivered 8.3. The Elastic
 mappings align two displacement statistics and can produce different fields
 (Appendix~\ref{app:semantics}).
 
@@ -273,29 +274,6 @@ mappings align two displacement statistics and can produce different fields
 \caption{AX led TorchVision CPU on 41 recipes and TorchVision GPU on 34
 of the \PlotTorchVisionShared{} recipes shared by all three paths.}
 \end{figure}
-
-\ifdefined\RepeatPoints
-\newpage
-\subsection{TorchVision GPU repeatability}
-
-We repeated all 42 TorchVision GPU recipes with three new seeds on three
-separate L4 VMs. Across recipes, the median throughput span was
-\OriginalSeedSpan\% with the original seeds and \RepeatSeedSpan\% with the
-new seeds. For CenterCrop, the new rates ranged from 3,967 to 5,081 images/s
-and produced the largest span in the repeat (\RepeatMaxSpan\%).
-Seed and VM vary together, so the observed spans combine variation in
-file order, random transforms, and execution conditions.
-
-\begin{figure}[H]
-\centering
-\input{torchvision-repeat-plot.tex}
-\caption{Throughput span for each of the 42 recipes on TorchVision 0.29.2
-GPU. Each axis shows the difference between the maximum and minimum divided
-by the median for three seeds. The dashed diagonal marks equal spans. Both
-groups use the configuration in Table~\ref{tab:setup}.}
-\label{fig:torchvision-repeat}
-\end{figure}
-\fi
 
 \section{Use the results in a training job}
 
@@ -461,9 +439,10 @@ and their boundary effects. The calibration procedure is in
 \section{Results for every measured implementation--recipe pair}
 \label{app:results}
 
-Each row gives the median, minimum, and maximum across the same three cells
-for throughput and peak GPU memory. The CSV contains unrounded values and
-GPU baselines. Recipe IDs link to Appendix~\ref{app:recipes}.
+Each row gives the median and observed minimum and maximum for throughput
+and peak GPU memory across the available seeds, six for TorchVision GPU
+and three for the other paths. The CSV contains unrounded values and GPU
+baselines. Recipe IDs link to Appendix~\ref{app:recipes}.
 
 The table below gives a direct comparison on the recipes shared by all
 eight paths. Each value is the implementation's median throughput divided
@@ -563,20 +542,12 @@ following run directories:
 \item[Primary RGB source] \texttt{\expandafter\seqsplit\expandafter{\FullRunID}}\\
   Source \texttt{\FullSourceRevision}.
 \SupplementalRunDetails
-\ifdefined\RepeatPoints
-\item[TorchVision GPU repeat] \texttt{\expandafter\seqsplit\expandafter{\RepeatRunID}}\\
-  Same source archive as the primary run.
-\fi
 \end{description}
 
 The repository's \texttt{paper/README.md} gives the commands to regenerate the
 report from the source archives and cells. The CSV in
 \texttt{paper/generated/recipe-results.csv} records the source run ID, cell IDs,
-versions, declared stages, throughput, and GPU memory for the primary run.
-\ifdefined\RepeatPoints
-The file \texttt{paper/generated/torchvision-gpu-repeats.csv} records individual
-observations for all six TorchVision GPU seeds with their run, cell, and VM IDs.
-\fi
+versions, declared stages, throughput, and GPU memory for all seeds.
 The separate coverage catalog has SHA-256
 \texttt{\expandafter\seqsplit\expandafter{\CoverageCatalogSHA}}.
 

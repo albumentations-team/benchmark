@@ -42,20 +42,20 @@ The current manuscript includes per-recipe results, GPU memory, and transformati
 
 ## RGB results
 
-1263 measurements across 421 implementation–recipe pairs, with 3 seeds per pair. See the [per-seed results and manifests](docs/generated/results.json).
+1,389 measurements across 421 implementation–recipe pairs. See the [per-seed results and manifests](docs/generated/results.json).
 
-![Ready batches per second and peak process GPU memory on 31 common recipes. Each metric takes the median across seeds, then across recipes. The dashed line marks AX's batch rate.](docs/generated/common-summary.png)
+![Ready batches per second and peak process GPU memory on 31 common recipes. Each metric takes the median across seeds, then across recipes. Whiskers show the central 95% of batch-rate estimates from resampling whole seed jobs.](docs/generated/common-summary.png)
 
 ### Mean per-recipe throughput ratios
 
-All rows below use the same 31 recipes. Throughput is the arithmetic mean of per-recipe ratios: each path's median over 3 seeds divided by AX's median for that recipe. GPU memory is the median of those recipes' peak-memory medians.
+All rows below use the same 31 recipes. Throughput is the arithmetic mean of per-recipe ratios: each path's median across its seeds divided by AX's median for that recipe. GPU memory is the median of those recipes' peak-memory medians.
 
 | Measured path | Version | Mean throughput / AX (higher is faster) | Peak process GPU memory (MiB, lower is better) |
 | --- | --- | ---: | ---: |
 | DALI GPU | 2.4.0 | 1.82× | 784 |
 | AlbumentationsX CPU | 2.6.7 | 1.00× | 404 |
 | Pillow-AllSIMD CPU (fast) | 13.0.0.post4 | 0.90× | 330 |
-| TorchVision GPU | 0.29.2 | 0.81× | 1,250 |
+| TorchVision GPU | 0.29.2 | 0.82× | 1,243 |
 | TorchVision CPU | 0.29.2 | 0.81× | 330 |
 | Pillow CPU | 13.0.0 | 0.72× | 330 |
 | Kornia GPU | 0.9.2 | 0.49× | 538 |
@@ -67,65 +67,57 @@ Each implementation and seed ran in a fresh process. NVML sampled its baseline b
 
 ### Throughput ratio on each shared recipe
 
-Each value is the path's median throughput across three seeds divided by AX's median for that recipe. A value above 1.00 means that path delivered batches faster than AX.
+Each value is the path's median throughput across its seeds divided by AX's median for that recipe. A value above 1.00 means that path delivered batches faster than AX.
 
 | Shared recipe | DALI | Kornia CPU | Kornia GPU | Pillow | Pillow-AllSIMD | TorchVision CPU | TorchVision GPU |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | R01 Resize | 1.47 | 0.47 | 0.48 | 0.57 | 0.83 | 0.82 | 0.92 |
-| R02 RandomCrop224 | 1.86 | 0.49 | 0.50 | 0.94 | 0.96 | 0.93 | 1.20 |
-| R03 RandomResizedCrop | 1.78 | 0.42 | 0.43 | 0.58 | 0.84 | 0.77 | 0.66 |
-| R04 HorizontalFlip | 2.18 | 0.54 | 0.59 | 1.08 | 1.12 | 1.07 | 1.10 |
-| R05 VerticalFlip | 1.95 | 0.47 | 0.53 | 0.99 | 1.00 | 0.95 | 1.02 |
-| R07 Rotate | 2.02 | 0.35 | 0.55 | 0.66 | 0.94 | 0.57 | 0.39 |
+| R02 RandomCrop224 | 1.86 | 0.49 | 0.50 | 0.94 | 0.96 | 0.93 | 1.17 |
+| R03 RandomResizedCrop | 1.78 | 0.42 | 0.43 | 0.58 | 0.84 | 0.77 | 0.65 |
+| R04 HorizontalFlip | 2.18 | 0.54 | 0.59 | 1.08 | 1.12 | 1.07 | 1.17 |
+| R05 VerticalFlip | 1.95 | 0.47 | 0.53 | 0.99 | 1.00 | 0.95 | 0.99 |
+| R07 Rotate | 2.02 | 0.35 | 0.55 | 0.66 | 0.94 | 0.57 | 0.40 |
 | R08 Affine | 1.89 | 0.33 | 0.54 | 0.66 | 0.93 | 0.66 | 0.45 |
 | R09 Perspective | 1.65 | 0.35 | 0.58 | 0.67 | 0.94 | 0.66 | 0.32 |
-| R12 ChannelShuffle | 1.79 | 0.45 | 0.48 | 0.90 | 0.91 | 0.86 | 0.82 |
+| R12 ChannelShuffle | 1.79 | 0.45 | 0.48 | 0.90 | 0.91 | 0.86 | 0.81 |
 | R13 Grayscale | 1.80 | 0.43 | 0.47 | 0.86 | 0.92 | 0.81 | 0.81 |
-| R15 GaussianBlur | 1.93 | 0.28 | 0.51 | 0.45 | 0.85 | 0.54 | 0.57 |
-| R17 Invert | 1.75 | 0.42 | 0.46 | 0.83 | 0.87 | 0.85 | 0.86 |
-| R18 Posterize | 1.75 | 0.34 | 0.46 | 0.81 | 0.86 | 0.85 | 0.87 |
-| R19 Solarize | 1.82 | 0.42 | 0.49 | 0.88 | 0.92 | 0.78 | 0.93 |
+| R15 GaussianBlur | 1.93 | 0.28 | 0.51 | 0.45 | 0.85 | 0.54 | 0.56 |
+| R17 Invert | 1.75 | 0.42 | 0.46 | 0.83 | 0.87 | 0.85 | 0.89 |
+| R18 Posterize | 1.75 | 0.34 | 0.46 | 0.81 | 0.86 | 0.85 | 0.86 |
+| R19 Solarize | 1.82 | 0.42 | 0.49 | 0.88 | 0.92 | 0.78 | 0.92 |
 | R22 Equalize | 2.15 | 0.40 | 0.57 | 0.95 | 0.98 | 0.77 | 0.42 |
-| R24 JpegCompression | 2.07 | 0.16 | 0.55 | 0.87 | 0.87 | 0.83 | 0.76 |
+| R24 JpegCompression | 2.07 | 0.16 | 0.55 | 0.87 | 0.87 | 0.83 | 0.77 |
 | R25 RandomGamma | 1.84 | 0.38 | 0.48 | 0.87 | 0.90 | 0.68 | 1.07 |
-| R30 Brightness | 1.86 | 0.45 | 0.50 | 0.88 | 0.88 | 0.83 | 0.90 |
+| R30 Brightness | 1.86 | 0.45 | 0.50 | 0.88 | 0.88 | 0.83 | 0.96 |
 | R31 Contrast | 1.89 | 0.44 | 0.50 | 0.84 | 0.86 | 0.77 | 0.79 |
 | R46 Shear | 1.96 | 0.34 | 0.53 | 0.63 | 0.91 | 0.65 | 0.45 |
-| R50 LongestMaxSize | 1.81 | 0.34 | 0.35 | 0.33 | 0.78 | 0.87 | 0.83 |
-| R51 SmallestMaxSize | 2.09 | 0.29 | 0.32 | 0.25 | 0.73 | 0.95 | 1.07 |
-| R53 RandomRotate90 | 1.81 | 0.31 | 0.48 | 0.91 | 0.93 | 0.88 | 0.99 |
-| R58 CenterCrop | 1.91 | 0.56 | 0.58 | 0.95 | 0.96 | 0.95 | 1.54 |
-| R59 Crop | 1.54 | 0.44 | 0.47 | 0.54 | 0.84 | 0.83 | 0.89 |
-| R62 PadIfNeeded | 1.58 | 0.44 | 0.46 | 0.98 | 1.01 | 0.97 | 1.24 |
-| R63 RGB <-> BGR | 1.59 | 0.50 | 0.52 | 0.61 | 0.88 | 0.83 | 0.80 |
+| R50 LongestMaxSize | 1.81 | 0.34 | 0.35 | 0.33 | 0.78 | 0.87 | 0.85 |
+| R51 SmallestMaxSize | 2.09 | 0.29 | 0.32 | 0.25 | 0.73 | 0.95 | 1.05 |
+| R53 RandomRotate90 | 1.81 | 0.31 | 0.48 | 0.91 | 0.93 | 0.88 | 1.02 |
+| R58 CenterCrop | 1.91 | 0.56 | 0.58 | 0.95 | 0.96 | 0.95 | 1.52 |
+| R59 Crop | 1.54 | 0.44 | 0.47 | 0.54 | 0.84 | 0.83 | 0.92 |
+| R62 PadIfNeeded | 1.58 | 0.44 | 0.46 | 0.98 | 1.01 | 0.97 | 1.20 |
+| R63 RGB <-> BGR | 1.59 | 0.50 | 0.52 | 0.61 | 0.88 | 0.83 | 0.81 |
 | R67 RandomScale | 1.84 | 0.33 | 0.34 | 0.31 | 0.76 | 0.87 | 0.90 |
-| R68 RandomSizedCrop | 1.58 | 0.38 | 0.51 | 0.45 | 0.81 | 0.76 | 0.62 |
-| R69 CoarseDropout | 1.57 | 0.42 | 0.51 | 0.62 | 0.90 | 0.82 | 0.57 |
-| R72 ShiftScaleRotate | 1.67 | 0.35 | 0.56 | 0.48 | 0.88 | 0.64 | 0.44 |
+| R68 RandomSizedCrop | 1.58 | 0.38 | 0.51 | 0.45 | 0.81 | 0.76 | 0.61 |
+| R69 CoarseDropout | 1.57 | 0.42 | 0.51 | 0.62 | 0.90 | 0.82 | 0.58 |
+| R72 ShiftScaleRotate | 1.67 | 0.35 | 0.56 | 0.48 | 0.88 | 0.64 | 0.45 |
 
 ### AlbumentationsX against each library
 
 Each chart uses the recipes shared by every path it shows. Compare rows within each chart.
 
-![AX vs Kornia on 61 shared recipes](docs/generated/pairwise-kornia.png)
+![AX vs Kornia on 61 shared recipes with 95% seed bootstrap intervals for batch rate.](docs/generated/pairwise-kornia.png)
 
-![AX vs TorchVision on 42 shared recipes](docs/generated/pairwise-torchvision.png)
+![AX vs TorchVision on 42 shared recipes with 95% seed bootstrap intervals for batch rate.](docs/generated/pairwise-torchvision.png)
 
-![AX vs Pillow on 46 shared recipes](docs/generated/pairwise-pillow.png)
+![AX vs Pillow on 46 shared recipes with 95% seed bootstrap intervals for batch rate.](docs/generated/pairwise-pillow.png)
 
-![AX vs DALI on 51 shared recipes](docs/generated/pairwise-dali.png)
-
-### TorchVision GPU repeatability
-
-The repeat run adds 126 measurements across 42 recipes with seeds 140, 141, 142. The median throughput span across recipes was 5.8% versus 6.2% in the primary run. The largest span in the repeat was 23.1%. Each seed ran on a different VM, so the span includes variation from the data, transforms, and VM.
-
-![TorchVision GPU throughput span in two groups of three seeds on L4. Each point is one recipe. Span is the difference between maximum and minimum divided by the group median.](docs/generated/torchvision-repeat.png)
-
-The cross-library tables use seeds 137, 138, 139. The values for all six seeds are in the [repeat CSV](paper/generated/torchvision-gpu-repeats.csv).
+![AX vs DALI on 51 shared recipes with 95% seed bootstrap intervals for batch rate.](docs/generated/pairwise-dali.png)
 
 ### Measurement settings
 
-Machine: `g2-standard-16`, `nvidia-l4`. Output: CUDA `float16` BCHW `256x3x224x224`. Dataset: 49,999 non-CMYK ImageNet validation JPEGs with EXIF stripped before timing. Seeds: 137, 138, 139. Workers: 15; prefetch setting: 2; persistent workers: true; dataset prewarm: true.
+Machine: `g2-standard-16`, `nvidia-l4`. Output: CUDA `float16` BCHW `256x3x224x224`. Dataset: 49,999 non-CMYK ImageNet validation JPEGs with EXIF stripped before timing. Seeds 137, 138, 139 for all paths. TorchVision GPU also includes seeds 140, 141, 142. Workers: 15; prefetch setting: 2; persistent workers: true; dataset prewarm: true.
 
 Warm-up batches: 30. Throughput measures 100 batches (25,600 images), ending after CUDA synchronization. Construction and worker startup are excluded; prefetch effects remain.
 
@@ -152,13 +144,12 @@ GPU memory is sampled by NVML every 50 ms from before pipeline construction thro
   R24 samples JPEG quality per image, although codec paths and artifact
   simulators can produce different pixels at the same nominal quality.
 
-Three seeds provide repeated executions with the same per-seed file order across
-paths. The results measure input preparation on one machine type. Performance
+The shared seeds use the same file order across paths. TorchVision GPU uses three additional seeds. The results measure input preparation on one machine type. Performance
 during training also depends on the model and its use of the GPU.
 
 ## Update the README results
 
-Regenerate the paper and README from the validated primary matrix and the TorchVision GPU repeat. The exports retain every observation's source run and cell IDs. [Regeneration commands](paper/README.md#regenerate-the-results)
+Regenerate the paper and README from the validated primary matrix and the additional TorchVision GPU measurements. The exports retain every observation's source run and cell IDs. [Regeneration commands](paper/README.md#regenerate-the-results)
 
 The expanded run changed the JPEG selection, timing window, and some recipes and packages. The prior comparison records observed throughput changes under those conditions. [Comparison with the previous run](docs/results/2026-11-20.md)
 

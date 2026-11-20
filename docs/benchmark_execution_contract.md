@@ -279,13 +279,13 @@ Add `--max-workers 8` to distribute this validation through the job queue. Valid
 
 ## Aggregation
 
-The published cross-library comparisons use the complete primary matrix at seeds 137–139.
-The TorchVision GPU repeat at seeds 140–142 uses the same frozen inputs and its own run ID.
-The report compares the observed throughput span between the two seed groups and retains all
-six observations for that path. See the [published runs and regeneration commands](../paper/README.md#regenerate-the-results).
+The published comparisons pool the three primary seeds and three additional seeds for TorchVision GPU.
+Other paths use the three primary seeds. The additional run preserves the other frozen inputs
+and has its own run ID. The throughput intervals resample complete seed jobs within each path,
+keeping the recipe set fixed. See the [regeneration commands](../paper/README.md#regenerate-the-results).
 
 Aggregate only after validating the entire matrix. Compare throughput and GPU memory row by row
-with the same family, recipe, seed policy, batch size, dataset, hardware, and timing boundary.
+with the same family, recipe, seed sampling policy, batch size, dataset, hardware, and timing boundary.
 Pairwise and all-library summaries use the exact intersection of supported recipes. The coverage
 census is separate. Unsupported operations never count as speed losses.
 
