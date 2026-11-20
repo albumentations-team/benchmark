@@ -93,6 +93,18 @@ def test_pillow_gaussian_blur_respects_the_configured_kernel_size() -> None:
     assert result.getbbox() == (8, 8, 13, 13)
 
 
+def test_pillow_unsharp_mask_matches_ax_three_tap_edge_strength() -> None:
+    image = np.full((32, 32, 3), 64, dtype=np.uint8)
+    image[:, 16:] = 192
+    spec = TransformSpec("UnsharpMask", {"blur_limit": [3, 3], "alpha": [0.5, 0.5], "threshold": 10})
+    sharpen = create_transform(spec)
+    assert sharpen is not None
+
+    edge = np.asarray(sharpen(Image.fromarray(image)))[16, 14:18, 0]
+    # The AX 3-tap Gaussian puts 1/4 of the 128-level step across the edge.
+    np.testing.assert_allclose(edge, [64, 48, 208, 192], atol=2, rtol=0)
+
+
 def test_r46_pillow_centers_x_shear_and_interpolates_zero_border() -> None:
     recipes = load_recipe_catalog(Path(__file__).parents[1] / "catalog" / "recipes" / "rgb.yaml")
     recipe = next(recipe for recipe in recipes.recipes if recipe.augmentation_id == "Shear")
