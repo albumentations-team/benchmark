@@ -2120,8 +2120,8 @@ recipes:
   - operation_id: OpticalDistortion
     parameters:
       distort_limit:
-      - -0.5
-      - 0.5
+      - -0.3
+      - 0.3
       mode: fisheye
       kornia_gamma: [45.0, 90.0]
     stochastic: true
