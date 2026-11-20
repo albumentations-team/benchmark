@@ -28,9 +28,11 @@ matrix unless the user explicitly adds that research question.
 
 ## RGB workload and reference effect
 
-- Treat the RGB workload as image classification on one 8-bit RGB JPEG per sample.
+- Treat the RGB workload as image classification on one 8-bit JPEG decoded to RGB per sample.
   The augmentation receives only the image. Boxes, masks, keypoints, and
   `additional_targets` are outside this workload.
+- Exclude CMYK JPEGs from the common selection for every implementation before timing.
+  The ImageNet archive supplies 49,999 eligible files.
 - Strip EXIF during shared JPEG extraction before timing. All decoders consume
   the prepared files in stored pixel orientation.
 - Use stock AlbumentationsX transforms as the reference. Construct one AX transform

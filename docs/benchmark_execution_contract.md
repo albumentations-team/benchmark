@@ -11,7 +11,7 @@ the work each adapter adds around the native operators.
 
 ## RGB workload and reference implementations
 
-Each sample starts with one 8-bit RGB JPEG, as in ImageNet image classification. The augmentation
+Each sample starts with one 8-bit JPEG decoded to RGB, as in ImageNet image classification. The augmentation
 call receives only the image. Bounding boxes, masks, keypoints, `additional_targets`, and other
 annotations are outside this workload. Each library can use its native working dtype after decode.
 
@@ -51,7 +51,7 @@ fall outside the production benchmark.
 
 | Field | Value |
 | --- | --- |
-| Data | All 50,000 `val/*.JPEG` files in lexicographic order from the SHA-256-verified ImageNet validation archive |
+| Data | All 49,999 non-CMYK `val/*.JPEG` files in lexicographic order from the SHA-256-verified ImageNet validation archive |
 | Recipes | 72 RGB recipes, each supported by at least two libraries |
 | Matrix | 421 supported implementation–recipe pairs × 3 seeds = 1,263 cells |
 | Seeds | 137, 138, 139 |
@@ -227,12 +227,14 @@ and preflights each path on CUDA before collecting throughput and peak VRAM.
 
 ## Data access
 
+The common selection excludes CMYK JPEGs before timing. The archive contains 49,100 RGB, 899 grayscale, and one CMYK JPEG. Excluding `val/ILSVRC2012_val_00019877.JPEG` leaves 49,999 files for every implementation. TorchCodec CUDA fails to decode CMYK inputs. The other JPEGs are retained without re-encoding. [TorchCodec issue](https://github.com/meta-pytorch/torchcodec/issues/1872)
+
 The VM removes EXIF APP1 headers from the selected JPEGs during extraction. This copies the
 compressed image data into one shared cache while preserving the orientation of the stored pixels.
 The preparation version is part of the cache key. Every implementation reads the same prepared
 JPEGs, including TorchCodec, which normally applies EXIF orientation.
 
-After preparation, the VM reads all 50,000 JPEGs sequentially once outside the timed cells. All
+After preparation, the VM reads all 49,999 selected JPEGs sequentially once outside the timed cells. All
 implementations then use the same deterministic PCG64 permutation without replacement for each
 seed. PyTorch DataLoader adds no shuffle. DALI receives the same preordered file list.
 
@@ -253,7 +255,7 @@ rule, plus the package lock, recipe catalog, and hardware config. It then:
 4. Otherwise, looks for zones with `g2-standard-16` and L4 availability and creates Standard
    VMs up to the requested worker limit (one by default).
 5. On the VM, downloads the code, raw dataset, and cached RGB environment once, verifies the
-   Pillow-AllSIMD lock and wheel, extracts all 50,000 sorted `val/*.JPEG` files, and
+   Pillow-AllSIMD lock and wheel, extracts all 49,999 selected non-CMYK `val/*.JPEG` files, and
    prewarms them. If the run measures TorchVision GPU, bootstrap makes the installed NVIDIA
    driver's `libnvcuvid.so.1` available to that worker. Each
    implementation runs in its own process. It checks one batch through CUDA
@@ -270,6 +272,8 @@ With `augbench launch-rgb --max-workers 24`, the queue contains one job per impl
 A resumed pool validates published cells and queues only missing cells. An active pool is reused without launching duplicates. Once its workers have stopped, resume creates a new claim namespace; failed claims from the previous attempt cannot hide unfinished cells. Failed jobs retain their bootstrap logs and are investigated before retrying.
 
 Run `augbench launch-rgb --preflight-only` on one L4 before starting the pool with a new environment. It checks one CUDA batch for every supported implementation–recipe pair, then measures the first selected recipe for each implementation with the full timing and memory window. These validation records go under `preflight/`, separate from production `cells/`. Production workers repeat preflight before measuring their jobs.
+
+Add `--max-workers 8` to distribute this validation through the job queue. Validation uses only the first configured seed, giving one job per implementation. Start the production pool only after all eight validation records pass output, timing, and GPU-memory checks.
 
 ## Aggregation
 

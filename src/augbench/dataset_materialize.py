@@ -58,11 +58,22 @@ def _selected_member_names(archive: Path, dataset: DatasetConfig) -> tuple[str, 
                 and member.name.startswith(dataset.archive_member_prefix)
                 and member.name.endswith(dataset.archive_member_suffix)
                 and _is_safe_relative_path(member.name)
+                and (dataset.selection == "first-sorted" or not _is_cmyk(source, member))
             )[: dataset.item_count]
         )
     if len(selected) != dataset.item_count:
         raise ValueError(f"source archive has only {len(selected)} matching JPEGs")
     return selected
+
+
+def _is_cmyk(source: tarfile.TarFile, member: tarfile.TarInfo) -> bool:
+    from PIL import Image
+
+    stream = source.extractfile(member)
+    if stream is None:
+        raise ValueError(f"could not inspect {member.name}")
+    with stream, Image.open(stream) as image:
+        return image.mode == "CMYK"
 
 
 def _extract_selected(archive: Path, selected: tuple[str, ...], destination: Path) -> None:

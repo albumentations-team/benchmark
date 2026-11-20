@@ -39,7 +39,7 @@ def launch_rgb(
         start=GcpStartRequest(
             cloud=cloud,
             request=frozen.request.model_copy(update={"preflight_only": preflight_only}),
-            cells=frozen.cells,
+            cells=tuple(cell for cell in frozen.cells if not preflight_only or cell.seed == config.execution.seeds[0]),
             startup_script=repository_root / "infra/gcp/bootstrap.sh",
         ),
         dependencies=GcpControllerDependencies(remote=remote),

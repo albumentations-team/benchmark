@@ -3,7 +3,7 @@
 `environments/rgb/requirements.in` declares the base production environment.
 `environments/rgb/lock.txt` pins Linux x86-64 packages with hashes, including the
 PyPI build of PyTorch 2.15.0 with CUDA 13.2, Triton 3.9.0, AlbumentationsX 2.6.7, Albucore 0.3.11, Kornia 0.9.2, TorchVision 0.29.2,
-and OpenCV 5.1.0.95. These are stable releases resolved for the new 50k run.
+and OpenCV 5.1.0.95. These are stable releases resolved for the new ImageNet validation run.
 
 Pillow-AllSIMD uses the same base packages. Bootstrap verifies
 `environments/rgb/pillow-allsimd.lock.txt` and installs its wheel into a

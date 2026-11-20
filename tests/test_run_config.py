@@ -16,7 +16,8 @@ def test_rgb_config_defines_the_entire_runnable_contract() -> None:
     assert config.normalization == "gpu"
     assert config.output.device == "cuda"
     assert config.output.layout == "BCHW"
-    assert config.dataset.item_count == 50_000
+    assert config.dataset.item_count == 49_999
+    assert config.dataset.selection == "first-sorted-non-cmyk"
     assert config.dataset.archive_member_prefix == "val/"
     assert config.dataset.archive_member_suffix == ".JPEG"
     assert config.execution.batch_size == 256

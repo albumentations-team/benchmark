@@ -131,7 +131,7 @@ def start_or_resume(
         )
 
     pending_request = request.model_copy(update={"pending_cell_ids": tuple(cell.cell_id for cell in pending)})
-    if not pending_request.preflight_only:
+    if not pending_request.preflight_only or max_workers > 1:
         return _start_pool(start=start, dependencies=dependencies, request=pending_request, max_workers=max_workers)
     request_digest = hashlib.sha256(_json_bytes(pending_request)).hexdigest()
     request_key = f"runs/{request.run.run_id}/requests/{request_digest}.json"
@@ -190,7 +190,8 @@ def _start_pool(
 
     def provision(index: int) -> GceInstance | str:
         name = f"augbench-{request.run.family_config['family']}-{request.run.run_id[:12]}-{index:02d}"
-        ordered_zones = zones[index % len(zones) :] + zones[: index % len(zones)]
+        zone_offset = index * len(zones) // workers
+        ordered_zones = zones[zone_offset:] + zones[:zone_offset]
         try:
             zone = provision_first_available(
                 attempt=GcpProvisioningAttempt(
