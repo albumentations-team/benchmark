@@ -28,13 +28,15 @@ from paper.generate_results import (
     add_run_arguments,
     load_report,
     pillow_allsimd_ratios,
+    throughput_span,
+    torchvision_repeat_groups,
     write_plot_inputs,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from augbench.run_records import RunRecord
+    from augbench.run_records import ResultRecord, RunRecord
     from paper.generate_results import _PaperData
 
 _BEGIN = "<!-- BEGIN GENERATED RESULTS -->"
@@ -87,10 +89,50 @@ def export_figures(directory: Path, captions: Mapping[str, str]) -> dict[str, di
     return figures
 
 
-def _isolated_workers(data: _PaperData) -> bool:
-    return all(
-        record.runtime.get("worker_scope") == "implementation" for records in data.groups.values() for record in records
-    )
+def _worker_note(data: _PaperData) -> str:
+    scopes = {record.runtime.get("worker_scope") for records in data.groups.values() for record in records}
+    if scopes == {"implementation_seed"}:
+        return "Each implementation and seed ran in a fresh process. NVML sampled its baseline before pipeline setup."
+    if scopes == {"implementation"}:
+        return "Each implementation ran in its own process. NVML sampled the baseline before pipeline construction."
+    return ""
+
+
+def _observation(record: ResultRecord) -> dict[str, str | int | float]:
+    return {
+        "seed": record.cell.seed,
+        "cell_id": record.cell_id,
+        "run_id": record.run_id,
+        "throughput_images_s": record.throughput.value,
+        "gpu_memory_peak_mib": record.gpu_memory.peak_mib,
+        **(
+            {"gpu_memory_baseline_mib": record.gpu_memory.baseline_mib}
+            if record.gpu_memory.baseline_mib is not None
+            else {}
+        ),
+        **{field: record.runtime[field] for field in ("worker_hostname", "worker_scope") if field in record.runtime},
+    }
+
+
+def _export_repeat(data: _PaperData) -> dict[str, object]:
+    if data.torchvision_repeat is None:
+        return {}
+    run, cells = data.torchvision_repeat
+    return {
+        "torchvision_gpu_repeat": {
+            "run": run.model_dump(mode="json"),
+            "measurement_count": len(cells),
+            "recipes": [
+                {
+                    "id": recipe,
+                    "primary_span_percent": throughput_span(original),
+                    "repeat_span_percent": throughput_span(repeat),
+                    "observations": [_observation(record) for record in repeat],
+                }
+                for recipe, (original, repeat) in torchvision_repeat_groups(data).items()
+            ],
+        },
+    }
 
 
 def export_results(
@@ -127,21 +169,7 @@ def export_results(
             results[implementation] = {
                 "throughput": {"median": data.speed[key], "min": min(speeds), "max": max(speeds)},
                 "gpu_memory": {"median": data.memory[key], "min": min(memories), "max": max(memories)},
-                "observations": [
-                    {
-                        "seed": record.cell.seed,
-                        "cell_id": record.cell_id,
-                        "run_id": record.run_id,
-                        "throughput_images_s": record.throughput.value,
-                        "gpu_memory_peak_mib": record.gpu_memory.peak_mib,
-                        **(
-                            {"gpu_memory_baseline_mib": record.gpu_memory.baseline_mib}
-                            if record.gpu_memory.baseline_mib is not None
-                            else {}
-                        ),
-                    }
-                    for record in records
-                ],
+                "observations": [_observation(record) for record in records],
             }
         recipes.append({"key": f"R{index:02d}", "id": recipe.recipe_id, "results": results})
     groups = [("all", tuple(implementation for implementation, _ in data.implementations))]
@@ -165,12 +193,8 @@ def export_results(
             }
         )
     pairwise_comparisons = []
-    isolated_workers = _isolated_workers(data)
-    measurement_notes = (
-        ["Each implementation ran in its own process. The baseline is sampled before pipeline construction."]
-        if isolated_workers
-        else []
-    )
+    worker_note = _worker_note(data)
+    measurement_notes = [worker_note] if worker_note else []
     if any(implementation == PILLOW_ALLSIMD[0] for implementation, _ in data.implementations):
         pillow_shared, pillow_ratios = pillow_allsimd_ratios(data)
         pairwise_comparisons.append(
@@ -181,7 +205,7 @@ def export_results(
                 "median_throughput_ratio": median(pillow_ratios),
             }
         )
-        if not isolated_workers:
+        if not worker_note:
             measurement_notes.append(
                 "Pillow-AllSIMD ran in its own worker process. Other paths share the base worker, so their "
                 "NVML peaks include a different process lifetime."
@@ -201,6 +225,7 @@ def export_results(
         "summaries": summaries,
         "pairwise_comparisons": pairwise_comparisons,
         "measurement_notes": measurement_notes,
+        **_export_repeat(data),
     }
 
 
@@ -221,7 +246,7 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
     labels[AX] = "AlbumentationsX CPU"
     count = len(data.common)
     captions = figure_captions(data)
-    isolated_workers = _isolated_workers(data)
+    worker_note = _worker_note(data)
     pillow_variant_note = None
     if any(implementation == PILLOW_ALLSIMD[0] for implementation, _ in data.implementations):
         shared, speedups = pillow_allsimd_ratios(data)
@@ -278,20 +303,12 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
         lines.append(
             f"| {labels[implementation]} | {version} | "
             f"{means[implementation]:.2f}\N{MULTIPLICATION SIGN} | {memories[implementation]:,.0f}"
-            f"{'†' if implementation == PILLOW_ALLSIMD[0] and not isolated_workers else ''} |"
+            f"{'†' if implementation == PILLOW_ALLSIMD[0] and not worker_note else ''} |"
         )
     if pillow_variant_note is not None:
         lines.extend(["", pillow_variant_note])
-    if isolated_workers:
-        lines.extend(
-            [
-                "",
-                (
-                    "Each implementation ran in its own process. Peak VRAM includes the CUDA state that process "
-                    "retains. The per-seed baseline before pipeline construction is in the machine-readable results."
-                ),
-            ]
-        )
+    if worker_note:
+        lines.extend(["", worker_note])
     elif pillow_variant_note is not None:
         lines.extend(
             [
@@ -340,6 +357,7 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
     lines.extend(
         [
             "",
+            *_repeat_lines(data, captions),
             *_workload_lines(data, run, config),
             "",
             _image("batch-wait", captions["batch-wait"]),
@@ -348,17 +366,49 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
     return "\n".join(lines)
 
 
+def _repeat_lines(data: _PaperData, captions: Mapping[str, str]) -> list[str]:
+    if not data.torchvision_repeat:
+        return []
+    run, cells = data.torchvision_repeat
+    seeds = ", ".join(map(str, run.family_config["execution"]["seeds"]))
+    groups = torchvision_repeat_groups(data)
+    original_seeds = ", ".join(str(record.cell.seed) for record in next(iter(groups.values()))[0])
+    original = [throughput_span(base) for base, _ in groups.values()]
+    repeat = [throughput_span(extra) for _, extra in groups.values()]
+    return [
+        "### TorchVision GPU repeatability",
+        "",
+        (
+            f"The repeat run adds {len(cells):,} measurements across {len(groups)} recipes with seeds {seeds}. "
+            f"The median throughput span across recipes was {median(repeat):.1f}% versus "
+            f"{median(original):.1f}% in the primary run. The largest span in the repeat was {max(repeat):.1f}%. "
+            "Each seed ran on a different VM, so the span includes variation from the data, transforms, and VM."
+        ),
+        "",
+        _image("torchvision-repeat", captions["torchvision-repeat"]),
+        "",
+        (
+            f"The cross-library tables use seeds {original_seeds}. "
+            "The values for all six seeds are in the [repeat CSV](paper/generated/torchvision-gpu-repeats.csv)."
+        ),
+        "",
+    ]
+
+
 def _workload_lines(data: _PaperData, run: RunRecord, config: FamilyRunConfig) -> list[str]:
     execution = config.execution
     poll_ms = _single({record.gpu_memory.poll_interval_ms for records in data.groups.values() for record in records})
     shape = "x".join(map(str, (execution.batch_size, *config.output.shape)))
+    dataset = f"first {config.dataset.item_count:,} sorted ImageNet validation JPEGs"
+    if config.dataset.selection == "first-sorted-non-cmyk":
+        dataset = f"{config.dataset.item_count:,} non-CMYK ImageNet validation JPEGs with EXIF stripped before timing"
     return [
         "### Measurement settings",
         "",
         (
             f"Machine: `{run.hardware['machine_type']}`, `{run.hardware['accelerator']}`. "
             f"Output: CUDA `float16` BCHW `{shape}`. "
-            f"Dataset: first {config.dataset.item_count:,} lexicographically sorted ImageNet Val JPEGs. "
+            f"Dataset: {dataset}. "
             f"Seeds: {', '.join(map(str, execution.seeds))}. "
             f"Workers: {execution.num_workers}; prefetch setting: {execution.prefetch_factor}; "
             f"persistent workers: {str(execution.persistent_workers).lower()}; "
@@ -394,6 +444,11 @@ def figure_captions(data: _PaperData) -> dict[str, str]:
     for family, paths in data.comparisons:
         count = len(_shared_recipes(data, [AX, *paths]))
         captions[f"pairwise-{family.lower()}"] = f"AX vs {family} on {count} shared recipes"
+    if data.torchvision_repeat:
+        captions["torchvision-repeat"] = (
+            "TorchVision GPU throughput span in two groups of three seeds on L4. "
+            "Each point is one recipe. Span is the difference between maximum and minimum divided by the group median."
+        )
     return captions
 
 
@@ -406,7 +461,11 @@ def render_figures(output: Path, paper_root: Path, data: _PaperData) -> None:
         "common-summary": r"\input{delivery-plot.tex}",
         **{f"pairwise-{family.lower()}": rf"\LibraryComparison{{{family.lower()}}}" for family, _ in data.comparisons},
     }
-    for filename in ("batch-wait.tex", "delivery-plot.tex", "library-comparison.tex", "plot-colors.tex"):
+    sources = ["batch-wait.tex", "delivery-plot.tex", "library-comparison.tex", "plot-colors.tex"]
+    if data.torchvision_repeat:
+        commands["torchvision-repeat"] = r"\input{torchvision-repeat-plot.tex}"
+        sources.append("torchvision-repeat-plot.tex")
+    for filename in sources:
         shutil.copyfile(paper_root / filename, output / filename)
     source = output / "readme-figures.tex"
     source.write_text(

@@ -27,6 +27,7 @@
 \input{generated/coverage-metrics.tex}
 \input{plot-colors.tex}
 \input{library-comparison.tex}
+\input{generated/torchvision-repeat.tex}
 
 \title{From JPEG to CUDA Batch:\\Measuring RGB Input Pipeline Throughput}
 \author{Vladimir Iglovikov\\Albumentations LLC\\\texttt{vladimir@albumentations.ai}}
@@ -37,7 +38,7 @@
 
 \begin{abstract}
 We measure how many ready batches per second eight image input pipelines
-deliver to an NVIDIA L4. Each pipeline starts with RGB JPEG files and delivers
+deliver to an NVIDIA L4. Each pipeline starts with JPEG files decoded to RGB and delivers
 synchronized CUDA float16 batches of 256 images. The benchmark contains
 \ProductionCellCount{} measurements across \RecipeCount{} recipes. On the
 \CommonRecipeCount{} recipes shared by all eight paths, DALI delivered a
@@ -45,6 +46,11 @@ median of \CommonBatchRateDALIGPU{} batches/s and AlbumentationsX (AX) delivered
 \CommonBatchRateAlbumentationsX{}. DALI was fastest on \CommonDALIFastest{} of
 those recipes. Median peak process GPU memory was \CommonMemoryDALIGPU{} MiB
 for DALI and \CommonMemoryAlbumentationsX{} MiB for AX.
+\ifdefined\RepeatPoints
+Three additional TorchVision GPU seeds gave a median throughput span of
+\RepeatSeedSpan\% across its recipes, compared with \OriginalSeedSpan\% for the
+original three seeds.
+\fi
 \end{abstract}
 
 \section{Keep the next batch ready}
@@ -75,8 +81,8 @@ the model and measure progress toward a quality target \cite{mlperf}.
 \subsection{Input and timing}
 
 Each measurement covers one implementation, one recipe, and one seed.
-After one warm-up batch, the runner times delivery of 32 batches through
-the final CUDA synchronization. Batch rate is 32 divided by elapsed
+After 30 warm-up batches, the runner times delivery of 100 batches through
+the final CUDA synchronization. Batch rate is 100 divided by elapsed
 wall-clock seconds. The runner reads the selected ImageNet JPEGs
 \cite{imagenet} before timing to reduce the influence of storage. Every
 path uses the same file order for a given seed. Decoding remains part of
@@ -87,12 +93,12 @@ batch preparation.
 \rowcolors{2}{gray!5}{white}
 \begin{tabularx}{\textwidth}{p{3.1cm}Y}
 \textbf{Control} & \textbf{Frozen setting} \\ \midrule
-Input and access & 10,000 sorted ImageNet-validation JPEGs; prewarmed; shared per-seed permutation \\
-Output & CUDA float16 BCHW, \(256\times3\times224\times224\); GPU normalization \\
-DataLoader paths & 15 workers; persistent workers; pinned memory; prefetch factor 2 \\
-DALI & 15 pipeline threads; native prefetch queue depth 2; native file reader and mixed decoder \\
-Timing and repeats & One warm-up batch; 32 measured batches; seeds 137, 138, 139 \\
-Machine & Standard \texttt{g2-standard-16}, one NVIDIA L4; 16 vCPUs, 64 GB host memory \\
+Input and access & 49,999 non-CMYK ImageNet validation JPEGs, sequentially prewarmed, shared per-seed order \\
+Output & GPU normalization to CUDA float16 BCHW, \(256\times3\times224\times224\) \\
+DataLoader paths & 15 persistent workers, pinned memory, prefetch factor 2 \\
+DALI & 15 pipeline threads, queue depth 2, native file reader and mixed decoder \\
+Timing and repeats & 30 warm-up batches, 100 measured batches, seeds 137, 138, 139 \\
+Machine & Standard \texttt{g2-standard-16}, one NVIDIA L4, 16 vCPUs, 64 GiB host memory \\
 \end{tabularx}
 \caption{Benchmark configuration. Google Cloud specifies Cascade Lake
 for G2~\cite{gcp}. Appendix~\ref{app:reproduce} gives the software versions
@@ -102,9 +108,9 @@ and source revisions.}
 
 In the same pass, we sample the GPU memory occupied by the input process
 from before pipeline construction through cleanup. The first reading
-is the baseline. The peak can include state left by preflight or earlier
-recipes. AX uses one native thread per CPU operation; the other paths
-use their runtime defaults. Appendix~\ref{app:setup} gives the timing and
+is the baseline after releasing unused CUDA memory pools. The peak includes
+persistent CUDA state. AX uses one native thread per CPU operation. The other
+paths use their runtime defaults. Appendix~\ref{app:setup} gives the timing and
 randomness details.
 
 \subsection{Execution paths}
@@ -144,12 +150,13 @@ pixels or identical work. Crop offsets, padding, interpolation, and
 arithmetic can differ. Appendix~\ref{app:recipes} gives the parameters
 and Appendix~\ref{app:semantics} documents the differences.
 
-Three immutable runs form the base matrix. A fourth replaces the
-TorchVision GPU results with a run using TorchCodec and hardware JPEG
-decoding. All runs use the same dataset, recipes, machine configuration,
-and measurement window. The replacement adds TorchCodec to the RGB
-package lock. Each cell retains its source run and cell ID.
-Appendix~\ref{app:reproduce} lists the manifests.
+The primary run measures \ProductionPairCount{} supported
+implementation--recipe pairs at seeds 137--139. A fresh process on one VM
+handles all recipes for each implementation and seed. A VM can run several
+such jobs in sequence. The repeat run measures only TorchVision GPU with
+seeds 140--142 using the same code, dataset, recipes, package locks, machine
+type, and measurement window. The primary run supplies the cross-library
+comparisons. Appendix~\ref{app:reproduce} lists the manifests.
 
 \section{Throughput on the same recipes}
 
@@ -170,9 +177,10 @@ The dashed line marks AX. Teal shows higher rates and pale bars show lower rates
 
 The mean of the per-recipe DALI/AX batch-rate ratios was
 \CommonMeanDaliRatio\(\times\) on the common set. DALI's median baseline
-was \CommonBaselineDALIGPU{} MiB,
-equal to its median peak. AX's median baseline was
-\CommonBaselineAlbumentationsX{} MiB.
+was \CommonBaselineDALIGPU{} MiB and its median peak was \CommonMemoryDALIGPU{}
+MiB. AX used \CommonBaselineAlbumentationsX{} MiB at baseline and
+\CommonMemoryAlbumentationsX{} MiB at peak. Both memory summaries take the
+median across seeds and then across the common recipes.
 
 \section{AlbumentationsX against each library}
 \label{sec:library-comparisons}
@@ -212,8 +220,8 @@ Pillow mapping in this benchmark.
 
 Pillow-AllSIMD delivered \AllSIMDMedianRatio\(\times\) Pillow's batch rate
 at the median across these recipes and \AllSIMDMedianBlurRatio\(\times\) on
-MedianBlur (R27). Dithering (R65) is an exception to AX's usual lead here.
-AX, Pillow, and Pillow-AllSIMD delivered 3.5, 9.6, and 12.3 batches/s,
+MedianBlur (R27). Dithering (R64) is an exception to AX's usual lead here.
+AX, Pillow, and Pillow-AllSIMD delivered 2.4, 6.9, and 9.9 batches/s,
 respectively. AX diffuses error in floating point, while both Pillow
 paths use integer error terms. The resulting pixels can differ
 (Appendix~\ref{app:semantics}).
@@ -234,15 +242,16 @@ Kornia path. The two Kornia paths use the same JPEG decoder. The GPU
 path forms a collatable shape on the CPU, then runs the remaining image
 operations after transfer (Table~\ref{tab:paths}).
 
-For Elastic (R10), AX and Kornia deliver 11.8 batches/s and 3.1 batches/s
-on CPU, respectively. Kornia GPU delivers 9.3 batches/s on that recipe.
+For Elastic (R10), AX and Kornia CPU delivered 8.3 and 2.2 batches/s,
+respectively. Kornia GPU delivered 6.3 batches/s on that recipe.
 The Elastic settings were calibrated by displacement magnitude and
 spatial scale, and the implementations still produce different fields.
 
 \begin{figure}[H]
 \centering
 \LibraryComparison{kornia}
-\caption{AX was faster than both Kornia paths on all \PlotKorniaShared{} shared recipes.}
+\caption{AX led Kornia CPU on 61 recipes and Kornia GPU on 60 of the
+\PlotKorniaShared{} recipes measured by all three paths.}
 \end{figure}
 
 \subsection{AX vs TorchVision}
@@ -252,22 +261,41 @@ TorchVision CPU path uses TorchVision I/O and runs the image transforms
 before transfer. The two paths share \PlotTorchVisionShared{} recipes with
 AX, including geometry, color operations, and JPEG compression.
 
-The update from the earlier hybrid JPEG path increased TorchVision GPU's
-throughput on all 44 of its recipes, with a median paired speedup of
-\(5.69\times\). On RandomCrop224 (R02), TorchVision GPU delivered
-17.4 batches/s, AX delivered 17.3, and TorchVision CPU delivered 16.1.
-On Elastic (R10), TorchVision GPU delivered about 0.09 batches/s in
-both decoder configurations. AX delivered 11.8 batches/s on that
-recipe. The Elastic mappings align two displacement statistics and can
-still produce different fields (Appendix~\ref{app:semantics}).
+On RandomCrop224 (R02), TorchVision GPU delivered 15.1 batches/s, AX
+delivered 12.6, and TorchVision CPU delivered 11.7. On Elastic (R10),
+TorchVision GPU delivered 0.087 batches/s and AX delivered 8.3. The Elastic
+mappings align two displacement statistics and can produce different fields
+(Appendix~\ref{app:semantics}).
 
 \begin{figure}[H]
 \centering
 \LibraryComparison{torchvision}
-\caption{TorchVision GPU delivers 10.2 batches/s at the median over
-\PlotTorchVisionShared{} shared recipes. AX leads both TorchVision paths
-on most recipes in this set.}
+\caption{AX led TorchVision CPU on 41 recipes and TorchVision GPU on 34
+of the \PlotTorchVisionShared{} recipes shared by all three paths.}
 \end{figure}
+
+\ifdefined\RepeatPoints
+\newpage
+\subsection{TorchVision GPU repeatability}
+
+We repeated all 42 TorchVision GPU recipes with three new seeds on three
+separate L4 VMs. Across recipes, the median throughput span was
+\OriginalSeedSpan\% with the original seeds and \RepeatSeedSpan\% with the
+new seeds. For CenterCrop, the new rates ranged from 3,967 to 5,081 images/s
+and produced the largest span in the repeat (\RepeatMaxSpan\%).
+Seed and VM vary together, so the observed spans combine variation in
+file order, random transforms, and execution conditions.
+
+\begin{figure}[H]
+\centering
+\input{torchvision-repeat-plot.tex}
+\caption{Throughput span for each of the 42 recipes on TorchVision 0.29.2
+GPU. Each axis shows the difference between the maximum and minimum divided
+by the median for three seeds. The dashed diagonal marks equal spans. Both
+groups use the configuration in Table~\ref{tab:setup}.}
+\label{fig:torchvision-repeat}
+\end{figure}
+\fi
 
 \section{Use the results in a training job}
 
@@ -310,10 +338,12 @@ The author maintains AlbumentationsX.
 \section{Timing, sampling, and output details}
 \label{app:setup}
 
-The runner selects the first 10,000 validation JPEGs in lexicographic order
-and reads them once before timing. Each seed selects the first 8,448 files
-from a PCG64 permutation of that list. After synchronizing the warm-up
-batch, the runner times the remaining 8,192 images. Pipeline and worker
+The ImageNet validation archive contains 50,000 JPEGs. The runner excludes
+one CMYK JPEG for all paths, strips EXIF headers, and sorts the 49,999
+remaining files by name. The decoders use the stored pixel orientation.
+Each seed selects 33,280 distinct files from a PCG64 permutation of the
+sorted list. After synchronizing 30 warm-up batches (7,680 images), the
+runner times the remaining 25,600 images. Pipeline and worker
 setup precede timing. Prefetch can prepare part of the workload before the
 timer starts. The selected JPEGs fit in the VM's 64 GB of host memory, so
 sequential prewarming lets timed random file reads usually hit the Linux page
@@ -383,37 +413,37 @@ short side before cropping~\cite{daliresize}.
 The DALI adapter sets \texttt{horizontal=0} and \texttt{vertical=1}
 for vertical-only reflection~\cite{daliflip}.
 
-\paragraph{Shear (R46).}
-In pixel-center coordinates, each path maps \(x\) to
-\(x+\tan(10^\circ)(y-111.5)\) and leaves \(y\) unchanged. Sampling is bilinear,
-with zero-valued neighbors outside the frame.
+\paragraph{Shear, affine, and perspective.}
+R46 samples an X shear angle uniformly from \(-10^\circ\) to \(10^\circ\).
+R08 samples scale from 0.75 to 1.25, rotation from \(-15^\circ\) to \(15^\circ\),
+shear along both axes from \(-8^\circ\) to \(8^\circ\), and translation along
+both axes from \(-12\) to \(12\) pixels. R09 uses an inner quadrilateral as
+the source and maps it to the output. AX uses Gaussian offsets and Kornia
+retains its native uniform sampler. Coordinate conventions and rounding
+can differ across paths.
 
-\paragraph{Affine (R08).}
-Every R08 path applies the same fixed centered warp: scale 2, rotation 25°,
-shear 10° on X and 15° on Y, and translation 20 pixels on both axes. Each
-implementation performs all four operations in one affine transform.
-Coordinate conventions, interpolation arithmetic, and rounding can still
-produce small pixel differences.
+\paragraph{Color, filters, and JPEG artifacts.}
+R11 and R49 sample ColorJitter factors and operation order independently
+for each image. DALI uses its native RGB-space hue approximation. R24
+draws an integer JPEG quality from 30 through 90 per image. Kornia uses a
+differentiable JPEG codec and DALI uses a GPU approximation that skips
+bitstream coding. The remaining measured paths encode and decode JPEGs.
+Pillow approximates a Gaussian with box filters in R15~\cite{pillowfilters}.
+R32 draws a \(3\times3\) or \(5\times5\) box per image with equal probability.
+Both Pillow paths reflect-pad the crop for the box filter.
 
-\paragraph{Brightness and blur.}
-R30 uses a fixed brightness multiplier of 1.2. R31 uses contrast factor 1.2
-around each image's grayscale mean. R11 samples ColorJitter factors and
-operation order independently for each image. DALI uses its native RGB-space
-hue approximation. R24 draws an integer JPEG quality from 30 through 90 per
-image. Kornia and DALI simulate JPEG artifacts, while TorchVision, AX, and
-Pillow encode and decode JPEGs, so a shared nominal quality does not imply
-pixel-identical output. In GaussianBlur (R15), Pillow's filter approximates a
-Gaussian with box filters~\cite{pillowfilters}. R32 applies a
-\(5\times5\) box in every measured path. AX, Kornia, and DALI reflect the
-boundary, and the Pillow paths extend the edge pixels.
+\paragraph{Optical distortion (R45).}
+AX draws its radial distortion coefficient uniformly from \([-0.3,0.3]\).
+Kornia uses its native fisheye model with a fixed center and a calibrated
+range for its gamma parameter.
 
 \paragraph{Omitted recipes and grid masks.}
 Mosaic, reference-image histogram matching, and box-aware crops require
 different inputs. The DALI grid mask drops squares, while AX GridMask
 drops stripes.
 
-\paragraph{Dithering (R65).}
-All three paths apply binary Floyd--Steinberg error diffusion to grayscale
+\paragraph{Dithering (R64).}
+All three measured paths apply binary Floyd--Steinberg error diffusion to grayscale
 pixels. AX accumulates error in floating point and quantizes at half scale.
 The Pillow paths accumulate integer error terms and use white when the
 corrected byte value exceeds 128. These arithmetic choices can produce
@@ -521,7 +551,7 @@ and validate that the report matrix is complete.
 \end{tabular}
 \caption{Implementation versions recorded in the cells. The locks pin
 PyTorch 2.15.0, Triton 3.9.0, SimpleJPEG 1.9.0, and the OpenCV Python wheel
-5.0.0.93. The TorchVision GPU replacement adds TorchCodec 0.17.0.}
+5.1.0.95. The RGB lock includes TorchCodec 0.17.0.}
 \end{table}
 
 The benchmark used Python 3.13.14 on
@@ -533,14 +563,20 @@ following run directories:
 \item[Primary RGB source] \texttt{\expandafter\seqsplit\expandafter{\FullRunID}}\\
   Source \texttt{\FullSourceRevision}.
 \SupplementalRunDetails
-\item[AX 2.6.3] \texttt{\expandafter\seqsplit\expandafter{\AXRunID}}\\
-  Source \texttt{\AXSourceRevision}.
+\ifdefined\RepeatPoints
+\item[TorchVision GPU repeat] \texttt{\expandafter\seqsplit\expandafter{\RepeatRunID}}\\
+  Same source archive as the primary run.
+\fi
 \end{description}
 
 The repository's \texttt{paper/README.md} gives the commands to regenerate the
 report from the source archives and cells. The CSV in
 \texttt{paper/generated/recipe-results.csv} records the source run ID, cell IDs,
-versions, declared stages, throughput, and GPU memory for every seed.
+versions, declared stages, throughput, and GPU memory for the primary run.
+\ifdefined\RepeatPoints
+The file \texttt{paper/generated/torchvision-gpu-repeats.csv} records individual
+observations for all six TorchVision GPU seeds with their run, cell, and VM IDs.
+\fi
 The separate coverage catalog has SHA-256
 \texttt{\expandafter\seqsplit\expandafter{\CoverageCatalogSHA}}.
 

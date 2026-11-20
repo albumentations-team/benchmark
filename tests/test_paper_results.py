@@ -268,6 +268,34 @@ def test_published_export_flag_excludes_ax_rerun(paper_data: paper._PaperData, s
     assert readme.export_results(paper_data, published, ax_run=selected_run)["is_published_run"] is False
 
 
+@pytest.mark.parametrize(("seeds", "measured_batches"), [([139, 140, 141], 100), ([140, 141, 142], 99)])
+def test_torchvision_repeat_rejects_overlapping_seeds_or_changed_window(
+    tmp_path: Path,
+    selected_run: RunRecord,
+    seeds: list[int],
+    measured_batches: int,
+) -> None:
+    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
+    repeat = build_run_record(
+        family_config={
+            **selected_run.family_config,
+            "implementations": [paper.TORCHVISION_GPU],
+            "execution": {
+                **selected_run.family_config["execution"],
+                "seeds": seeds,
+                "measured_batches": measured_batches,
+            },
+        },
+        inputs=selected_run.inputs,
+        hardware=selected_run.hardware,
+    )
+    manifest = tmp_path / "run.json"
+    manifest.write_text(repeat.model_dump_json())
+
+    with pytest.raises(ValueError, match="preserve the workload and inputs and use disjoint seeds"):
+        paper._load_torchvision_repeat((manifest, tmp_path), selected_run, catalog, [])
+
+
 def test_selected_run_rejects_missing_foreign_or_tampered_results(
     tmp_path: Path,
     paper_data: paper._PaperData,

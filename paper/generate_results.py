@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from augbench.recipes.models import RecipeCatalog, RecipeSpec
     from augbench.run_records import ResultRecord
 
-RUN_ID = "3f8e2e315710528399b8e82e2359ab85c58c809644595b68a92fb9d83492cc8c"
+RUN_ID = "8d20f12ba0833a29971aec166fa02a98fadd4a9faba013fe12ae7cd81caa920a"
 INVALID_DALI_FLIP_RUN = "75bc062fe770cfec3d857f401e16366deb01f6582c8645e952930e3cd3d788fb"
 AX = "albumentationsx_cpu"
 TORCHVISION_GPU = "torchvision_gpu"
@@ -90,6 +90,7 @@ class _PaperData:
     common: tuple[str, ...]
     pairwise: dict[str, list[_PairwiseRow]]
     supplemental_runs: tuple[RunRecord, ...] = ()
+    torchvision_repeat: tuple[RunRecord, list[ResultRecord]] | None = None
 
 
 def main() -> None:
@@ -109,6 +110,8 @@ def main() -> None:
     _write_versions(args.output / "versions.tex", data)
     _write_coverage(args.output, root / "catalog/operations.yaml")
     _write_sources(args.output / "sources.tex", run, ax_run, data.supplemental_runs)
+    if data.torchvision_repeat:
+        _write_repeat_csv(args.output / "torchvision-gpu-repeats.csv", data)
 
 
 def add_run_arguments(parser: argparse.ArgumentParser) -> None:
@@ -132,6 +135,13 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
         type=Path,
         metavar=("MANIFEST", "CELLS", "RECIPES", "PRIMARY_LOCK", "DECODER_LOCK"),
         help="replace all TorchVision GPU cells with a TorchCodec run and verify both RGB locks",
+    )
+    parser.add_argument(
+        "--torchvision-repeat",
+        nargs=2,
+        type=Path,
+        metavar=("MANIFEST", "CELLS"),
+        help="include a separate TorchVision GPU repeat with fresh seeds",
     )
 
 
@@ -175,10 +185,45 @@ def load_report(args: argparse.Namespace, root: Path) -> tuple[_PaperData, RunRe
     if ax_run_inputs:
         ax_run, ax_records = _load_ax_run(ax_run_inputs, run)
         records = [record for record in records if record.cell.implementation != AX] + ax_records
-    data = _prepare(records, recipes.recipes, tuple(supplemental_runs))
+    repeat = _load_torchvision_repeat(getattr(args, "torchvision_repeat", None), run, recipes, records)
+    data = _prepare(records, recipes.recipes, tuple(supplemental_runs), repeat)
     if not data.common:
         raise ValueError("the selected results have no recipes shared by all paths")
     return data, run, ax_run
+
+
+def _load_torchvision_repeat(
+    inputs: Sequence[Path] | None,
+    primary: RunRecord,
+    recipes: RecipeCatalog,
+    primary_records: Sequence[ResultRecord],
+) -> tuple[RunRecord, list[ResultRecord]] | None:
+    if inputs is None:
+        return None
+    manifest, cells = inputs
+    repeat = RunRecord.model_validate_json(manifest.read_bytes())
+    primary_config = FamilyRunConfig.model_validate(primary.family_config)
+    repeat_config = FamilyRunConfig.model_validate(repeat.family_config)
+    seeds = repeat_config.execution.seeds
+    expected_config = primary_config.model_copy(
+        update={
+            "implementations": (TORCHVISION_GPU,),
+            "execution": primary_config.execution.model_copy(update={"seeds": seeds}),
+        }
+    )
+    if (
+        repeat_config != expected_config
+        or repeat.hardware != primary.hardware
+        or repeat.inputs != primary.inputs
+        or len(seeds) != len(primary_config.execution.seeds)
+        or len(set(seeds)) != len(seeds)
+        or set(seeds).intersection(primary_config.execution.seeds)
+    ):
+        raise ValueError("TorchVision GPU repeat must preserve the workload and inputs and use disjoint seeds")
+    original = [record for record in primary_records if record.cell.implementation == TORCHVISION_GPU]
+    if {record.run_id for record in original} != {primary.run_id}:
+        raise ValueError("TorchVision GPU repeat requires the original TorchVision GPU cells from the primary run")
+    return repeat, load_run_results(cells, repeat, recipes)
 
 
 def _require_compatible_workload(supplemental: RunRecord, primary: RunRecord) -> None:
@@ -295,6 +340,7 @@ def _prepare(
     records: Sequence[ResultRecord],
     recipes: tuple[RecipeSpec, ...],
     supplemental_runs: tuple[RunRecord, ...] = (),
+    torchvision_repeat: tuple[RunRecord, list[ResultRecord]] | None = None,
 ) -> _PaperData:
     groups: dict[tuple[str, str], list[ResultRecord]] = defaultdict(list)
     for record in records:
@@ -325,6 +371,7 @@ def _prepare(
         ordered,
         _pairwise(speed, memory, support, comparisons),
         supplemental_runs,
+        torchvision_repeat,
     )
 
 
@@ -483,6 +530,7 @@ def write_plot_inputs(output: Path, data: _PaperData) -> None:
         )
     _write_tex(output / "delivery-rows.tex", [*lines, "}"])
     _write_library_comparisons(output, data, batch_size)
+    _write_repeat_plot_inputs(output / "torchvision-repeat.tex", data)
 
 
 def _rate_color(rate: float, ax_rate: float) -> str:
@@ -568,19 +616,20 @@ def _write_versions(path: Path, data: _PaperData) -> None:
 def _write_sources(
     path: Path, run: RunRecord, ax_run: RunRecord | None, supplemental_runs: Sequence[RunRecord] = ()
 ) -> None:
-    lines: list[str] = []
-    for label, source in (("Full", run), ("AX", ax_run or run)):
-        lines.extend(
-            (
-                rf"\newcommand{{\{label}RunID}}{{{source.run_id}}}",
-                rf"\newcommand{{\{label}SourceRevision}}{{{source.inputs.git_commit}}}",
-            )
-        )
+    lines = [
+        rf"\newcommand{{\FullRunID}}{{{run.run_id}}}",
+        rf"\newcommand{{\FullSourceRevision}}{{{run.inputs.git_commit}}}",
+    ]
     details = [
         rf"\item[Correction {index}] \texttt{{\expandafter\seqsplit\expandafter{{{source.run_id}}}}}\\"
         rf"Source \texttt{{\expandafter\seqsplit\expandafter{{{source.inputs.git_commit}}}}}."
         for index, source in enumerate(supplemental_runs, start=1)
-    ] or [r"\item[Correction runs] none"]
+    ]
+    if ax_run:
+        details.append(
+            rf"\item[AX correction] \nolinkurl{{{ax_run.run_id}}}\\"
+            rf"Source \texttt{{{ax_run.inputs.git_commit}}}."
+        )
     details_tex = "\n".join(details)
     lines.append(rf"\newcommand{{\SupplementalRunDetails}}{{{details_tex}}}")
     _write_tex(path, lines)
@@ -632,6 +681,80 @@ def _write_csv(path: Path, data: _PaperData) -> None:
         for implementation, _ in data.implementations
         for recipe in data.recipes
         if (implementation, recipe.recipe_id) in data.groups
+    ]
+    with path.open("w", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(rows[0]), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def torchvision_repeat_groups(
+    data: _PaperData,
+) -> dict[str, tuple[list[ResultRecord], list[ResultRecord]]]:
+    if data.torchvision_repeat is None:
+        return {}
+    repeat: dict[str, list[ResultRecord]] = defaultdict(list)
+    for record in data.torchvision_repeat[1]:
+        repeat[record.cell.recipe_id].append(record)
+    return {
+        recipe: (data.groups[TORCHVISION_GPU, recipe], sorted(records, key=lambda record: record.cell.seed))
+        for recipe, records in repeat.items()
+    }
+
+
+def throughput_span(records: Sequence[ResultRecord]) -> float:
+    rates = [record.throughput.value for record in records]
+    return (max(rates) - min(rates)) / median(rates) * 100
+
+
+def _write_repeat_plot_inputs(path: Path, data: _PaperData) -> None:
+    if data.torchvision_repeat is None:
+        _write_tex(path, [])
+        return
+    groups = torchvision_repeat_groups(data)
+    original_group, repeat_group = next(iter(groups.values()))
+    original_seeds, repeat_seeds = (
+        ", ".join(str(record.cell.seed) for record in group) for group in (original_group, repeat_group)
+    )
+    points = [(throughput_span(original), throughput_span(repeat)) for original, repeat in groups.values()]
+    original_spans, repeat_spans = zip(*points, strict=True)
+    limit = max(5, 5 * math.ceil(max(*original_spans, *repeat_spans) / 5))
+    _write_tex(
+        path,
+        [
+            rf"\def\RepeatPlotLimit{{{limit}}}",
+            rf"\def\RepeatPlotTicks{{{','.join(map(str, range(0, limit + 1, limit // 5)))}}}",
+            rf"\def\OriginalSeedSpan{{{median(original_spans):.1f}}}",
+            rf"\def\RepeatSeedSpan{{{median(repeat_spans):.1f}}}",
+            rf"\def\RepeatMaxSpan{{{max(repeat_spans):.1f}}}",
+            rf"\def\RepeatRunID{{{data.torchvision_repeat[0].run_id}}}",
+            rf"\def\OriginalSeeds{{{original_seeds}}}",
+            rf"\def\RepeatSeeds{{{repeat_seeds}}}",
+            r"\def\RepeatPoints{%",
+            *(rf"\RepeatPoint{{{original:.6f}}}{{{repeat:.6f}}}" for original, repeat in points),
+            "}",
+        ],
+    )
+
+
+def _write_repeat_csv(path: Path, data: _PaperData) -> None:
+    rows = [
+        {
+            "recipe_key": _recipe_key(recipe, data.recipes),
+            "recipe_id": recipe,
+            "seed": record.cell.seed,
+            "run_id": record.run_id,
+            "cell_id": record.cell_id,
+            "throughput_images_s": record.throughput.value,
+            "completed_images": record.throughput.completed_items,
+            "duration_seconds": record.throughput.duration_seconds,
+            "gpu_memory_peak_mib": record.gpu_memory.peak_mib,
+            "gpu_memory_baseline_mib": record.gpu_memory.baseline_mib,
+            "gpu_memory_poll_ms": record.gpu_memory.poll_interval_ms,
+            "worker_hostname": record.runtime.get("worker_hostname"),
+        }
+        for recipe, (original, repeat) in sorted(torchvision_repeat_groups(data).items())
+        for record in (*original, *repeat)
     ]
     with path.open("w", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=list(rows[0]), lineterminator="\n")

@@ -1,0 +1,18 @@
+\begingroup
+\input{generated/torchvision-repeat.tex}
+\pgfmathsetlengthmacro{\repeatunit}{5.5cm/\RepeatPlotLimit}
+\begin{tikzpicture}[x=\repeatunit,y=\repeatunit,font=\small]
+  \foreach \tick in \RepeatPlotTicks {
+    \draw[gray!18] (\tick,0) -- (\tick,\RepeatPlotLimit);
+    \draw[gray!18] (0,\tick) -- (\RepeatPlotLimit,\tick);
+    \node[below] at (\tick,0) {\tick};
+    \node[left] at (0,\tick) {\tick};
+  }
+  \draw[gray,densely dashed] (0,0) -- (\RepeatPlotLimit,\RepeatPlotLimit);
+  \draw[black!65] (0,\RepeatPlotLimit) -- (0,0) -- (\RepeatPlotLimit,0);
+  \def\RepeatPoint#1#2{\fill[rateabove,opacity=.75] (#1,#2) circle[radius=1.8pt];}
+  \RepeatPoints
+  \node[below=19pt] at ({\RepeatPlotLimit/2},0) {Seeds \OriginalSeeds{} span (\%)};
+  \node[rotate=90,above=24pt] at (0,{\RepeatPlotLimit/2}) {Seeds \RepeatSeeds{} span (\%)};
+\end{tikzpicture}
+\endgroup
