@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import io
+from itertools import permutations
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pytest
@@ -12,7 +13,10 @@ from augbench.adapters.dali.native import (
     _apply_pad,
     _apply_pixel_spread,
     _apply_stage,
+    _color_jitter_in_order,
+    _contrast,
     _decode_recipe_input,
+    _saturation,
 )
 from augbench.recipes.load import load_recipe_catalog
 from augbench.recipes.models import RecipeStage
@@ -127,6 +131,80 @@ def test_dali_samples_within_a_batch(operation: str) -> None:
     assert all(output.at(index).shape == image.shape for index in range(16))
     assert all(output.at(index).dtype == image.dtype for index in range(16))
     assert len({output.at(index).tobytes() for index in range(16)}) > 1
+
+
+@pytest.fixture(params=["ColorJitter", "ColorJiggle"])
+def color_jitter_stage(request: pytest.FixtureRequest) -> RecipeStage:
+    torch = pytest.importorskip("torch")
+    if not torch.cuda.is_available():
+        pytest.skip("DALI color jitter requires CUDA")
+
+    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog" / "recipes" / "rgb.yaml")
+    recipe = next(recipe for recipe in catalog.recipes if recipe.augmentation_id == request.param)
+    return next(stage for stage in recipe.stages if stage.operation_id == request.param)
+
+
+def test_dali_color_jitter_matches_all_permutations(color_jitter_stage: RecipeStage) -> None:
+    rng = np.random.default_rng(137)
+    order_ids = rng.permutation(24).astype(np.int32)
+    images = rng.integers(0, 256, (len(order_ids), 224, 224, 3), dtype=np.uint8)
+    factors = []
+    for name in ("brightness", "contrast", "saturation", "hue"):
+        values = rng.uniform(*color_jitter_stage.parameters[name], size=len(order_ids)).astype(np.float32)
+        factors.append(values * 360 if name == "hue" else values)
+
+    @dali.pipeline_def(batch_size=len(order_ids), num_threads=1, device_id=0, enable_conditionals=True)
+    def pipeline_definition() -> tuple[Any, Any]:
+        image, order, brightness, contrast, saturation, hue = fn.external_source(
+            source=lambda: (images, order_ids, *factors), num_outputs=6, layout=["HWC", "", "", "", "", ""]
+        )
+        data = image.gpu()
+        factors_by_operation = (brightness, contrast, saturation, hue)
+        return (
+            _color_jitter_in_order(data, order, factors_by_operation),
+            _color_jitter_permutation_branches(data, order, factors_by_operation),
+        )
+
+    pipeline = pipeline_definition()
+    pipeline.build()
+    actual, expected = pipeline.run()
+    np.testing.assert_array_equal(actual.as_cpu().as_array(), expected.as_cpu().as_array())
+
+
+def _color_jitter_permutation_branches(data: Any, order: Any, factors: tuple[Any, Any, Any, Any]) -> Any:
+    brightness, contrast, saturation, hue = factors
+    orders = tuple(permutations(range(4)))
+    for index, operations in enumerate(orders):
+        if order == index:
+            for operation in operations:
+                if operation == 0:
+                    data = fn.brightness(data, brightness=brightness)
+                elif operation == 1:
+                    data = _contrast(data, contrast.gpu())
+                elif operation == 2:
+                    data = _saturation(data, saturation.gpu())
+                else:
+                    data = fn.hue(data, hue=hue)
+    return data
+
+
+def test_dali_color_jitter_is_repeatable_by_seed(color_jitter_stage: RecipeStage) -> None:
+    image = np.random.default_rng(137).integers(0, 256, (224, 224, 3), dtype=np.uint8)
+
+    @dali.pipeline_def(batch_size=24, num_threads=1, device_id=0, enable_conditionals=True)
+    def pipeline_definition() -> Any:
+        data = fn.external_source(source=lambda: [image] * 24, layout="HWC").gpu()
+        return _apply_stage(data, color_jitter_stage, output_height=224, output_width=224)
+
+    def batches(seed: int) -> NDArray[np.uint8]:
+        pipeline = pipeline_definition(seed=seed)
+        pipeline.build()
+        return np.stack([pipeline.run()[0].as_cpu().as_array() for _ in range(3)])
+
+    actual = batches(137)
+    np.testing.assert_array_equal(actual, batches(137))
+    assert not np.array_equal(actual, batches(138))
+    assert len({sample.tobytes() for sample in actual[0]}) > 1
 
 
 @pytest.mark.parametrize(("scale", "ratio"), [((0.02, 0.33), (0.3, 3.3)), ((0.12, 0.13), (1.9, 2.0))])
