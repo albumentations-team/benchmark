@@ -112,7 +112,7 @@ The figures below are CPU checks on 16 ImageNet validation crops at 224×224 wit
 
 | Recipe | Calibration and remaining differences |
 | --- | --- |
-| GaussianNoise (R16) | AX uses σ=0.44 and clips to uint8. Native Kornia uses σ=0.325. Pixel RMS was 82.7 for AX and 82.8 for Kornia. Kornia still leaves values outside the image range. |
+| GaussianNoise (R16) | AX and Kornia draw zero-mean noise with σ=0.44 on a 0–1 scale. AX clips and returns uint8. The Kornia adapter clamps the native output to [0, 1] before batch normalization. On 16 ImageNet images resized and center-cropped to 224×224, pixel RMS was 82.66 for AX and 82.92 for Kornia. |
 | CLAHE (R29) | AX applies CLAHE to Lab lightness. Kornia applies it per RGB channel with clip range 1.0–3.5, and DALI applies it to luma. AX and Kornia changed Lab lightness by an average of 7.5 and 7.2 units respectively. The mean Lab chroma shift was 0.7 and 7.5 units respectively. |
 | Corner and Gaussian Illumination (R35–36) | Kornia uses gain 0.006–0.12. Pixel RMS was 9.0 and 9.4 in AX and 8.8 and 9.2 in Kornia. The AX effects multiply pixel values. Kornia adds a field and can affect black pixels. |
 | PlasmaBrightness and PlasmaShadow (R38, R40) | Tuning the native Kornia intensity and shadow threshold gave mean absolute changes of 23.0 and 27.9. AX measured 22.7 and 28.5. Kornia can change each RGB channel separately for brightness and uses a thresholded mask for shadow. |
@@ -126,7 +126,13 @@ DALI generates JPEG artifacts on the decoded crop and returns RGB pixels without
 
 For Perspective (R09), the sampled inner quadrilateral is the source. The native warp expands it into the output canvas. In a separate CPU check on 24 white inputs, AX, TorchVision, and Kornia all returned zero fully black pixels. With the previous corner order, TorchVision and Kornia left 20% and 22% of the canvas black. [Geometry contract](benchmark_execution_contract.md#timing-boundary)
 
-Some native operators differ substantially after tuning. Kornia PlasmaContrast exposes roughness and has no contrast-strength parameter. Its pixel RMS was 36.5 versus 5.6 in AX. Kornia Fisheye samples a radial exponent and always expands source coordinates outward. AX samples a signed radial coefficient. On the 16 crops, 27% of Kornia's output pixels were black versus 9% in AX. [Kornia adapter](../src/augbench/implementations/kornia_impl.py) · [Benchmark contract](benchmark_execution_contract.md#timing-boundary)
+Kornia PlasmaContrast exposes roughness and has no contrast-strength parameter. Its pixel RMS was 36.5 versus 5.6 in AX. [Kornia adapter](../src/augbench/implementations/kornia_impl.py)
+
+### What is the reference for OpticalDistortion (R45)?
+
+The reference is OpenCV's `cv2.fisheye` camera model. AX uses a signed radial polynomial that can approximate the OpenCV map at a comparable strength. On a 224×224 grid, AX at `k=-0.30` differed by 3.7 px RMS from the OpenCV map with a centered principal point, a focal length of 120 px, and zero distortion coefficients. [OpenCV camera model](https://docs.opencv.org/doc/doxygen/html/d2/d14/namespacecv_1_1fisheye.html) · [AX radial map](https://github.com/albumentations-team/AlbumentationsX/blob/2.6.3/albumentations/augmentations/geometric/_functional_distortion.py)
+
+AX's signed coefficient allows inward and outward shifts. The benchmark runs Kornia's native `RandomFisheye` on CPU and GPU as an approximate match. With the configured center, Kornia's map moves sampling coordinates outward. On the 16 CPU calibration crops, 27% of Kornia's output pixels were black versus 9% in AX. [AX adapter](../src/augbench/implementations/albumentationsx_impl.py#L361) · [Kornia adapter](../src/augbench/implementations/kornia_impl.py#L437)
 
 ## Why normalize on the GPU and return FP16?
 

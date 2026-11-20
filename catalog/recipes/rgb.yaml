@@ -776,7 +776,6 @@ recipes:
     parameters:
       mean: 0
       std: 0.44
-      kornia_std: 0.325
       per_channel: true
     stochastic: true
     randomness_scope: per-image

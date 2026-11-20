@@ -234,6 +234,25 @@ def test_kornia_rain_uses_native_streaks_with_calibrated_density() -> None:
     assert not torch.equal(result[0], result[1])
 
 
+def test_kornia_gaussian_noise_clips_at_reference_strength() -> None:
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("kornia")
+    from augbench.implementations import kornia_impl
+
+    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog" / "recipes" / "rgb.yaml")
+    recipe = next(recipe for recipe in catalog.recipes if recipe.augmentation_id == "GaussianNoise")
+    spec = next(spec for spec in transform_specs(recipe) if spec.name == "GaussianNoise")
+    transform = kornia_impl.create_transform(spec)
+    assert transform is not None
+    torch.manual_seed(137)
+    result = transform(torch.full((4, 3, 64, 64), 0.5))
+
+    assert result.min().item() == 0
+    assert result.max().item() == 1
+    for endpoint in (0, 1):
+        assert (result == endpoint).float().mean().item() == pytest.approx(0.128, abs=0.015)
+
+
 def test_kornia_tps_matches_ax_anchor_strength() -> None:
     torch = pytest.importorskip("torch")
     kornia = pytest.importorskip("kornia")
