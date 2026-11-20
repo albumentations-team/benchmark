@@ -87,7 +87,7 @@ class RGBCellExecutor:
         _seed_everything(cell.seed)
         adapter = self._adapters.load(cell.implementation)
         sources = self._sources_for_seed(cell.seed)
-        _clear_device_state()
+        _clear_device_state(cell.implementation)
         monitor = NvmlProcessMemoryMonitor()
         monitor.start()
         try:
@@ -120,7 +120,7 @@ class RGBCellExecutor:
         adapter = self._adapters.load(cell.implementation)
         runtime = adapter.build_recipe(recipe)
         sources = self._sources_for_seed(cell.seed)
-        _clear_device_state()
+        _clear_device_state(cell.implementation)
         if cell.implementation == "dali_gpu":
             self._preflight_dali(adapter, recipe, sources, cell.seed)
         else:
@@ -358,12 +358,16 @@ def _cuda_synchronize() -> None:
     torch.cuda.synchronize()
 
 
-def _clear_device_state() -> None:
+def _clear_device_state(implementation: str) -> None:
     import torch
 
     gc.collect()
     torch.cuda.empty_cache()
     torch.cuda.synchronize()
+    if implementation == "dali_gpu":
+        from nvidia.dali import backend
+
+        backend.ReleaseUnusedMemory()
 
 
 def _seed_everything(seed: int) -> None:
