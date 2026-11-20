@@ -86,8 +86,10 @@ JPEG on local disk
 
 Throughput excludes `Compose` initialization, imports, and preflight. NVML samples GPU memory
 for the implementation's PID before pipeline construction and measures the peak in the same pass
-as throughput. The peak includes the entire process's VRAM use, including CUDA state retained
-after preflight. Subtracting the baseline from the peak gives the increase during the cell.
+as throughput. Before sampling the baseline, the runner releases unused PyTorch CUDA cache
+blocks and, for DALI, unused blocks in DALI's shared memory pools. This also clears cached
+blocks left by preflight. The peak includes persistent CUDA state. Subtracting the baseline
+from the peak gives the increase during the cell.
 
 Mean/std normalization runs on the GPU on every path. The catalog entries `Normalize` and
 `ToTensor` specify batch statistics, layout, and dtype. The `recipe_id` names the image
