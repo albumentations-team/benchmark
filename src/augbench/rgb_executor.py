@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import gc
 import random
+import socket
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol, cast
@@ -336,7 +337,12 @@ def _runtime_metadata(adapter: AugmentationAdapter) -> dict[str, str]:
         device = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "unknown"
     except (ImportError, RuntimeError):
         device = "unknown"
-    metadata = {"library_version": version, "cuda_device": device, "worker_scope": "implementation"}
+    metadata = {
+        "library_version": version,
+        "cuda_device": device,
+        "worker_scope": "implementation_seed",
+        "worker_hostname": socket.gethostname(),
+    }
     if package == "pillow_allsimd":
         fast, kernels = pillow_allsimd_runtime()
         metadata.update(simd_kernels=kernels, pillow_mode="fast" if fast else "exact")

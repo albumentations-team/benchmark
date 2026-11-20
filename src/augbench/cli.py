@@ -15,6 +15,8 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
     launch = commands.add_parser("launch-rgb", help="resume or launch the frozen RGB L4 matrix")
     launch.add_argument("--repository-root", type=Path, default=Path.cwd())
+    launch.add_argument("--max-workers", type=int, default=1)
+    launch.add_argument("--preflight-only", action="store_true")
     grayscale = commands.add_parser("launch-grayscale", help="resume or launch grayscale Colorize on L4")
     grayscale.add_argument("--repository-root", type=Path, default=Path.cwd())
     grayscale.add_argument("--archive-uri", required=True)
@@ -37,7 +39,9 @@ def main(argv: list[str] | None = None) -> int:
         )
         frozen, launch = launch_rgb(repository_root=root, config=config)
     else:
-        frozen, launch = launch_rgb(repository_root=root)
+        frozen, launch = launch_rgb(
+            repository_root=root, max_workers=args.max_workers, preflight_only=args.preflight_only
+        )
     print(
         json.dumps(
             {
@@ -46,6 +50,8 @@ def main(argv: list[str] | None = None) -> int:
                 "pending_cells": len(launch.pending_cell_ids),
                 "instance_name": launch.instance_name,
                 "zone": launch.zone,
+                "instances": [instance.model_dump() for instance in launch.instances],
+                "provisioning_errors": launch.provisioning_errors,
             },
             sort_keys=True,
         ),

@@ -35,7 +35,7 @@ class DatasetConfig(_ConfigModel):
     archive_member_prefix: str = Field(min_length=1)
     archive_member_suffix: str = Field(min_length=1)
     item_count: int = Field(ge=1)
-    selection: Literal["first-sorted"]
+    selection: Literal["first-sorted", "first-sorted-non-cmyk"]
     access_order: Literal["seeded-random-without-replacement"]
 
 

@@ -32,6 +32,8 @@ class GuestRequest(BaseModel):
     environment_lock_sha256: Sha256
     environment_python_version: str = Field(pattern=r"^\d+\.\d+\.\d+$")
     pending_cell_ids: tuple[Sha256, ...] = Field(min_length=1)
+    pool_id: str | None = Field(default=None, pattern=r"^[0-9a-f]{32}$")
+    preflight_only: bool = False
 
     @model_validator(mode="after")
     def validate_inputs(self) -> GuestRequest:

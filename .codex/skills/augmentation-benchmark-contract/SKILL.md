@@ -13,7 +13,7 @@ truth; this skill is the short operational checklist.
 
 The image runner supports RGB and a separate grayscale Colorize matrix: local ImageNet JPEG →
 library-native reader and decoder → recipe → collate → pinned H2D → model-ready
-CUDA batch. RGB uses one Standard `g2-standard-16` VM with one L4 and the
+CUDA batch. RGB uses up to 24 Standard `g2-standard-16` VMs, each with one L4, and the
 frozen values in `configs/families/rgb.yaml`.
 
 One cell is exactly `(family, implementation, recipe, seed)`. One pass records
@@ -28,9 +28,11 @@ matrix unless the user explicitly adds that research question.
 
 ## RGB workload and reference effect
 
-- Treat the RGB workload as image classification on one 8-bit RGB JPEG per sample.
+- Treat the RGB workload as image classification on one 8-bit JPEG decoded to RGB per sample.
   The augmentation receives only the image. Boxes, masks, keypoints, and
   `additional_targets` are outside this workload.
+- Exclude CMYK JPEGs from the common selection for every implementation before timing.
+  The ImageNet archive supplies 49,999 eligible files.
 - Strip EXIF during shared JPEG extraction before timing. All decoders consume
   the prepared files in stored pixel orientation.
 - Use stock AlbumentationsX transforms as the reference. Construct one AX transform
@@ -64,10 +66,10 @@ matrix unless the user explicitly adds that research question.
 - Keep batch, workers, prefetch policy, recipe parameters, dataset ordering,
   hardware, and timing boundary identical across rows. Pairwise summaries use
   the exact supported recipe intersection; coverage is a separate census.
-- The VM runs each implementation in its own process through all of its recipes and
-  seeds. It writes every valid cell to GCS immediately. Resume validates those
-  immutable cells and runs only the missing ones. Keep each implementation on
-  one VM within a run.
+- The shared queue groups cells by implementation and seed. Each job runs all of its
+  recipes in a fresh process, and each VM executes one job at a time. It writes valid
+  cells to GCS immediately. Resume validates immutable cells and queues only missing
+  work after the prior pool has stopped. Keep every job on one VM within an attempt.
 - Grayscale Colorize starts with an offline-prepared one-channel JPEG archive. Measure
   native grayscale decode, crop, and Colorize, then normalize the RGB batch on CUDA.
   Keep this dataset and run identity separate from RGB.
