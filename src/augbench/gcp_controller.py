@@ -38,6 +38,8 @@ if TYPE_CHECKING:
 class GcpControllerStore(Protocol):
     def create_if_absent(self, key: str, payload: bytes) -> bool: ...
 
+    def remove_if_matches(self, key: str, payload: bytes) -> bool: ...
+
     def read(self, key: str) -> bytes: ...
 
     def list_keys(self, prefix: str) -> tuple[str, ...]: ...
@@ -83,25 +85,34 @@ def start_or_resume(
     """Publish immutable inputs and launch workers for validated missing cells."""
     if not 1 <= max_workers <= _MAX_POOL_WORKERS:
         raise ValueError("max_workers must be between 1 and 24")
+    if start.request.gcs_base_uri.rstrip("/") != start.cloud.gcs_base_uri.rstrip("/"):
+        raise ValueError("guest request and cloud config use different GCS roots")
+    if not start.startup_script.is_file():
+        raise FileNotFoundError(start.startup_script)
+    key = f"runs/{start.request.run.run_id}/controller.lock"
+    owner = uuid.uuid4().hex.encode()
+    if not dependencies.remote.create_if_absent(key, owner):
+        raise RuntimeError(
+            f"another controller holds {key}; retry after provisioning completes. "
+            "If its controller crashed, confirm that it stopped before removing the stale lock."
+        )
+    try:
+        return _start_or_resume_locked(start=start, dependencies=dependencies, max_workers=max_workers)
+    finally:
+        dependencies.remote.remove_if_matches(key, owner)
+
+
+def _start_or_resume_locked(
+    *, start: GcpStartRequest, dependencies: GcpControllerDependencies, max_workers: int
+) -> GcpLaunch:
     cloud = start.cloud
     request = start.request
     cells = start.cells
-    startup_script = start.startup_script
     remote = dependencies.remote
     executable = dependencies.executable
     command_runner = dependencies.runner or _run
-    if request.gcs_base_uri.rstrip("/") != cloud.gcs_base_uri.rstrip("/"):
-        raise ValueError("guest request and cloud config use different GCS roots")
-    if not startup_script.is_file():
-        raise FileNotFoundError(startup_script)
     matrix = tuple(cells)
     _publish_immutable(remote, f"runs/{request.run.run_id}/run.json", _json_bytes(request.run))
-    completed = completed_cell_ids(remote=remote, run_id=request.run.run_id, cells=matrix)
-    pending = pending_cells(cells=matrix, completed=completed)
-    if not pending:
-        return GcpLaunch(status="complete", run_id=request.run.run_id, pending_cell_ids=())
-
-    _delete_reclaimable_augbench_instances(cloud=cloud, executable=executable, runner=command_runner)
     label_value = request.run.run_id[:12]
     instances = list_labeled_instances(
         project=cloud.project,
@@ -110,7 +121,11 @@ def start_or_resume(
         executable=executable,
         runner=command_runner,
     )
-    active = tuple(instance for instance in instances if instance.active)
+    active = tuple(instance for instance in instances if not instance.reclaimable)
+    completed = completed_cell_ids(remote=remote, run_id=request.run.run_id, cells=matrix)
+    pending = pending_cells(cells=matrix, completed=completed)
+    if not pending:
+        return GcpLaunch(status="complete", run_id=request.run.run_id, pending_cell_ids=())
     if active:
         instance = active[0]
         return GcpLaunch(
@@ -121,15 +136,7 @@ def start_or_resume(
             zone=instance.zone,
             instances=active,
         )
-    for instance in instances:
-        delete_instance(
-            project=cloud.project,
-            zone=instance.zone,
-            instance_name=instance.name,
-            executable=executable,
-            runner=command_runner,
-        )
-
+    _delete_reclaimable_augbench_instances(cloud=cloud, executable=executable, runner=command_runner)
     pending_request = request.model_copy(update={"pending_cell_ids": tuple(cell.cell_id for cell in pending)})
     if not pending_request.preflight_only or max_workers > 1:
         return _start_pool(start=start, dependencies=dependencies, request=pending_request, max_workers=max_workers)

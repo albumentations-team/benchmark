@@ -1,6 +1,10 @@
 import subprocess
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import pytest
 
 from augbench.gcp_controller import GcpControllerDependencies, GcpStartRequest, start_or_resume
 from augbench.guest_request import GuestRequest
@@ -23,6 +27,12 @@ class _Remote:
 
     def list_keys(self, prefix: str) -> tuple[str, ...]:
         return tuple(key for key in self.objects if key.startswith(prefix))
+
+    def remove_if_matches(self, key: str, payload: bytes) -> bool:
+        if self.objects.get(key) != payload:
+            return False
+        del self.objects[key]
+        return True
 
 
 def _cloud() -> GcpRunConfig:
@@ -225,3 +235,74 @@ def test_pool_workers_share_one_queue_and_have_distinct_vm_names(tmp_path: Path)
     assert queue_requests[0].run == request.run
     assert queue_requests[0].pending_cell_ids == request.pending_cell_ids
     assert len(launch.instances) == 2
+
+
+def test_concurrent_controllers_do_not_launch_independent_pools(tmp_path: Path) -> None:
+    class AtomicRemote(_Remote):
+        def __init__(self) -> None:
+            super().__init__()
+            self.guard = threading.Lock()
+
+        def create_if_absent(self, key: str, payload: bytes) -> bool:
+            with self.guard:
+                return super().create_if_absent(key, payload)
+
+    started = threading.Event()
+    release = threading.Event()
+    creates: list[list[str]] = []
+
+    def runner(command: list[str]) -> subprocess.CompletedProcess[bytes]:
+        if command[2:4] == ["instances", "list"]:
+            return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+        if command[2:4] in (["accelerator-types", "list"], ["machine-types", "list"]):
+            return subprocess.CompletedProcess(command, 0, stdout=b"us-central1-a\n", stderr=b"")
+        if command[2:4] == ["instances", "create"]:
+            creates.append(command)
+            if not started.is_set():
+                started.set()
+                assert release.wait(10)
+            return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+        raise AssertionError(command)
+
+    startup = tmp_path / "bootstrap.sh"
+    startup.write_text("#!/bin/bash\n")
+    request = _request()
+    remote = AtomicRemote()
+    start = GcpStartRequest(cloud=_cloud(), request=request, cells=(_cell(request),), startup_script=startup)
+    dependencies = GcpControllerDependencies(remote=remote, runner=runner)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        first = executor.submit(start_or_resume, start=start, dependencies=dependencies)
+        assert started.wait(10)
+        try:
+            with pytest.raises(RuntimeError, match="another controller"):
+                start_or_resume(start=start, dependencies=dependencies)
+        finally:
+            release.set()
+        assert first.result().status == "launched"
+    assert len(creates) == 1
+    assert not any(key.endswith("controller.lock") for key in remote.objects)
+
+
+def test_controller_refreshes_results_after_workers_stop(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    published = False
+    request = _request()
+    cell = _cell(request)
+
+    def runner(command: list[str]) -> subprocess.CompletedProcess[bytes]:
+        nonlocal published
+        if command[2:4] == ["instances", "list"]:
+            published = True
+            return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+        raise AssertionError("must not provision after the last cell was published")
+
+    monkeypatch.setattr(
+        "augbench.gcp_controller.completed_cell_ids",
+        lambda **_kwargs: frozenset({cell.cell_id}) if published else frozenset(),
+    )
+    startup = tmp_path / "bootstrap.sh"
+    startup.write_text("#!/bin/bash\n")
+    launch = start_or_resume(
+        start=GcpStartRequest(cloud=_cloud(), request=request, cells=(cell,), startup_script=startup),
+        dependencies=GcpControllerDependencies(remote=_Remote(), runner=runner),
+    )
+    assert launch.status == "complete"

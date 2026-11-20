@@ -271,6 +271,8 @@ With `augbench launch-rgb --max-workers 24`, the queue contains one job per impl
 
 A resumed pool validates published cells and queues only missing cells. An active pool is reused without launching duplicates. Once its workers have stopped, resume creates a new claim namespace; failed claims from the previous attempt cannot hide unfinished cells. Failed jobs retain their bootstrap logs and are investigated before retrying.
 
+Only one controller may provision a run at a time. It holds `runs/<run_id>/controller.lock` while checking workers and provisioning, then releases only its own object generation. A concurrent invocation reports the busy controller and must retry after provisioning finishes. If the controller crashes, confirm that it has stopped before removing its stale lock; worker and cell validation still precede the next launch.
+
 Run `augbench launch-rgb --preflight-only` on one L4 before starting the pool with a new environment. It checks one CUDA batch for every supported implementation–recipe pair, then measures the first selected recipe for each implementation with the full timing and memory window. These validation records go under `preflight/`, separate from production `cells/`. Production workers repeat preflight before measuring their jobs.
 
 Add `--max-workers 8` to distribute this validation through the job queue. Validation uses only the first configured seed, giving one job per implementation. Start the production pool only after all eight validation records pass output, timing, and GPU-memory checks.

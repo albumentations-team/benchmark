@@ -88,6 +88,34 @@ class GcloudObjectStore:
                 keys.add(key)
         return tuple(sorted(keys))
 
+    def remove_if_matches(self, key: str, payload: bytes) -> bool:
+        uri = self._uri(key)
+        metadata = self._runner([self._executable, "storage", "objects", "describe", uri, "--format=value(generation)"])
+        if metadata.returncode != 0:
+            error = metadata.stderr.decode(errors="replace")
+            if "404" in error:
+                return False
+            raise RuntimeError(f"could not inspect GCS lock {uri}: {error.strip()}")
+        generation = metadata.stdout.decode().strip()
+        if not generation.isdecimal():
+            raise ValueError(f"invalid GCS generation for {uri}")
+        try:
+            if self.read(key) != payload:
+                return False
+        except RuntimeError as read_error:
+            if "404" in str(read_error):
+                return False
+            raise
+        result = self._runner(
+            [self._executable, "storage", "rm", "--quiet", f"--if-generation-match={generation}", uri]
+        )
+        if result.returncode == 0:
+            return True
+        error = result.stderr.decode(errors="replace")
+        if "412" in error or "404" in error:
+            return False
+        raise RuntimeError(f"could not release GCS lock {uri}: {error.strip()}")
+
     def _uri(self, key: str) -> str:
         parts = key.split("/")
         if not key or key.startswith(("/", "gs://")) or ".." in parts:
