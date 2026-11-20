@@ -173,11 +173,21 @@ TorchVision samples and rounds the inner corners, then passes them to its native
 scale 0.24. Both pass the inner quadrilateral as the source and adjust the destination
 extent to keep the original canvas size. Kornia retains its uniform corner sampler.
 
-R24 samples an integer JPEG quality uniformly from 30 through 90 for each
-image. TorchVision GPU encodes images in groups with the same sampled quality
-and restores sample order after decoding. Kornia maps the sampled quality to its
-differentiable codec using the calibration points 30→24, 70→63, and 90→89. DALI
-passes the sampled quality to its native artifact simulator.
+R24 draws JPEG quality independently for each image, uniformly from the integers
+30 through 90 inclusive. TorchVision GPU encodes images in groups with the same
+sampled quality and restores sample order after decoding. Kornia maps the sampled
+quality to its differentiable codec using the calibration points 30→24, 70→63,
+and 90→89. At the same nominal quality, differences in chroma subsampling,
+quantization, and rounding can change the resulting artifacts.
+
+DALI applies its native `jpeg_compression_distortion` GPU operator to the decoded
+224×224 RGB crop. The kernel subsamples chroma, applies block DCT and quantization,
+and reconstructs RGB directly without entropy coding or a JPEG bitstream. For
+a fixed crop size, `quality` changes the quantization tables. The kernel processes
+the same number of blocks and performs the same operations at every quality.
+Reading and decoding the source JPEG still count toward the measured throughput.
+[DALI operator](https://docs.nvidia.com/deeplearning/dali/user-guide/docs/operations/nvidia.dali.fn.jpeg_compression_distortion.html) ·
+[DALI 2.4.0 GPU kernel](https://github.com/NVIDIA/DALI/blob/v2.4.0/dali/kernels/imgproc/jpeg/jpeg_distortion_gpu_impl.cuh)
 
 ColorJitter recipes sample factors and operation order per image. DALI uses
 its native hue adjustment, an RGB-space approximation to HSV hue rotation.
