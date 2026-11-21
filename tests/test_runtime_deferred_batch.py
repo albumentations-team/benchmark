@@ -9,16 +9,46 @@ from augbench.adapters.runtime import PythonModuleAdapter, PythonModuleAdapterCo
 from augbench.execution.pipeline import TorchDataLoaderConfig, TorchDataLoaderSource, _collate_images
 
 if TYPE_CHECKING:
+    from augbench.execution.pipeline import RecipeDataset
     from augbench.recipes.models import RecipeSpec
 
 
-def test_collate_preserves_pixels_from_a_reversed_numpy_view() -> None:
+def test_collate_flips_cropped_rgb_views_directly_into_batch(monkeypatch: pytest.MonkeyPatch) -> None:
     torch = pytest.importorskip("torch")
-    image = np.arange(12, dtype=np.uint8).reshape(2, 2, 3)
+    cv2 = pytest.importorskip("cv2")
+    image = np.arange(6 * 11 * 3, dtype=np.uint8).reshape(6, 11, 3)
+    crop = image[1:5, 2:6]
+    samples = [crop, crop[:, ::-1], crop[::-1], crop[::-1, ::-1], crop[..., ::-1], image[1:5, 1:8:2][:, ::-1]]
+    before = image.copy()
+    actual_flip = cv2.flip
+    writes = []
 
-    batch = _collate_images([image, image[:, ::-1]])
+    def track_flip(source: np.ndarray, code: int, *, dst: np.ndarray) -> np.ndarray:
+        writes.append((code, dst))
+        return actual_flip(source, code, dst=dst)
 
-    torch.testing.assert_close(batch, torch.from_numpy(np.stack([image, image[:, ::-1]])))
+    monkeypatch.setattr(cv2, "flip", track_flip)
+    batch = _collate_images(samples)
+
+    assert torch.equal(batch, torch.from_numpy(np.stack(samples)))
+    assert batch.is_contiguous()
+    assert [(code, dst.ctypes.data) for code, dst in writes] == [
+        (1, batch[1].data_ptr()),
+        (0, batch[2].data_ptr()),
+        (-1, batch[3].data_ptr()),
+    ]
+    np.testing.assert_array_equal(image, before)
+
+
+def test_collate_preserves_float_views_and_stack_dtype_promotion() -> None:
+    torch = pytest.importorskip("torch")
+    image = np.arange(36, dtype=np.uint8).reshape(3, 4, 3)
+    flipped = image[:, ::-1].astype(np.float32, order="C")[::-1]
+    expected = torch.from_numpy(np.stack([image, flipped]))
+    batch = _collate_images([image, flipped])
+
+    assert batch.dtype == torch.float32
+    assert torch.equal(batch, expected)
 
 
 class _Recipe:
@@ -44,6 +74,40 @@ class _NumpyBackedTensorDataset:
         torch = pytest.importorskip("torch")
         array = np.full((3, 2, 2), index, dtype=np.uint8)
         return torch.from_numpy(array)
+
+
+class _FlippedCropDataset:
+    def __len__(self) -> int:
+        return 2
+
+    def __getitem__(self, index: int) -> np.ndarray:
+        pixels = np.arange(6 * 8 * 3, dtype=np.uint8).reshape(6, 8, 3)
+        return pixels[index : index + 4, 1:5][:, ::-1]
+
+
+def test_loader_packs_flipped_views_from_worker() -> None:
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("cv2")
+    dataset = _FlippedCropDataset()
+    loader = TorchDataLoaderSource(
+        dataset=cast("RecipeDataset", dataset),
+        config=TorchDataLoaderConfig(
+            batch_size=2,
+            num_workers=1,
+            prefetch_factor=2,
+            persistent_workers=True,
+            pin_memory=False,
+            seed=137,
+        ),
+    )
+    loader.open()
+    try:
+        batch = loader.next_batch()
+    finally:
+        loader.close()
+
+    assert batch.is_contiguous()
+    assert torch.equal(batch, torch.from_numpy(np.stack([dataset[0], dataset[1]])))
 
 
 class _CpuStage:

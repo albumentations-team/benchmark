@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any, cast
 import numpy as np
 
 _MODEL_BATCH_DIMENSIONS = 4
+_IMAGE_DIMENSIONS = 3
+_RGB_CHANNELS = 3
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -250,12 +252,54 @@ def _collate_images(samples: Sequence[Any]) -> Any:
 
     first = samples[0]
     if isinstance(first, np.ndarray):
-        return torch.stack(
-            [
-                torch.from_numpy(np.ascontiguousarray(sample) if min(sample.strides) < 0 else sample)
-                for sample in samples
-            ]
-        )
+        tensors = []
+        check_rgb_layout = True
+        for sample in samples:
+            image = sample
+            if min(sample.strides) < 0:
+                if check_rgb_layout and _is_uniform_rgb_batch(samples, first):
+                    return torch.from_numpy(_pack_rgb_views(samples, first.shape))
+                check_rgb_layout = False
+                image = np.ascontiguousarray(sample)
+            tensors.append(torch.from_numpy(image))
+        return torch.stack(tensors)
     if isinstance(first, torch.Tensor):
         return torch.stack(samples)
     return default_collate(samples)
+
+
+def _is_uniform_rgb_batch(samples: Sequence[np.ndarray], first: np.ndarray) -> bool:
+    return (
+        first.dtype == np.uint8
+        and first.ndim == _IMAGE_DIMENSIONS
+        and first.shape[2] == _RGB_CHANNELS
+        and first.size > 0
+        and all(sample.shape == first.shape and sample.dtype == first.dtype for sample in samples)
+    )
+
+
+def _pack_rgb_views(samples: Sequence[np.ndarray], shape: tuple[int, ...]) -> np.ndarray:
+    try:
+        import cv2
+    except ModuleNotFoundError as error:
+        if error.name != "cv2":
+            raise
+        return np.stack(samples)
+
+    batch = np.empty((len(samples), *shape), dtype=np.uint8)
+    for sample, slot in zip(samples, batch, strict=True):
+        row, column, channel = sample.strides
+        reverse_rows, reverse_columns = row < 0, column < 0
+        if (
+            (reverse_rows or reverse_columns)
+            and channel == 1
+            and abs(column) == _RGB_CHANNELS
+            and abs(row) >= shape[1] * _RGB_CHANNELS
+        ):
+            # Undo the negative strides before passing the original pixels to OpenCV.
+            source = sample[:: -1 if reverse_rows else 1, :: -1 if reverse_columns else 1]
+            flip_code = -1 if reverse_rows and reverse_columns else int(reverse_columns)
+            cv2.flip(source, flip_code, dst=slot)
+        else:
+            np.copyto(slot, sample)
+    return batch

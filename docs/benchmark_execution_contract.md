@@ -97,6 +97,12 @@ operations, for example `Resize224+RGBToBGR`. The per-image CPU recipe contains 
 image operations. AX workers stack HWC `uint8` images into a BHWC batch and transfer that batch
 as `uint8`. On CUDA, a single `permute` gives a BCHW view for the native `InputNormalizer`,
 which returns normalized FP16. The AX image recipe contains no per-image `ToTensorV2`.
+
+A CPU transform may return a flipped NumPy view. During collation, packed RGB
+`uint8` views with reversed spatial strides use OpenCV to write the flip into
+the destination batch slot. Other layouts in that batch are copied into their
+slots with NumPy.
+
 Each completed run retains the implementation in its frozen code archive.
 
 | Implementation | Before GPU transfer | On the GPU |
