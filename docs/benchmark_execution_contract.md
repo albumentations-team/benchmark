@@ -240,7 +240,9 @@ A cell records, in one pass:
 - the model-only ceiling: the same step on one resident synthetic batch, measured in the same process before
   the loader opens, which also compiles the model. Ceiling and cell share the machine, so machine
   differences cancel in their ratio;
-- loader wait: the seconds the training loop blocked on the next batch during the window;
+- loader wait: the seconds the training loop blocked on the next batch during the window. Work that a path runs
+  on the GPU after the batch arrives (Kornia GPU, TorchVision GPU) belongs to the step, not to the wait, and DALI's
+  wait includes its GPU work for that batch;
 - two GPU-memory peaks: the contract peak from pipeline construction to the end, and the peak after
   the ceiling phase, which leaves out the compilation spike;
 - a finite loss at the end of the window. A non-finite loss fails the cell.
@@ -281,6 +283,9 @@ The VM removes EXIF APP1 headers from the selected JPEGs during extraction. This
 compressed image data into one shared cache while preserving the orientation of the stored pixels.
 The preparation version is part of the cache key. Every implementation reads the same prepared
 JPEGs, including TorchCodec, which normally applies EXIF orientation.
+A CMYK or YCCK JPEG is re-encoded as RGB at JPEG quality 95 during preparation, because some decoders reject
+four-component files and the others convert them differently. The first 10,000 validation files hold none, so
+the RGB workload is unaffected; the full 50,000-file training workload holds at least one. Other files are copied unchanged.
 
 After preparation, the VM reads all 10,000 JPEGs sequentially once outside the timed cells. All
 implementations then use the same deterministic PCG64 permutation without replacement for each

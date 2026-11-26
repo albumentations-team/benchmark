@@ -58,3 +58,34 @@ def test_materialize_selects_sorted_jpegs_and_reuses_a_complete_cache(tmp_path: 
     assert not first.root.joinpath("val/b.JPEG").exists()
     assert not first.cache_hit
     assert second.cache_hit
+
+
+def test_materialize_converts_a_cmyk_jpeg_to_rgb_and_leaves_other_files_untouched(tmp_path: Path) -> None:
+    with io.BytesIO() as rgb, io.BytesIO() as gray, io.BytesIO() as cmyk:
+        Image.new("RGB", (16, 16), color=(10, 200, 30)).save(rgb, format="JPEG")
+        Image.new("L", (16, 16), color=90).save(gray, format="JPEG")
+        Image.new("CMYK", (16, 16), color=(0, 255, 255, 0)).save(cmyk, format="JPEG")
+        payloads = {"val/a.JPEG": rgb.getvalue(), "val/b.JPEG": gray.getvalue(), "val/c.JPEG": cmyk.getvalue()}
+    archive = tmp_path / "source.tar"
+    with tarfile.open(archive, "w") as tar:
+        for name, payload in payloads.items():
+            info = tarfile.TarInfo(name)
+            info.size = len(payload)
+            tar.addfile(info, io.BytesIO(payload))
+    dataset = DatasetConfig(
+        archive_uri="gs://bucket/source.tar",
+        archive_sha256="a" * 64,
+        archive_member_prefix="val/",
+        archive_member_suffix=".JPEG",
+        item_count=3,
+        selection="first-sorted",
+        access_order="seeded-random-without-replacement",
+    )
+
+    staged = materialize_rgb_dataset(archive=archive, dataset=dataset, cache_root=tmp_path / "cache")
+
+    modes = {path.name: Image.open(path).mode for path in staged.files}
+    assert modes == {"a.JPEG": "RGB", "b.JPEG": "L", "c.JPEG": "RGB"}
+    assert staged.files[0].read_bytes() == payloads["val/a.JPEG"]
+    assert staged.files[1].read_bytes() == payloads["val/b.JPEG"]
+    assert Image.open(staged.files[2]).convert("RGB").getpixel((8, 8))[0] > 200  # magenta plus yellow ink makes red

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import shutil
 import tarfile
@@ -18,7 +19,8 @@ _JPEG_MARKER_PREFIX = 0xFF
 _JPEG_APP1 = 0xE1
 _JPEG_SCAN_OR_END = (0xDA, 0xD9)
 _JPEG_LENGTH_BYTES = 2
-_JPEG_CACHE_FORMAT = "jpeg-exif-free-v1"
+_JPEG_CACHE_FORMAT = "jpeg-exif-free-rgb-v2"
+_RGB_REENCODE_QUALITY = 95
 
 
 @dataclass(frozen=True)
@@ -78,7 +80,27 @@ def _extract_selected(archive: Path, selected: tuple[str, ...], destination: Pat
             output = destination / relative_path
             output.parent.mkdir(parents=True, exist_ok=True)
             with stream, output.open("wb") as target:
-                target.write(_strip_jpeg_exif(stream.read()))
+                target.write(_four_component_to_rgb(_strip_jpeg_exif(stream.read())))
+
+
+def _four_component_to_rgb(encoded: bytes) -> bytes:
+    """Re-encode a CMYK or YCCK JPEG as RGB so every decoder reads the same image.
+
+    Some decoders reject four-component JPEGs and the others convert them in different ways. The ImageNet
+    validation set holds such files. Three-component and one-component files pass through byte for byte.
+    """
+    from PIL import Image, UnidentifiedImageError
+
+    try:
+        with Image.open(io.BytesIO(encoded)) as image:
+            if image.mode != "CMYK":
+                return encoded
+            converted = image.convert("RGB")
+    except UnidentifiedImageError:
+        return encoded
+    buffer = io.BytesIO()
+    converted.save(buffer, format="JPEG", quality=_RGB_REENCODE_QUALITY)
+    return buffer.getvalue()
 
 
 def _strip_jpeg_exif(encoded: bytes) -> bytes:
