@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "run_id": "d89b7ecffa4c75b9ab078abf889f3fba91d06772c3eb908c1e7b67c63d41134f",
+  "run_id": "d84d75894f2a0b5ad879c5df1c06ca1ec82690486652c62ed50295a241e19a1a",
   "family_config": {
     "cloud": "configs/cloud/gcp-l4.yaml",
     "coverage_catalog": "catalog/operations.yaml",
@@ -10,12 +10,12 @@
       "archive_member_suffix": ".JPEG",
       "archive_sha256": "1a97eafff044ac04b5f222fa83a6a20d5f9946f053fee86fa4f1ce030c64c8a2",
       "archive_uri": "gs://imagenet_validation/imagenet/val.tar",
-      "item_count": 10000,
-      "selection": "first-sorted"
+      "item_count": 49999,
+      "selection": "first-sorted-non-cmyk"
     },
     "execution": {
       "batch_size": 256,
-      "measured_batches": 32,
+      "measured_batches": 100,
       "num_workers": 15,
       "persistent_workers": true,
       "prefetch_factor": 2,
@@ -27,7 +27,7 @@
         140,
         141
       ],
-      "warmup_batches": 1
+      "warmup_batches": 30
     },
     "family": "rgb",
     "implementations": [
@@ -53,13 +53,13 @@
     "schema_version": 1
   },
   "inputs": {
-    "git_commit": "c7ed1d7ac924d8235cd993da812ebbd5e3075c60",
-    "code_archive_sha256": "7a64746f2650b4812f3bc6e0d29d4990353f59cbd0eeb829bef3bde62af69c2e",
+    "git_commit": "fd0981270dea5be638890b112c875447555e919d",
+    "code_archive_sha256": "10fb36cf4aebc7dad16036d258cc2181ba1147509f7b86fb6017c123c86f9a15",
     "dataset_archive_sha256": "1a97eafff044ac04b5f222fa83a6a20d5f9946f053fee86fa4f1ce030c64c8a2",
     "recipe_catalog_sha256": "2cbf6e7e1a030284dd5099bd2c15d408d2c067af8d84e1396d24226d4c896bf5",
     "environment_lock_sha256": {
       "pillow_allsimd": "d6d279fadead4b30426d96f4dfbfcdf77c4ae876b91d44915b20e20b1996cf8a",
-      "rgb": "803ec86afbfabca776d340e692a717a0bab202013e99aa244fa2caa895512550"
+      "rgb": "597eec39911aa9ce3ef02b8f6a8d94ceaa202ae62bbd979322268ac0a4602eca"
     }
   },
   "hardware": {

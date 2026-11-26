@@ -4,7 +4,6 @@ from argparse import Namespace
 from pathlib import Path
 
 import pytest
-import yaml
 from PIL import Image
 
 from augbench.recipes.load import load_recipe_catalog
@@ -87,10 +86,10 @@ def paper_data(selected_run: RunRecord) -> paper._PaperData:
 
 
 def test_metrics_count_seed_verdicts_against_ax_and_report_neutral_medians(
-    tmp_path: Path, paper_data: paper._PaperData
+    tmp_path: Path, paper_data: paper._PaperData, selected_run: RunRecord
 ) -> None:
     output = tmp_path / "metrics.tex"
-    paper._write_metrics(output, paper_data)
+    paper._write_metrics(output, paper_data, selected_run)
 
     metrics = output.read_text()
     assert r"\newcommand{\MedianRatioKorniaCPU}{0.50}" in metrics
@@ -100,6 +99,9 @@ def test_metrics_count_seed_verdicts_against_ax_and_report_neutral_medians(
     assert r"\newcommand{\SharedKorniaCPU}{3}" in metrics
     assert r"\newcommand{\CommonSpeedAlbumentationsX}{200}" in metrics
     assert r"\newcommand{\SeedCount}{3}" in metrics
+    assert r"\newcommand{\WarmupBatches}{30}" in metrics
+    assert r"\newcommand{\MeasuredBatches}{100}" in metrics
+    assert r"\newcommand{\DatasetFiles}{49,999}" in metrics
 
 
 def test_common_mean_averages_recipe_ratios_with_equal_weight(paper_data: paper._PaperData) -> None:
@@ -138,7 +140,9 @@ def test_csv_retains_seed_observations_and_intervals(
 
 
 _TRAINING = {
-    "runs": [{"model": "resnet18", "batch_size": 256, "run_id": "f" * 64}],
+    "runs": [
+        {"model": "resnet18", "batch_size": 256, "run_id": "f" * 64, "warmup_batches": 10, "measured_batches": 150}
+    ],
     "results": [
         {
             "model": "resnet18",
@@ -179,60 +183,6 @@ def test_readme_updates_results_without_replacing_manual_text(
     assert after.startswith("Cite this work.\n")
     assert after.endswith("\nInstructions.")
     assert readme.replace_results(after, readme.readme_results(changed, selected_run, _TRAINING)) == after
-
-
-def test_ax_rerun_replaces_only_ax_observations(
-    tmp_path: Path, paper_data: paper._PaperData, selected_run: RunRecord
-) -> None:
-    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
-    catalog_path = tmp_path / "rgb.yaml"
-    catalog_path.write_text(
-        yaml.safe_dump(catalog.model_copy(update={"recipes": paper_data.recipes}).model_dump(mode="json"))
-    )
-    inputs = selected_run.inputs.model_copy(
-        update={"recipe_catalog_sha256": hashlib.sha256(catalog_path.read_bytes()).hexdigest()}
-    )
-    run = build_run_record(family_config=selected_run.family_config, inputs=inputs, hardware=selected_run.hardware)
-    ax_run = build_run_record(
-        family_config={**run.family_config, "implementations": [paper.AX]},
-        inputs=inputs,
-        hardware=run.hardware,
-    )
-    run_manifest = tmp_path / "run.json"
-    run_manifest.write_text(run.model_dump_json())
-    ax_manifest = tmp_path / "ax.json"
-    ax_manifest.write_text(ax_run.model_dump_json())
-    full_cells = tmp_path / "full"
-    full_cells.mkdir()
-    ax_cells = tmp_path / "ax"
-    ax_cells.mkdir()
-    for (implementation, _), group in paper_data.groups.items():
-        for record in group:
-            _write_observation(full_cells, run, record)
-            if implementation == paper.AX:
-                _write_observation(ax_cells, ax_run, record)
-    args = Namespace(
-        run=run_manifest, cells=full_cells, recipes=catalog_path, ax_run=(ax_manifest, ax_cells, catalog_path)
-    )
-
-    report, _, replacement = paper.load_report(args, tmp_path)
-
-    assert replacement == ax_run
-    assert {(group[0].run_id, implementation) for (implementation, _), group in report.groups.items()} == {
-        (ax_run.run_id if implementation == paper.AX else run.run_id, implementation)
-        for implementation, _ in paper_data.implementations
-    }
-    assert {
-        record.cell_id for group in report.groups.values() for record in group if record.run_id == ax_run.run_id
-    } == {path.stem for path in ax_cells.glob("*.json")}
-    mismatched = build_run_record(
-        family_config=ax_run.family_config,
-        inputs=inputs.model_copy(update={"environment_lock_sha256": {"rgb": "e" * 64}}),
-        hardware=ax_run.hardware,
-    )
-    ax_manifest.write_text(mismatched.model_dump_json())
-    with pytest.raises(ValueError, match="another lock"):
-        paper.load_report(args, tmp_path)
 
 
 def _write_observation(directory: Path, run: RunRecord, record: ResultRecord) -> None:
@@ -277,11 +227,11 @@ def test_torchvision_gpu_replacement_allows_only_addition_of_torchcodec(
         assert paper._torchcodec_lock_version(*runs, old_lock, new_lock) == "0.17.0"
 
 
-def test_published_export_flag_excludes_ax_rerun(paper_data: paper._PaperData, selected_run: RunRecord) -> None:
+def test_published_export_flag_marks_the_published_run(paper_data: paper._PaperData, selected_run: RunRecord) -> None:
     published = selected_run.model_copy(update={"run_id": paper.RUN_ID})
 
     assert readme.export_results(paper_data, published)["is_published_run"] is True
-    assert readme.export_results(paper_data, published, ax_run=selected_run)["is_published_run"] is False
+    assert readme.export_results(paper_data, selected_run)["is_published_run"] is False
 
 
 def test_selected_run_rejects_missing_foreign_or_tampered_results(
@@ -382,49 +332,3 @@ def test_figure_export_records_exact_generated_image_bytes_and_dimensions(tmp_pa
     }
     Image.new("RGB", (120, 80), "black").save(path)
     assert readme.export_figures(tmp_path, captions)["common-summary"]["sha256"] != figures["common-summary"]["sha256"]
-
-
-def _lock_runs(tmp_path: Path, original: bytes, updated: bytes) -> tuple[RunRecord, RunRecord, Path, Path]:
-    primary_lock = tmp_path / "primary.txt"
-    ax_lock = tmp_path / "ax.txt"
-    primary_lock.write_bytes(original)
-    ax_lock.write_bytes(updated)
-
-    def run(lock: bytes, implementations: list[str]) -> RunRecord:
-        return build_run_record(
-            family_config={"family": "rgb", "implementations": implementations},
-            inputs=RunInputs(
-                git_commit="a" * 40,
-                code_archive_sha256="b" * 64,
-                dataset_archive_sha256="c" * 64,
-                recipe_catalog_sha256="d" * 64,
-                environment_lock_sha256={"rgb": hashlib.sha256(lock).hexdigest(), "pillow_allsimd": "e" * 64},
-            ),
-            hardware={"machine_type": "g2-standard-16"},
-        )
-
-    return run(original, [paper.AX, "pillow_cpu"]), run(updated, [paper.AX]), primary_lock, ax_lock
-
-
-_LOCK = (
-    b"albucore==0.3.13 \\\n    --hash=sha256:aa\n"
-    b"albumentationsx==2.6.8 \\\n    --hash=sha256:bb\n    # via -r in\n"
-    b"numpy==2.5.5 \\\n    --hash=sha256:cc\n"
-)
-
-
-def test_ax_rerun_lock_may_change_only_the_albumentationsx_entry(tmp_path: Path) -> None:
-    updated = _LOCK.replace(
-        b"albumentationsx==2.6.8 \\\n    --hash=sha256:bb", b"albumentationsx==2.6.9 \\\n    --hash=sha256:dd"
-    )
-
-    assert paper._ax_lock_version(*_lock_runs(tmp_path, _LOCK, updated)) == "2.6.9"
-
-
-def test_ax_rerun_lock_rejects_any_other_change(tmp_path: Path) -> None:
-    updated = _LOCK.replace(b"albumentationsx==2.6.8", b"albumentationsx==2.6.9").replace(
-        b"numpy==2.5.5", b"numpy==2.5.6"
-    )
-
-    with pytest.raises(ValueError, match="only change"):
-        paper._ax_lock_version(*_lock_runs(tmp_path, _LOCK, updated))

@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from augbench.recipes.models import RecipeCatalog, RecipeSpec
     from augbench.run_records import ResultRecord
 
-RUN_ID = "3f8e2e315710528399b8e82e2359ab85c58c809644595b68a92fb9d83492cc8c"
+RUN_ID = "d84d75894f2a0b5ad879c5df1c06ca1ec82690486652c62ed50295a241e19a1a"
 INVALID_DALI_FLIP_RUN = "75bc062fe770cfec3d857f401e16366deb01f6582c8645e952930e3cd3d788fb"
 AX = "albumentationsx_cpu"
 TORCHVISION_GPU = "torchvision_gpu"
@@ -81,32 +81,22 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=Path(__file__).parent / "generated")
     args = parser.parse_args()
     root = Path(__file__).parents[1]
-    data, run, ax_run = load_report(args, root)
+    data, run = load_report(args, root)
     args.output.mkdir(parents=True, exist_ok=True)
-    _write_metrics(args.output / "metrics.tex", data)
+    _write_metrics(args.output / "metrics.tex", data, run)
     write_figures(args.output, data)
     _write_csv(args.output / "recipe-results.csv", data)
     _write_recipe_catalog(args.output / "recipes.tex", data.recipes)
     _write_recipe_results(args.output / "recipe-results.tex", data)
     _write_versions(args.output / "versions.tex", data)
     _write_coverage(args.output, root / "catalog/operations.yaml")
-    _write_sources(args.output / "sources.tex", run, ax_run, data.supplemental_runs)
+    _write_sources(args.output / "sources.tex", run, data.supplemental_runs)
 
 
 def add_run_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--run", type=Path, required=True, help="immutable run.json for the full RGB run")
     parser.add_argument("--cells", type=Path, required=True)
     parser.add_argument("--recipes", type=Path, help="full run's catalog; defaults to the repository catalog")
-    parser.add_argument(
-        "--ax-run", nargs=3, type=Path, metavar=("MANIFEST", "CELLS", "RECIPES"), help="optional AX-only rerun"
-    )
-    parser.add_argument(
-        "--ax-locks",
-        nargs=2,
-        type=Path,
-        metavar=("PRIMARY_LOCK", "AX_LOCK"),
-        help="RGB locks of the full run and the AX rerun when they differ; only the AlbumentationsX entry may change",
-    )
     parser.add_argument(
         "--supplemental-run",
         nargs=3,
@@ -130,7 +120,7 @@ def _run_catalog(run: RunRecord, path: Path) -> RecipeCatalog:
     return load_recipe_catalog(path)
 
 
-def load_report(args: argparse.Namespace, root: Path) -> tuple[_PaperData, RunRecord, RunRecord | None]:
+def load_report(args: argparse.Namespace, root: Path) -> tuple[_PaperData, RunRecord]:
     run = RunRecord.model_validate_json(args.run.read_bytes())
     config = FamilyRunConfig.model_validate(run.family_config)
     base = {implementation for implementation, _ in IMPLEMENTATIONS}
@@ -140,9 +130,6 @@ def load_report(args: argparse.Namespace, root: Path) -> tuple[_PaperData, RunRe
         raise ValueError("this run contains incorrect DALI VerticalFlip measurements")
     recipes = _run_catalog(run, args.recipes or root / config.recipes)
     supplemental_inputs = getattr(args, "supplemental_run", None) or []
-    ax_run_inputs = getattr(args, "ax_run", None)
-    if supplemental_inputs and ax_run_inputs:
-        raise ValueError("supplemental implementation runs and an AX replacement run cannot be combined")
     records = load_run_results(args.cells, run, recipes, allow_partial=bool(supplemental_inputs))
     supplemental_runs = []
     for manifest, cells, catalog_path in supplemental_inputs:
@@ -160,14 +147,10 @@ def load_report(args: argparse.Namespace, root: Path) -> tuple[_PaperData, RunRe
         records = [record for record in records if record.cell.implementation != TORCHVISION_GPU] + decoder_records
         _validate_combined_matrix(records, run, recipes)
         supplemental_runs.append(decoder_run)
-    ax_run = None
-    if ax_run_inputs:
-        ax_run, ax_records = _load_ax_run(ax_run_inputs, run, getattr(args, "ax_locks", None))
-        records = [record for record in records if record.cell.implementation != AX] + ax_records
     data = _prepare(records, recipes.recipes, tuple(supplemental_runs))
     if not data.common:
         raise ValueError("the selected results have no recipes shared by all paths")
-    return data, run, ax_run
+    return data, run
 
 
 def _require_compatible_workload(supplemental: RunRecord, primary: RunRecord) -> None:
@@ -234,55 +217,6 @@ def _validate_combined_matrix(records: Sequence[ResultRecord], run: RunRecord, r
     found = [(record.cell.implementation, record.cell.recipe_id, record.cell.seed) for record in records]
     if set(found) != expected or len(found) != len(expected):
         raise ValueError("combined source runs do not form one complete RGB matrix without duplicate cells")
-
-
-def _load_ax_run(
-    inputs: Sequence[Path], run: RunRecord, locks: Sequence[Path] | None = None
-) -> tuple[RunRecord, list[ResultRecord]]:
-    """Replace the AX cells with an AX-only rerun of the same workload.
-
-    Each implementation runs in its own process, so a newer AX release leaves the other cells valid. The two RGB
-    locks may differ only in the AlbumentationsX entry, and the rerun's cells must record that version.
-    """
-    manifest, cells, catalog = inputs
-    ax_run = RunRecord.model_validate_json(manifest.read_bytes())
-    if (
-        ax_run.family_config != {**run.family_config, "implementations": [AX]}
-        or ax_run.hardware != run.hardware
-        or ax_run.inputs.dataset_archive_sha256 != run.inputs.dataset_archive_sha256
-        or ax_run.inputs.recipe_catalog_sha256 != run.inputs.recipe_catalog_sha256
-    ):
-        raise ValueError("AX rerun must use the same workload, hardware, dataset, and recipes")
-    version = None
-    if ax_run.inputs.environment_lock_sha256 != run.inputs.environment_lock_sha256:
-        if locks is None:
-            raise ValueError("AX rerun uses another lock; pass --ax-locks so the generator can check the difference")
-        version = _ax_lock_version(run, ax_run, *locks)
-    records = load_run_results(cells, ax_run, _run_catalog(ax_run, catalog))
-    if version is not None and any(record.runtime.get("library_version") != version for record in records):
-        raise ValueError(f"AX rerun cells must record the locked AlbumentationsX {version}")
-    return ax_run, records
-
-
-def _ax_lock_version(primary: RunRecord, replacement: RunRecord, primary_lock: Path, ax_lock: Path) -> str:
-    base_hashes = primary.inputs.environment_lock_sha256
-    ax_hashes = replacement.inputs.environment_lock_sha256
-    original = primary_lock.read_bytes()
-    updated = ax_lock.read_bytes()
-    if (
-        hashlib.sha256(original).hexdigest() != base_hashes.get("rgb")
-        or hashlib.sha256(updated).hexdigest() != ax_hashes.get("rgb")
-        or {key: value for key, value in base_hashes.items() if key != "rgb"}
-        != {key: value for key, value in ax_hashes.items() if key != "rgb"}
-    ):
-        raise ValueError("supplied RGB locks must match the manifests and other package locks must agree")
-    entry = re.compile(rb"(?m)^albumentationsx==([^\s]+)[^\n]*\n(?:[ \t]+[^\n]*\n)*")
-    before, after = list(entry.finditer(original)), list(entry.finditer(updated))
-    if len(before) != 1 or len(after) != 1:
-        raise ValueError("each RGB lock must pin AlbumentationsX exactly once")
-    if entry.sub(b"", original) != entry.sub(b"", updated):
-        raise ValueError("AlbumentationsX must be the only change between the RGB locks")
-    return after[0][1].decode()
 
 
 def load_run_results(
@@ -372,7 +306,35 @@ def _command(implementation: str) -> str:
     return "AllSIMD" if implementation == PILLOW_ALLSIMD[0] else dict(IMPLEMENTATIONS)[implementation].replace(" ", "")
 
 
-def _write_metrics(path: Path, data: _PaperData) -> None:
+# DALI decodes only the crop window when a recipe starts with one of these stages.
+_DALI_WINDOW_DECODE_STAGES = {"RandomCrop224", "CenterCrop", "RandomResizedCrop"}
+
+
+def _dali_decode_metrics(data: _PaperData) -> dict[str, str]:
+    """DALI's rate on the common recipes, split by whether its decoder reads the whole image or only the crop."""
+    first_stage = {recipe.recipe_id: recipe.stages[0].operation_id for recipe in data.recipes}
+    window = [
+        data.speed["dali_gpu", recipe] for recipe in data.common if first_stage[recipe] in _DALI_WINDOW_DECODE_STAGES
+    ]
+    full = [
+        data.speed["dali_gpu", recipe]
+        for recipe in data.common
+        if first_stage[recipe] not in _DALI_WINDOW_DECODE_STAGES
+    ]
+    return {
+        "DALIWindowRecipes": str(len(window)),
+        "DALIWindowMedian": f"{median(window):,.0f}",
+        "DALIWindowLow": f"{min(window):,.0f}",
+        "DALIWindowHigh": f"{max(window):,.0f}",
+        "DALIFullRecipes": str(len(full)),
+        "DALIFullMedian": f"{median(full):,.0f}",
+        "DALIFullLow": f"{min(full):,.0f}",
+        "DALIFullHigh": f"{max(full):,.0f}",
+    }
+
+
+def _write_metrics(path: Path, data: _PaperData, run: RunRecord) -> None:
+    execution = run.family_config["execution"]
     records = [record for group in data.groups.values() for record in group]
     batch_size = _single({record.output.shape[0] for record in records})
     metrics = {
@@ -382,6 +344,9 @@ def _write_metrics(path: Path, data: _PaperData) -> None:
         "CommonRecipeCount": str(len(data.common)),
         "SeedCount": str(_single({len(group) for group in data.groups.values()})),
         "BatchSize": str(batch_size),
+        "WarmupBatches": str(execution["warmup_batches"]),
+        "MeasuredBatches": str(execution["measured_batches"]),
+        "DatasetFiles": f"{run.family_config['dataset']['item_count']:,}",
         "MemoryPollMs": str(_single({record.gpu_memory.poll_interval_ms for record in records})),
         "CommonDALIFastest": str(
             sum(
@@ -397,6 +362,7 @@ def _write_metrics(path: Path, data: _PaperData) -> None:
     spreads = sorted(
         (max(speeds) - min(speeds)) / median(speeds) for speeds in (_speeds(data, key) for key in data.groups)
     )
+    metrics.update(_dali_decode_metrics(data))
     metrics["SeedSpreadMedian"] = f"{100 * median(spreads):.1f}"
     metrics["SeedSpreadNinety"] = f"{100 * spreads[int(0.9 * (len(spreads) - 1))]:.0f}"
     for implementation, _ in data.implementations:
@@ -501,17 +467,11 @@ def _write_versions(path: Path, data: _PaperData) -> None:
     _write_tex(path, lines)
 
 
-def _write_sources(
-    path: Path, run: RunRecord, ax_run: RunRecord | None, supplemental_runs: Sequence[RunRecord] = ()
-) -> None:
-    lines: list[str] = []
-    for label, source in (("Full", run), ("AX", ax_run or run)):
-        lines.extend(
-            (
-                rf"\newcommand{{\{label}RunID}}{{{source.run_id}}}",
-                rf"\newcommand{{\{label}SourceRevision}}{{{source.inputs.git_commit}}}",
-            )
-        )
+def _write_sources(path: Path, run: RunRecord, supplemental_runs: Sequence[RunRecord] = ()) -> None:
+    lines = [
+        rf"\newcommand{{\FullRunID}}{{{run.run_id}}}",
+        rf"\newcommand{{\FullSourceRevision}}{{{run.inputs.git_commit}}}",
+    ]
     details = [
         rf"\item[Correction {index}] \texttt{{\expandafter\seqsplit\expandafter{{{source.run_id}}}}}\\"
         rf"Source \texttt{{\expandafter\seqsplit\expandafter{{{source.inputs.git_commit}}}}}."

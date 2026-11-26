@@ -241,6 +241,7 @@ def _training_metrics(summaries: list[tuple[TrainingRun, list[Row]]]) -> dict[st
     cells = sum(len(group) for training, _ in summaries for group in training.groups.values())
     metrics = {
         "TrainCellCount": str(cells),
+        "TrainWarmupBatches": str(summaries[0][0].run.family_config["execution"]["warmup_batches"]),
         "TrainMeasuredBatches": str(summaries[0][0].run.family_config["execution"]["measured_batches"]),
     }
     for training, rows in summaries:
@@ -292,7 +293,13 @@ def write_outputs(runs: list[TrainingRun], output: Path, paper_output: Path) -> 
     export = {
         "schema_version": 1,
         "runs": [
-            {"model": training.model, "batch_size": training.batch_size, "run_id": training.run.run_id}
+            {
+                "model": training.model,
+                "batch_size": training.batch_size,
+                "run_id": training.run.run_id,
+                "warmup_batches": training.run.family_config["execution"]["warmup_batches"],
+                "measured_batches": training.run.family_config["execution"]["measured_batches"],
+            }
             for training in runs
         ],
         "results": [asdict(row) for row in rows],

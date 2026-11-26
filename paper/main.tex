@@ -95,8 +95,8 @@ comparisons with AX appear in their own section.
 
 \subsection{What one measurement covers}
 
-A measurement, or \emph{cell}, is one path, one recipe, and one seed. After one warm-up batch the
-runner times the delivery of 32 batches of \BatchSize{} images up to the final CUDA
+A measurement, or \emph{cell}, is one path, one recipe, and one seed. After \WarmupBatches{} warm-up batches the
+runner times the delivery of \MeasuredBatches{} batches of \BatchSize{} images up to the final CUDA
 synchronization. Inside the timer are file lookup, decoding, the recipe, batching, the host to
 device copy, any GPU work, normalization, and output validation. Outside it are imports,
 pipeline construction, and a one-batch preflight. Every path returns the same output: a CUDA
@@ -105,7 +105,7 @@ ImageNet mean and standard deviation on the GPU.
 
 NVML samples the process's GPU memory every \MemoryPollMs{}\,ms from before pipeline
 construction to the end of the cell. The reported peak therefore includes the CUDA context and
-anything the process retained from earlier cells. Throughput and memory come from the same pass.
+any memory that survives the cleanup between cells. Throughput and memory come from the same pass.
 
 \subsection{Fixed workload}
 
@@ -114,7 +114,7 @@ anything the process retained from earlier cells. Throughput and memory come fro
 \rowcolors{2}{gray!5}{white}
 \begin{tabularx}{\textwidth}{p{3.2cm}Y}
 \textbf{Setting} & \textbf{Value} \\ \midrule
-Data & First 10,000 sorted ImageNet validation JPEGs \cite{imagenet}, read once before timing so the page cache serves them \\
+Data & \DatasetFiles{} ImageNet validation JPEGs \cite{imagenet} (all but one CMYK file), read once before timing so the page cache serves them \\
 Order & One PCG64 permutation per seed, shared by every path \\
 Seeds & \SeedCount{} seeds; each seed of a path is a separate job on one of up to 20 identical VMs \\
 Batch & \BatchSize{} images, \(224\times224\) RGB output \\
@@ -214,6 +214,14 @@ compression, which it simulates with a differentiable codec, and TorchVision GPU
 warps and equalization applied one image at a time. Appendix~\ref{app:results} lists every
 path--recipe pair with its seed range.
 
+\paragraph{DALI's rate follows its decoder.} DALI decodes only the crop window when a recipe starts
+with a crop, and the whole image otherwise. On the \DALIWindowRecipes{} shared recipes that start with a
+crop it runs at a median of \DALIWindowMedian{} images/s (\DALIWindowLow{}--\DALIWindowHigh{}); on the
+\DALIFullRecipes{} that start by resizing or padding the full image it runs at \DALIFullMedian{}
+(\DALIFullLow{}--\DALIFullHigh{}), whatever the augmentation. Its lead over AX therefore combines the
+GPU decoder, which AX does not use, and the augmentation itself. The CPU paths decode every pixel of the
+file, so the comparison with them also mixes the decoder with the recipe.
+
 \paragraph{Pillow-AllSIMD.} The two Pillow paths run the same adapter with different builds of
 the library. Across \AllSIMDShared{} shared recipes, Pillow-AllSIMD delivered a median of
 \AllSIMDMedianRatio\(\times\) Pillow's throughput, and \AllSIMDMedianBlurRatio\(\times\) on
@@ -238,10 +246,11 @@ count of shared recipes.}
 
 DALI is faster than AX on \FasterDALIGPU{} of \SharedDALIGPU{} shared recipes and tied on
 \TiedDALIGPU{}, with a median ratio of \MedianRatioDALIGPU\(\times\). Kornia CPU is slower on all
-\SharedKorniaCPU{}. Between these, the intervals change the picture that medians alone would give:
-Pillow-AllSIMD is tied with AX on \TiedAllSIMD{} of its \SharedAllSIMD{} recipes and slower on
-\SlowerAllSIMD{}, and TorchVision CPU is tied on \TiedTorchVisionCPU{} of \SharedTorchVisionCPU{}.
-A median-only count would have called each of those a loss for the path.
+\SharedKorniaCPU{}. With five seeds and a window of \MeasuredBatches{} batches the seeds agree
+closely (the median spread is \SeedSpreadMedian\% of the median), so most verdicts follow the order of the
+medians. The intervals change the count where paths sit close to AX: TorchVision GPU is faster on
+\FasterTorchVisionGPU{}, tied on \TiedTorchVisionGPU{}, and slower on \SlowerTorchVisionGPU{} of its
+\SharedTorchVisionGPU{} recipes, and Pillow-AllSIMD is tied on \TiedAllSIMD{} of \SharedAllSIMD{}.
 
 \section{Feeding a training step}
 \label{sec:training}
@@ -259,7 +268,7 @@ already in GPU memory; this also compiles the model. That rate is the step's \em
 reports its training throughput as a share of its own ceiling, so differences between machines
 cancel.
 
-\paragraph{The workload.} The training runs use all 50,000 validation JPEGs, enough for 10 warm-up
+\paragraph{The workload.} The training runs use the same \DatasetFiles{} files, enough for \TrainWarmupBatches{} warm-up
 and \TrainMeasuredBatches{} measured batches without reading a file twice. Recipes form a ladder of
 common ImageNet training augmentations: random resized crop and horizontal flip; then
 ColorJitter; then ColorJitter and random erasing; and, separately, RandAugment
@@ -280,9 +289,9 @@ Figure~\ref{fig:training} shows two regimes. ResNet-50 at batch 128 consumes abo
 \TrainCeilingResNetFifty{} images/s, and every path that hands the training loop a finished batch
 keeps up: the step runs at \TrainReadyFloorResNetFifty\% or more of the ceiling on every recipe. ResNet-18 consumes about \TrainCeilingResNetEighteen{} images/s,
 and there the slower CPU paths show: once ColorJitter is in the recipe, TorchVision CPU falls to
-\TrainMinResNetEighteenTorchVisionCPU\% and Kornia CPU to \TrainMinResNetEighteenKorniaCPU\%, while AX stays between
-\TrainMinResNetEighteenAlbumentationsX\% and \TrainMaxResNetEighteenAlbumentationsX\% and
-Pillow-AllSIMD between \TrainMinResNetEighteenAllSIMD\% and \TrainMaxResNetEighteenAllSIMD\%.
+\TrainMinResNetEighteenTorchVisionCPU\% and Kornia CPU to \TrainMinResNetEighteenKorniaCPU\%, while AX stays at
+\TrainMinResNetEighteenAlbumentationsX\% or more and Pillow-AllSIMD at
+\TrainMinResNetEighteenAllSIMD\% or more.
 
 Kornia GPU and TorchVision GPU behave differently. They apply the recipe on the GPU inside the
 training loop, after it receives the batch, so that work takes GPU time from the step itself. With ResNet-50 they reach \TrainMinResNetFiftyKorniaGPU\% and
@@ -290,7 +299,7 @@ training loop, after it receives the batch, so that work takes GPU time from the
 \TrainMinResNetEighteenKorniaGPU\% and \TrainMinResNetEighteenTorchVisionGPU\%. DALI also augments on
 the GPU, but inside its own pipeline before it hands over the batch, and stays between
 \TrainMinResNetEighteenDALIGPU\% and \TrainMaxResNetEighteenDALIGPU\% with ResNet-18 and
-between \TrainMinResNetFiftyDALIGPU\% and \TrainMaxResNetFiftyDALIGPU\% with ResNet-50, and holds 1--2 GiB
+between \TrainMinResNetFiftyDALIGPU\% and \TrainMaxResNetFiftyDALIGPU\% with ResNet-50, and holds about 1--2 GiB
 more GPU memory than the CPU paths. Appendix~\ref{app:training} lists every training cell.
 
 \section{Where the results apply}
@@ -311,11 +320,28 @@ If a path delivers well above that rate, the loader is not the bottleneck.
 
 \section{Changes since version 2}
 
-Version 3 measures \SeedCount{} seeds instead of 3, runs AX 2.6.9 with \texttt{ToTensorV2} before
+Version 3 measures \SeedCount{} seeds instead of 3, times \MeasuredBatches{} batches after \WarmupBatches{} warm-up batches
+over \DatasetFiles{} files instead of 32 after one over 10,000, runs AX 2.6.9 with \texttt{ToTensorV2} before
 the copy to the GPU, reports exact intervals and tied results instead of counting median wins,
 reports images per second instead of ratios to AX in the main results, and adds the
 training-step measurements of Section~\ref{sec:training}. The recipe catalog has
 \RecipeCount{} recipes; Appendix~\ref{app:reproduce} lists the runs.
+
+The longer window changed the absolute rates more than any code change. An earlier run of the same
+paths with the short window (run \texttt{d89b7ecffa4c}) measured the DataLoader paths 28--29\% faster
+than this report does: AX 4,348 against 3,124 images/s on the 31 shared recipes, Pillow-AllSIMD
+3,839 against 2,737, TorchVision CPU 3,537 against 2,524, and Kornia CPU 1,867 against 1,317. DALI
+measured 7\% faster (6,271 against 5,857), and TorchVision GPU, whose workers only read JPEG bytes,
+did not change (2,507 against 2,500). The pattern fits a start-up effect visible in the code: the 15 DataLoader workers start together and prepare up to 30 batches while the one warm-up
+batch is consumed, so a window of 32 batches begins with about 14 batches already finished. A longer warm-up and window removes that head
+start. We did not isolate the cause with a separate experiment. Because this changes the ratio between the paths
+(DALI against AX moved from 1.38$\times$ to 1.82$\times$), rates measured with the short window should not be compared with this report's.
+
+DALI's memory column changed for a second reason. The earlier readings rose with catalog order
+because one long-lived process kept DALI's memory pool from earlier cells. The runner now releases
+the pool between cells, so each reading reflects its own recipe: the baseline before the pipeline
+is built is 208~MiB in every DALI cell. The DALI adapter also splits ColorJitter into four stages
+instead of 24 branches.
 
 \begingroup\footnotesize
 \bibliographystyle{plain}
@@ -328,10 +354,10 @@ training-step measurements of Section~\ref{sec:training}. The recipe catalog has
 \section{Timing, sampling, and output details}
 \label{app:setup}
 
-The runner selects the first 10,000 validation JPEGs in lexicographic order, removes their EXIF
+The runner selects the \DatasetFiles{} non-CMYK validation JPEGs in lexicographic order, removes their EXIF
 headers so every decoder reads the stored pixel orientation, and reads them once before timing.
-Each seed takes the first \(\BatchSize\times33\) files of a PCG64 permutation; the first batch
-warms up and the remaining 32 are timed. The files fit in the VM's 64 GB of memory, so the timed
+Each seed takes the first \(\BatchSize\times(\WarmupBatches+\MeasuredBatches)\) files of a PCG64 permutation; the first \WarmupBatches{} batches
+warm up and the remaining \MeasuredBatches{} are timed. The files fit in the VM's 64 GB of memory, so the timed
 reads usually hit the Linux page cache; the measurement does not cover cold storage.
 
 Every stochastic stage draws its parameters for each image. The DataLoader generator, the DALI
@@ -340,9 +366,10 @@ own process through all of its recipes. Before timing, every path--recipe pair p
 one-batch preflight that checks the output's device, type, and shape.
 
 For the training step, the runner compiles the model once per process and restores its initial
-weights before each cell, so later cells reuse the compiled graph. The training data are all
-50,000 validation JPEGs; one file is a CMYK JPEG that some decoders reject, and the preparation
-step re-encodes it as RGB at quality 95 so that every path reads the same image.
+weights before each cell, so later cells reuse the compiled graph. Every workload excludes
+the archive's one CMYK JPEG (\texttt{ILSVRC2012\_val\_00019877}), which TorchCodec cannot decode on the GPU
+and the CPU decoders convert in different ways; the other \DatasetFiles{} files are kept byte for byte
+apart from the EXIF header.
 
 \clearpage
 \section{Recipes and parameters}
@@ -487,10 +514,8 @@ and Triton 3.9.0.}
 The cells are under \nolinkurl{gs://imagenet_validation/augmentation-benchmark/runs/}:
 
 \begin{description}
-\item[Input pipeline, all paths] \texttt{\expandafter\seqsplit\expandafter{\FullRunID}}\\
+\item[Input pipeline] \texttt{\expandafter\seqsplit\expandafter{\FullRunID}}\\
   Source \texttt{\FullSourceRevision}.
-\item[Input pipeline, AX 2.6.9] \texttt{\expandafter\seqsplit\expandafter{\AXRunID}}\\
-  Source \texttt{\AXSourceRevision}.
 \item[Training, ResNet-18] \texttt{\expandafter\seqsplit\expandafter{\TrainRunIDResNetEighteen}}\\
   Source \texttt{\TrainSourceResNetEighteen}.
 \item[Training, ResNet-50] \texttt{\expandafter\seqsplit\expandafter{\TrainRunIDResNetFifty}}\\

@@ -21,6 +21,7 @@ from paper.generate_results import (
     AX,
     PILLOW_ALLSIMD,
     RUN_ID,
+    _dali_decode_metrics,
     _mean_ratios,
     _shared_recipes,
     _single,
@@ -54,7 +55,7 @@ def main() -> None:
         help="export written by paper.generate_training, which also writes the training figure source",
     )
     args = parser.parse_args()
-    data, run, ax_run = load_report(args, root)
+    data, run = load_report(args, root)
     training = json.loads(args.training_results.read_text())
     captions = figure_captions(data)
     readme = root / "README.md"
@@ -70,7 +71,7 @@ def main() -> None:
         (destination / "results.json").write_text(
             json.dumps(
                 {
-                    **export_results(data, run, ax_run, data.supplemental_runs),
+                    **export_results(data, run, data.supplemental_runs),
                     "figures": export_figures(staging, captions),
                 },
                 indent=2,
@@ -96,16 +97,19 @@ def export_figures(directory: Path, captions: Mapping[str, str]) -> dict[str, di
     return figures
 
 
+# Each implementation, or each implementation and seed, ran in its own worker process.
+_ISOLATED_SCOPES = {"implementation", "implementation_seed"}
+
+
 def _isolated_workers(data: _PaperData) -> bool:
     return all(
-        record.runtime.get("worker_scope") == "implementation" for records in data.groups.values() for record in records
+        record.runtime.get("worker_scope") in _ISOLATED_SCOPES for records in data.groups.values() for record in records
     )
 
 
 def export_results(
     data: _PaperData,
     run: RunRecord,
-    ax_run: RunRecord | None = None,
     supplemental_runs: tuple[RunRecord, ...] = (),
 ) -> dict[str, object]:
     libraries = [
@@ -218,9 +222,8 @@ def export_results(
     return {
         "schema_version": 2,
         "run": run.model_dump(mode="json"),
-        **({"ax_run": ax_run.model_dump(mode="json")} if ax_run else {}),
         "supplemental_runs": [source.model_dump(mode="json") for source in supplemental_runs],
-        "is_published_run": ax_run is None and not supplemental_runs and run.run_id == RUN_ID,
+        "is_published_run": not supplemental_runs and run.run_id == RUN_ID,
         "measurement_count": sum(map(len, data.groups.values())),
         "gpu_memory_poll_ms": _single(
             {record.gpu_memory.poll_interval_ms for records in data.groups.values() for record in records}
@@ -351,6 +354,15 @@ def readme_results(data: _PaperData, run: RunRecord, training: Mapping[str, obje
     return "\n".join(lines)
 
 
+def _dali_decoder_note(data: _PaperData) -> str:
+    decode = _dali_decode_metrics(data)
+    return (
+        " DALI decodes only the crop window when a recipe starts with a crop: "
+        f"{decode['DALIWindowMedian']} images/s on {decode['DALIWindowRecipes']} recipes, against "
+        f"{decode['DALIFullMedian']} on the {decode['DALIFullRecipes']} that need the whole image."
+    )
+
+
 def _key_results(
     data: _PaperData, common: Mapping[str, list[float]], memory: Mapping[str, float], training: Mapping[str, Any]
 ) -> list[str]:
@@ -365,6 +377,7 @@ def _key_results(
             f"while holding {memory[fastest]:,.0f} MiB of GPU memory. The CPU paths deliver "
             f"{min(cpu_speeds):,.0f} to {max(cpu_speeds):,.0f} images/s and hold "
             f"{min(cpu_memory):,.0f} to {max(cpu_memory):,.0f} MiB."
+            f"{_dali_decoder_note(data) if fastest == 'dali_gpu' else ''}"
         )
     ]
     for item in training["runs"]:
@@ -451,6 +464,12 @@ _TIMES = "\N{MULTIPLICATION SIGN}"
 _FED = 0.95
 
 
+def _training_window(training: Mapping[str, Any]) -> str:
+    windows = {(run["warmup_batches"], run["measured_batches"]) for run in training["runs"]}
+    ((warmup, measured),) = windows
+    return f"{warmup} warm-up and {measured} measured batches"
+
+
 def _workload_lines(
     data: _PaperData, run: RunRecord, config: FamilyRunConfig, training: Mapping[str, Any]
 ) -> list[str]:
@@ -461,10 +480,10 @@ def _workload_lines(
         "",
         (
             f"One Standard `{run.hardware['machine_type']}` VM with one `{run.hardware['accelerator']}` per job. "
-            f"Input pipeline: the first {config.dataset.item_count:,} sorted ImageNet validation JPEGs, "
-            f"{execution.warmup_batches} warm-up batch and {execution.measured_batches} measured batches "
-            f"({execution.batch_size * execution.measured_batches:,} images). Training step: all 50,000 validation "
-            "JPEGs, 10 warm-up and 150 measured batches. Seeds: "
+            f"Input pipeline: {config.dataset.item_count:,} sorted ImageNet validation JPEGs (all but one CMYK file), "
+            f"{execution.warmup_batches} warm-up batches and {execution.measured_batches} measured batches "
+            f"({execution.batch_size * execution.measured_batches:,} images). Training step: the same files, "
+            f"{_training_window(training)}. Seeds: "
             f"{', '.join(map(str, execution.seeds))}; every path reads the same file order for a given seed. "
             f"DataLoader paths use {execution.num_workers} workers with prefetch factor {execution.prefetch_factor}; "
             "DALI uses the same number of threads."
