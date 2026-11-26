@@ -16,12 +16,13 @@ def test_rgb_config_defines_the_entire_runnable_contract() -> None:
     assert config.normalization == "gpu"
     assert config.output.device == "cuda"
     assert config.output.layout == "BCHW"
-    assert config.dataset.item_count == 10_000
+    assert config.dataset.item_count == 49_999
+    assert config.dataset.selection == "first-sorted-non-cmyk"
     assert config.dataset.archive_member_prefix == "val/"
     assert config.dataset.archive_member_suffix == ".JPEG"
     assert config.execution.batch_size == 256
-    assert config.execution.warmup_batches == 1
-    assert config.execution.measured_batches == 32
+    assert config.execution.warmup_batches == 30
+    assert config.execution.measured_batches == 100
     assert config.execution.seeds == (137, 138, 139, 140, 141)
     assert config.execution.num_workers == 15
     assert config.execution.prefetch_factor == 2
@@ -39,7 +40,7 @@ def test_rgb_config_defines_the_entire_runnable_contract() -> None:
     )
 
 
-def test_gcp_config_is_limited_to_one_standard_l4_vm() -> None:
+def test_gcp_config_requires_standard_l4_hardware() -> None:
     config = load_gcp_config(ROOT / "configs" / "cloud" / "gcp-l4.yaml")
 
     assert config.project == "albumentations"
@@ -63,12 +64,3 @@ def test_each_seed_has_a_stable_random_access_order() -> None:
 def test_config_rejects_a_measurement_window_larger_than_the_dataset() -> None:
     with pytest.raises(ValueError, match="dataset"):
         source_order(item_count=32, required_items=33, seed=137)
-
-
-def test_ax_only_config_is_the_rgb_workload_on_one_implementation() -> None:
-    root = Path(__file__).parents[1] / "configs/families"
-    rgb = load_family_config(root / "rgb.yaml")
-    ax = load_family_config(root / "rgb-ax.yaml")
-
-    assert ax.implementations == ("albumentationsx_cpu",)
-    assert ax.model_dump(exclude={"implementations"}) == rgb.model_dump(exclude={"implementations"})

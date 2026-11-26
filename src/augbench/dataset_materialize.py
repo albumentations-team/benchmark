@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import io
 import json
 import shutil
 import tarfile
@@ -19,8 +18,7 @@ _JPEG_MARKER_PREFIX = 0xFF
 _JPEG_APP1 = 0xE1
 _JPEG_SCAN_OR_END = (0xDA, 0xD9)
 _JPEG_LENGTH_BYTES = 2
-_JPEG_CACHE_FORMAT = "jpeg-exif-free-rgb-v2"
-_RGB_REENCODE_QUALITY = 95
+_JPEG_CACHE_FORMAT = "jpeg-exif-free-v1"
 
 
 @dataclass(frozen=True)
@@ -60,6 +58,7 @@ def _selected_member_names(archive: Path, dataset: DatasetConfig) -> tuple[str, 
                 and member.name.startswith(dataset.archive_member_prefix)
                 and member.name.endswith(dataset.archive_member_suffix)
                 and _is_safe_relative_path(member.name)
+                and (dataset.selection == "first-sorted" or not _is_cmyk(source, member))
             )[: dataset.item_count]
         )
     if len(selected) != dataset.item_count:
@@ -67,9 +66,20 @@ def _selected_member_names(archive: Path, dataset: DatasetConfig) -> tuple[str, 
     return selected
 
 
+def _is_cmyk(source: tarfile.TarFile, member: tarfile.TarInfo) -> bool:
+    from PIL import Image
+
+    stream = source.extractfile(member)
+    if stream is None:
+        raise ValueError(f"could not inspect {member.name}")
+    with stream, Image.open(stream) as image:
+        return image.mode == "CMYK"
+
+
 def _extract_selected(archive: Path, selected: tuple[str, ...], destination: Path) -> None:
+    selected_names = set(selected)
     with tarfile.open(archive, "r:*") as source:
-        members = {member.name: member for member in source.getmembers() if member.name in selected}
+        members = {member.name: member for member in source.getmembers() if member.name in selected_names}
         if len(members) != len(selected):
             raise ValueError("source archive changed while RGB data was being staged")
         for relative_path in selected:
@@ -80,27 +90,7 @@ def _extract_selected(archive: Path, selected: tuple[str, ...], destination: Pat
             output = destination / relative_path
             output.parent.mkdir(parents=True, exist_ok=True)
             with stream, output.open("wb") as target:
-                target.write(_four_component_to_rgb(_strip_jpeg_exif(stream.read())))
-
-
-def _four_component_to_rgb(encoded: bytes) -> bytes:
-    """Re-encode a CMYK or YCCK JPEG as RGB so every decoder reads the same image.
-
-    Some decoders reject four-component JPEGs and the others convert them in different ways. The ImageNet
-    validation set holds such files. Three-component and one-component files pass through byte for byte.
-    """
-    from PIL import Image, UnidentifiedImageError
-
-    try:
-        with Image.open(io.BytesIO(encoded)) as image:
-            if image.mode != "CMYK":
-                return encoded
-            converted = image.convert("RGB")
-    except UnidentifiedImageError:
-        return encoded
-    buffer = io.BytesIO()
-    converted.save(buffer, format="JPEG", quality=_RGB_REENCODE_QUALITY)
-    return buffer.getvalue()
+                target.write(_strip_jpeg_exif(stream.read()))
 
 
 def _strip_jpeg_exif(encoded: bytes) -> bytes:

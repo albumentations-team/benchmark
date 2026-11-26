@@ -52,13 +52,13 @@ fall outside the production benchmark.
 
 | Field | Value |
 | --- | --- |
-| Data | The first 10,000 `val/*.JPEG` files in lexicographic order from the SHA-256-verified ImageNet validation archive |
+| Data | All 49,999 non-CMYK `val/*.JPEG` files in lexicographic order from the SHA-256-verified ImageNet validation archive |
 | Recipes | 72 RGB recipes, each supported by at least two libraries |
 | Matrix | 421 supported implementation–recipe pairs × 5 seeds = 2,105 cells |
 | Seeds | 137, 138, 139, 140, 141 |
 | Batch size | 256 images |
-| Warm-up | 1 full batch outside the timer |
-| Measurement | 32 full batches, 8,192 images |
+| Warm-up | 30 full batches outside the timer |
+| Measurement | 100 full batches, 25,600 images |
 | Workers | 15, `persistent_workers=True`, `prefetch_factor=2`, `pin_memory=True` |
 | Hardware | Standard `g2-standard-16` VMs, each with one NVIDIA L4, in any eligible GCP zone. A run uses up to 20 VMs at once |
 
@@ -235,7 +235,7 @@ contract. Each ready batch feeds one training step, and the cell reports the rat
 | Field | Value |
 | --- | --- |
 | Family | `imagenet_train`; one run per model (`configs/families/train-resnet18.yaml`, `train-resnet50.yaml`) |
-| Data | All 50,000 ImageNet validation JPEGs; one pass per seed, no rollover |
+| Data | The same 49,999 non-CMYK ImageNet validation JPEGs; one pass per seed, no rollover |
 | Models | ResNet-18 (batch 256) and ResNet-50 (batch 128), `torchvision.models`, untrained |
 | Step | `torch.compile`, bfloat16 autocast without `GradScaler`, `channels_last`, fused SGD, cross-entropy on fixed random labels |
 | Window | 10 warm-up and 150 measured batches; 15 workers, prefetch 2, persistent workers, pinned memory |
@@ -295,11 +295,12 @@ The VM removes EXIF APP1 headers from the selected JPEGs during extraction. This
 compressed image data into one shared cache while preserving the orientation of the stored pixels.
 The preparation version is part of the cache key. Every implementation reads the same prepared
 JPEGs, including TorchCodec, which normally applies EXIF orientation.
-A CMYK or YCCK JPEG is re-encoded as RGB at JPEG quality 95 during preparation, because some decoders reject
-four-component files and the others convert them differently. The first 10,000 validation files hold none, so
-the RGB workload is unaffected; the full 50,000-file training workload holds at least one. Other files are copied unchanged.
+The selection excludes CMYK JPEGs before timing. The archive contains 49,100 RGB, 899 grayscale, and one CMYK
+JPEG. Excluding `val/ILSVRC2012_val_00019877.JPEG` leaves 49,999 files for every implementation and every
+workload. TorchCodec CUDA fails to decode CMYK inputs, and the CPU decoders convert them in different ways. The
+other JPEGs are kept without re-encoding. [TorchCodec issue](https://github.com/meta-pytorch/torchcodec/issues/1872)
 
-After preparation, the VM reads all 10,000 JPEGs sequentially once outside the timed cells. All
+After preparation, the VM reads all 49,999 selected JPEGs sequentially once outside the timed cells. All
 implementations then use the same deterministic PCG64 permutation without replacement for each
 seed. PyTorch DataLoader adds no shuffle. DALI receives the same preordered file list.
 
@@ -321,7 +322,7 @@ rule, plus the package lock, recipe catalog, and hardware config. It then:
    `min(max_vms, pending jobs)` of them. A job is one implementation and seed. Creation rotates the zone
    order per VM, and a quota or capacity error moves on to the next zone.
 5. On the VM, downloads the code, raw dataset, and cached RGB environment once, verifies the
-   Pillow-AllSIMD lock and wheel, extracts the first 10,000 sorted `val/*.JPEG` files, and
+   Pillow-AllSIMD lock and wheel, extracts the 49,999 selected non-CMYK `val/*.JPEG` files, and
    prewarms them. If the run measures TorchVision GPU, bootstrap makes the installed NVIDIA
    driver's `libnvcuvid.so.1` available to that worker. Each
    VM then takes jobs from the shared queue: it claims the next unclaimed job with a conditional
@@ -351,11 +352,6 @@ settings. Each observation keeps its source run and cell IDs. For an invalid res
 corrected recipe, freeze a correction run covering the affected implementation–recipe pairs
 and all seeds. Validate the replacement cells before regenerating the report. Keep the
 original cells for reproduction.
-
-The report's TorchVision GPU replacement uses a lock that adds TorchCodec to
-the primary RGB environment. The generator verifies both lock checksums,
-requires all other entries to match, and replaces the complete TorchVision
-GPU selection. [Reproduction instructions](../paper/README.md#regenerate-the-results)
 
 For a targeted run, `measurements` lists the implementation IDs to measure for each
 recipe. The catalog still records full support. The paper generators take a complete

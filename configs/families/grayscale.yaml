@@ -15,13 +15,13 @@ dataset:
   archive_sha256: '0000000000000000000000000000000000000000000000000000000000000000'
   archive_member_prefix: val/
   archive_member_suffix: .JPEG
-  item_count: 10000
-  selection: first-sorted
+  item_count: 49999
+  selection: first-sorted-non-cmyk
   access_order: seeded-random-without-replacement
 execution:
   batch_size: 256
-  warmup_batches: 1
-  measured_batches: 32
+  warmup_batches: 30
+  measured_batches: 100
   seeds:
   - 137
   - 138

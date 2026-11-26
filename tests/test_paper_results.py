@@ -42,7 +42,7 @@ def selected_run() -> RunRecord:
 
 
 @pytest.fixture
-def paper_data() -> paper._PaperData:
+def paper_data(selected_run: RunRecord) -> paper._PaperData:
     catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
     recipes = (*catalog.recipes[:2], next(recipe for recipe in catalog.recipes if recipe.augmentation_id == "Shear"))
     observations = {
@@ -55,6 +55,10 @@ def paper_data() -> paper._PaperData:
         "kornia_cpu": (100, 5000, 2900),
         "kornia_gpu": (1200, 100, 100),
     }
+    measured_items = (
+        selected_run.family_config["execution"]["batch_size"]
+        * selected_run.family_config["execution"]["measured_batches"]
+    )
     records = []
     for implementation, _ in (*paper.IMPLEMENTATIONS, paper.PILLOW_ALLSIMD):
         for index, recipe in enumerate(recipes):
@@ -73,7 +77,7 @@ def paper_data() -> paper._PaperData:
                         run_id=paper.RUN_ID,
                         cell=cell,
                         status="ok",
-                        throughput=Throughput(completed_items=8192, duration_seconds=8192 / speed),
+                        throughput=Throughput(completed_items=measured_items, duration_seconds=measured_items / speed),
                         gpu_memory=GpuMemory(peak_mib=memory, poll_interval_ms=50, valid_samples=10),
                         output=OutputObservation(shape=(256, 3, 224, 224)),
                         runtime={"library_version": "test"},

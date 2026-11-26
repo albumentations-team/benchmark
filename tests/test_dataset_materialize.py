@@ -4,6 +4,7 @@ import json
 import tarfile
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from augbench.dataset_materialize import materialize_rgb_dataset
@@ -60,32 +61,35 @@ def test_materialize_selects_sorted_jpegs_and_reuses_a_complete_cache(tmp_path: 
     assert second.cache_hit
 
 
-def test_materialize_converts_a_cmyk_jpeg_to_rgb_and_leaves_other_files_untouched(tmp_path: Path) -> None:
-    with io.BytesIO() as rgb, io.BytesIO() as gray, io.BytesIO() as cmyk:
-        Image.new("RGB", (16, 16), color=(10, 200, 30)).save(rgb, format="JPEG")
-        Image.new("L", (16, 16), color=90).save(gray, format="JPEG")
-        Image.new("CMYK", (16, 16), color=(0, 255, 255, 0)).save(cmyk, format="JPEG")
-        payloads = {"val/a.JPEG": rgb.getvalue(), "val/b.JPEG": gray.getvalue(), "val/c.JPEG": cmyk.getvalue()}
+@pytest.mark.parametrize(
+    ("selection", "expected"),
+    [("first-sorted", ("a.JPEG", "b.JPEG")), ("first-sorted-non-cmyk", ("b.JPEG", "c.JPEG"))],
+)
+def test_shared_selection_excludes_cmyk_without_reencoding_other_jpegs(
+    tmp_path: Path, selection: str, expected: tuple[str, ...]
+) -> None:
+    payloads = {}
+    for name, mode in (("a.JPEG", "CMYK"), ("b.JPEG", "RGB"), ("c.JPEG", "L")):
+        stream = io.BytesIO()
+        Image.new(mode, (48, 32)).save(stream, format="JPEG")
+        payloads[name] = stream.getvalue()
     archive = tmp_path / "source.tar"
-    with tarfile.open(archive, "w") as tar:
+    with tarfile.open(archive, "w") as source:
         for name, payload in payloads.items():
-            info = tarfile.TarInfo(name)
-            info.size = len(payload)
-            tar.addfile(info, io.BytesIO(payload))
-    dataset = DatasetConfig(
-        archive_uri="gs://bucket/source.tar",
-        archive_sha256="a" * 64,
-        archive_member_prefix="val/",
-        archive_member_suffix=".JPEG",
-        item_count=3,
-        selection="first-sorted",
-        access_order="seeded-random-without-replacement",
+            member = tarfile.TarInfo("val/" + name)
+            member.size = len(payload)
+            source.addfile(member, io.BytesIO(payload))
+    config = DatasetConfig.model_validate(
+        {
+            "archive_uri": "gs://bucket/source.tar",
+            "archive_sha256": "a" * 64,
+            "archive_member_prefix": "val/",
+            "archive_member_suffix": ".JPEG",
+            "item_count": 2,
+            "selection": selection,
+            "access_order": "seeded-random-without-replacement",
+        }
     )
-
-    staged = materialize_rgb_dataset(archive=archive, dataset=dataset, cache_root=tmp_path / "cache")
-
-    modes = {path.name: Image.open(path).mode for path in staged.files}
-    assert modes == {"a.JPEG": "RGB", "b.JPEG": "L", "c.JPEG": "RGB"}
-    assert staged.files[0].read_bytes() == payloads["val/a.JPEG"]
-    assert staged.files[1].read_bytes() == payloads["val/b.JPEG"]
-    assert Image.open(staged.files[2]).convert("RGB").getpixel((8, 8))[0] > 200  # magenta plus yellow ink makes red
+    dataset = materialize_rgb_dataset(archive=archive, dataset=config, cache_root=tmp_path / "cache")
+    assert tuple(path.name for path in dataset.files) == expected
+    assert all(path.read_bytes() == payloads[path.name] for path in dataset.files)

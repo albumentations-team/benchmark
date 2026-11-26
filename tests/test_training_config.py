@@ -69,7 +69,7 @@ def test_training_configs_build_a_complete_matrix_that_fits_the_dataset(name: st
     assert config.training is not None
     assert config.training.model == name
     assert config.execution.batch_size == batch_size
-    assert config.dataset.item_count == 50_000
+    assert config.dataset.item_count == 49_999
     assert config.execution.required_items <= config.dataset.item_count
     assert len(cells) == 5 * (8 + 6 + 6 + 8)
     assert {cell.family for cell in cells} == {"imagenet_train"}

@@ -13,8 +13,8 @@ dataset:
   archive_sha256: 1a97eafff044ac04b5f222fa83a6a20d5f9946f053fee86fa4f1ce030c64c8a2
   archive_member_prefix: val/
   archive_member_suffix: .JPEG
-  item_count: 50000
-  selection: first-sorted
+  item_count: 49999
+  selection: first-sorted-non-cmyk
   access_order: seeded-random-without-replacement
 execution:
   batch_size: 128
