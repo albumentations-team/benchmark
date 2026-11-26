@@ -206,7 +206,7 @@ and Pillow (\CommonSpeedPillowCPU{}); these paths hold \CommonMemoryAlbumentatio
 \input{generated/fig-rgb-overview.tex}
 \caption{Images per second on the \CommonRecipeCount{} recipes all paths share, one dot per
 recipe; the bar marks each path's median, printed on the right. Right panel: median peak
-process GPU memory. Log scale.}
+process GPU memory.}
 \label{fig:overview}
 \end{figure}
 
@@ -240,10 +240,9 @@ by AX's, and its mark shows whether the seed interval can tell the two apart
 \begin{figure}[H]
 \centering
 \input{generated/fig-ax-pairs.tex}
-\caption{Throughput of each path divided by AX's on every recipe both support, log scale. The
-counts on the right are recipes where the path is faster, tied, or slower than AX; a recipe
-counts as tied when the exact interval over seeds includes 1. The number after each path is its
-count of shared recipes.}
+\caption{Throughput of each path divided by AX's on every recipe both support, one dot per recipe.
+A filled dot means the exact interval over seeds excludes 1; an open dot means the two are tied.
+The table on the right counts the shared recipes and the verdicts for each path.}
 \label{fig:pairs}
 \end{figure}
 
