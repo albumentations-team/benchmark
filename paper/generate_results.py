@@ -22,6 +22,7 @@ from augbench.recipes.load import load_recipe_catalog
 from augbench.result_store import decode_result
 from augbench.run_config import FamilyRunConfig
 from augbench.run_records import RunRecord, build_run_record
+from paper import figures
 from paper.intervals import RatioInterval, median_interval, ratio_interval
 
 if TYPE_CHECKING:
@@ -63,24 +64,6 @@ RGB_2D_COVERAGE_DOMAINS = frozenset({"dropout_or_multi_image", "geometry", "pixe
 
 
 @dataclass(frozen=True)
-class _PairwiseRow:
-    recipe: str
-    implementation: str
-    ax_speed: float
-    competitor_speed: float
-    ax_memory: float
-    competitor_memory: float
-
-    @property
-    def ratio(self) -> float:
-        return self.competitor_speed / self.ax_speed
-
-    @property
-    def memory_delta(self) -> float:
-        return self.competitor_memory - self.ax_memory
-
-
-@dataclass(frozen=True)
 class _PaperData:
     groups: dict[tuple[str, str], list[ResultRecord]]
     recipes: tuple[RecipeSpec, ...]
@@ -89,7 +72,6 @@ class _PaperData:
     implementations: tuple[tuple[str, str], ...]
     comparisons: tuple[tuple[str, tuple[str, ...]], ...]
     common: tuple[str, ...]
-    pairwise: dict[str, list[_PairwiseRow]]
     supplemental_runs: tuple[RunRecord, ...] = ()
 
 
@@ -102,11 +84,10 @@ def main() -> None:
     data, run, ax_run = load_report(args, root)
     args.output.mkdir(parents=True, exist_ok=True)
     _write_metrics(args.output / "metrics.tex", data)
-    write_plot_inputs(args.output, data)
+    write_figures(args.output, data)
     _write_csv(args.output / "recipe-results.csv", data)
     _write_recipe_catalog(args.output / "recipes.tex", data.recipes)
     _write_recipe_results(args.output / "recipe-results.tex", data)
-    _write_common_recipe_ratios(args.output / "common-recipe-ratios.tex", data)
     _write_versions(args.output / "versions.tex", data)
     _write_coverage(args.output, root / "catalog/operations.yaml")
     _write_sources(args.output / "sources.tex", run, ax_run, data.supplemental_runs)
@@ -118,6 +99,13 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--recipes", type=Path, help="full run's catalog; defaults to the repository catalog")
     parser.add_argument(
         "--ax-run", nargs=3, type=Path, metavar=("MANIFEST", "CELLS", "RECIPES"), help="optional AX-only rerun"
+    )
+    parser.add_argument(
+        "--ax-locks",
+        nargs=2,
+        type=Path,
+        metavar=("PRIMARY_LOCK", "AX_LOCK"),
+        help="RGB locks of the full run and the AX rerun when they differ; only the AlbumentationsX entry may change",
     )
     parser.add_argument(
         "--supplemental-run",
@@ -174,7 +162,7 @@ def load_report(args: argparse.Namespace, root: Path) -> tuple[_PaperData, RunRe
         supplemental_runs.append(decoder_run)
     ax_run = None
     if ax_run_inputs:
-        ax_run, ax_records = _load_ax_run(ax_run_inputs, run)
+        ax_run, ax_records = _load_ax_run(ax_run_inputs, run, getattr(args, "ax_locks", None))
         records = [record for record in records if record.cell.implementation != AX] + ax_records
     data = _prepare(records, recipes.recipes, tuple(supplemental_runs))
     if not data.common:
@@ -248,7 +236,14 @@ def _validate_combined_matrix(records: Sequence[ResultRecord], run: RunRecord, r
         raise ValueError("combined source runs do not form one complete RGB matrix without duplicate cells")
 
 
-def _load_ax_run(inputs: Sequence[Path], run: RunRecord) -> tuple[RunRecord, list[ResultRecord]]:
+def _load_ax_run(
+    inputs: Sequence[Path], run: RunRecord, locks: Sequence[Path] | None = None
+) -> tuple[RunRecord, list[ResultRecord]]:
+    """Replace the AX cells with an AX-only rerun of the same workload.
+
+    Each implementation runs in its own process, so a newer AX release leaves the other cells valid. The two RGB
+    locks may differ only in the AlbumentationsX entry, and the rerun's cells must record that version.
+    """
     manifest, cells, catalog = inputs
     ax_run = RunRecord.model_validate_json(manifest.read_bytes())
     if (
@@ -256,11 +251,38 @@ def _load_ax_run(inputs: Sequence[Path], run: RunRecord) -> tuple[RunRecord, lis
         or ax_run.hardware != run.hardware
         or ax_run.inputs.dataset_archive_sha256 != run.inputs.dataset_archive_sha256
         or ax_run.inputs.recipe_catalog_sha256 != run.inputs.recipe_catalog_sha256
-        or ax_run.inputs.environment_lock_sha256 != run.inputs.environment_lock_sha256
     ):
-        raise ValueError("AX rerun must use the same workload, hardware, and package locks")
-    recipes = _run_catalog(ax_run, catalog)
-    return ax_run, load_run_results(cells, ax_run, recipes)
+        raise ValueError("AX rerun must use the same workload, hardware, dataset, and recipes")
+    version = None
+    if ax_run.inputs.environment_lock_sha256 != run.inputs.environment_lock_sha256:
+        if locks is None:
+            raise ValueError("AX rerun uses another lock; pass --ax-locks so the generator can check the difference")
+        version = _ax_lock_version(run, ax_run, *locks)
+    records = load_run_results(cells, ax_run, _run_catalog(ax_run, catalog))
+    if version is not None and any(record.runtime.get("library_version") != version for record in records):
+        raise ValueError(f"AX rerun cells must record the locked AlbumentationsX {version}")
+    return ax_run, records
+
+
+def _ax_lock_version(primary: RunRecord, replacement: RunRecord, primary_lock: Path, ax_lock: Path) -> str:
+    base_hashes = primary.inputs.environment_lock_sha256
+    ax_hashes = replacement.inputs.environment_lock_sha256
+    original = primary_lock.read_bytes()
+    updated = ax_lock.read_bytes()
+    if (
+        hashlib.sha256(original).hexdigest() != base_hashes.get("rgb")
+        or hashlib.sha256(updated).hexdigest() != ax_hashes.get("rgb")
+        or {key: value for key, value in base_hashes.items() if key != "rgb"}
+        != {key: value for key, value in ax_hashes.items() if key != "rgb"}
+    ):
+        raise ValueError("supplied RGB locks must match the manifests and other package locks must agree")
+    entry = re.compile(rb"(?m)^albumentationsx==([^\s]+)[^\n]*\n(?:[ \t]+[^\n]*\n)*")
+    before, after = list(entry.finditer(original)), list(entry.finditer(updated))
+    if len(before) != 1 or len(after) != 1:
+        raise ValueError("each RGB lock must pin AlbumentationsX exactly once")
+    if entry.sub(b"", original) != entry.sub(b"", updated):
+        raise ValueError("AlbumentationsX must be the only change between the RGB locks")
+    return after[0][1].decode()
 
 
 def load_run_results(
@@ -324,37 +346,8 @@ def _prepare(
         implementations,
         comparisons,
         ordered,
-        _pairwise(speed, memory, support, comparisons),
         supplemental_runs,
     )
-
-
-def _pairwise(
-    speed: dict[tuple[str, str], float],
-    memory: dict[tuple[str, str], float],
-    support: dict[str, set[str]],
-    comparisons: tuple[tuple[str, tuple[str, ...]], ...],
-) -> dict[str, list[_PairwiseRow]]:
-    rows: dict[str, list[_PairwiseRow]] = {}
-    for family, implementations in comparisons:
-        available = set.union(*(support[implementation] for implementation in implementations))
-        family_rows = []
-        for recipe in sorted(support[AX] & available):
-            candidates = [implementation for implementation in implementations if (implementation, recipe) in speed]
-            # CPU precedes GPU in PAIRWISE, so max also gives CPU an exact tie.
-            fastest = max(candidates, key=lambda implementation: speed[(implementation, recipe)])
-            family_rows.append(
-                _PairwiseRow(
-                    recipe,
-                    fastest,
-                    speed[(AX, recipe)],
-                    speed[(fastest, recipe)],
-                    memory[(AX, recipe)],
-                    memory[(fastest, recipe)],
-                )
-            )
-        rows[family] = family_rows
-    return rows
 
 
 def _write_tex(path: Path, lines: Iterable[str]) -> None:
@@ -375,60 +368,21 @@ def _recipe_key(recipe: str, recipes: Sequence[RecipeSpec]) -> str:
     return f"R{next(index for index, item in enumerate(recipes, 1) if item.recipe_id == recipe):02d}"
 
 
+def _command(implementation: str) -> str:
+    return "AllSIMD" if implementation == PILLOW_ALLSIMD[0] else dict(IMPLEMENTATIONS)[implementation].replace(" ", "")
+
+
 def _write_metrics(path: Path, data: _PaperData) -> None:
-    common_means = _mean_ratios(data, [implementation for implementation, _ in data.implementations])
-    common_memories = _common_memories(data)
+    records = [record for group in data.groups.values() for record in group]
+    batch_size = _single({record.output.shape[0] for record in records})
     metrics = {
-        "ProductionCellCount": str(sum(map(len, data.groups.values()))),
+        "ProductionCellCount": f"{len(records):,}",
         "ProductionPairCount": str(len(data.groups)),
         "RecipeCount": str(len(data.recipes)),
         "CommonRecipeCount": str(len(data.common)),
-        "CommonMeanDaliRatio": f"{common_means['dali_gpu']:.2f}",
-    }
-    batch_size = _single({group[0].output.shape[0] for group in data.groups.values()})
-    metrics.update(_common_plot_metrics(data, common_memories, batch_size))
-    crop = next((recipe.recipe_id for recipe in data.recipes if recipe.augmentation_id == "RandomCrop224"), "")
-    for implementation, label in ((AX, "AX"), ("dali_gpu", "DALI")):
-        if (implementation, crop) in data.speed:
-            metrics[f"Crop{label}BatchRate"] = f"{data.speed[implementation, crop] / batch_size:.1f}"
-    for family, paths in data.comparisons:
-        compared = [AX, *paths]
-        metrics[f"Plot{family}Shared"] = str(len(_shared_recipes(data, compared)))
-    for family, rows in data.pairwise.items():
-        metrics[f"Pair{family}Shared"] = str(len(rows))
-        metrics[f"Pair{family}Wins"] = str(sum(row.ratio < 1 for row in rows))
-        if family == "DALI":
-            metrics["PairDALIFaster"] = str(sum(row.ratio > 1 for row in rows))
-            observations = [
-                (ax, dali)
-                for row in rows
-                for ax, dali in zip(data.groups[AX, row.recipe], data.groups["dali_gpu", row.recipe], strict=True)
-            ]
-            metrics["PairDALISeedCount"] = str(len(observations))
-            metrics["PairDALISeedFaster"] = str(
-                sum(dali.throughput.value > ax.throughput.value for ax, dali in observations)
-            )
-        metrics[f"Pair{family}Ratio"] = f"{median(row.ratio for row in rows):.2f}"
-        metrics[f"Pair{family}MemoryDelta"] = f"{median(row.memory_delta for row in rows):+,.0f}"
-    metrics["MemoryPollMs"] = str(
-        _single({record.gpu_memory.poll_interval_ms for group in data.groups.values() for record in group})
-    )
-    if PILLOW_ALLSIMD in data.implementations:
-        recipes, ratios = pillow_allsimd_ratios(data)
-        metrics["AllSIMDShared"] = str(len(recipes))
-        metrics["AllSIMDMeanRatio"] = f"{fmean(ratios):.2f}"
-        metrics["AllSIMDMedianRatio"] = f"{median(ratios):.2f}"
-        blur = next((recipe.recipe_id for recipe in data.recipes if recipe.augmentation_id == "MedianBlur"), None)
-        if blur is not None and blur in recipes:
-            metrics["AllSIMDMedianBlurRatio"] = f"{ratios[recipes.index(blur)]:.2f}"
-    for recipe in data.recipes:
-        if recipe.augmentation_id == "Shear":
-            metrics["AXShearSpeed"] = f"{data.speed[(AX, recipe.recipe_id)]:,.0f}"
-    _write_tex(path, (rf"\newcommand{{\{command}}}{{{value}}}" for command, value in metrics.items()))
-
-
-def _common_plot_metrics(data: _PaperData, common_memories: Mapping[str, float], batch_size: int) -> dict[str, str]:
-    metrics = {
+        "SeedCount": str(_single({len(group) for group in data.groups.values()})),
+        "BatchSize": str(batch_size),
+        "MemoryPollMs": str(_single({record.gpu_memory.poll_interval_ms for record in records})),
         "CommonDALIFastest": str(
             sum(
                 all(
@@ -440,20 +394,55 @@ def _common_plot_metrics(data: _PaperData, common_memories: Mapping[str, float],
             )
         ),
     }
-    for implementation, label in data.implementations:
-        command = "AllSIMD" if implementation == PILLOW_ALLSIMD[0] else label.replace(" ", "")
+    spreads = sorted(
+        (max(speeds) - min(speeds)) / median(speeds) for speeds in (_speeds(data, key) for key in data.groups)
+    )
+    metrics["SeedSpreadMedian"] = f"{100 * median(spreads):.1f}"
+    metrics["SeedSpreadNinety"] = f"{100 * spreads[int(0.9 * (len(spreads) - 1))]:.0f}"
+    for implementation, _ in data.implementations:
+        command = _command(implementation)
         speed = median(data.speed[implementation, recipe] for recipe in data.common)
-        memory = common_memories[implementation]
         metrics[f"CommonSpeed{command}"] = f"{speed:,.0f}"
-        metrics[f"CommonMemory{command}"] = f"{memory:,.0f}"
         metrics[f"CommonBatchRate{command}"] = f"{speed / batch_size:.1f}"
+        metrics[f"CommonMemory{command}"] = (
+            f"{median(data.memory[implementation, recipe] for recipe in data.common):,.0f}"
+        )
         baselines = [
-            [result.gpu_memory.baseline_mib for result in data.groups[implementation, recipe]] for recipe in data.common
+            record.gpu_memory.baseline_mib
+            for recipe in data.common
+            for record in data.groups[implementation, recipe]
+            if record.gpu_memory.baseline_mib is not None
         ]
-        if all(value is not None for group in baselines for value in group):
-            baseline = median(median(value for value in group if value is not None) for group in baselines)
-            metrics[f"CommonBaseline{command}"] = f"{baseline:,.0f}"
-    return metrics
+        if baselines:
+            metrics[f"CommonBaseline{command}"] = f"{median(baselines):,.0f}"
+        metrics[f"Recipes{command}"] = str(sum(key[0] == implementation for key in data.groups))
+        if implementation == AX:
+            continue
+        shared = _shared_recipes(data, [AX, implementation])
+        verdicts = [ratio_to_ax(data, implementation, recipe).verdict for recipe in shared]
+        metrics[f"Shared{command}"] = str(len(shared))
+        metrics[f"Faster{command}"] = str(verdicts.count("faster"))
+        metrics[f"Tied{command}"] = str(verdicts.count("indistinguishable"))
+        metrics[f"Slower{command}"] = str(verdicts.count("slower"))
+        metrics[f"MedianRatio{command}"] = (
+            f"{median(data.speed[implementation, r] / data.speed[AX, r] for r in shared):.2f}"
+        )
+    if PILLOW_ALLSIMD in data.implementations:
+        recipes, ratios = pillow_allsimd_ratios(data)
+        metrics["AllSIMDShared"] = str(len(recipes))
+        metrics["AllSIMDMedianRatio"] = f"{median(ratios):.2f}"
+        blur = next((recipe.recipe_id for recipe in data.recipes if recipe.augmentation_id == "MedianBlur"), None)
+        if blur is not None and blur in recipes:
+            metrics["AllSIMDMedianBlurRatio"] = f"{ratios[recipes.index(blur)]:.1f}"
+    _write_tex(path, (rf"\newcommand{{\{command}}}{{{value}}}" for command, value in metrics.items()))
+
+
+def write_figures(output: Path, data: _PaperData) -> None:
+    """Write the PGFPlots sources: the overview, every path against AX, and one AX comparison per library family."""
+    (output / "fig-rgb-overview.tex").write_text(figures.rgb_overview(data))
+    (output / "fig-ax-pairs.tex").write_text(figures.ax_pairs(data))
+    for family, paths in data.comparisons:
+        (output / f"fig-pairwise-{family.lower()}.tex").write_text(figures.ax_pairs(data, paths))
 
 
 def _shared_recipes(data: _PaperData, implementations: Sequence[str]) -> tuple[str, ...]:
@@ -471,73 +460,6 @@ def _speeds(data: _PaperData, key: tuple[str, str]) -> list[float]:
 def ratio_to_ax(data: _PaperData, implementation: str, recipe: str) -> RatioInterval:
     """Throughput ratio of one path to AX on one recipe, with its exact interval over seeds."""
     return ratio_interval(_speeds(data, (implementation, recipe)), _speeds(data, (AX, recipe)))
-
-
-def write_plot_inputs(output: Path, data: _PaperData) -> None:
-    batch_size = _single({group[0].output.shape[0] for group in data.groups.values()})
-    labels = dict(data.implementations)
-    labels.update(pillow_cpu="Pillow", pillow_allsimd_cpu="Pillow-AllSIMD (fast)", dali_gpu="DALI")
-    rates = {
-        path: median(data.speed[path, recipe] for recipe in data.common) / batch_size
-        for path, _ in data.implementations
-    }
-    memories = _common_memories(data)
-    ordered = sorted(rates, key=rates.__getitem__)
-    lines = [
-        rf"\def\DeliveryTopRow{{{len(ordered) - 1}}}",
-        rf"\def\DeliveryAXRate{{{rates[AX]:.8f}}}",
-        r"\def\DeliveryRows{%",
-    ]
-    for row, path in enumerate(ordered):
-        color = _rate_color(rates[path], rates[AX])
-        lines.append(
-            rf"\DeliveryRow{{{row}}}{{{_tex(labels[path])}}}{{{rates[path]:.8f}}}{{{memories[path]}}}{{{color}}}"
-        )
-    _write_tex(output / "delivery-rows.tex", [*lines, "}"])
-    _write_library_comparisons(output, data, batch_size)
-
-
-def _rate_color(rate: float, ax_rate: float) -> str:
-    if rate == ax_rate:
-        return "ratereference"
-    return "rateabove" if rate > ax_rate else "ratebelow"
-
-
-def _write_library_comparisons(output: Path, data: _PaperData, batch_size: int) -> None:
-    labels = dict(data.implementations)
-    labels.update(pillow_allsimd_cpu="Pillow-AllSIMD (fast)", dali_gpu="DALI")
-    for family, paths in data.comparisons:
-        compared = (AX, *paths)
-        recipes = _shared_recipes(data, compared)
-        keys = ", ".join(_recipe_key(recipe, data.recipes) for recipe in recipes)
-        rates = {path: median(data.speed[path, recipe] for recipe in recipes) / batch_size for path in compared}
-        ordered = sorted(compared, key=rates.__getitem__, reverse=True)
-        lines = [
-            rf"\def\ComparisonRecipes{{{keys}}}",
-            rf"\def\ComparisonTopRow{{{len(ordered) - 1}}}",
-            r"\def\ComparisonRows{%",
-        ]
-        for row, path in enumerate(reversed(ordered)):
-            rate = rates[path]
-            memory = median(data.memory[path, recipe] for recipe in recipes)
-            color = _rate_color(rate, rates[AX])
-            result = "" if path == AX else _recipe_winner(data, path, labels[path], recipes)
-            lines.append(
-                rf"\ComparisonBar{{{row}}}{{{_tex(labels[path])}}}{{{rate:.8f}}}"
-                rf"{{{memory:,.0f}}}{{{color}}}{{{_tex(result)}}}"
-            )
-        _write_tex(output / f"comparison-{family.lower()}.tex", [*lines, "}"])
-
-
-def _recipe_winner(data: _PaperData, path: str, label: str, recipes: Sequence[str]) -> str:
-    verdicts = [ratio_to_ax(data, path, recipe).verdict for recipe in recipes]
-    ax_wins = verdicts.count("slower")
-    path_wins = verdicts.count("faster")
-    tied = f", {verdicts.count('indistinguishable')} tied" if "indistinguishable" in verdicts else ""
-    if ax_wins == path_wins:
-        return f"{ax_wins} wins each{tied}" if ax_wins else "All recipes tied"
-    winner = "AX" if ax_wins > path_wins else label
-    return f"{winner} faster on {max(ax_wins, path_wins)}/{len(recipes)}{tied}"
 
 
 def pillow_allsimd_ratios(data: _PaperData) -> tuple[tuple[str, ...], list[float]]:
@@ -621,11 +543,6 @@ def _interval_columns(data: _PaperData, implementation: str, recipe: str) -> dic
 def _csv_row(group: list[ResultRecord], recipe: RecipeSpec, data: _PaperData) -> dict[str, object]:
     implementation = group[0].cell.implementation
     key = (implementation, recipe.recipe_id)
-    selected = any(
-        row.implementation == implementation and row.recipe == recipe.recipe_id
-        for rows in data.pairwise.values()
-        for row in rows
-    )
     run_ids = {record.run_id for record in group}
     row: dict[str, object] = {
         "run_id": _single(run_ids) if len(run_ids) == 1 else "",
@@ -634,7 +551,6 @@ def _csv_row(group: list[ResultRecord], recipe: RecipeSpec, data: _PaperData) ->
         "recipe_key": _recipe_key(recipe.recipe_id, data.recipes),
         "recipe_id": recipe.recipe_id,
         "common_intersection": recipe.recipe_id in data.common,
-        "selected_pairwise_path": selected,
         "throughput_median_images_s": data.speed[key],
         **_interval_columns(data, implementation, recipe.recipe_id),
         "gpu_memory_median_mib": data.memory[key],
@@ -718,47 +634,6 @@ def _write_recipe_results(path: Path, data: _PaperData) -> None:
             values = [median(speed), min(speed), max(speed), median(memory), min(memory), max(memory)]
             lines.append(rf"\hyperlink{{{key}}}{{{key}}} & " + " & ".join(f"{v:,.0f}" for v in values) + r" \\")
         lines.append(r"\bottomrule\end{longtable}")
-    _write_tex(path, lines)
-
-
-def _tie_mark(value: RatioInterval, mark: str) -> str:
-    return mark if value.verdict == "indistinguishable" else ""
-
-
-def _write_common_recipe_ratios(path: Path, data: _PaperData) -> None:
-    abbreviation = {
-        "Kornia CPU": "K-CPU",
-        "Kornia GPU": "K-GPU",
-        "Pillow": "PIL",
-        "Pillow-AllSIMD": "PIL-SIMD",
-        "TorchVision CPU": "TV-CPU",
-        "TorchVision GPU": "TV-GPU",
-    }
-    columns = tuple(
-        (implementation, abbreviation.get(label, label)) for implementation, label in _COMMON_RECIPE_RATIO_PATHS
-    )
-    seeds = len(data.groups[AX, data.common[0]])
-    lines = [
-        r"\begin{longtable}{P{3.6cm}rrrrrrr}",
-        (
-            r"\caption{Median throughput for each recipe divided by the AX median for that recipe. "
-            rf"Each median uses {seeds} seeds. A \(\approx\) marks a ratio whose exact 95\% interval over seeds "
-            r"includes 1.00.}\label{tab:common-throughput}\\"
-        ),
-        " & ".join([r"\textbf{Recipe}", *(rf"\textbf{{{label}}}" for _, label in columns)]) + r" \\ \midrule",
-        r"\endfirsthead",
-        " & ".join([r"\textbf{Recipe}", *(rf"\textbf{{{label}}}" for _, label in columns)]) + r" \\ \midrule",
-        r"\endhead",
-    ]
-    for index, recipe in enumerate(data.recipes, start=1):
-        if recipe.recipe_id not in data.common:
-            continue
-        key = f"R{index:02d}"
-        name = rf"\hyperlink{{{key}}}{{{key} {_name(recipe.augmentation_id)}}}"
-        ratios = [ratio_to_ax(data, implementation, recipe.recipe_id) for implementation, _ in columns]
-        cells = [f"{value.ratio:.2f}\\(\\times\\)" + _tie_mark(value, r"\(\approx\)") for value in ratios]
-        lines.append(name + " & " + " & ".join(cells) + r" \\")
-    lines.extend([r"\bottomrule", r"\end{longtable}"])
     _write_tex(path, lines)
 
 

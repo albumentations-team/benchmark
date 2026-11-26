@@ -82,24 +82,20 @@ def paper_data() -> paper._PaperData:
     return paper._prepare(list(reversed(records)), recipes)
 
 
-def test_pairwise_uses_recipe_medians_and_memory_from_the_selected_path(paper_data: paper._PaperData) -> None:
-    rows = {row.recipe: row for row in paper_data.pairwise["Kornia"]}
-    first, second, third = (rows[recipe.recipe_id] for recipe in paper_data.recipes)
-
-    assert (first.implementation, first.competitor_memory) == ("kornia_gpu", 1200)
-    assert (second.implementation, second.competitor_speed, second.competitor_memory) == ("kornia_cpu", 100, 5000)
-    assert (third.implementation, third.competitor_memory) == ("kornia_cpu", 2900)
-
-
-def test_summary_aggregates_paired_ratios_and_differences(tmp_path: Path, paper_data: paper._PaperData) -> None:
+def test_metrics_count_seed_verdicts_against_ax_and_report_neutral_medians(
+    tmp_path: Path, paper_data: paper._PaperData
+) -> None:
     output = tmp_path / "metrics.tex"
     paper._write_metrics(output, paper_data)
 
     metrics = output.read_text()
-    assert r"\newcommand{\PairKorniaRatio}{0.50}" in metrics
-    assert r"\newcommand{\PairKorniaMemoryDelta}{+200}" in metrics
-    assert r"\newcommand{\CropAXBatchRate}{0.8}" in metrics
-    assert r"\newcommand{\CropDALIBatchRate}{0.4}" in metrics
+    assert r"\newcommand{\MedianRatioKorniaCPU}{0.50}" in metrics
+    assert r"\newcommand{\FasterKorniaCPU}{0}" in metrics
+    assert r"\newcommand{\TiedKorniaCPU}{1}" in metrics
+    assert r"\newcommand{\SlowerKorniaCPU}{2}" in metrics
+    assert r"\newcommand{\SharedKorniaCPU}{3}" in metrics
+    assert r"\newcommand{\CommonSpeedAlbumentationsX}{200}" in metrics
+    assert r"\newcommand{\SeedCount}{3}" in metrics
 
 
 def test_common_mean_averages_recipe_ratios_with_equal_weight(paper_data: paper._PaperData) -> None:
@@ -118,7 +114,7 @@ def test_mean_uses_the_same_supported_recipes_for_cpu_and_gpu(paper_data: paper.
     assert means == pytest.approx({paper.AX: 1, "kornia_cpu": 0.75, "kornia_gpu": 1.2475})
 
 
-def test_csv_retains_seed_observations_and_marks_only_the_selected_path(
+def test_csv_retains_seed_observations_and_intervals(
     tmp_path: Path,
     paper_data: paper._PaperData,
 ) -> None:
@@ -130,19 +126,35 @@ def test_csv_retains_seed_observations_and_marks_only_the_selected_path(
     selected = next(row for row in rows if row["implementation"] == "kornia_cpu" and row["recipe_key"] == "R02")
 
     assert len(rows) == 24
-    assert second["selected_pairwise_path"] == "False"
-    assert selected["selected_pairwise_path"] == "True"
+    assert float(second["throughput_interval_low_images_s"]) == pytest.approx(1)
+    assert second["ratio_to_ax_verdict"] == "indistinguishable"
     assert [float(second[f"throughput_images_s_{seed}"]) for seed in (137, 138, 139)] == pytest.approx([1, 99, 99999])
     assert float(second["throughput_median_images_s"]) == pytest.approx(99)
     assert float(selected["gpu_memory_median_mib"]) == 5000
 
 
-def test_readme_updates_results_and_selection_without_replacing_manual_text(
+_TRAINING = {
+    "runs": [{"model": "resnet18", "batch_size": 256, "run_id": "f" * 64}],
+    "results": [
+        {
+            "model": "resnet18",
+            "recipe_id": "RandomResizedCrop+HorizontalFlip",
+            "implementation": implementation,
+            "ceiling_median": 1700.0,
+            "of_ceiling_median": share,
+            "images_per_second_median": 1700.0 * share,
+        }
+        for implementation, share in (("albumentationsx_cpu", 0.99), ("kornia_gpu", 0.5), ("torchvision_gpu", 0.6))
+    ],
+}
+
+
+def test_readme_updates_results_without_replacing_manual_text(
     paper_data: paper._PaperData,
     selected_run: RunRecord,
 ) -> None:
     template = "Cite this work.\n<!-- BEGIN GENERATED RESULTS -->\nstale\n<!-- END GENERATED RESULTS -->\nInstructions."
-    before = readme.replace_results(template, readme.readme_results(paper_data, selected_run))
+    before = readme.replace_results(template, readme.readme_results(paper_data, selected_run, _TRAINING))
     records = [
         record.model_copy(update={"throughput": Throughput(completed_items=8192, duration_seconds=8192 / 200)})
         if record.cell.implementation == "pillow_cpu"
@@ -151,15 +163,18 @@ def test_readme_updates_results_and_selection_without_replacing_manual_text(
         for record in group
     ]
     changed = paper._prepare(records, paper_data.recipes)
-    after = readme.replace_results(before, readme.readme_results(changed, selected_run))
+    after = readme.replace_results(before, readme.readme_results(changed, selected_run, _TRAINING))
 
-    assert "| Pillow CPU | test | 0.53\N{MULTIPLICATION SIGN}" in before
-    assert "| Pillow CPU | test | 1.07\N{MULTIPLICATION SIGN}" in after
-    assert "[per-seed results and manifests](docs/generated/results.json)" in after
-    assert "![AX vs Kornia on 3 shared recipes](docs/generated/pairwise-kornia.png)" in after
+    assert "| Pillow | test | 100 |" in before
+    assert "| Pillow | test | 200 |" in after
+    assert "| Kornia CPU | 3 | 0 | 1 | 2 | 0.50 |" in after
+    assert "| Kornia GPU | 50% (850) |" in after
+    assert "(docs/generated/ax-pairs.png)" in after
+    assert "AlbumentationsX keeps the step at 95% or more of that rate on every recipe." in after
+    assert "the others reach 50% (Kornia GPU) and 60% (TorchVision GPU)." in after
     assert after.startswith("Cite this work.\n")
     assert after.endswith("\nInstructions.")
-    assert readme.replace_results(after, readme.readme_results(changed, selected_run)) == after
+    assert readme.replace_results(after, readme.readme_results(changed, selected_run, _TRAINING)) == after
 
 
 def test_ax_rerun_replaces_only_ax_observations(
@@ -212,7 +227,7 @@ def test_ax_rerun_replaces_only_ax_observations(
         hardware=ax_run.hardware,
     )
     ax_manifest.write_text(mismatched.model_dump_json())
-    with pytest.raises(ValueError, match="same workload, hardware, and package locks"):
+    with pytest.raises(ValueError, match="another lock"):
         paper.load_report(args, tmp_path)
 
 
@@ -363,3 +378,49 @@ def test_figure_export_records_exact_generated_image_bytes_and_dimensions(tmp_pa
     }
     Image.new("RGB", (120, 80), "black").save(path)
     assert readme.export_figures(tmp_path, captions)["common-summary"]["sha256"] != figures["common-summary"]["sha256"]
+
+
+def _lock_runs(tmp_path: Path, original: bytes, updated: bytes) -> tuple[RunRecord, RunRecord, Path, Path]:
+    primary_lock = tmp_path / "primary.txt"
+    ax_lock = tmp_path / "ax.txt"
+    primary_lock.write_bytes(original)
+    ax_lock.write_bytes(updated)
+
+    def run(lock: bytes, implementations: list[str]) -> RunRecord:
+        return build_run_record(
+            family_config={"family": "rgb", "implementations": implementations},
+            inputs=RunInputs(
+                git_commit="a" * 40,
+                code_archive_sha256="b" * 64,
+                dataset_archive_sha256="c" * 64,
+                recipe_catalog_sha256="d" * 64,
+                environment_lock_sha256={"rgb": hashlib.sha256(lock).hexdigest(), "pillow_allsimd": "e" * 64},
+            ),
+            hardware={"machine_type": "g2-standard-16"},
+        )
+
+    return run(original, [paper.AX, "pillow_cpu"]), run(updated, [paper.AX]), primary_lock, ax_lock
+
+
+_LOCK = (
+    b"albucore==0.3.13 \\\n    --hash=sha256:aa\n"
+    b"albumentationsx==2.6.8 \\\n    --hash=sha256:bb\n    # via -r in\n"
+    b"numpy==2.5.5 \\\n    --hash=sha256:cc\n"
+)
+
+
+def test_ax_rerun_lock_may_change_only_the_albumentationsx_entry(tmp_path: Path) -> None:
+    updated = _LOCK.replace(
+        b"albumentationsx==2.6.8 \\\n    --hash=sha256:bb", b"albumentationsx==2.6.9 \\\n    --hash=sha256:dd"
+    )
+
+    assert paper._ax_lock_version(*_lock_runs(tmp_path, _LOCK, updated)) == "2.6.9"
+
+
+def test_ax_rerun_lock_rejects_any_other_change(tmp_path: Path) -> None:
+    updated = _LOCK.replace(b"albumentationsx==2.6.8", b"albumentationsx==2.6.9").replace(
+        b"numpy==2.5.5", b"numpy==2.5.6"
+    )
+
+    with pytest.raises(ValueError, match="only change"):
+        paper._ax_lock_version(*_lock_runs(tmp_path, _LOCK, updated))
