@@ -28,8 +28,10 @@ from paper.generate_results import (
     add_run_arguments,
     load_report,
     pillow_allsimd_ratios,
+    ratio_to_ax,
     write_plot_inputs,
 )
+from paper.intervals import median_interval
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -124,8 +126,28 @@ def export_results(
             records = data.groups[key]
             speeds = [record.throughput.value for record in records]
             memories = [record.gpu_memory.peak_mib for record in records]
+            interval = median_interval(speeds)
+            versus = None if implementation == AX else ratio_to_ax(data, implementation, recipe.recipe_id)
             results[implementation] = {
-                "throughput": {"median": data.speed[key], "min": min(speeds), "max": max(speeds)},
+                "throughput": {
+                    "median": data.speed[key],
+                    "min": min(speeds),
+                    "max": max(speeds),
+                    "interval": {"low": interval.low, "high": interval.high, "confidence": interval.confidence},
+                },
+                **(
+                    {
+                        "ratio_to_ax": {
+                            "ratio": versus.ratio,
+                            "low": versus.low,
+                            "high": versus.high,
+                            "confidence": versus.confidence,
+                            "verdict": versus.verdict,
+                        }
+                    }
+                    if versus
+                    else {}
+                ),
                 "gpu_memory": {"median": data.memory[key], "min": min(memories), "max": max(memories)},
                 "observations": [
                     {
@@ -199,9 +221,33 @@ def export_results(
         "libraries": libraries,
         "recipes": recipes,
         "summaries": summaries,
+        "ax_verdicts": _ax_verdicts(data),
         "pairwise_comparisons": pairwise_comparisons,
         "measurement_notes": measurement_notes,
     }
+
+
+def _ax_verdicts(data: _PaperData) -> list[dict[str, object]]:
+    """Count recipes where each path is faster, slower, or indistinguishable from AX over seeds."""
+    verdicts = []
+    for implementation, _ in data.implementations:
+        if implementation == AX:
+            continue
+        outcomes = [
+            ratio_to_ax(data, implementation, recipe.recipe_id).verdict
+            for recipe in data.recipes
+            if (implementation, recipe.recipe_id) in data.groups and (AX, recipe.recipe_id) in data.groups
+        ]
+        verdicts.append(
+            {
+                "id": implementation,
+                "recipes": len(outcomes),
+                "faster": outcomes.count("faster"),
+                "indistinguishable": outcomes.count("indistinguishable"),
+                "slower": outcomes.count("slower"),
+            }
+        )
+    return verdicts
 
 
 def replace_results(readme: str, generated: str) -> str:
@@ -309,8 +355,10 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
             "### Throughput ratio on each shared recipe",
             "",
             (
-                "Each value is the path's median throughput across three seeds divided by AX's median "
-                "for that recipe. A value above 1.00 means that path delivered batches faster than AX."
+                f"Each value is the path's median throughput across {len(execution.seeds)} seeds divided by AX's "
+                "median for that recipe. A value above 1.00 means that path delivered batches faster than AX. "
+                "A trailing \N{ALMOST EQUAL TO} marks a ratio whose exact 95% interval over seeds includes 1.00, "
+                "so the seeds cannot tell that path from AX."
             ),
             "",
             "| Shared recipe | " + " | ".join(label for _, label in ratio_paths) + " |",
@@ -321,17 +369,22 @@ def readme_results(data: _PaperData, run: RunRecord) -> str:
         if recipe.recipe_id not in data.common:
             continue
         key = f"R{index:02d}"
-        ratios = [
-            data.speed[(implementation, recipe.recipe_id)] / data.speed[(AX, recipe.recipe_id)]
-            for implementation, _ in ratio_paths
+        ratios = [ratio_to_ax(data, implementation, recipe.recipe_id) for implementation, _ in ratio_paths]
+        cells = [
+            f"{value.ratio:.2f}{' \N{ALMOST EQUAL TO}' if value.verdict == 'indistinguishable' else ''}"
+            for value in ratios
         ]
-        lines.append(f"| {key} {recipe.augmentation_id} | " + " | ".join(f"{value:.2f}" for value in ratios) + " |")
+        lines.append(f"| {key} {recipe.augmentation_id} | " + " | ".join(cells) + " |")
     lines.extend(
         [
             "",
             "### AlbumentationsX against each library",
             "",
-            "Each chart uses the recipes shared by every path it shows. Compare rows within each chart.",
+            (
+                "Each chart uses the recipes shared by every path it shows. Compare rows within each chart. "
+                "A per-recipe win needs an exact 95% interval over seeds that excludes equal throughput; "
+                "the remaining recipes are counted as tied."
+            ),
         ],
     )
     for family, _ in data.comparisons:

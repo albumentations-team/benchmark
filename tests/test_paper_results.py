@@ -325,7 +325,15 @@ def test_machine_export_uses_selected_run_and_the_readme_aggregates(
     assert result["measurement_count"] == 72
     assert result["gpu_memory_poll_ms"] == 50
     second = result["recipes"][1]["results"]["kornia_gpu"]
-    assert second["throughput"] == pytest.approx({"median": 99, "min": 1, "max": 99999})
+    assert {key: second["throughput"][key] for key in ("median", "min", "max")} == pytest.approx(
+        {"median": 99, "min": 1, "max": 99999}
+    )
+    assert second["throughput"]["interval"] == pytest.approx({"low": 1, "high": 99999, "confidence": 0.75})
+    assert second["ratio_to_ax"]["verdict"] == "indistinguishable"
+    assert "ratio_to_ax" not in result["recipes"][1]["results"][paper.AX]
+    assert {entry["id"] for entry in result["ax_verdicts"]} == {
+        implementation for implementation, _ in data.implementations if implementation != paper.AX
+    }
     assert second["gpu_memory"] == {"median": 100, "min": 100, "max": 100}
     assert [observation["seed"] for observation in second["observations"]] == [137, 138, 139]
     assert second["observations"][0]["cell_id"] == data.groups[("kornia_gpu", data.recipes[1].recipe_id)][0].cell_id

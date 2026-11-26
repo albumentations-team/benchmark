@@ -22,6 +22,7 @@ from augbench.recipes.load import load_recipe_catalog
 from augbench.result_store import decode_result
 from augbench.run_config import FamilyRunConfig
 from augbench.run_records import RunRecord, build_run_record
+from paper.intervals import RatioInterval, median_interval, ratio_interval
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -463,6 +464,15 @@ def _shared_recipes(data: _PaperData, implementations: Sequence[str]) -> tuple[s
     )
 
 
+def _speeds(data: _PaperData, key: tuple[str, str]) -> list[float]:
+    return [record.throughput.value for record in data.groups[key]]
+
+
+def ratio_to_ax(data: _PaperData, implementation: str, recipe: str) -> RatioInterval:
+    """Throughput ratio of one path to AX on one recipe, with its exact interval over seeds."""
+    return ratio_interval(_speeds(data, (implementation, recipe)), _speeds(data, (AX, recipe)))
+
+
 def write_plot_inputs(output: Path, data: _PaperData) -> None:
     batch_size = _single({group[0].output.shape[0] for group in data.groups.values()})
     labels = dict(data.implementations)
@@ -520,12 +530,14 @@ def _write_library_comparisons(output: Path, data: _PaperData, batch_size: int) 
 
 
 def _recipe_winner(data: _PaperData, path: str, label: str, recipes: Sequence[str]) -> str:
-    ax_wins = sum(data.speed[AX, recipe] > data.speed[path, recipe] for recipe in recipes)
-    path_wins = sum(data.speed[path, recipe] > data.speed[AX, recipe] for recipe in recipes)
+    verdicts = [ratio_to_ax(data, path, recipe).verdict for recipe in recipes]
+    ax_wins = verdicts.count("slower")
+    path_wins = verdicts.count("faster")
+    tied = f", {verdicts.count('indistinguishable')} tied" if "indistinguishable" in verdicts else ""
     if ax_wins == path_wins:
-        return f"{ax_wins} wins each" if ax_wins else "All recipes tied"
+        return f"{ax_wins} wins each{tied}" if ax_wins else "All recipes tied"
     winner = "AX" if ax_wins > path_wins else label
-    return f"{winner} faster on {max(ax_wins, path_wins)}/{len(recipes)}"
+    return f"{winner} faster on {max(ax_wins, path_wins)}/{len(recipes)}{tied}"
 
 
 def pillow_allsimd_ratios(data: _PaperData) -> tuple[tuple[str, ...], list[float]]:
@@ -588,6 +600,24 @@ def _write_sources(
     _write_tex(path, lines)
 
 
+def _interval_columns(data: _PaperData, implementation: str, recipe: str) -> dict[str, object]:
+    interval = median_interval(_speeds(data, (implementation, recipe)))
+    columns: dict[str, object] = {
+        "throughput_interval_low_images_s": interval.low,
+        "throughput_interval_high_images_s": interval.high,
+        "throughput_interval_confidence": interval.confidence,
+    }
+    versus = None if implementation == AX else ratio_to_ax(data, implementation, recipe)
+    columns.update(
+        ratio_to_ax=versus.ratio if versus else "",
+        ratio_to_ax_low=versus.low if versus else "",
+        ratio_to_ax_high=versus.high if versus else "",
+        ratio_to_ax_confidence=versus.confidence if versus else "",
+        ratio_to_ax_verdict=versus.verdict if versus else "",
+    )
+    return columns
+
+
 def _csv_row(group: list[ResultRecord], recipe: RecipeSpec, data: _PaperData) -> dict[str, object]:
     implementation = group[0].cell.implementation
     key = (implementation, recipe.recipe_id)
@@ -606,6 +636,7 @@ def _csv_row(group: list[ResultRecord], recipe: RecipeSpec, data: _PaperData) ->
         "common_intersection": recipe.recipe_id in data.common,
         "selected_pairwise_path": selected,
         "throughput_median_images_s": data.speed[key],
+        **_interval_columns(data, implementation, recipe.recipe_id),
         "gpu_memory_median_mib": data.memory[key],
         "recipe_stages_json": json.dumps(
             [stage.model_dump(mode="json") for stage in recipe.stages], separators=(",", ":")
@@ -690,6 +721,10 @@ def _write_recipe_results(path: Path, data: _PaperData) -> None:
     _write_tex(path, lines)
 
 
+def _tie_mark(value: RatioInterval, mark: str) -> str:
+    return mark if value.verdict == "indistinguishable" else ""
+
+
 def _write_common_recipe_ratios(path: Path, data: _PaperData) -> None:
     abbreviation = {
         "Kornia CPU": "K-CPU",
@@ -702,11 +737,13 @@ def _write_common_recipe_ratios(path: Path, data: _PaperData) -> None:
     columns = tuple(
         (implementation, abbreviation.get(label, label)) for implementation, label in _COMMON_RECIPE_RATIO_PATHS
     )
+    seeds = len(data.groups[AX, data.common[0]])
     lines = [
         r"\begin{longtable}{P{3.6cm}rrrrrrr}",
         (
             r"\caption{Median throughput for each recipe divided by the AX median for that recipe. "
-            r"Each median uses three seeds.}\label{tab:common-throughput}\\"
+            rf"Each median uses {seeds} seeds. A \(\approx\) marks a ratio whose exact 95\% interval over seeds "
+            r"includes 1.00.}\label{tab:common-throughput}\\"
         ),
         " & ".join([r"\textbf{Recipe}", *(rf"\textbf{{{label}}}" for _, label in columns)]) + r" \\ \midrule",
         r"\endfirsthead",
@@ -718,11 +755,9 @@ def _write_common_recipe_ratios(path: Path, data: _PaperData) -> None:
             continue
         key = f"R{index:02d}"
         name = rf"\hyperlink{{{key}}}{{{key} {_name(recipe.augmentation_id)}}}"
-        ratios = [
-            data.speed[(implementation, recipe.recipe_id)] / data.speed[(AX, recipe.recipe_id)]
-            for implementation, _ in columns
-        ]
-        lines.append(name + " & " + " & ".join(f"{value:.2f}\\(\\times\\)" for value in ratios) + r" \\")
+        ratios = [ratio_to_ax(data, implementation, recipe.recipe_id) for implementation, _ in columns]
+        cells = [f"{value.ratio:.2f}\\(\\times\\)" + _tie_mark(value, r"\(\approx\)") for value in ratios]
+        lines.append(name + " & " + " & ".join(cells) + r" \\")
     lines.extend([r"\bottomrule", r"\end{longtable}"])
     _write_tex(path, lines)
 
