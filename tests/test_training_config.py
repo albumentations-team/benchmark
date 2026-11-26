@@ -71,7 +71,7 @@ def test_training_configs_build_a_complete_matrix_that_fits_the_dataset(name: st
     assert config.execution.batch_size == batch_size
     assert config.dataset.item_count == 50_000
     assert config.execution.required_items <= config.dataset.item_count
-    assert len(cells) == 5 * (8 + 6 + 6)
+    assert len(cells) == 5 * (8 + 6 + 6 + 8)
     assert {cell.family for cell in cells} == {"imagenet_train"}
 
 
@@ -86,6 +86,8 @@ def test_training_recipes_reuse_the_rgb_catalog_stage_definitions() -> None:
     }
     for recipe in ladder:
         for stage in recipe.stages:
+            if stage.operation_id == "RandAugment":
+                continue  # the one operation that has no RGB-catalog donor
             donor = next(
                 s
                 for s in donors.get(stage.operation_id, rgb["Resize224"]).stages

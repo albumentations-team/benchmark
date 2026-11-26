@@ -4,21 +4,19 @@ import ast
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING
 from unittest.mock import Mock
+
+import pytest
 
 from augbench.adapters.dali.native import _apply_vertical_flip, supports_recipe
 from augbench.recipes.load import load_recipe_catalog
-
-if TYPE_CHECKING:
-    import pytest
 
 
 def test_recipe_factories_contain_only_current_image_operations() -> None:
     root = Path(__file__).parents[1]
     catalog_operations = {
         stage.operation_id
-        for family in ("rgb", "grayscale")
+        for family in ("rgb", "grayscale", "imagenet_train")
         for recipe in load_recipe_catalog(root / "catalog" / "recipes" / f"{family}.yaml").recipes
         for stage in recipe.stages
     }
@@ -34,8 +32,9 @@ def test_recipe_factories_contain_only_current_image_operations() -> None:
         assert factory_operations <= catalog_operations, filename
 
 
-def test_dali_stage_handlers_cover_the_supported_catalog_recipes() -> None:
-    recipes = load_recipe_catalog(Path(__file__).parents[1] / "catalog" / "recipes" / "rgb.yaml")
+@pytest.mark.parametrize("family", ["rgb", "imagenet_train"])
+def test_dali_stage_handlers_cover_the_supported_catalog_recipes(family: str) -> None:
+    recipes = load_recipe_catalog(Path(__file__).parents[1] / "catalog" / "recipes" / f"{family}.yaml")
     for recipe in recipes.recipes:
         if "dali_gpu" in recipe.supported_implementations:
             assert supports_recipe(recipe), recipe.recipe_id

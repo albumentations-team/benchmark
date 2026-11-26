@@ -87,8 +87,8 @@ def test_colorize_uses_real_grayscale_jpeg_input(tmp_path: Path, implementation:
     color = transform(sample)
     if implementation == "albumentationsx_cpu":
         assert sample.shape == (272, 248, 1)
-        assert color.shape == (224, 224, 3)
-        assert color[0, 0].tolist() == [8, 24, 64]
+        assert color.shape == (3, 224, 224)  # ToTensorV2 ends the AX Compose
+        assert color[:, 0, 0].tolist() == [8, 24, 64]
     else:
         assert color.shape == (3, 224, 224)
         assert color[:, 0, 0].tolist() == pytest.approx(

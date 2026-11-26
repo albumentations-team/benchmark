@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import io
 import random
-from math import exp, sqrt
+from math import ceil, exp, sqrt
 from typing import TYPE_CHECKING, Any
 
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
@@ -22,6 +22,7 @@ from augbench.implementations.geometry import (
     sample_perspective_coefficients,
     x_shear_matrix,
 )
+from augbench.implementations.randaugment import SIGNED, RandAugmentSpec
 from augbench.implementations.specs import odd_kernel_sizes, parameter_range
 
 if TYPE_CHECKING:
@@ -439,7 +440,55 @@ def _build_jpeg_compression(params: dict[str, Any]) -> Any | None:
     return _jpeg
 
 
+class _RandAugment:
+    """RandAugment from Pillow primitives: each call draws its own operations, with replacement."""
+
+    def __init__(self, spec: RandAugmentSpec) -> None:
+        self._spec = spec
+        self._fill = (int(spec.fill),) * 3
+        self._operations = {
+            "Identity": lambda image, _sign: image,
+            "ShearX": lambda image, sign: self._affine(image, (1, sign * spec.shear, 0, 0, 1, 0)),
+            "ShearY": lambda image, sign: self._affine(image, (1, 0, 0, sign * spec.shear, 1, 0)),
+            "TranslateX": lambda image, sign: self._affine(
+                image, (1, 0, -sign * int(spec.translate_fraction * image.width), 0, 1, 0)
+            ),
+            "TranslateY": lambda image, sign: self._affine(
+                image, (1, 0, 0, 0, 1, -sign * int(spec.translate_fraction * image.height))
+            ),
+            "Rotate": lambda image, sign: image.rotate(
+                sign * spec.rotate_degrees, resample=Image.Resampling.BILINEAR, fillcolor=self._fill
+            ),
+            "Brightness": lambda image, sign: ImageEnhance.Brightness(image).enhance(1 + sign * spec.enhance),
+            "Color": lambda image, sign: ImageEnhance.Color(image).enhance(1 + sign * spec.enhance),
+            "Contrast": lambda image, sign: ImageEnhance.Contrast(image).enhance(1 + sign * spec.enhance),
+            "Sharpness": lambda image, sign: ImageEnhance.Sharpness(image).enhance(1 + sign * spec.enhance),
+            "Posterize": lambda image, _sign: ImageOps.posterize(image, spec.posterize_bits),
+            "Solarize": lambda image, _sign: ImageOps.solarize(image, threshold=ceil(255 * spec.solarize_fraction)),
+            "AutoContrast": lambda image, _sign: ImageOps.autocontrast(image),
+            "Equalize": lambda image, _sign: ImageOps.equalize(image),
+        }
+        self._names = tuple(self._operations)
+
+    def _affine(self, image: Image.Image, coefficients: tuple[float, ...]) -> Image.Image:
+        return image.transform(
+            image.size, Image.Transform.AFFINE, coefficients, resample=Image.Resampling.BILINEAR, fillcolor=self._fill
+        )
+
+    def __call__(self, image: Image.Image) -> Image.Image:
+        for _ in range(self._spec.num_ops):
+            name = random.choice(self._names)
+            sign = random.choice((-1.0, 1.0)) if name in SIGNED else 1.0
+            image = self._operations[name](image, sign)
+        return image
+
+
+def _build_rand_augment(params: dict[str, Any]) -> Any:
+    return _RandAugment(RandAugmentSpec.from_params(params))
+
+
 _TRANSFORM_BUILDERS = {
+    "RandAugment": _build_rand_augment,
     "Resize": _build_resize,
     "CenterCrop": _build_center_crop,
     "Crop": _build_crop,

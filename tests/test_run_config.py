@@ -63,3 +63,12 @@ def test_each_seed_has_a_stable_random_access_order() -> None:
 def test_config_rejects_a_measurement_window_larger_than_the_dataset() -> None:
     with pytest.raises(ValueError, match="dataset"):
         source_order(item_count=32, required_items=33, seed=137)
+
+
+def test_ax_only_config_is_the_rgb_workload_on_one_implementation() -> None:
+    root = Path(__file__).parents[1] / "configs/families"
+    rgb = load_family_config(root / "rgb.yaml")
+    ax = load_family_config(root / "rgb-ax.yaml")
+
+    assert ax.implementations == ("albumentationsx_cpu",)
+    assert ax.model_dump(exclude={"implementations"}) == rgb.model_dump(exclude={"implementations"})

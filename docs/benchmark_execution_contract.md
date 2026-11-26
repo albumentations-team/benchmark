@@ -24,7 +24,8 @@ implement, test, and maintain.
 
 Each AX stage is one stock transform with its public parameters. The top-level `A.Compose` runs the
 stages listed in the catalog. Declare any required input preparation as its own stage.
-Keep `A.Lambda`, `A.OneOf`, and `A.Sequential` out of the AX adapter.
+Keep `A.Lambda`, `A.OneOf`, and `A.Sequential` out of the AX adapter. The one exception is the
+`RandAugment` stage of the training workload, which AX assembles as one `A.SomeOf` of stock transforms.
 AX owns image processing and parameter sampling for its path. Choose native transforms
 or functional operators in TorchVision and Kornia. Tune their parameters against the AX
 effect and retain their algorithms and kernel costs. Sample parameters in the adapter
@@ -226,8 +227,8 @@ contract. Each ready batch feeds one training step, and the cell reports the rat
 | Models | ResNet-18 (batch 256) and ResNet-50 (batch 128), `torchvision.models`, untrained |
 | Step | `torch.compile`, bfloat16 autocast without `GradScaler`, `channels_last`, fused SGD, cross-entropy on fixed random labels |
 | Window | 10 warm-up and 150 measured batches; 15 workers, prefetch 2, persistent workers, pinned memory |
-| Recipes | `RandomResizedCrop+HorizontalFlip`; `+ColorJitter`; `+ColorJitter+Erasing`. Stage definitions come from the RGB catalog. Pillow paths lack ColorJitter and Erasing |
-| Cells | 5 seeds × (8 + 6 + 6) pairs = 100 per run |
+| Recipes | `RandomResizedCrop+HorizontalFlip`; `+ColorJitter`; `+ColorJitter+Erasing`; `RandomResizedCrop+HorizontalFlip+RandAugment`. Stage definitions come from the RGB catalog. Pillow paths lack ColorJitter and Erasing |
+| Cells | 5 seeds × (8 + 6 + 6 + 8) pairs = 140 per run |
 
 The step runs on the delivered batch with no extra copy: the loader's normalized `float16` BCHW batch
 goes into autocast. The labels are random and fixed per seed because the cell measures speed. It makes no
@@ -243,6 +244,32 @@ A cell records, in one pass:
 - two GPU-memory peaks: the contract peak from pipeline construction to the end, and the peak after
   the ceiling phase, which leaves out the compilation spike;
 - a finite loss at the end of the window. A non-finite loss fails the cell.
+
+### RandAugment
+
+Every path applies two operations per image at magnitude 9 of 31 bins, with bilinear warps and zero fill.
+TorchVision (`v2.RandAugment`), Kornia (`kornia.augmentation.auto.RandAugment`), and DALI
+(`nvidia.dali.auto_aug.rand_augment`) run their native policy. AX and the two Pillow paths assemble it
+from stock operations: AX as one `A.SomeOf(n=2, replace=True)` in which each signed operation is an
+`A.OneOf` of its two signs, Pillow from `ImageOps`, `ImageEnhance`, and `Image.transform`.
+
+TorchVision, DALI, and the assembled paths share one pool of 14 operations (Identity, ShearX, ShearY,
+TranslateX, TranslateY, Rotate, Brightness, Color, Contrast, Sharpness, Posterize, Solarize, AutoContrast,
+Equalize), draw each operation with replacement, and pick the sign of a signed operation at random for each
+application. At this magnitude they give shear 0.09, translation 30 px, rotation 9°, enhancement factors
+1 ± 0.27, 7 posterize bits, and a solarize threshold at 70% of the maximum. The assembled paths take these
+values from TorchVision and a test checks each operation against TorchVision's output on a 224×224 image
+(mean absolute difference at most 1.5 of 255; the largest observed is 0.9).
+
+Differences that remain:
+
+- Kornia draws its operations without replacement from its own pool at one global magnitude (`m=9` of 30)
+  and one sequence per call, so the adapter calls it once per image.
+- AX shears about the image center and TorchVision about the top-left corner, so AX recenters the shear.
+  AX Sharpness is `UnsharpMask` with a signed alpha (supported since AX 2.6.9); its 3×3 Gaussian differs
+  slightly from Pillow's smoothing kernel.
+- TorchVision truncates the translation to whole pixels (30), DALI uses 100/224 of the side, and Equalize
+  differs between Pillow-style, OpenCV-style, and Kornia's own.
 
 The worker keeps one compiled model per process. Each cell restores the initial weights in place and starts
 a new optimizer, so compilation happens once per job. The VM keeps the Inductor cache for later jobs and

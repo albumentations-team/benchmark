@@ -6,9 +6,9 @@ albucore==0.3.13 \
     # via
     #   -r environments/rgb/requirements.in
     #   albumentationsx
-albumentationsx==2.6.8 \
-    --hash=sha256:39ded40dbbc25ec898c5d58de26d4eb077e83560b1b482142d9a905c21841300 \
-    --hash=sha256:7b7815f1e42b47b9f757a2564be0f67f78af2f495df0f50fd7667558f49fbf79
+albumentationsx==2.6.9 \
+    --hash=sha256:10e6f2fcb1a1018d2586d69c71a335fd0322603d9e08aa6fadeaf1a4ca9ec051 \
+    --hash=sha256:6e3584d2c9cce3ad0f1d3e9cca1ebd0476658a55443c204825d7cd926bf596de
     # via -r environments/rgb/requirements.in
 annotated-types==0.8.0 \
     --hash=sha256:13b2beaad985e05e2d6407ee4c4f35590b11f8d693a258a561055cac8f64cab7 \

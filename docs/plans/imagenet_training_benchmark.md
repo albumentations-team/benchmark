@@ -1,7 +1,7 @@
 # ImageNet training-step benchmark: implementation plan
 
-Status: Phase 0 and Phase 1 are implemented and pass the local tests. The L4 preflight has not run yet.
-Phase 2 (RandAugment) is open.
+Status: Phases 0, 1, and 2 are implemented and pass the local tests. The L4 preflight has not run yet.
+Task 2.1 added no `operations.yaml` entry: that census describes AX's public API and nothing reads it for recipes.
 
 ## Goal
 
@@ -30,8 +30,7 @@ Decisions from the design discussion, unchanged:
   1. `RandomResizedCrop+HorizontalFlip` (8 paths)
   2. `...+ColorJitter` (6 paths)
   3. `...+ColorJitter+Erasing` (6 paths)
-  4. `RandomResizedCrop+HorizontalFlip+RandAugment` (8 paths)
-  5. `RandomResizedCrop+HorizontalFlip+RandAugment+Erasing` (6 paths; the modern ImageNet recipe without MixUp)
+  4. `RandomResizedCrop+HorizontalFlip+RandAugment` (8 paths). A fifth recipe with Erasing was dropped by the owner.
 - RandAugment: use the library's native policy where one exists (TorchVision v2 `RandAugment`, Kornia
   `kornia.augmentation.auto.RandAugment`, DALI `nvidia.dali.auto_aug.rand_augment`). Assemble it where none
   exists (AlbumentationsX, Pillow, Pillow-AllSIMD). Shared parameters: 2 operations, magnitude 9 of 31 bins
@@ -107,7 +106,7 @@ Decisions from the design discussion, unchanged:
 - Modify: `recipe_contract.py` only if `validate_rgb_recipes` rejects the new family name; the
   stage rules stay.
 - Test: `tests/test_matrix.py` style test builds the matrix for each config: 100 cells per run
-  (5 seeds × (8 + 6 + 6)) after Phase 1 and 170 after Phase 2 (5 seeds × (8 + 6 + 6 + 8 + 6)); `required_items` (256 × 160 = 40,960; 128 × 160 = 20,480) does not
+  (5 seeds × (8 + 6 + 6)) after Phase 1 and 140 after Phase 2 (5 seeds × (8 + 6 + 6 + 8)); `required_items` (256 × 160 = 40,960; 128 × 160 = 20,480) does not
   exceed 50,000.
 
 **Task 1.3: measurement hooks**
@@ -166,7 +165,7 @@ Decisions from the design discussion, unchanged:
 
 ### Phase 2: RandAugment (native where it exists, assembled elsewhere)
 
-Phase 1 ships on its own. Phase 2 adds recipes 4 and 5 and one new operation, `RandAugment`.
+Phase 1 ships on its own. Phase 2 adds recipe 4 and one new operation, `RandAugment`.
 
 **Task 2.1: operation, parameters, contract rule**
 - Modify: `catalog/operations.yaml` (new operation `RandAugment`, domain `policy`, so the coverage census
@@ -190,8 +189,7 @@ Phase 1 ships on its own. Phase 2 adds recipes 4 and 5 and one new operation, `R
   replacement.
 - Modify: `implementations/albumentationsx_impl.py`: stage = `A.SomeOf(14 stock transforms, n=2, replace=True)`;
   a signed operation is `A.OneOf([op(+m), op(-m)])` so magnitude stays fixed; `Identity` is `A.NoOp`.
-  Write each operation's stock mapping into a table in the module. Record the mapping for Sharpness in
-  `docs/torchvision_kornia_adapters.md` style notes if the algorithm differs from Pillow's blend.
+  Write each operation's stock mapping into a table in the module. Sharpness is `UnsharpMask` with a signed alpha (AX #699, released in 2.6.9).
 - Modify: `implementations/pillow_impl.py` (shared by Pillow-AllSIMD): same table with `ImageOps` and
   `ImageEnhance` plus `Image.transform(AFFINE)`; operations and signs are drawn per image in the adapter.
 - Test (red first): a unit test pins the constants against `torchvision.transforms.v2.RandAugment` (skipped
@@ -235,9 +233,9 @@ Phase 1 ships on its own. Phase 2 adds recipes 4 and 5 and one new operation, `R
 - Test: handler registered in `_STAGE_HANDLERS`; the graph build stays Linux-only and runs in the L4
   preflight, where one batch must come out `uint8` HWC before normalization.
 
-**Task 2.6: recipes 4 and 5**
-- Modify: `catalog/recipes/imagenet_train.yaml` (recipes 4 and 5), configs unchanged.
-- Test: matrix tests expect 170 cells per run.
+**Task 2.6: recipe 4**
+- Modify: `catalog/recipes/imagenet_train.yaml` (recipe 4), configs unchanged.
+- Test: matrix tests expect 140 cells per run.
 
 **Task 2.7: documents**
 - Modify: `docs/benchmark_execution_contract.md` (RandAugment: native or assembled, shared parameters, the

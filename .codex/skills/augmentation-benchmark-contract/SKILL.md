@@ -39,7 +39,8 @@ model-only ceiling, loader wait, and two GPU-memory peaks.
 - Use stock AlbumentationsX transforms as the reference. Construct one AX transform
   per catalog stage. Its own sampler runs during execution. Use one top-level
   `A.Compose` for the declared recipe. Keep `A.Lambda`, `A.OneOf`, and `A.Sequential`
-  out of the AX adapter. Put required conversions in explicit catalog stages.
+  out of the AX adapter, except inside the training workload's `RandAugment` stage, which AX
+  assembles as one `A.SomeOf` of stock transforms. Put required conversions in explicit catalog stages.
 - Run native TorchVision and Kornia operators. Adjust their public parameters
   toward the AX effect. Add per-image sampling in the adapter when the operator
   accepts fixed values. Keep the native image operation.

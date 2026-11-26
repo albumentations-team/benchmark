@@ -210,3 +210,84 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - dali_gpu
+- recipe_id: RandomResizedCrop+HorizontalFlip+RandAugment
+  augmentation_id: RandAugment
+  channels: 3
+  stages:
+  - operation_id: RandomResizedCrop
+    parameters:
+      size:
+      - 224
+      - 224
+      width: 224
+      scale:
+      - 0.08
+      - 1.0
+      ratio:
+      - 0.75
+      - 1.3333333333333333
+      interpolation: bilinear
+      antialias: false
+    stochastic: true
+    randomness_scope: per-image
+  - operation_id: HorizontalFlip
+    parameters: {}
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: RandAugment
+    parameters:
+      num_ops: 2
+      magnitude: 9
+      num_magnitude_bins: 31
+      interpolation: bilinear
+      fill: 0
+      operations:
+      - Identity
+      - ShearX
+      - ShearY
+      - TranslateX
+      - TranslateY
+      - Rotate
+      - Brightness
+      - Color
+      - Contrast
+      - Sharpness
+      - Posterize
+      - Solarize
+      - AutoContrast
+      - Equalize
+    stochastic: true
+    randomness_scope: per-image
+  - operation_id: Normalize
+    parameters:
+      mean:
+      - 0.485
+      - 0.456
+      - 0.406
+      std:
+      - 0.229
+      - 0.224
+      - 0.225
+    stochastic: false
+    randomness_scope: deterministic
+  - operation_id: ToTensor
+    parameters:
+      layout: CHW
+      dtype: float16
+    stochastic: false
+    randomness_scope: deterministic
+  supported_libraries:
+  - albumentationsx
+  - torchvision
+  - kornia
+  - pillow
+  - dali
+  supported_implementations:
+  - albumentationsx_cpu
+  - torchvision_cpu
+  - torchvision_gpu
+  - kornia_cpu
+  - kornia_gpu
+  - pillow_cpu
+  - pillow_allsimd_cpu
+  - dali_gpu
