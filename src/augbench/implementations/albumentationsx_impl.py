@@ -1,11 +1,13 @@
 """AlbumentationsX transforms used by the active RGB recipe catalog."""
 
+from math import atan, degrees
 from typing import Any
 
 import albumentations
 import cv2
 
 from augbench.implementations.geometry import affine_axis_ranges
+from augbench.implementations.randaugment import OPERATIONS, SIGNED, RandAugmentSpec
 from augbench.implementations.specs import TransformSpec, parameter_range
 
 LIBRARY = "albumentationsx"
@@ -99,6 +101,66 @@ def _build_affine(params: dict[str, Any]) -> Any:
         fill=params.get("fill", 0),
         p=1,
     )
+
+
+def _build_rand_augment(params: dict[str, Any]) -> Any:
+    """RandAugment as one ``SomeOf`` of stock transforms; a signed operation picks its sign through ``OneOf``.
+
+    ``SomeOf`` applies the sampled operations in list order, which differs from the order drawn by the other paths.
+    """
+    spec = RandAugmentSpec.from_params(params)
+    operations = []
+    for name in _RAND_AUGMENT_OPERATIONS:
+        if name in SIGNED:
+            operations.append(
+                albumentations.OneOf([_rand_augment_operation(name, spec, sign) for sign in (1.0, -1.0)], p=1)
+            )
+        else:
+            operations.append(_rand_augment_operation(name, spec, 1.0))
+    return albumentations.SomeOf(operations, n=spec.num_ops, replace=True, p=1)
+
+
+def _rand_augment_operation(name: str, spec: RandAugmentSpec, sign: float) -> Any:
+    warp = {"interpolation": cv2.INTER_LINEAR, "border_mode": cv2.BORDER_CONSTANT, "fill": spec.fill, "p": 1}
+    enhance = (1 + sign * spec.enhance,) * 2
+    neutral = (1.0, 1.0)
+    shear = degrees(atan(sign * spec.shear))
+    # TorchVision shears about the top-left corner and AX about the center, so move the image back by the difference.
+    recenter = -sign * spec.shear / 2
+    return {
+        "Identity": lambda: albumentations.NoOp(p=1),
+        "ShearX": lambda: albumentations.Affine(
+            shear={"x": (shear, shear), "y": (0, 0)}, translate_percent={"x": (recenter, recenter), "y": (0, 0)}, **warp
+        ),
+        "ShearY": lambda: albumentations.Affine(
+            shear={"x": (0, 0), "y": (shear, shear)}, translate_percent={"x": (0, 0), "y": (recenter, recenter)}, **warp
+        ),
+        "TranslateX": lambda: albumentations.Affine(
+            translate_percent={"x": (sign * spec.translate_fraction,) * 2, "y": (0, 0)}, **warp
+        ),
+        "TranslateY": lambda: albumentations.Affine(
+            translate_percent={"x": (0, 0), "y": (sign * spec.translate_fraction,) * 2}, **warp
+        ),
+        "Rotate": lambda: albumentations.Affine(rotate=(sign * spec.rotate_degrees,) * 2, **warp),
+        "Brightness": lambda: albumentations.ColorJitter(
+            brightness_range=enhance, contrast_range=neutral, saturation_range=neutral, hue_range=(0, 0), p=1
+        ),
+        "Contrast": lambda: albumentations.ColorJitter(
+            brightness_range=neutral, contrast_range=enhance, saturation_range=neutral, hue_range=(0, 0), p=1
+        ),
+        "Color": lambda: albumentations.ColorJitter(
+            brightness_range=neutral, contrast_range=neutral, saturation_range=enhance, hue_range=(0, 0), p=1
+        ),
+        "Sharpness": lambda: albumentations.UnsharpMask(
+            blur_range=(3, 3), sigma_range=(0.0, 0.0), alpha_range=(sign * spec.enhance,) * 2, threshold=0, p=1
+        ),
+        "Posterize": lambda: albumentations.Posterize(num_bits=(spec.posterize_bits, spec.posterize_bits), p=1),
+        "Solarize": lambda: albumentations.Solarize(
+            threshold_range=(spec.solarize_fraction, spec.solarize_fraction), p=1
+        ),
+        "AutoContrast": lambda: albumentations.AutoContrast(method="pil", p=1),
+        "Equalize": lambda: albumentations.Equalize(mode="pil", p=1),
+    }[name]()
 
 
 def _build_perspective(params: dict[str, Any]) -> Any:
@@ -488,7 +550,10 @@ def _build_unsharp_mask(params: dict[str, Any]) -> Any | None:
     )
 
 
+_RAND_AUGMENT_OPERATIONS = OPERATIONS
+
 _TRANSFORM_BUILDERS = {
+    "RandAugment": _build_rand_augment,
     "Resize": _build_resize,
     "RandomCrop224": _build_random_crop224,
     "CenterCrop": _build_center_crop,

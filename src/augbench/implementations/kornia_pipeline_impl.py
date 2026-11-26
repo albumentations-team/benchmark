@@ -22,6 +22,7 @@ _FP32_GPU_STAGES = frozenset(
         "Erasing",
         "LinearIllumination",
         "Perspective",
+        "RandAugment",
         "ShiftScaleRotate",
         "ThinPlateSpline",
     }

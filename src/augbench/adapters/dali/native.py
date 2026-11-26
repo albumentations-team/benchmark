@@ -738,6 +738,22 @@ def _apply_erasing(data: Any, params: dict[str, Any], _output_height: int, _outp
     )
 
 
+def _apply_rand_augment(data: Any, params: dict[str, Any], output_height: int, output_width: int) -> Any:
+    """DALI's own policy: every sample draws its operations and signs inside the graph."""
+    from nvidia.dali import types
+    from nvidia.dali.auto_aug import rand_augment
+
+    return rand_augment.rand_augment(
+        data,
+        n=_integer(params, "num_ops"),
+        m=_integer(params, "magnitude"),
+        num_magnitude_bins=_integer(params, "num_magnitude_bins"),
+        shape=(output_height, output_width),
+        fill_value=_integer(params, "fill"),
+        interp_type=types.INTERP_LINEAR if params["interpolation"] == "bilinear" else types.INTERP_NN,
+    )
+
+
 def _apply_jpeg_compression(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
     from nvidia.dali import fn, types
 
@@ -799,6 +815,7 @@ _STAGE_HANDLERS = {
     "GaussianNoise": _apply_gaussian_noise,
     "SaltAndPepper": _apply_salt_and_pepper,
     "Erasing": _apply_erasing,
+    "RandAugment": _apply_rand_augment,
     "JpegCompression": _apply_jpeg_compression,
 }
 

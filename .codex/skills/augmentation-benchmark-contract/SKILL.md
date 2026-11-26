@@ -23,8 +23,11 @@ both primary outcomes:
 2. peak process GPU memory from pipeline construction through the final CUDA
    synchronization.
 
-Never create a memory-only, micro, H2D-only, training, capacity, or smoke
-matrix unless the user explicitly adds that research question.
+Never create a memory-only, micro, H2D-only, capacity, or smoke
+matrix unless the user explicitly adds that research question. The ImageNet
+training-step family (`imagenet_train`) is such an explicit addition, made on
+2026-11-26. It has its own contract section, one run per model, and records the
+model-only ceiling, loader wait, and two GPU-memory peaks.
 
 ## RGB workload and reference effect
 
@@ -36,7 +39,8 @@ matrix unless the user explicitly adds that research question.
 - Use stock AlbumentationsX transforms as the reference. Construct one AX transform
   per catalog stage. Its own sampler runs during execution. Use one top-level
   `A.Compose` for the declared recipe. Keep `A.Lambda`, `A.OneOf`, and `A.Sequential`
-  out of the AX adapter. Put required conversions in explicit catalog stages.
+  out of the AX adapter, except inside the training workload's `RandAugment` stage, which AX
+  assembles as one `A.SomeOf` of stock transforms. Put required conversions in explicit catalog stages.
 - Run native TorchVision and Kornia operators. Adjust their public parameters
   toward the AX effect. Add per-image sampling in the adapter when the operator
   accepts fixed values. Keep the native image operation.
@@ -56,18 +60,20 @@ matrix unless the user explicitly adds that research question.
   GPU normalization in FP16.
 - The timed output is CUDA `float16` BCHW `B×3×224×224`, materialized and
   synchronized. The catalog's `Normalize` and `ToTensor` entries configure the
-  batch output. The `Resize` image recipe contains only `Resize(224)`. AX stacks
-  HWC `uint8` images into a BHWC batch, transfers it, then changes the batch view
-  to BCHW on CUDA for `InputNormalizer`. Keep `ToTensorV2` out of AX image recipes.
+  batch output. The `Resize` image recipe contains only `Resize(224)`. The AX adapter
+  ends its `A.Compose` with `ToTensorV2`, so workers stack CHW `uint8` tensors into a
+  BCHW batch. The batch transfers as `uint8` and goes straight into `InputNormalizer`
+  on CUDA. The catalog does not list `ToTensorV2`.
 - Measure recipe execution, not `Compose` init or imports. Start the NVML
   process-memory monitor before pipeline construction.
 - Keep batch, workers, prefetch policy, recipe parameters, dataset ordering,
   hardware, and timing boundary identical across rows. Pairwise summaries use
   the exact supported recipe intersection; coverage is a separate census.
-- The VM runs each implementation in its own process through all of its recipes and
-  seeds. It writes every valid cell to GCS immediately. Resume validates those
-  immutable cells and runs only the missing ones. Keep each implementation on
-  one VM within a run.
+- A run uses up to `max_vms` L4 VMs. A job is one implementation and one seed. Each VM claims
+  the next unclaimed job with an atomic GCS object and runs it in its own process
+  through all its recipes, then claims another. Never split a job. Every valid cell goes
+  to GCS immediately. Resume validates those immutable cells, releases claims of vanished
+  VMs, and runs only the missing cells.
 - Grayscale Colorize starts with an offline-prepared one-channel JPEG archive. Measure
   native grayscale decode, crop, and Colorize, then normalize the RGB batch on CUDA.
   Keep this dataset and run identity separate from RGB.
@@ -82,9 +88,10 @@ matrix unless the user explicitly adds that research question.
 2. Validate the RGB config (including archive identity and selection), catalog, lock, and matrix.
 3. Verify output validation and the same-pass GPU-memory field in the result
    schema.
-4. Use `augbench launch-rgb`; it searches eligible zones, protects an active
-   labelled VM from duplication, and resumes only validated missing cells.
-5. If the VM exits before a cell, inspect its `runs/<run_id>/logs/` bootstrap
+4. Use `augbench launch-rgb`; it searches eligible zones, tops the fleet up to
+   `min(max_vms, pending jobs)` without duplicating active labelled VMs, and resumes
+   only validated missing cells.
+5. If a VM exits before a cell, inspect its `runs/<run_id>/logs/` bootstrap
    log; do not retry blindly.
 6. A new run may reclaim only terminal or suspended `augbench` VMs; never
    delete active VMs or GCS result artifacts.

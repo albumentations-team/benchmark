@@ -4,7 +4,6 @@ from argparse import Namespace
 from pathlib import Path
 
 import pytest
-import yaml
 from PIL import Image
 
 from augbench.recipes.load import load_recipe_catalog
@@ -27,6 +26,7 @@ from paper import generate_results as paper
 @pytest.fixture
 def selected_run() -> RunRecord:
     config = load_family_config(Path(__file__).parents[1] / "configs/families/rgb.yaml")
+    config = config.model_copy(update={"execution": config.execution.model_copy(update={"seeds": (137, 138, 139)})})
     return build_run_record(
         family_config=config.model_dump(mode="json"),
         inputs=RunInputs(
@@ -41,7 +41,7 @@ def selected_run() -> RunRecord:
 
 
 @pytest.fixture
-def paper_data() -> paper._PaperData:
+def paper_data(selected_run: RunRecord) -> paper._PaperData:
     catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
     recipes = (*catalog.recipes[:2], next(recipe for recipe in catalog.recipes if recipe.augmentation_id == "Shear"))
     observations = {
@@ -54,6 +54,10 @@ def paper_data() -> paper._PaperData:
         "kornia_cpu": (100, 5000, 2900),
         "kornia_gpu": (1200, 100, 100),
     }
+    measured_items = (
+        selected_run.family_config["execution"]["batch_size"]
+        * selected_run.family_config["execution"]["measured_batches"]
+    )
     records = []
     for implementation, _ in (*paper.IMPLEMENTATIONS, paper.PILLOW_ALLSIMD):
         for index, recipe in enumerate(recipes):
@@ -72,7 +76,7 @@ def paper_data() -> paper._PaperData:
                         run_id=paper.RUN_ID,
                         cell=cell,
                         status="ok",
-                        throughput=Throughput(completed_items=8192, duration_seconds=8192 / speed),
+                        throughput=Throughput(completed_items=measured_items, duration_seconds=measured_items / speed),
                         gpu_memory=GpuMemory(peak_mib=memory, poll_interval_ms=50, valid_samples=10),
                         output=OutputObservation(shape=(256, 3, 224, 224)),
                         runtime={"library_version": "test"},
@@ -81,24 +85,23 @@ def paper_data() -> paper._PaperData:
     return paper._prepare(list(reversed(records)), recipes)
 
 
-def test_pairwise_uses_recipe_medians_and_memory_from_the_selected_path(paper_data: paper._PaperData) -> None:
-    rows = {row.recipe: row for row in paper_data.pairwise["Kornia"]}
-    first, second, third = (rows[recipe.recipe_id] for recipe in paper_data.recipes)
-
-    assert (first.implementation, first.competitor_memory) == ("kornia_gpu", 1200)
-    assert (second.implementation, second.competitor_speed, second.competitor_memory) == ("kornia_cpu", 100, 5000)
-    assert (third.implementation, third.competitor_memory) == ("kornia_cpu", 2900)
-
-
-def test_summary_aggregates_paired_ratios_and_differences(tmp_path: Path, paper_data: paper._PaperData) -> None:
+def test_metrics_count_seed_verdicts_against_ax_and_report_neutral_medians(
+    tmp_path: Path, paper_data: paper._PaperData, selected_run: RunRecord
+) -> None:
     output = tmp_path / "metrics.tex"
-    paper._write_metrics(output, paper_data)
+    paper._write_metrics(output, paper_data, selected_run)
 
     metrics = output.read_text()
-    assert r"\newcommand{\PairKorniaRatio}{0.50}" in metrics
-    assert r"\newcommand{\PairKorniaMemoryDelta}{+200}" in metrics
-    assert r"\newcommand{\CropAXBatchRate}{0.8}" in metrics
-    assert r"\newcommand{\CropDALIBatchRate}{0.4}" in metrics
+    assert r"\newcommand{\MedianRatioKorniaCPU}{0.50}" in metrics
+    assert r"\newcommand{\FasterKorniaCPU}{0}" in metrics
+    assert r"\newcommand{\TiedKorniaCPU}{1}" in metrics
+    assert r"\newcommand{\SlowerKorniaCPU}{2}" in metrics
+    assert r"\newcommand{\SharedKorniaCPU}{3}" in metrics
+    assert r"\newcommand{\CommonSpeedAlbumentationsX}{200}" in metrics
+    assert r"\newcommand{\SeedCount}{3}" in metrics
+    assert r"\newcommand{\WarmupBatches}{30}" in metrics
+    assert r"\newcommand{\MeasuredBatches}{100}" in metrics
+    assert r"\newcommand{\DatasetFiles}{49,999}" in metrics
 
 
 def test_common_mean_averages_recipe_ratios_with_equal_weight(paper_data: paper._PaperData) -> None:
@@ -117,7 +120,7 @@ def test_mean_uses_the_same_supported_recipes_for_cpu_and_gpu(paper_data: paper.
     assert means == pytest.approx({paper.AX: 1, "kornia_cpu": 0.75, "kornia_gpu": 1.2475})
 
 
-def test_csv_retains_seed_observations_and_marks_only_the_selected_path(
+def test_csv_retains_seed_observations_and_intervals(
     tmp_path: Path,
     paper_data: paper._PaperData,
 ) -> None:
@@ -129,19 +132,37 @@ def test_csv_retains_seed_observations_and_marks_only_the_selected_path(
     selected = next(row for row in rows if row["implementation"] == "kornia_cpu" and row["recipe_key"] == "R02")
 
     assert len(rows) == 24
-    assert second["selected_pairwise_path"] == "False"
-    assert selected["selected_pairwise_path"] == "True"
+    assert float(second["throughput_interval_low_images_s"]) == pytest.approx(1)
+    assert second["ratio_to_ax_verdict"] == "indistinguishable"
     assert [float(second[f"throughput_images_s_{seed}"]) for seed in (137, 138, 139)] == pytest.approx([1, 99, 99999])
     assert float(second["throughput_median_images_s"]) == pytest.approx(99)
     assert float(selected["gpu_memory_median_mib"]) == 5000
 
 
-def test_readme_updates_results_and_selection_without_replacing_manual_text(
+_TRAINING = {
+    "runs": [
+        {"model": "resnet18", "batch_size": 256, "run_id": "f" * 64, "warmup_batches": 10, "measured_batches": 150}
+    ],
+    "results": [
+        {
+            "model": "resnet18",
+            "recipe_id": "RandomResizedCrop+HorizontalFlip",
+            "implementation": implementation,
+            "ceiling_median": 1700.0,
+            "of_ceiling_median": share,
+            "images_per_second_median": 1700.0 * share,
+        }
+        for implementation, share in (("albumentationsx_cpu", 0.99), ("kornia_gpu", 0.5), ("torchvision_gpu", 0.6))
+    ],
+}
+
+
+def test_readme_updates_results_without_replacing_manual_text(
     paper_data: paper._PaperData,
     selected_run: RunRecord,
 ) -> None:
     template = "Cite this work.\n<!-- BEGIN GENERATED RESULTS -->\nstale\n<!-- END GENERATED RESULTS -->\nInstructions."
-    before = readme.replace_results(template, readme.readme_results(paper_data, selected_run))
+    before = readme.replace_results(template, readme.readme_results(paper_data, selected_run, _TRAINING))
     records = [
         record.model_copy(update={"throughput": Throughput(completed_items=8192, duration_seconds=8192 / 200)})
         if record.cell.implementation == "pillow_cpu"
@@ -150,69 +171,18 @@ def test_readme_updates_results_and_selection_without_replacing_manual_text(
         for record in group
     ]
     changed = paper._prepare(records, paper_data.recipes)
-    after = readme.replace_results(before, readme.readme_results(changed, selected_run))
+    after = readme.replace_results(before, readme.readme_results(changed, selected_run, _TRAINING))
 
-    assert "| Pillow CPU | test | 0.53\N{MULTIPLICATION SIGN}" in before
-    assert "| Pillow CPU | test | 1.07\N{MULTIPLICATION SIGN}" in after
-    assert "[per-seed results and manifests](docs/generated/results.json)" in after
-    assert "![AX vs Kornia on 3 shared recipes](docs/generated/pairwise-kornia.png)" in after
+    assert "| Pillow | test | 100 |" in before
+    assert "| Pillow | test | 200 |" in after
+    assert "| Kornia CPU | 3 | 0 | 1 | 2 | 0.50 |" in after
+    assert "| Kornia GPU | 50% (850) |" in after
+    assert "(docs/generated/ax-pairs.png)" in after
+    assert "AlbumentationsX keeps the step at 95% or more of that rate on every recipe." in after
+    assert "the others reach 50% (Kornia GPU) and 60% (TorchVision GPU)." in after
     assert after.startswith("Cite this work.\n")
     assert after.endswith("\nInstructions.")
-    assert readme.replace_results(after, readme.readme_results(changed, selected_run)) == after
-
-
-def test_ax_rerun_replaces_only_ax_observations(
-    tmp_path: Path, paper_data: paper._PaperData, selected_run: RunRecord
-) -> None:
-    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog/recipes/rgb.yaml")
-    catalog_path = tmp_path / "rgb.yaml"
-    catalog_path.write_text(
-        yaml.safe_dump(catalog.model_copy(update={"recipes": paper_data.recipes}).model_dump(mode="json"))
-    )
-    inputs = selected_run.inputs.model_copy(
-        update={"recipe_catalog_sha256": hashlib.sha256(catalog_path.read_bytes()).hexdigest()}
-    )
-    run = build_run_record(family_config=selected_run.family_config, inputs=inputs, hardware=selected_run.hardware)
-    ax_run = build_run_record(
-        family_config={**run.family_config, "implementations": [paper.AX]},
-        inputs=inputs,
-        hardware=run.hardware,
-    )
-    run_manifest = tmp_path / "run.json"
-    run_manifest.write_text(run.model_dump_json())
-    ax_manifest = tmp_path / "ax.json"
-    ax_manifest.write_text(ax_run.model_dump_json())
-    full_cells = tmp_path / "full"
-    full_cells.mkdir()
-    ax_cells = tmp_path / "ax"
-    ax_cells.mkdir()
-    for (implementation, _), group in paper_data.groups.items():
-        for record in group:
-            _write_observation(full_cells, run, record)
-            if implementation == paper.AX:
-                _write_observation(ax_cells, ax_run, record)
-    args = Namespace(
-        run=run_manifest, cells=full_cells, recipes=catalog_path, ax_run=(ax_manifest, ax_cells, catalog_path)
-    )
-
-    report, _, replacement = paper.load_report(args, tmp_path)
-
-    assert replacement == ax_run
-    assert {(group[0].run_id, implementation) for (implementation, _), group in report.groups.items()} == {
-        (ax_run.run_id if implementation == paper.AX else run.run_id, implementation)
-        for implementation, _ in paper_data.implementations
-    }
-    assert {
-        record.cell_id for group in report.groups.values() for record in group if record.run_id == ax_run.run_id
-    } == {path.stem for path in ax_cells.glob("*.json")}
-    mismatched = build_run_record(
-        family_config=ax_run.family_config,
-        inputs=inputs.model_copy(update={"environment_lock_sha256": {"rgb": "e" * 64}}),
-        hardware=ax_run.hardware,
-    )
-    ax_manifest.write_text(mismatched.model_dump_json())
-    with pytest.raises(ValueError, match="same workload, hardware, and package locks"):
-        paper.load_report(args, tmp_path)
+    assert readme.replace_results(after, readme.readme_results(changed, selected_run, _TRAINING)) == after
 
 
 def _write_observation(directory: Path, run: RunRecord, record: ResultRecord) -> None:
@@ -257,11 +227,11 @@ def test_torchvision_gpu_replacement_allows_only_addition_of_torchcodec(
         assert paper._torchcodec_lock_version(*runs, old_lock, new_lock) == "0.17.0"
 
 
-def test_published_export_flag_excludes_ax_rerun(paper_data: paper._PaperData, selected_run: RunRecord) -> None:
+def test_published_export_flag_marks_the_published_run(paper_data: paper._PaperData, selected_run: RunRecord) -> None:
     published = selected_run.model_copy(update={"run_id": paper.RUN_ID})
 
     assert readme.export_results(paper_data, published)["is_published_run"] is True
-    assert readme.export_results(paper_data, published, ax_run=selected_run)["is_published_run"] is False
+    assert readme.export_results(paper_data, selected_run)["is_published_run"] is False
 
 
 def test_selected_run_rejects_missing_foreign_or_tampered_results(
@@ -324,7 +294,15 @@ def test_machine_export_uses_selected_run_and_the_readme_aggregates(
     assert result["measurement_count"] == 72
     assert result["gpu_memory_poll_ms"] == 50
     second = result["recipes"][1]["results"]["kornia_gpu"]
-    assert second["throughput"] == pytest.approx({"median": 99, "min": 1, "max": 99999})
+    assert {key: second["throughput"][key] for key in ("median", "min", "max")} == pytest.approx(
+        {"median": 99, "min": 1, "max": 99999}
+    )
+    assert second["throughput"]["interval"] == pytest.approx({"low": 1, "high": 99999, "confidence": 0.75})
+    assert second["ratio_to_ax"]["verdict"] == "indistinguishable"
+    assert "ratio_to_ax" not in result["recipes"][1]["results"][paper.AX]
+    assert {entry["id"] for entry in result["ax_verdicts"]} == {
+        implementation for implementation, _ in data.implementations if implementation != paper.AX
+    }
     assert second["gpu_memory"] == {"median": 100, "min": 100, "max": 100}
     assert [observation["seed"] for observation in second["observations"]] == [137, 138, 139]
     assert second["observations"][0]["cell_id"] == data.groups[("kornia_gpu", data.recipes[1].recipe_id)][0].cell_id

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "run_id": "03b5fd6c6fab74fd1029fc88012e03cb4b51d0a2e3c4b8be59ead6928efae6ee",
+  "run_id": "d84d75894f2a0b5ad879c5df1c06ca1ec82690486652c62ed50295a241e19a1a",
   "family_config": {
     "cloud": "configs/cloud/gcp-l4.yaml",
     "coverage_catalog": "catalog/operations.yaml",
@@ -10,12 +10,12 @@
       "archive_member_suffix": ".JPEG",
       "archive_sha256": "1a97eafff044ac04b5f222fa83a6a20d5f9946f053fee86fa4f1ce030c64c8a2",
       "archive_uri": "gs://imagenet_validation/imagenet/val.tar",
-      "item_count": 10000,
-      "selection": "first-sorted"
+      "item_count": 49999,
+      "selection": "first-sorted-non-cmyk"
     },
     "execution": {
       "batch_size": 256,
-      "measured_batches": 32,
+      "measured_batches": 100,
       "num_workers": 15,
       "persistent_workers": true,
       "prefetch_factor": 2,
@@ -23,9 +23,11 @@
       "seeds": [
         137,
         138,
-        139
+        139,
+        140,
+        141
       ],
-      "warmup_batches": 1
+      "warmup_batches": 30
     },
     "family": "rgb",
     "implementations": [
@@ -51,13 +53,13 @@
     "schema_version": 1
   },
   "inputs": {
-    "git_commit": "3859d9333fba8cb70ab40aef5c456b7336cf06f4",
-    "code_archive_sha256": "66ae0e7f87c69e9b732db75be67cf9eec3e6a51d39aa35a7fd05b49ddcda1f00",
+    "git_commit": "fd0981270dea5be638890b112c875447555e919d",
+    "code_archive_sha256": "10fb36cf4aebc7dad16036d258cc2181ba1147509f7b86fb6017c123c86f9a15",
     "dataset_archive_sha256": "1a97eafff044ac04b5f222fa83a6a20d5f9946f053fee86fa4f1ce030c64c8a2",
-    "recipe_catalog_sha256": "0a263bd00f0c4259708adb0e27a2b2ede5964d02b28f7628486795479f679d33",
+    "recipe_catalog_sha256": "2cbf6e7e1a030284dd5099bd2c15d408d2c067af8d84e1396d24226d4c896bf5",
     "environment_lock_sha256": {
       "pillow_allsimd": "d6d279fadead4b30426d96f4dfbfcdf77c4ae876b91d44915b20e20b1996cf8a",
-      "rgb": "1cab616c0eb4372ef87c62dcd154be514238a89550589e773704355af3418cdc"
+      "rgb": "597eec39911aa9ce3ef02b8f6a8d94ceaa202ae62bbd979322268ac0a4602eca"
     }
   },
   "hardware": {

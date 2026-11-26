@@ -18,19 +18,19 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class FrozenRgbRun:
+class FrozenRun:
     run: RunRecord
     request: GuestRequest
     cells: tuple[CellKey, ...]
 
 
-def build_frozen_rgb_run(
+def build_frozen_run(
     *,
     repository_root: Path,
     git_commit: str,
     code_archive_sha256: str,
     config: FamilyRunConfig | None = None,
-) -> FrozenRgbRun:
+) -> FrozenRun:
     """Resolve repository inputs once; no historic epoch or suite is involved."""
     if config is None:
         config = load_family_config(repository_root / "configs/families/rgb.yaml")
@@ -41,7 +41,7 @@ def build_frozen_rgb_run(
     recipe_sha256 = _sha256_file(recipes_path)
     lock_sha256 = _sha256_file(lock_path)
     run = build_run_record(
-        family_config=config.model_dump(mode="json", exclude={"measurements"} if config.measurements is None else None),
+        family_config=config.model_dump(mode="json", exclude=_unset_sections(config)),
         inputs=RunInputs(
             git_commit=git_commit,
             code_archive_sha256=code_archive_sha256,
@@ -75,7 +75,13 @@ def build_frozen_rgb_run(
         environment_python_version=cloud.python_version,
         pending_cell_ids=tuple(cell.cell_id for cell in cells),
     )
-    return FrozenRgbRun(run=run, request=request, cells=cells)
+    return FrozenRun(run=run, request=request, cells=cells)
+
+
+def _unset_sections(config: FamilyRunConfig) -> set[str]:
+    """Keep optional sections out of the run identity unless the config uses them."""
+    sections = {"measurements": config.measurements, "training": config.training}
+    return {name for name, value in sections.items() if value is None}
 
 
 def _sha256_file(path: Path) -> str:

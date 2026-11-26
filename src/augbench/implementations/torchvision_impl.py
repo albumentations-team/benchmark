@@ -335,7 +335,21 @@ def _build_photo_metric_distort(params: dict[str, Any]) -> Any | None:
     )
 
 
+def _build_rand_augment(params: dict[str, Any]) -> Any:
+    """TorchVision's own policy: each call draws its operations and signs independently."""
+    return tv_transforms.RandAugment(
+        num_ops=params["num_ops"],
+        magnitude=params["magnitude"],
+        num_magnitude_bins=params["num_magnitude_bins"],
+        interpolation=tv_transforms.InterpolationMode.BILINEAR
+        if params["interpolation"] == "bilinear"
+        else tv_transforms.InterpolationMode.NEAREST,
+        fill=params["fill"],
+    )
+
+
 _TRANSFORM_BUILDERS = {
+    "RandAugment": _build_rand_augment,
     "Resize": _build_resize,
     "RandomCrop224": _build_random_crop224,
     "CenterCrop": _build_center_crop,

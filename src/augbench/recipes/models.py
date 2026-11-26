@@ -43,7 +43,7 @@ class RecipeSpec(_RecipeModel):
 class RecipeCatalog(_RecipeModel):
     schema_version: Literal[1] = 1
     recipe_set_id: str = Field(min_length=1)
-    family: Literal["rgb", "grayscale"]
+    family: Literal["rgb", "grayscale", "imagenet_train"]
     recipes: tuple[RecipeSpec, ...] = Field(min_length=1)
 
     @model_validator(mode="after")

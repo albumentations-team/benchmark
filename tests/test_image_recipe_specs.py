@@ -129,6 +129,8 @@ def test_r63_pillow_uses_the_fixed_ax_channel_order() -> None:
 
 def test_ax_recipe_stages_are_stock_transforms() -> None:
     albumentations = pytest.importorskip("albumentations")
+    from albumentations.pytorch import ToTensorV2
+
     from augbench.implementations.albumentationsx_pipeline_impl import build_recipe
 
     catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog" / "recipes" / "rgb.yaml")
@@ -136,8 +138,10 @@ def test_ax_recipe_stages_are_stock_transforms() -> None:
         if "albumentationsx_cpu" not in recipe.supported_implementations:
             continue
         pipeline = build_recipe(recipe, "albumentationsx_cpu").cpu_transform
-        assert len(pipeline.transforms) == len(transform_specs(recipe)), recipe.recipe_id
-        for transform in pipeline.transforms:
+        *stages, to_tensor = pipeline.transforms
+        assert isinstance(to_tensor, ToTensorV2), recipe.recipe_id
+        assert len(stages) == len(transform_specs(recipe)), recipe.recipe_id
+        for transform in stages:
             assert isinstance(transform, albumentations.BasicTransform), (recipe.recipe_id, type(transform))
             assert type(transform).__module__.startswith("albumentations."), (recipe.recipe_id, type(transform))
             assert type(transform).__name__ != "Lambda", recipe.recipe_id
@@ -321,3 +325,23 @@ def test_perspective_maps_sampled_inner_points_to_the_output_canvas(
     result = transform(image.unsqueeze(0) if library == "kornia" else image)
 
     assert result.mean() > 0.99
+
+
+def test_ax_sample_is_a_chw_uint8_tensor_that_the_batch_normalizer_accepts_unpermuted() -> None:
+    pytest.importorskip("albumentations")
+    import torch
+
+    from augbench.implementations.albumentationsx_pipeline_impl import __call__ as call_recipe
+    from augbench.implementations.albumentationsx_pipeline_impl import build_recipe
+
+    catalog = load_recipe_catalog(Path(__file__).parents[1] / "catalog" / "recipes" / "rgb.yaml")
+    recipe = next(recipe for recipe in catalog.recipes if recipe.augmentation_id == "HorizontalFlip")
+    runtime = build_recipe(recipe, "albumentationsx_cpu")
+
+    image = np.arange(240 * 260 * 3, dtype=np.uint8).reshape(240, 260, 3)
+    samples = [call_recipe(runtime.cpu_transform, image) for _ in range(2)]
+    assert all(sample.dtype == torch.uint8 and tuple(sample.shape) == (3, 224, 224) for sample in samples)
+
+    output = runtime.gpu_transform(torch.stack(samples))
+    assert output.dtype == torch.float16
+    assert tuple(output.shape) == (2, 3, 224, 224)

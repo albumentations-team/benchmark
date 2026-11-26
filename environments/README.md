@@ -1,9 +1,10 @@
 # Benchmark environment
 
-`environments/rgb/requirements.in` declares the base production environment.
+`environments/rgb/requirements.in` declares the base production environment for every image family,
+including grayscale Colorize and the ImageNet training step.
 `environments/rgb/lock.txt` pins Linux x86-64 packages with hashes, including the
-PyPI build of PyTorch 2.15.0 with CUDA 13.2, Triton 3.9.0, AlbumentationsX 2.6.3,
-and Albucore 0.3.9.
+PyPI build of PyTorch 2.15.0 with CUDA 13.2, Triton 3.9.0, AlbumentationsX 2.6.9,
+and Albucore 0.3.13.
 
 Pillow-AllSIMD uses the same base packages. Bootstrap verifies
 `environments/rgb/pillow-allsimd.lock.txt` and installs its wheel into a

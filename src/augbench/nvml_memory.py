@@ -30,6 +30,7 @@ class NvmlProcessMemoryMonitor:
         self._thread: Thread | None = None
         self._peak_mib = 0.0
         self._baseline_mib: float | None = None
+        self._steady_peak_mib: float | None = None
         self._valid_samples = 0
 
     def start(self) -> None:
@@ -38,6 +39,19 @@ class NvmlProcessMemoryMonitor:
         self._baseline_mib = self._record_sample()
         self._thread = Thread(target=self._run, name="augbench-nvml-memory", daemon=True)
         self._thread.start()
+
+    def mark_steady(self) -> None:
+        """Start a second peak that ignores everything sampled up to this call."""
+        self._record_sample()
+        with self._lock:
+            self._steady_peak_mib = 0.0
+
+    @property
+    def steady_peak_mib(self) -> float:
+        with self._lock:
+            if self._steady_peak_mib is None:
+                raise RuntimeError("GPU memory monitor has no steady-state mark")
+            return self._steady_peak_mib
 
     def stop(self) -> GpuMemory:
         if self._thread is None:
@@ -62,12 +76,15 @@ class NvmlProcessMemoryMonitor:
             self._record_sample()
 
     def _record_sample(self) -> float | None:
-        value = self._sample_process_memory()
-        if value is None:
-            return None
+        # Read under the lock so that a sample taken before mark_steady() cannot be recorded after its reset.
         with self._lock:
+            value = self._sample_process_memory()
+            if value is None:
+                return None
             self._valid_samples += 1
             self._peak_mib = max(self._peak_mib, value)
+            if self._steady_peak_mib is not None:
+                self._steady_peak_mib = max(self._steady_peak_mib, value)
         return value
 
 

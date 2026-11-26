@@ -541,7 +541,13 @@ def _build_smallest_max_size(params: dict[str, Any]) -> Any | None:
     )
 
 
+def _build_rand_augment(params: dict[str, Any]) -> Any:
+    """Kornia's own policy. It draws one operation sequence per call, so call it once per image."""
+    return _PerImageJitter(kornia.augmentation.auto.RandAugment(n=params["num_ops"], m=params["magnitude"]))
+
+
 _TRANSFORM_BUILDERS = {
+    "RandAugment": _build_rand_augment,
     "ColorJitter": _build_color_jitter,
     "ColorJiggle": _build_color_jitter,
     "AutoContrast": _build_auto_contrast,

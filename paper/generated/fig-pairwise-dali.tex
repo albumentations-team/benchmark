@@ -1,0 +1,18 @@
+\begin{tikzpicture}
+\begin{axis}[width=10.5cm, xmode=log, xmin=0.006, xmax=5,
+  xtick={0.01,0.1,0.25,0.5,1,2,4}, xticklabels={0.01,0.1,0.25,0.5,1,2,4}, ytick={0,...,0}, yticklabels={DALI (51)}, ymin=-0.7, ymax=0.7,
+  height=2.15cm,
+  xlabel={Throughput of the path divided by AX on each shared recipe (log scale)},
+  legend style={at={(0.0,1.03)}, anchor=south west, draw=none, font=\footnotesize, legend columns=3,
+    /tikz/every even column/.append style={column sep=1.2em}}, axis lines*=left, y axis line style={draw=none}, ytick style={draw=none}, xmajorgrids, major grid style={black!10}, tick label style={font=\small}, label style={font=\small}, clip=false]
+\node[anchor=south west,font=\footnotesize\bfseries] at (axis cs:7,0.44999999999999996) {faster \textperiodcentered{} tied \textperiodcentered{} slower};
+\draw[black!50, densely dashed] (axis cs:1,-0.7) -- (axis cs:1,0.7);
+\addplot[only marks, mark=*, mark size=1.4pt, draw=verdictslower, fill=verdictslower] coordinates {};
+\addlegendentry{slower than AX}
+\addplot[only marks, mark=o, mark size=1.6pt, draw=black!60, fill=white] coordinates {};
+\addlegendentry{tied}
+\addplot[only marks, mark=triangle*, mark size=2.2pt, draw=verdictfaster, fill=verdictfaster] coordinates {(1.52065,-0.18) (1.74131,0.135) (1.83688,0.045) (1.75706,-0.045) (1.83598,-0.135) (1.49524,0.18) (2.02748,0.09) (1.87907,0) (1.6452,-0.09) (1.94056,-0.18) (1.8191,0.135) (1.82978,0.045) (1.91073,-0.045) (1.91215,-0.135) (2.59671,0.18) (1.76515,0.09) (1.79742,0) (1.82803,-0.09) (2.14767,-0.18) (1.82428,0.135) (2.06145,0.045) (1.83326,-0.045) (1.76854,-0.135) (2.51454,0.18) (1.86021,0.09) (1.87777,0) (1.84042,-0.09) (1.81388,-0.18) (2.16775,0.135) (1.86762,0.045) (1.94668,-0.045) (1.99708,-0.135) (1.94305,0.18) (1.76181,0.09) (1.8892,0) (1.77977,-0.09) (1.81756,-0.18) (1.77509,0.135) (1.55561,0.045) (1.5439,-0.045) (1.53829,-0.135) (1.48351,0.18) (1.58144,0.09) (1.56783,0) (1.57503,-0.09) (1.78517,-0.18) (1.60273,0.135) (1.63944,0.045) (1.63586,-0.045) (1.94119,-0.135) (1.67551,0.18)};
+\addlegendentry{faster than AX}
+\node[anchor=west,font=\footnotesize] at (axis cs:7,0) {51 \textperiodcentered{} 0 \textperiodcentered{} 0};
+\end{axis}
+\end{tikzpicture}

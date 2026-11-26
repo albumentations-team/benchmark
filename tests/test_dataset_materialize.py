@@ -4,6 +4,7 @@ import json
 import tarfile
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from augbench.dataset_materialize import materialize_rgb_dataset
@@ -58,3 +59,37 @@ def test_materialize_selects_sorted_jpegs_and_reuses_a_complete_cache(tmp_path: 
     assert not first.root.joinpath("val/b.JPEG").exists()
     assert not first.cache_hit
     assert second.cache_hit
+
+
+@pytest.mark.parametrize(
+    ("selection", "expected"),
+    [("first-sorted", ("a.JPEG", "b.JPEG")), ("first-sorted-non-cmyk", ("b.JPEG", "c.JPEG"))],
+)
+def test_shared_selection_excludes_cmyk_without_reencoding_other_jpegs(
+    tmp_path: Path, selection: str, expected: tuple[str, ...]
+) -> None:
+    payloads = {}
+    for name, mode in (("a.JPEG", "CMYK"), ("b.JPEG", "RGB"), ("c.JPEG", "L")):
+        stream = io.BytesIO()
+        Image.new(mode, (48, 32)).save(stream, format="JPEG")
+        payloads[name] = stream.getvalue()
+    archive = tmp_path / "source.tar"
+    with tarfile.open(archive, "w") as source:
+        for name, payload in payloads.items():
+            member = tarfile.TarInfo("val/" + name)
+            member.size = len(payload)
+            source.addfile(member, io.BytesIO(payload))
+    config = DatasetConfig.model_validate(
+        {
+            "archive_uri": "gs://bucket/source.tar",
+            "archive_sha256": "a" * 64,
+            "archive_member_prefix": "val/",
+            "archive_member_suffix": ".JPEG",
+            "item_count": 2,
+            "selection": selection,
+            "access_order": "seeded-random-without-replacement",
+        }
+    )
+    dataset = materialize_rgb_dataset(archive=archive, dataset=config, cache_root=tmp_path / "cache")
+    assert tuple(path.name for path in dataset.files) == expected
+    assert all(path.read_bytes() == payloads[path.name] for path in dataset.files)

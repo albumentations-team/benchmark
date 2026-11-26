@@ -1,12 +1,12 @@
 from pathlib import Path
 
-from augbench.frozen_rgb_run import build_frozen_rgb_run
+from augbench.frozen_run import build_frozen_run
 
 
-def test_frozen_rgb_run_resolves_config_locks_and_matrix() -> None:
+def test_frozen_run_resolves_config_locks_and_matrix() -> None:
     root = Path(__file__).parents[1]
 
-    frozen = build_frozen_rgb_run(
+    frozen = build_frozen_run(
         repository_root=root,
         git_commit="a" * 40,
         code_archive_sha256="b" * 64,
@@ -26,4 +26,4 @@ def test_frozen_rgb_run_resolves_config_locks_and_matrix() -> None:
         "boot_disk_size_gib": "350",
         "python_version": "3.13.14",
     }
-    assert len(frozen.cells) == 1263
+    assert len(frozen.cells) == 2105

@@ -11,25 +11,28 @@ import subprocess
 import tempfile
 from pathlib import Path
 from statistics import fmean, median
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from PIL import Image
 
 from augbench.run_config import FamilyRunConfig
+from paper.figures import LABELS
 from paper.generate_results import (
-    _COMMON_RECIPE_RATIO_PATHS,
     AX,
     PILLOW_ALLSIMD,
     RUN_ID,
-    _common_memories,
+    _dali_decode_metrics,
     _mean_ratios,
     _shared_recipes,
     _single,
     add_run_arguments,
     load_report,
     pillow_allsimd_ratios,
-    write_plot_inputs,
+    ratio_to_ax,
+    write_figures,
 )
+from paper.generate_training import recipe_label
+from paper.intervals import median_interval
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -45,11 +48,18 @@ def main() -> None:
     root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
     add_run_arguments(parser)
+    parser.add_argument(
+        "--training-results",
+        type=Path,
+        default=root / "docs/generated/training-results.json",
+        help="export written by paper.generate_training, which also writes the training figure source",
+    )
     args = parser.parse_args()
-    data, run, ax_run = load_report(args, root)
+    data, run = load_report(args, root)
+    training = json.loads(args.training_results.read_text())
     captions = figure_captions(data)
     readme = root / "README.md"
-    updated = replace_results(readme.read_text(), readme_results(data, run))
+    updated = replace_results(readme.read_text(), readme_results(data, run, training))
     with tempfile.TemporaryDirectory(prefix="augbench-readme-") as directory:
         staging = Path(directory)
         render_figures(staging, root / "paper", data)
@@ -61,7 +71,7 @@ def main() -> None:
         (destination / "results.json").write_text(
             json.dumps(
                 {
-                    **export_results(data, run, ax_run, data.supplemental_runs),
+                    **export_results(data, run, data.supplemental_runs),
                     "figures": export_figures(staging, captions),
                 },
                 indent=2,
@@ -87,16 +97,19 @@ def export_figures(directory: Path, captions: Mapping[str, str]) -> dict[str, di
     return figures
 
 
+# Each implementation, or each implementation and seed, ran in its own worker process.
+_ISOLATED_SCOPES = {"implementation", "implementation_seed"}
+
+
 def _isolated_workers(data: _PaperData) -> bool:
     return all(
-        record.runtime.get("worker_scope") == "implementation" for records in data.groups.values() for record in records
+        record.runtime.get("worker_scope") in _ISOLATED_SCOPES for records in data.groups.values() for record in records
     )
 
 
 def export_results(
     data: _PaperData,
     run: RunRecord,
-    ax_run: RunRecord | None = None,
     supplemental_runs: tuple[RunRecord, ...] = (),
 ) -> dict[str, object]:
     libraries = [
@@ -124,8 +137,28 @@ def export_results(
             records = data.groups[key]
             speeds = [record.throughput.value for record in records]
             memories = [record.gpu_memory.peak_mib for record in records]
+            interval = median_interval(speeds)
+            versus = None if implementation == AX else ratio_to_ax(data, implementation, recipe.recipe_id)
             results[implementation] = {
-                "throughput": {"median": data.speed[key], "min": min(speeds), "max": max(speeds)},
+                "throughput": {
+                    "median": data.speed[key],
+                    "min": min(speeds),
+                    "max": max(speeds),
+                    "interval": {"low": interval.low, "high": interval.high, "confidence": interval.confidence},
+                },
+                **(
+                    {
+                        "ratio_to_ax": {
+                            "ratio": versus.ratio,
+                            "low": versus.low,
+                            "high": versus.high,
+                            "confidence": versus.confidence,
+                            "verdict": versus.verdict,
+                        }
+                    }
+                    if versus
+                    else {}
+                ),
                 "gpu_memory": {"median": data.memory[key], "min": min(memories), "max": max(memories)},
                 "observations": [
                     {
@@ -189,9 +222,8 @@ def export_results(
     return {
         "schema_version": 2,
         "run": run.model_dump(mode="json"),
-        **({"ax_run": ax_run.model_dump(mode="json")} if ax_run else {}),
         "supplemental_runs": [source.model_dump(mode="json") for source in supplemental_runs],
-        "is_published_run": ax_run is None and not supplemental_runs and run.run_id == RUN_ID,
+        "is_published_run": not supplemental_runs and run.run_id == RUN_ID,
         "measurement_count": sum(map(len, data.groups.values())),
         "gpu_memory_poll_ms": _single(
             {record.gpu_memory.poll_interval_ms for records in data.groups.values() for record in records}
@@ -199,9 +231,33 @@ def export_results(
         "libraries": libraries,
         "recipes": recipes,
         "summaries": summaries,
+        "ax_verdicts": _ax_verdicts(data),
         "pairwise_comparisons": pairwise_comparisons,
         "measurement_notes": measurement_notes,
     }
+
+
+def _ax_verdicts(data: _PaperData) -> list[dict[str, object]]:
+    """Count recipes where each path is faster, slower, or indistinguishable from AX over seeds."""
+    verdicts = []
+    for implementation, _ in data.implementations:
+        if implementation == AX:
+            continue
+        outcomes = [
+            ratio_to_ax(data, implementation, recipe.recipe_id).verdict
+            for recipe in data.recipes
+            if (implementation, recipe.recipe_id) in data.groups and (AX, recipe.recipe_id) in data.groups
+        ]
+        verdicts.append(
+            {
+                "id": implementation,
+                "recipes": len(outcomes),
+                "faster": outcomes.count("faster"),
+                "indistinguishable": outcomes.count("indistinguishable"),
+                "slower": outcomes.count("slower"),
+            }
+        )
+    return verdicts
 
 
 def replace_results(readme: str, generated: str) -> str:
@@ -212,169 +268,237 @@ def replace_results(readme: str, generated: str) -> str:
     return before + _BEGIN + "\n\n" + generated.rstrip() + "\n\n" + _END + after
 
 
-def readme_results(data: _PaperData, run: RunRecord) -> str:
+def _versions(data: _PaperData) -> dict[str, str]:
+    return {
+        implementation: _single(
+            {
+                record.runtime["library_version"]
+                for (path, _), group in data.groups.items()
+                if path == implementation
+                for record in group
+            }
+        )
+        for implementation, _ in data.implementations
+    }
+
+
+def readme_results(data: _PaperData, run: RunRecord, training: Mapping[str, object]) -> str:
     config = FamilyRunConfig.model_validate(run.family_config)
-    execution = config.execution
-    means = _mean_ratios(data, [implementation for implementation, _ in data.implementations])
-    memories = _common_memories(data)
-    labels = dict(data.implementations)
-    labels[AX] = "AlbumentationsX CPU"
-    count = len(data.common)
     captions = figure_captions(data)
-    isolated_workers = _isolated_workers(data)
-    pillow_variant_note = None
-    if any(implementation == PILLOW_ALLSIMD[0] for implementation, _ in data.implementations):
-        shared, speedups = pillow_allsimd_ratios(data)
-        pillow_variant_note = (
-            f"Across {len(shared)} shared recipes, Pillow-AllSIMD was {fmean(speedups):.2f}\N{MULTIPLICATION SIGN} "
-            f"as fast as Pillow on average, with a {median(speedups):.2f}\N{MULTIPLICATION SIGN} median ratio."
-        )
-        median_blur = next(
-            (
-                (index, recipe)
-                for index, recipe in enumerate(data.recipes, 1)
-                if recipe.augmentation_id == "MedianBlur" and recipe.recipe_id in shared
-            ),
-            None,
-        )
-        if median_blur is not None:
-            index, recipe = median_blur
-            ratio = data.speed[(PILLOW_ALLSIMD[0], recipe.recipe_id)] / data.speed[("pillow_cpu", recipe.recipe_id)]
-            pillow_variant_note += f" Its R{index:02} MedianBlur ratio was {ratio:.2f}\N{MULTIPLICATION SIGN}."
+    versions = _versions(data)
+    paths = [implementation for implementation, _ in data.implementations]
+    common = {path: [data.speed[path, recipe] for recipe in data.common] for path in paths}
+    memory = {path: median(data.memory[path, recipe] for recipe in data.common) for path in paths}
     lines = [
-        "## RGB results",
+        "## Results",
+        "",
+        *_key_results(data, common, memory, training),
         "",
         (
-            f"{sum(map(len, data.groups.values()))} measurements across {len(data.groups)} "
-            f"implementation\N{EN DASH}recipe pairs, with {len(execution.seeds)} seeds per pair. "
-            "See the [per-seed results and manifests](docs/generated/results.json)."
+            f"{sum(map(len, data.groups.values())):,} input-pipeline measurements cover {len(data.groups)} "
+            f"path\N{EN DASH}recipe pairs with {len(config.execution.seeds)} seeds each. Every measurement "
+            "records throughput and peak process GPU memory in the same pass. "
+            "[Per-seed results](docs/generated/results.json) \N{MIDDLE DOT} "
+            "[training-step results](docs/generated/training-summary.md)"
+        ),
+        "",
+        "### Input pipeline alone",
+        "",
+        (
+            "The timer runs from JPEG files on local disk to a normalized CUDA `float16` batch of "
+            f"{_TIMES.join(map(str, (config.execution.batch_size, *config.output.shape)))}. "
+            "Each path uses its own decoder and places its work on the CPU or the GPU."
         ),
         "",
         _image("common-summary", captions["common-summary"]),
         "",
-        "### Mean per-recipe throughput ratios",
+        f"Medians over the {len(data.common)} recipes that all eight paths support:",
         "",
-        (
-            f"All rows below use the same {count} recipes. Throughput is the arithmetic mean of per-recipe ratios: "
-            f"each path's median over {len(execution.seeds)} seeds divided by AX's median for that recipe. "
-            "GPU memory is the median of those recipes' peak-memory medians."
-        ),
-        "",
-        (
-            "| Measured path | Version | Mean throughput / AX (higher is faster) | "
-            "Peak process GPU memory (MiB, lower is better) |"
-        ),
-        "| --- | --- | ---: | ---: |",
+        "| Path | Version | Images/s | Slowest to fastest recipe | Peak GPU memory (MiB) |",
+        "| --- | --- | ---: | ---: | ---: |",
     ]
-    for implementation in sorted(means, key=means.__getitem__, reverse=True):
-        version = _single(
-            {
-                record.runtime["library_version"]
-                for (impl, _), records in data.groups.items()
-                if impl == implementation
-                for record in records
-            }
-        )
+    lines.extend(
+        f"| {LABELS[path]} | {versions[path]} | {median(common[path]):,.0f} | "
+        f"{min(common[path]):,.0f}\N{EN DASH}{max(common[path]):,.0f} | {memory[path]:,.0f} |"
+        for path in sorted(paths, key=lambda path: -median(common[path]))
+    )
+    lines += [
+        "",
+        "### Each path against AlbumentationsX",
+        "",
+        (
+            "The author maintains AlbumentationsX (AX), and AX transforms define the reference effect of each recipe. "
+            "This section therefore compares every path with AX on the recipes both support. A recipe counts as "
+            "faster or slower only when the exact 95% interval over seeds excludes equal throughput; the rest are "
+            "tied."
+        ),
+        "",
+        _image("ax-pairs", captions["ax-pairs"]),
+        "",
+        "| Path | Shared recipes | Path faster | Tied | AX faster | Median ratio, path / AX |",
+        "| --- | ---: | ---: | ---: | ---: | ---: |",
+    ]
+
+    def typical_ratio(path: str) -> float:
+        return median(data.speed[path, recipe] / data.speed[AX, recipe] for recipe in _shared_recipes(data, [AX, path]))
+
+    for path in sorted((path for path in paths if path != AX), key=typical_ratio, reverse=True):
+        shared = _shared_recipes(data, [AX, path])
+        verdicts = [ratio_to_ax(data, path, recipe).verdict for recipe in shared]
+        ratio = median(data.speed[path, recipe] / data.speed[AX, recipe] for recipe in shared)
         lines.append(
-            f"| {labels[implementation]} | {version} | "
-            f"{means[implementation]:.2f}\N{MULTIPLICATION SIGN} | {memories[implementation]:,.0f}"
-            f"{'†' if implementation == PILLOW_ALLSIMD[0] and not isolated_workers else ''} |"
+            f"| {LABELS[path]} | {len(shared)} | {verdicts.count('faster')} | {verdicts.count('indistinguishable')} | "
+            f"{verdicts.count('slower')} | {ratio:.2f} |"
         )
-    if pillow_variant_note is not None:
-        lines.extend(["", pillow_variant_note])
-    if isolated_workers:
-        lines.extend(
-            [
-                "",
-                (
-                    "Each implementation ran in its own process. Peak VRAM includes the CUDA state that process "
-                    "retains. The per-seed baseline before pipeline construction is in the machine-readable results."
-                ),
-            ]
-        )
-    elif pillow_variant_note is not None:
-        lines.extend(
-            [
-                "",
-                (
-                    "†Pillow-AllSIMD ran in its own worker process to load its PIL package. "
-                    "Other paths share the base worker, so these NVML peaks reflect different process lifetimes."
-                ),
-            ]
-        )
-    ratio_paths = _COMMON_RECIPE_RATIO_PATHS
-    lines.extend(
-        [
-            "",
-            "### Throughput ratio on each shared recipe",
-            "",
-            (
-                "Each value is the path's median throughput across three seeds divided by AX's median "
-                "for that recipe. A value above 1.00 means that path delivered batches faster than AX."
-            ),
-            "",
-            "| Shared recipe | " + " | ".join(label for _, label in ratio_paths) + " |",
-            "| --- | " + " | ".join("---:" for _ in ratio_paths) + " |",
-        ]
-    )
-    for index, recipe in enumerate(data.recipes, start=1):
-        if recipe.recipe_id not in data.common:
-            continue
-        key = f"R{index:02d}"
-        ratios = [
-            data.speed[(implementation, recipe.recipe_id)] / data.speed[(AX, recipe.recipe_id)]
-            for implementation, _ in ratio_paths
-        ]
-        lines.append(f"| {key} {recipe.augmentation_id} | " + " | ".join(f"{value:.2f}" for value in ratios) + " |")
-    lines.extend(
-        [
-            "",
-            "### AlbumentationsX against each library",
-            "",
-            "Each chart uses the recipes shared by every path it shows. Compare rows within each chart.",
-        ],
-    )
-    for family, _ in data.comparisons:
-        name = f"pairwise-{family.lower()}"
-        lines.extend(["", _image(name, captions[name])])
-    lines.extend(
-        [
-            "",
-            *_workload_lines(data, run, config),
-            "",
-            _image("batch-wait", captions["batch-wait"]),
-        ]
-    )
+    lines += ["", *_training_lines(training), "", *_workload_lines(data, run, config, training)]
     return "\n".join(lines)
 
 
-def _workload_lines(data: _PaperData, run: RunRecord, config: FamilyRunConfig) -> list[str]:
+def _dali_decoder_note(data: _PaperData) -> str:
+    decode = _dali_decode_metrics(data)
+    return (
+        " DALI decodes only the crop window when a recipe starts with a crop: "
+        f"{decode['DALIWindowMedian']} images/s on {decode['DALIWindowRecipes']} recipes, against "
+        f"{decode['DALIFullMedian']} on the {decode['DALIFullRecipes']} that need the whole image."
+    )
+
+
+def _key_results(
+    data: _PaperData, common: Mapping[str, list[float]], memory: Mapping[str, float], training: Mapping[str, Any]
+) -> list[str]:
+    fastest = max(common, key=lambda path: median(common[path]))
+    cpu = [path for path in common if path.endswith("_cpu")]
+    cpu_speeds = [median(common[path]) for path in cpu]
+    cpu_memory = [memory[path] for path in cpu]
+    lines = [
+        (
+            f"- **Input pipeline alone.** {LABELS[fastest]} delivers the most images per second: "
+            f"{median(common[fastest]):,.0f}, the median over the {len(data.common)} recipes all paths share, "
+            f"while holding {memory[fastest]:,.0f} MiB of GPU memory. The CPU paths deliver "
+            f"{min(cpu_speeds):,.0f} to {max(cpu_speeds):,.0f} images/s and hold "
+            f"{min(cpu_memory):,.0f} to {max(cpu_memory):,.0f} MiB."
+            f"{_dali_decoder_note(data) if fastest == 'dali_gpu' else ''}"
+        )
+    ]
+    for item in training["runs"]:
+        rows = [row for row in training["results"] if row["model"] == item["model"]]
+        ceiling = median(row["ceiling_median"] for row in rows)
+        floors = {
+            path: min(row["of_ceiling_median"] for row in rows if row["implementation"] == path)
+            for path in dict.fromkeys(row["implementation"] for row in rows)
+        }
+        fed = [LABELS[path] for path, share in floors.items() if share >= _FED]
+        behind = sorted((share, path) for path, share in floors.items() if share < _FED)
+        kept = (
+            f"{_series(fed)} {'keeps' if len(fed) == 1 else 'keep'} the step at {100 * _FED:.0f}% or more of that "
+            "rate on every recipe."
+            if fed
+            else f"No path keeps the step at {100 * _FED:.0f}% or more of that rate on every recipe."
+        )
+        lines.append(
+            f"- **{_MODEL_NAMES[item['model']]} training step ({ceiling:,.0f} images/s without input).** "
+            + kept
+            + (
+                f" On their heaviest recipe the {'others' if fed else 'paths'} reach "
+                + _series([f"{100 * share:.0f}% ({LABELS[path]})" for share, path in behind])
+                + "."
+                if behind
+                else ""
+            )
+        )
+    return lines
+
+
+def _series(items: list[str]) -> str:
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def _training_lines(training: Mapping[str, Any]) -> list[str]:
+    runs = {item["model"]: item for item in training["runs"]}
+    rows = training["results"]
+    recipes = list(dict.fromkeys(row["recipe_id"] for row in rows))
+    lines = [
+        "### Feeding a training step",
+        "",
+        (
+            "Here every delivered batch feeds one training step of an untrained torchvision ResNet: "
+            "`torch.compile`, bfloat16 autocast, SGD, on the same L4. The *ceiling* is the same step on a batch "
+            "already in GPU memory, measured in the same process before the loader starts. A path at 100% keeps the "
+            "model fully fed; below that, the model waits for input or shares the GPU with the path's own work."
+        ),
+        "",
+        _image("training", "Training-step throughput as a share of the model-only ceiling, per path and recipe"),
+    ]
+    for model, run in runs.items():
+        model_rows = [row for row in rows if row["model"] == model]
+        ceiling = median(row["ceiling_median"] for row in model_rows)
+        lines += [
+            "",
+            (
+                f"**{_MODEL_NAMES[model]}, batch {run['batch_size']}.** Ceiling {ceiling:,.0f} images/s. "
+                "Each cell is the share of the ceiling, with images/s in parentheses."
+            ),
+            "",
+            "| Path | " + " | ".join(recipe_label(recipe) for recipe in recipes) + " |",
+            "| --- | " + " | ".join("---:" for _ in recipes) + " |",
+        ]
+        paths = list(dict.fromkeys(row["implementation"] for row in model_rows))
+        paths.sort(key=lambda path: -median(r["of_ceiling_median"] for r in model_rows if r["implementation"] == path))
+        for path in paths:
+            cells = []
+            for recipe in recipes:
+                row = next((r for r in model_rows if r["implementation"] == path and r["recipe_id"] == recipe), None)
+                cells.append(
+                    "\N{EN DASH}"
+                    if row is None
+                    else f"{100 * row['of_ceiling_median']:.0f}% ({row['images_per_second_median']:,.0f})"
+                )
+            lines.append(f"| {LABELS[path]} | " + " | ".join(cells) + " |")
+    lines += [
+        "",
+        (
+            "A dash means the path has no implementation of that recipe. Kornia GPU and TorchVision GPU augment on "
+            "the GPU inside the training loop, so their work takes GPU time from the step."
+        ),
+    ]
+    return lines
+
+
+_MODEL_NAMES = {"resnet18": "ResNet-18", "resnet50": "ResNet-50"}
+_TIMES = "\N{MULTIPLICATION SIGN}"
+_FED = 0.95
+
+
+def _training_window(training: Mapping[str, Any]) -> str:
+    windows = {(run["warmup_batches"], run["measured_batches"]) for run in training["runs"]}
+    ((warmup, measured),) = windows
+    return f"{warmup} warm-up and {measured} measured batches"
+
+
+def _workload_lines(
+    data: _PaperData, run: RunRecord, config: FamilyRunConfig, training: Mapping[str, Any]
+) -> list[str]:
     execution = config.execution
     poll_ms = _single({record.gpu_memory.poll_interval_ms for records in data.groups.values() for record in records})
-    shape = "x".join(map(str, (execution.batch_size, *config.output.shape)))
     return [
         "### Measurement settings",
         "",
         (
-            f"Machine: `{run.hardware['machine_type']}`, `{run.hardware['accelerator']}`. "
-            f"Output: CUDA `float16` BCHW `{shape}`. "
-            f"Dataset: first {config.dataset.item_count:,} lexicographically sorted ImageNet Val JPEGs. "
-            f"Seeds: {', '.join(map(str, execution.seeds))}. "
-            f"Workers: {execution.num_workers}; prefetch setting: {execution.prefetch_factor}; "
-            f"persistent workers: {str(execution.persistent_workers).lower()}; "
-            f"dataset prewarm: {str(execution.prewarm_dataset).lower()}."
+            f"One Standard `{run.hardware['machine_type']}` VM with one `{run.hardware['accelerator']}` per job. "
+            f"Input pipeline: {config.dataset.item_count:,} sorted ImageNet validation JPEGs (all but one CMYK file), "
+            f"{execution.warmup_batches} warm-up batches and {execution.measured_batches} measured batches "
+            f"({execution.batch_size * execution.measured_batches:,} images). Training step: the same files, "
+            f"{_training_window(training)}. Seeds: "
+            f"{', '.join(map(str, execution.seeds))}; every path reads the same file order for a given seed. "
+            f"DataLoader paths use {execution.num_workers} workers with prefetch factor {execution.prefetch_factor}; "
+            "DALI uses the same number of threads."
         ),
         "",
         (
-            f"Warm-up batches: {execution.warmup_batches}. Throughput measures "
-            f"{execution.measured_batches} batches ({execution.batch_size * execution.measured_batches:,} images), "
-            "ending after CUDA synchronization. Construction and worker startup are excluded; prefetch effects remain."
-        ),
-        "",
-        (
-            f"GPU memory is sampled by NVML every {poll_ms} ms from before pipeline construction through "
-            "final synchronization and cleanup in the same pass. The peak includes process and library allocations. "
-            "Shorter peaks may be missed; CPU and model memory are not measured."
+            f"NVML samples the process's GPU memory every {poll_ms} ms from before pipeline construction to the end "
+            "of the cell. Short peaks between samples can be missed. CPU memory is not measured. Training runs: "
+            + ", ".join(f"`{item['run_id'][:12]}` ({_MODEL_NAMES[item['model']]})" for item in training["runs"])
+            + f". Input-pipeline run: `{run.run_id[:12]}`."
         ),
     ]
 
@@ -387,26 +511,38 @@ def figure_captions(data: _PaperData) -> dict[str, str]:
     captions = {
         "batch-wait": "When a batch arrives late, the GPU sits idle and completes fewer steps in the same time.",
         "common-summary": (
-            f"Ready batches per second and peak process GPU memory on {len(data.common)} common recipes. "
-            "Each metric takes the median across seeds, then across recipes. The dashed line marks AX's batch rate."
+            f"Images per second on the {len(data.common)} recipes all paths share: one dot per recipe, the bar marks "
+            "the median. Right: peak process GPU memory."
         ),
+        "ax-pairs": (
+            "Each path's throughput divided by AX's on every recipe both support, log scale. Marks show whether "
+            "the exact 95% interval over seeds excludes equal throughput."
+        ),
+        "training": "Training-step throughput as a share of the model-only ceiling, with the seed interval.",
     }
     for family, paths in data.comparisons:
         count = len(_shared_recipes(data, [AX, *paths]))
-        captions[f"pairwise-{family.lower()}"] = f"AX vs {family} on {count} shared recipes"
+        captions[f"pairwise-{family.lower()}"] = f"{family} against AX on {count} shared recipes, per recipe"
     return captions
 
 
 def render_figures(output: Path, paper_root: Path, data: _PaperData) -> None:
+    """Render the paper's figure sources to PNG; the training figure comes from paper.generate_training."""
     generated = output / "generated"
     generated.mkdir()
-    write_plot_inputs(generated, data)
+    write_figures(generated, data)
+    shutil.copyfile(paper_root / "generated/fig-training.tex", generated / "fig-training.tex")
     commands = {
         "batch-wait": r"\input{batch-wait.tex}",
-        "common-summary": r"\input{delivery-plot.tex}",
-        **{f"pairwise-{family.lower()}": rf"\LibraryComparison{{{family.lower()}}}" for family, _ in data.comparisons},
+        "common-summary": r"\input{generated/fig-rgb-overview.tex}",
+        "ax-pairs": r"\input{generated/fig-ax-pairs.tex}",
+        "training": r"\input{generated/fig-training.tex}",
+        **{
+            f"pairwise-{family.lower()}": rf"\input{{generated/fig-pairwise-{family.lower()}.tex}}"
+            for family, _ in data.comparisons
+        },
     }
-    for filename in ("batch-wait.tex", "delivery-plot.tex", "library-comparison.tex", "plot-colors.tex"):
+    for filename in ("batch-wait.tex", "plot-colors.tex"):
         shutil.copyfile(paper_root / filename, output / filename)
     source = output / "readme-figures.tex"
     source.write_text(
@@ -414,12 +550,12 @@ def render_figures(output: Path, paper_root: Path, data: _PaperData) -> None:
             [
                 r"\documentclass[11pt]{article}",
                 r"\usepackage[T1]{fontenc}",
-                r"\usepackage{tikz}",
+                r"\usepackage{pgfplots}",
+                r"\pgfplotsset{compat=1.18}",
                 r"\usepackage[active,tightpage]{preview}",
                 r"\PreviewEnvironment{tikzpicture}",
                 r"\setlength{\PreviewBorder}{8pt}",
                 r"\input{plot-colors.tex}",
-                r"\input{library-comparison.tex}",
                 r"\begin{document}",
                 *commands.values(),
                 r"\end{document}",

@@ -7,7 +7,7 @@ from typing import Never
 
 import pytest
 
-from augbench import rgb_executor
+from augbench import cell_executor
 from augbench.adapters.dali.common import DaliAdapter
 from augbench.recipes.load import load_recipe_catalog
 from augbench.run_config import load_family_config
@@ -54,12 +54,12 @@ def test_cell_cleans_device_state_before_sampling_baseline(
     dali = SimpleNamespace(backend=backend) if implementation == "dali_gpu" else None
     monkeypatch.setitem(sys.modules, "torch", SimpleNamespace(cuda=cuda, Tensor=SimpleNamespace, float16="float16"))
     monkeypatch.setitem(sys.modules, "nvidia.dali", dali)
-    monkeypatch.setattr(rgb_executor, "_seed_everything", lambda _seed: None)
-    monkeypatch.setattr(rgb_executor, "NvmlProcessMemoryMonitor", lambda: SimpleNamespace(start=sample_baseline))
+    monkeypatch.setattr(cell_executor, "_seed_everything", lambda _seed: None)
+    monkeypatch.setattr(cell_executor, "NvmlProcessMemoryMonitor", lambda: SimpleNamespace(start=sample_baseline))
 
     root = Path(__file__).resolve().parents[1]
     config = load_family_config(root / "configs/families/rgb.yaml")
-    executor = rgb_executor.RGBCellExecutor(
+    executor = cell_executor.CellExecutor(
         config=config,
         recipes=load_recipe_catalog(root / config.recipes),
         dataset_files=(Path("image.jpg"),) * config.dataset.item_count,

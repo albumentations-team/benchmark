@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pytest
 
 from augbench.guest_request import GuestRequest
-from augbench.guest_worker import _launch_worker, preflight_implementations, select_pending_cells
+from augbench.guest_worker import _jobs, _launch_worker, preflight_implementations, select_pending_cells
 from augbench.run_records import CellKey, RunInputs, build_run_record
 
 
@@ -137,3 +137,18 @@ def test_preflight_compiles_each_implementation_and_runs_one_batch_per_recipe() 
         ("compile", "dali_gpu"),
         ("batch", "dali_gpu"),
     ]
+
+
+def test_job_queue_is_ordered_by_implementation_then_seed_and_skips_finished_jobs() -> None:
+    from augbench.run_config import FamilyRunConfig, load_family_config
+
+    config: FamilyRunConfig = load_family_config(Path(__file__).parents[1] / "configs" / "families" / "rgb.yaml")
+    first, second = config.implementations[:2]
+    seeds = config.execution.seeds
+
+    def cell(implementation: str, seed: int) -> CellKey:
+        return CellKey(run_id="a" * 64, family="rgb", implementation=implementation, recipe_id="r", seed=seed)
+
+    cells = [cell(second, seeds[0]), cell(first, seeds[2]), cell(first, seeds[1]), cell(first, seeds[1])]
+
+    assert _jobs(config, cells) == ((first, seeds[1]), (first, seeds[2]), (second, seeds[0]))

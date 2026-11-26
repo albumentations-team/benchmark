@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from augbench.rgb_executor import _runtime_metadata
+from augbench.cell_executor import _runtime_metadata
 
 
 @pytest.mark.parametrize(
