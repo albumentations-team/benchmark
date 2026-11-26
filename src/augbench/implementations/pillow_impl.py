@@ -400,8 +400,8 @@ def _build_affine(params: dict[str, Any]) -> Any:
 def _build_unsharp_mask(params: dict[str, Any]) -> Any | None:
     sizes = odd_kernel_sizes(params["blur_limit"])
     alpha = parameter_range(params["alpha"])
-    # Standard deviations of OpenCV's sigma=0 kernels for 3, 5 and 7 taps.
-    radii = {3: sqrt(0.5), 5: 1.0, 7: sqrt(1.875)}
+    # Match the 3-tap step response. For 5 and 7 taps, use OpenCV's sigma=0 kernel deviations.
+    radii = {3: 0.85, 5: 1.0, 7: sqrt(1.875)}
 
     def _unsharp_mask(img: Image.Image) -> Image.Image:
         radius = radii[random.choice(sizes)]

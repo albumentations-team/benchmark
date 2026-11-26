@@ -238,15 +238,6 @@ def _build_color_jitter(params: dict[str, Any]) -> Any | None:
     )
 
 
-def _build_color_jiggle(params: dict[str, Any]) -> Any | None:
-    return tv_transforms.ColorJitter(
-        brightness=params["brightness"],
-        contrast=params["contrast"],
-        saturation=params["saturation"],
-        hue=params["hue"],
-    )
-
-
 def _build_channel_shuffle(_params: dict[str, Any]) -> Any | None:
     return tv_transforms.RandomChannelPermutation()
 
@@ -299,10 +290,6 @@ def _build_auto_contrast(_params: dict[str, Any]) -> Any | None:
 
 def _build_equalize(_params: dict[str, Any]) -> Any | None:
     return tv_transforms.RandomEqualize(p=1)
-
-
-def _build_normalize(_params: dict[str, Any]) -> Any | None:
-    return None
 
 
 def _build_erasing(params: dict[str, Any]) -> Any | None:
@@ -390,7 +377,7 @@ _TRANSFORM_BUILDERS = {
     "Perspective": _build_perspective,
     "Elastic": _build_elastic,
     "ColorJitter": _build_color_jitter,
-    "ColorJiggle": _build_color_jiggle,
+    "ColorJiggle": _build_color_jitter,
     "ChannelShuffle": _build_channel_shuffle,
     "Grayscale": _build_grayscale,
     "GaussianBlur": _build_gaussian_blur,
@@ -400,7 +387,6 @@ _TRANSFORM_BUILDERS = {
     "Sharpen": _build_sharpen,
     "AutoContrast": _build_auto_contrast,
     "Equalize": _build_equalize,
-    "Normalize": _build_normalize,
     "Erasing": _build_erasing,
     "JpegCompression": _build_jpeg_compression,
     "Brightness": _build_brightness,

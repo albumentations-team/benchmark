@@ -51,6 +51,27 @@ model-only ceiling, loader wait, and two GPU-memory peaks.
 - Check the paths against the [RGB reference policy](docs/benchmark_execution_contract.md#rgb-workload-and-reference-implementations)
   when changing a recipe. Keep throughput claims scoped to the measured image-only workload.
 
+## RGB workload and reference effect
+
+- Treat the RGB workload as image classification on one 8-bit RGB JPEG per sample.
+  The augmentation receives only the image. Boxes, masks, keypoints, and
+  `additional_targets` are outside this workload.
+- Strip EXIF during shared JPEG extraction before timing. All decoders consume
+  the prepared files in stored pixel orientation.
+- Use stock AlbumentationsX transforms as the reference. Construct one AX transform
+  per catalog stage. Its own sampler runs during execution. Use one top-level
+  `A.Compose` for the declared recipe. Keep `A.Lambda`, `A.OneOf`, and `A.Sequential`
+  out of the AX adapter. Put required conversions in explicit catalog stages.
+- Run native TorchVision and Kornia operators. Adjust their public parameters
+  toward the AX effect. Add per-image sampling in the adapter when the operator
+  accepts fixed values. Keep the native image operation.
+  Mark a path unsupported when it would need a custom implementation of the target.
+  Assemble the preprocessing paths Pillow, Pillow-AllSIMD, and DALI from native
+  primitives. Compare observable outputs and record material differences that
+  remain after calibration.
+- Check the paths against the [RGB reference policy](docs/benchmark_execution_contract.md#rgb-workload-and-reference-implementations)
+  when changing a recipe. Keep throughput claims scoped to the measured image-only workload.
+
 ## Non-negotiable execution rules
 
 - **Normalize never runs on CPU.** CPU paths may decode, form a collatable

@@ -191,16 +191,6 @@ def _build_color_jitter(params: dict[str, Any]) -> Any | None:
     )
 
 
-def _build_color_jiggle(params: dict[str, Any]) -> Any | None:
-    return albumentations.ColorJitter(
-        brightness_range=params["brightness"],
-        contrast_range=params["contrast"],
-        saturation_range=params["saturation"],
-        hue_range=params["hue"],
-        p=1,
-    )
-
-
 def _build_channel_shuffle(_params: dict[str, Any]) -> Any | None:
     return albumentations.ChannelShuffle(p=1)
 
@@ -268,13 +258,6 @@ def _build_auto_contrast(_params: dict[str, Any]) -> Any | None:
 
 def _build_equalize(params: dict[str, Any]) -> Any | None:
     return albumentations.Equalize(mode=params["mode"], p=1)
-
-
-def _build_normalize(_params: dict[str, Any]) -> Any | None:
-    # Normalization is a batch-level CUDA stage.  Returning no CPU
-    # transform here makes it impossible for an RGB recipe factory to
-    # accidentally put it back into a DataLoader worker.
-    return None
 
 
 def _build_erasing(params: dict[str, Any]) -> Any | None:
@@ -594,7 +577,7 @@ _TRANSFORM_BUILDERS = {
     "Perspective": _build_perspective,
     "Elastic": _build_elastic,
     "ColorJitter": _build_color_jitter,
-    "ColorJiggle": _build_color_jiggle,
+    "ColorJiggle": _build_color_jitter,
     "ChannelShuffle": _build_channel_shuffle,
     "Grayscale": _build_grayscale,
     "RGBShift": _build_rgbshift,
@@ -606,7 +589,7 @@ _TRANSFORM_BUILDERS = {
     "Sharpen": _build_sharpen,
     "AutoContrast": _build_auto_contrast,
     "Equalize": _build_equalize,
-    "Normalize": _build_normalize,
+    "Normalize": lambda _: None,
     "Erasing": _build_erasing,
     "JpegCompression": _build_jpeg_compression,
     "RandomGamma": _build_random_gamma,

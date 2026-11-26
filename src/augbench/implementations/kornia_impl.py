@@ -518,10 +518,6 @@ def _build_resize(params: dict[str, Any]) -> Any | None:
     )
 
 
-def _build_normalize(_params: dict[str, Any]) -> Any | None:
-    return None
-
-
 def _build_posterize(params: dict[str, Any]) -> Any | None:
     return kornia_augmentation.RandomPosterize(
         bits=parameter_range(params["bits"]),
@@ -610,7 +606,6 @@ _TRANSFORM_BUILDERS = {
     "ThinPlateSpline": _build_thin_plate_spline,
     "VerticalFlip": _build_vertical_flip,
     "Resize": _build_resize,
-    "Normalize": _build_normalize,
     "Posterize": _build_posterize,
     "LongestMaxSize": _build_longest_max_size,
     "SmallestMaxSize": _build_smallest_max_size,

@@ -23,6 +23,11 @@ if TYPE_CHECKING:
     from augbench.recipes.models import RecipeSpec, RecipeStage
 
 
+_COLOR_JITTER_ORDERS = tuple(permutations(range(4)))
+_COLOR_JITTER_ORDER_IDS = list(range(len(_COLOR_JITTER_ORDERS)))
+_COLOR_JITTER_STAGE_OPERATIONS = tuple(zip(*_COLOR_JITTER_ORDERS, strict=True))
+
+
 class _Execution(Protocol):
     batch_size: int
     num_workers: int
@@ -613,25 +618,33 @@ def _apply_contrast(data: Any, params: dict[str, Any], _output_height: int, _out
 def _apply_color_jitter(data: Any, params: dict[str, Any], _output_height: int, _output_width: int) -> Any:
     from nvidia.dali import fn, types
 
-    brightness = _uniform(params["brightness"])
-    contrast = _uniform(params["contrast"])
-    saturation = _uniform(params["saturation"])
-    hue = 360 * _uniform(params["hue"])
-    orders = tuple(permutations(range(4)))
-    keys = list(range(len(orders)))
-    order = fn.random.uniform(values=keys, dtype=types.INT32)
+    factors = (
+        _uniform(params["brightness"]),
+        _uniform(params["contrast"]),
+        _uniform(params["saturation"]),
+        360 * _uniform(params["hue"]),
+    )
+    order = fn.random.uniform(values=_COLOR_JITTER_ORDER_IDS, dtype=types.INT32)
+    return _color_jitter_in_order(data, order, factors)
+
+
+def _color_jitter_in_order(data: Any, order: Any, factors: tuple[Any, Any, Any, Any]) -> Any:
+    from nvidia.dali import fn, types
+
+    brightness, contrast, saturation, hue = factors
     brightness_step, contrast_step, saturation_step = range(3)
-    for permutation_index, operations in enumerate(orders):
-        if order == permutation_index:
-            for operation in operations:
-                if operation == brightness_step:
-                    data = fn.brightness(data, brightness=brightness)
-                elif operation == contrast_step:
-                    data = _contrast(data, contrast.gpu())
-                elif operation == saturation_step:
-                    data = _saturation(data, saturation.gpu())
-                else:
-                    data = fn.hue(data, hue=hue)
+    for operations_by_order in _COLOR_JITTER_STAGE_OPERATIONS:
+        operation = fn.lookup_table(
+            order, keys=_COLOR_JITTER_ORDER_IDS, values=list(operations_by_order), dtype=types.INT32
+        )
+        if operation == brightness_step:
+            data = fn.brightness(data, brightness=brightness)
+        elif operation == contrast_step:
+            data = _contrast(data, contrast.gpu())
+        elif operation == saturation_step:
+            data = _saturation(data, saturation.gpu())
+        else:
+            data = fn.hue(data, hue=hue)
     return data
 
 

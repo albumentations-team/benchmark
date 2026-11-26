@@ -75,7 +75,7 @@ class _Executor(cell_executor.CellExecutor):
 
 def _executor(monkeypatch: pytest.MonkeyPatch, events: list[str], session: _Session | None) -> _Executor:
     monkeypatch.setattr(cell_executor, "NvmlProcessMemoryMonitor", type("Monitor", (_Monitor,), {"events": events}))
-    monkeypatch.setattr(cell_executor, "_clear_device_state", lambda: None)
+    monkeypatch.setattr(cell_executor, "_clear_device_state", lambda _implementation: None)
     monkeypatch.setattr(cell_executor, "_seed_everything", lambda _seed: None)
     monkeypatch.setattr(cell_executor, "_runtime_metadata", lambda _adapter: {"library_version": "1"})
     return _Executor(events, session)

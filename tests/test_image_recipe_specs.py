@@ -62,6 +62,27 @@ def test_r01_pillow_uses_bilinear_without_smoothing() -> None:
     assert resize(impulse).tobytes() == bytes([0, 255, 0]) * 3
 
 
+@pytest.mark.parametrize(
+    ("size", "box"),
+    [
+        ((100, 32), (28, 0, 71, 32)),
+        ((32, 100), (0, 28, 32, 71)),
+        ((64, 64), (0, 0, 64, 64)),
+    ],
+)
+def test_pillow_random_resized_crop_falls_back_to_centered_aspect_ratio(
+    size: tuple[int, int], box: tuple[int, int, int, int], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pytest.importorskip("torch")
+    from augbench.implementations import pillow_pipeline_impl
+
+    monkeypatch.setattr(pillow_pipeline_impl.random, "uniform", lambda _low, high: high)
+    image = Image.fromarray(np.arange(size[0] * size[1], dtype=np.uint8).reshape(size[1], size[0]))
+    crop = pillow_pipeline_impl._RandomResizedCrop(resize=lambda patch: patch, scale=(1, 1), ratio=(0.75, 4 / 3))
+
+    np.testing.assert_array_equal(np.asarray(crop(image)), np.asarray(image.crop(box)))
+
+
 def test_pillow_gaussian_blur_respects_the_configured_kernel_size() -> None:
     image = Image.new("RGB", (21, 21))
     image.putpixel((10, 10), (255, 255, 255))
@@ -70,6 +91,18 @@ def test_pillow_gaussian_blur_respects_the_configured_kernel_size() -> None:
 
     result = blur(image)
     assert result.getbbox() == (8, 8, 13, 13)
+
+
+def test_pillow_unsharp_mask_matches_ax_three_tap_edge_strength() -> None:
+    image = np.full((32, 32, 3), 64, dtype=np.uint8)
+    image[:, 16:] = 192
+    spec = TransformSpec("UnsharpMask", {"blur_limit": [3, 3], "alpha": [0.5, 0.5], "threshold": 10})
+    sharpen = create_transform(spec)
+    assert sharpen is not None
+
+    edge = np.asarray(sharpen(Image.fromarray(image)))[16, 14:18, 0]
+    # The AX 3-tap Gaussian puts 1/4 of the 128-level step across the edge.
+    np.testing.assert_allclose(edge, [64, 48, 208, 192], atol=2, rtol=0)
 
 
 def test_r46_pillow_centers_x_shear_and_interpolates_zero_border() -> None:
