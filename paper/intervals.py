@@ -2,8 +2,10 @@
 """Exact, distribution-free intervals for seed-level throughput.
 
 Each cell contributes one throughput value per seed, and seeds run on different VMs, so the
-values carry both input-order and machine variation. The intervals below assume only that
-the seeds are exchangeable. They never use a normal approximation.
+values carry both input-order and machine variation. The median interval needs independent seeds
+drawn from one distribution. The ratio interval also needs the two paths to differ by a
+multiplicative factor only; with different spreads its coverage is approximate. Neither uses a
+normal approximation.
 """
 
 from __future__ import annotations
@@ -72,8 +74,8 @@ def ratio_interval(
     """Hodges-Lehmann interval for a ratio of locations from the exact Mann-Whitney distribution.
 
     Order the ``n * m`` pairwise ratios. The interval ``[r(k+1), r(nm-k)]`` has coverage
-    ``1 - 2 P(U <= k)`` under exchangeability. The largest ``k`` that reaches ``confidence`` is
-    used. Small samples may fall short, and the achieved coverage is reported.
+    ``1 - 2 P(U <= k)`` when the two samples differ only by a scale factor. The largest ``k``
+    that reaches ``confidence`` is used. Small samples may fall short, and the achieved coverage is reported.
     """
     size, other = len(numerator), len(denominator)
     counts = _mann_whitney_counts(size, other)

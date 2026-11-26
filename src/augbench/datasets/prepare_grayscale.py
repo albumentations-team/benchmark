@@ -29,12 +29,15 @@ def prepare_grayscale_archive(source: Path, output: Path) -> dict[str, str | int
                 name = path.as_posix()
                 if name in names:
                     raise ValueError(f"duplicate ImageNet validation image: {name}")
-                names.add(name)
                 encoded = original.extractfile(member)
                 if encoded is None:
                     raise ValueError(f"unable to read ImageNet validation image: {name}")
                 with Image.open(io.BytesIO(encoded.read())) as image:
+                    if image.mode == "CMYK":
+                        # The shared selection excludes CMYK files, and conversion to L would hide that they were CMYK.
+                        continue
                     gray = image.convert("L")
+                names.add(name)
                 with io.BytesIO() as buffer:
                     gray.save(buffer, format="JPEG", quality=JPEG_QUALITY)
                     metadata = tarfile.TarInfo(name)

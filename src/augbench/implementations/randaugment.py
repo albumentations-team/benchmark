@@ -32,6 +32,7 @@ SIGNED = frozenset(
 
 # TorchVision's translation spans 150 of 331 pixels of the side at the top bin.
 _TRANSLATE_REACH = 150 / 331
+_MIN_BINS = 2  # the magnitude scale divides by bins - 1
 _MAX_SHEAR = 0.3
 _MAX_ROTATE_DEGREES = 30.0
 _MAX_ENHANCE = 0.9
@@ -58,8 +59,8 @@ class RandAugmentSpec:
             bins=int(params["num_magnitude_bins"]),
             fill=float(params["fill"]),
         )
-        if spec.num_ops < 1 or not 0 <= spec.magnitude < spec.bins:
-            raise ValueError("RandAugment needs num_ops >= 1 and 0 <= magnitude < num_magnitude_bins")
+        if spec.num_ops < 1 or spec.bins < _MIN_BINS or not 0 <= spec.magnitude < spec.bins:
+            raise ValueError("RandAugment needs num_ops >= 1, num_magnitude_bins >= 2, and 0 <= magnitude < bins")
         return spec
 
     @property

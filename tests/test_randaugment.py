@@ -40,6 +40,8 @@ def test_the_spec_rejects_a_pool_or_interpolation_it_does_not_assemble() -> None
         RandAugmentSpec.from_params({**PARAMS, "interpolation": "nearest"})
     with pytest.raises(ValueError, match="magnitude"):
         RandAugmentSpec.from_params({**PARAMS, "magnitude": 31})
+    with pytest.raises(ValueError, match="magnitude"):
+        RandAugmentSpec.from_params({**PARAMS, "magnitude": 0, "num_magnitude_bins": 1})
 
 
 def test_constants_match_torchvision_at_the_benchmark_magnitude() -> None:

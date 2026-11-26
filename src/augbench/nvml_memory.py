@@ -76,10 +76,11 @@ class NvmlProcessMemoryMonitor:
             self._record_sample()
 
     def _record_sample(self) -> float | None:
-        value = self._sample_process_memory()
-        if value is None:
-            return None
+        # Read under the lock so that a sample taken before mark_steady() cannot be recorded after its reset.
         with self._lock:
+            value = self._sample_process_memory()
+            if value is None:
+                return None
             self._valid_samples += 1
             self._peak_mib = max(self._peak_mib, value)
             if self._steady_peak_mib is not None:

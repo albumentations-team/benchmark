@@ -273,6 +273,6 @@ uv run augbench launch --config configs/families/train-resnet18.yaml   # L4 flee
 uv run augbench launch --config configs/families/train-resnet50.yaml
 ```
 
-After each run, download its cells and check: 100 cells, all `status: ok`, every cell has `training`,
+After each run, download its cells and check: 140 cells, all `status: ok`, every cell has `training`,
 `ceiling_images_per_second` exceeds the cell's `throughput.value`, `steady_peak_mib` does not exceed
 `gpu_memory.peak_mib`, and the guest logs contain no `Traceback`.

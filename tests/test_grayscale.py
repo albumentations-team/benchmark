@@ -41,6 +41,24 @@ def test_grayscale_archive_contains_deterministic_one_channel_jpegs(tmp_path: Pa
             assert not image.getexif()
 
 
+def test_grayscale_archive_leaves_out_cmyk_sources(tmp_path: Path) -> None:
+    source = tmp_path / "rgb.tar"
+    with tarfile.open(source, "w") as archive:
+        for name, mode in (("val/a.JPEG", "RGB"), ("val/b.JPEG", "CMYK")):
+            with io.BytesIO() as buffer:
+                Image.new(mode, (16, 16)).save(buffer, format="JPEG")
+                member = tarfile.TarInfo(name)
+                member.size = buffer.tell()
+                buffer.seek(0)
+                archive.addfile(member, buffer)
+
+    result = prepare_grayscale_archive(source, tmp_path / "gray.tar")
+
+    assert result["file_count"] == 1
+    with tarfile.open(tmp_path / "gray.tar") as archive:
+        assert archive.getnames() == ["val/a.JPEG"]
+
+
 def test_grayscale_colorize_has_a_separate_frozen_matrix() -> None:
     stock = load_family_config(ROOT / "configs/families/grayscale.yaml")
     archive = {"archive_uri": "gs://bucket/gray.tar", "archive_sha256": "c" * 64}

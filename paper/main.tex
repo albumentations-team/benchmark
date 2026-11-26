@@ -177,13 +177,16 @@ path--recipe pairs, the range between the slowest and fastest seed has a median 
 \SeedSpreadMedian\% of the median, and one pair in ten exceeds \SeedSpreadNinety\%.
 
 Two kinds of interval make that spread explicit. For one cell, the range from the slowest to the
-fastest of five seeds covers the median with probability \(1-2\cdot2^{-5}=93.75\%\). For a ratio
-between two paths on one recipe, we use the Hodges--Lehmann interval \cite{hodgeslehmann}: order
-the \(5\times5\) pairwise ratios and keep those inside the exact Mann--Whitney bounds
-\cite{mannwhitney}, which gives \(96.8\%\) coverage. A path is \emph{faster} or \emph{slower} on a
-recipe only when this interval excludes 1; otherwise the two are \emph{tied}. These intervals
-assume only that the seeds are exchangeable. A statistically clear difference can still be
-small, so the figures show the size of every ratio as well.
+fastest of five seeds covers the median with probability \(1-2\cdot2^{-5}=93.75\%\) when the seeds
+are independent draws from one distribution. For a ratio between two paths on one recipe, we use the
+Hodges--Lehmann interval \cite{hodgeslehmann}: order the \(5\times5\) pairwise ratios and keep those
+inside the exact Mann--Whitney bounds \cite{mannwhitney}, which gives \(96.8\%\) coverage when the
+seeds are independent and the two paths differ only by a multiplicative factor, that is, by a shift in
+log throughput. If the paths also differ in spread, the stated coverage is approximate. Each seed is
+its own job with its own file order, so independence is a reasonable reading of the design, but we did
+not test it. A path is \emph{faster} or \emph{slower} on a recipe only when the interval excludes 1;
+otherwise the two are \emph{tied}. A statistically clear difference can still be small, so the
+figures show the size of every ratio as well.
 
 \section{Input pipeline alone}
 \label{sec:loader}
@@ -328,14 +331,16 @@ training-step measurements of Section~\ref{sec:training}. The recipe catalog has
 \RecipeCount{} recipes; Appendix~\ref{app:reproduce} lists the runs.
 
 The longer window changed the absolute rates more than any code change. An earlier run of the same
-paths with the short window (run \texttt{d89b7ecffa4c}) measured the DataLoader paths 28--29\% faster
-than this report does: AX 4,348 against 3,124 images/s on the 31 shared recipes, Pillow-AllSIMD
-3,839 against 2,737, TorchVision CPU 3,537 against 2,524, and Kornia CPU 1,867 against 1,317. DALI
-measured 7\% faster (6,271 against 5,857), and TorchVision GPU, whose workers only read JPEG bytes,
-did not change (2,507 against 2,500). The pattern fits a start-up effect visible in the code: the 15 DataLoader workers start together and prepare up to 30 batches while the one warm-up
-batch is consumed, so a window of 32 batches begins with about 14 batches already finished. A longer warm-up and window removes that head
-start. We did not isolate the cause with a separate experiment. Because this changes the ratio between the paths
-(DALI against AX moved from 1.38$\times$ to 1.82$\times$), rates measured with the short window should not be compared with this report's.
+paths with the short window (run \texttt{d89b7ecffa4c}) measured the DataLoader paths 28--29\% lower
+here than there: AX 3,124 images/s against 4,348 on the 31 shared recipes, Pillow-AllSIMD 2,737
+against 3,839, TorchVision CPU 2,524 against 3,537, and Kornia CPU 1,317 against 1,867. DALI is
+7\% lower (5,857 against 6,271), and TorchVision GPU, whose workers only read JPEG bytes, did not
+change (2,500 against 2,507). The pattern fits a start-up effect visible in the code: the 15
+DataLoader workers start together and prepare up to 30 batches while the one warm-up batch is
+consumed, so a window of 32 batches begins with about 14 batches already finished. A longer warm-up
+and window removes that head start. We did not isolate the cause with a separate experiment. Because
+this changes the ratio between the paths (DALI against AX moved from 1.38$\times$ to
+1.82$\times$), rates measured with the short window should not be compared with this report's.
 
 DALI's memory column changed for a second reason. The earlier readings rose with catalog order
 because one long-lived process kept DALI's memory pool from earlier cells. The runner now releases
@@ -499,9 +504,7 @@ can still differ.
 
 The \repo{} holds the execution code, the report generators, and the immutable run manifests.
 The generators check every cell against its manifest and recipe checksum and require a complete
-matrix. The AX cells come from an AX-only rerun on AlbumentationsX 2.6.9; the generator checks
-that its package lock differs from the full run's only in the AlbumentationsX entry. Each
-implementation ran in its own process, so the other cells are unaffected.
+matrix. Each implementation and seed ran in its own process.
 
 \begin{table}[H]
 \centering\small

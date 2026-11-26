@@ -389,12 +389,17 @@ def _key_results(
         }
         fed = [LABELS[path] for path, share in floors.items() if share >= _FED]
         behind = sorted((share, path) for path, share in floors.items() if share < _FED)
-        lines.append(
-            f"- **{_MODEL_NAMES[item['model']]} training step ({ceiling:,.0f} images/s without input).** "
+        kept = (
             f"{_series(fed)} {'keeps' if len(fed) == 1 else 'keep'} the step at {100 * _FED:.0f}% or more of that "
             "rate on every recipe."
+            if fed
+            else f"No path keeps the step at {100 * _FED:.0f}% or more of that rate on every recipe."
+        )
+        lines.append(
+            f"- **{_MODEL_NAMES[item['model']]} training step ({ceiling:,.0f} images/s without input).** "
+            + kept
             + (
-                " On their heaviest recipe the others reach "
+                f" On their heaviest recipe the {'others' if fed else 'paths'} reach "
                 + _series([f"{100 * share:.0f}% ({LABELS[path]})" for share, path in behind])
                 + "."
                 if behind
