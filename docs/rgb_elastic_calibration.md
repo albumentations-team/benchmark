@@ -1,8 +1,10 @@
 # R10 Elastic calibration
 
 R10 compares elastic deformations after cropping to 224×224. The benchmark uses similar
-displacement strength (about 0.74 px RMS) and spatial scale (about 10 px) across
-implementations. The [recipe catalog](../catalog/recipes/rgb.yaml) records the parameters.
+displacement strength and a spatial scale of about 10 px across implementations. Each image
+gets an independent field and a uniform draw from 50% to 100% of the calibrated amplitude.
+The calibration below measured the upper endpoint at about 0.74 px RMS. The
+[recipe catalog](../catalog/recipes/rgb.yaml) records the ranges.
 
 AlbumentationsX 2.6.1 builds a displacement field from cubic splines on a control grid. AX 2.4.2
 smoothed noise with a Gaussian filter. TorchVision and Kornia still smooth noise, but they

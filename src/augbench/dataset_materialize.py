@@ -14,6 +14,12 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from augbench.run_config import DatasetConfig
 
+_JPEG_MARKER_PREFIX = 0xFF
+_JPEG_APP1 = 0xE1
+_JPEG_SCAN_OR_END = (0xDA, 0xD9)
+_JPEG_LENGTH_BYTES = 2
+_JPEG_CACHE_FORMAT = "jpeg-exif-free-v1"
+
 
 @dataclass(frozen=True)
 class MaterializedDataset:
@@ -23,7 +29,7 @@ class MaterializedDataset:
 
 
 def materialize_rgb_dataset(*, archive: Path, dataset: DatasetConfig, cache_root: Path) -> MaterializedDataset:
-    """Extract the deterministic configured selection once and reuse a complete cache."""
+    """Stage the configured selection without EXIF and reuse a complete cache."""
     selected = _selected_member_names(archive, dataset)
     cache_root.mkdir(parents=True, exist_ok=True)
     destination = cache_root / _selection_digest(dataset)
@@ -55,7 +61,7 @@ def _selected_member_names(archive: Path, dataset: DatasetConfig) -> tuple[str, 
             )[: dataset.item_count]
         )
     if len(selected) != dataset.item_count:
-        raise ValueError(f"source archive has only {len(selected)} matching RGB JPEGs")
+        raise ValueError(f"source archive has only {len(selected)} matching JPEGs")
     return selected
 
 
@@ -72,7 +78,33 @@ def _extract_selected(archive: Path, selected: tuple[str, ...], destination: Pat
             output = destination / relative_path
             output.parent.mkdir(parents=True, exist_ok=True)
             with stream, output.open("wb") as target:
-                shutil.copyfileobj(stream, target)
+                target.write(_strip_jpeg_exif(stream.read()))
+
+
+def _strip_jpeg_exif(encoded: bytes) -> bytes:
+    """Remove EXIF APP1 headers while preserving the encoded scan and other metadata."""
+    if not encoded.startswith(b"\xff\xd8"):
+        return encoded
+
+    view = memoryview(encoded)
+    parts = []
+    start = 0
+    offset = 2
+    while offset + 4 <= len(encoded) and encoded[offset] == _JPEG_MARKER_PREFIX:
+        marker_start = offset
+        while offset < len(encoded) and encoded[offset] == _JPEG_MARKER_PREFIX:
+            offset += 1
+        if offset + 3 > len(encoded) or encoded[offset] in _JPEG_SCAN_OR_END:
+            break
+        segment_size = int.from_bytes(view[offset + 1 : offset + 3], "big")
+        segment_end = offset + 1 + segment_size
+        if segment_size < _JPEG_LENGTH_BYTES or segment_end > len(encoded):
+            break
+        if encoded[offset] == _JPEG_APP1 and encoded.startswith(b"Exif\x00\x00", offset + 3, segment_end):
+            parts.append(view[start:marker_start])
+            start = segment_end
+        offset = segment_end
+    return b"".join([*parts, view[start:]]) if parts else encoded
 
 
 def _is_complete(files: tuple[Path, ...]) -> bool:
@@ -81,7 +113,7 @@ def _is_complete(files: tuple[Path, ...]) -> bool:
 
 def _selection_digest(dataset: DatasetConfig) -> str:
     encoded = json.dumps(dataset.model_dump(mode="json"), sort_keys=True, separators=(",", ":")).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
+    return hashlib.sha256(_JPEG_CACHE_FORMAT.encode("ascii") + b"\0" + encoded).hexdigest()
 
 
 def _is_safe_relative_path(value: str) -> bool:

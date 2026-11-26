@@ -1,8 +1,8 @@
 schema_version: 1
-recipe_set_id: rgb-comparable-2026-11-16
+recipe_set_id: rgb-per-image-calibrated-2026-11-19
 family: rgb
 recipes:
-- recipe_id: Resize224+Normalize+ToTensor
+- recipe_id: Resize224
   augmentation_id: Resize
   channels: 3
   stages:
@@ -47,7 +47,7 @@ recipes:
   - pillow_cpu
   - pillow_allsimd_cpu
   - dali_gpu
-- recipe_id: RandomCrop224+Normalize+ToTensor
+- recipe_id: RandomCrop224
   augmentation_id: RandomCrop224
   channels: 3
   stages:
@@ -91,7 +91,7 @@ recipes:
   - pillow_cpu
   - pillow_allsimd_cpu
   - dali_gpu
-- recipe_id: RandomResizedCrop+Normalize+ToTensor
+- recipe_id: RandomResizedCrop
   augmentation_id: RandomResizedCrop
   channels: 3
   stages:
@@ -145,7 +145,7 @@ recipes:
   - pillow_cpu
   - pillow_allsimd_cpu
   - dali_gpu
-- recipe_id: RandomCrop224+HorizontalFlip+Normalize+ToTensor
+- recipe_id: RandomCrop224+HorizontalFlip
   augmentation_id: HorizontalFlip
   channels: 3
   stages:
@@ -193,7 +193,7 @@ recipes:
   - pillow_cpu
   - pillow_allsimd_cpu
   - dali_gpu
-- recipe_id: RandomCrop224+VerticalFlip+Normalize+ToTensor
+- recipe_id: RandomCrop224+VerticalFlip
   augmentation_id: VerticalFlip
   channels: 3
   stages:
@@ -241,7 +241,7 @@ recipes:
   - pillow_cpu
   - pillow_allsimd_cpu
   - dali_gpu
-- recipe_id: Pad+RandomCrop224+Normalize+ToTensor
+- recipe_id: Pad+RandomCrop224
   augmentation_id: Pad
   channels: 3
   stages:
@@ -282,17 +282,14 @@ recipes:
   - pillow
   - pillow_allsimd
   - dali
-  - kornia
   supported_implementations:
   - albumentationsx_cpu
   - pillow_cpu
   - torchvision_cpu
   - torchvision_gpu
-  - kornia_cpu
-  - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+Rotate+Normalize+ToTensor
+- recipe_id: RandomCrop224+Rotate
   augmentation_id: Rotate
   channels: 3
   stages:
@@ -307,7 +304,7 @@ recipes:
       angle_range:
       - -45
       - 45
-      interpolation: nearest
+      interpolation: bilinear
       mode: constant
       fill: 0
     stochastic: true
@@ -346,7 +343,7 @@ recipes:
   - pillow_cpu
   - pillow_allsimd_cpu
   - dali_gpu
-- recipe_id: RandomCrop224+Affine+Normalize+ToTensor
+- recipe_id: RandomCrop224+Affine
   augmentation_id: Affine
   channels: 3
   stages:
@@ -358,20 +355,24 @@ recipes:
     randomness_scope: per-image
   - operation_id: Affine
     parameters:
-      angle: 25.0
-      shift:
-      - 20
-      - 20
-      scale: 2.0
-      shear:
-      - 10.0
+      input_size: 224
+      angle:
+      - -15.0
       - 15.0
+      shift:
+        x: [-12, 12]
+        y: [-12, 12]
+      scale:
+      - 0.75
+      - 1.25
+      shear:
+        x: [-8.0, 8.0]
+        y: [-8.0, 8.0]
       interpolation: bilinear
       mode: constant
       fill: 0
-      input_size: 224
-    stochastic: false
-    randomness_scope: deterministic
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -406,7 +407,7 @@ recipes:
   - pillow_cpu
   - pillow_allsimd_cpu
   - dali_gpu
-- recipe_id: RandomCrop224+Perspective+Normalize+ToTensor
+- recipe_id: RandomCrop224+Perspective
   augmentation_id: Perspective
   channels: 3
   stages:
@@ -418,10 +419,10 @@ recipes:
     randomness_scope: per-image
   - operation_id: Perspective
     parameters:
-      input_size: 224
       scale:
       - 0.05
       - 0.1
+      uniform_corner_scale: 0.24
       interpolation: bilinear
       fill: 0
     stochastic: true
@@ -460,7 +461,7 @@ recipes:
   - pillow_cpu
   - pillow_allsimd_cpu
   - dali_gpu
-- recipe_id: RandomCrop224+Elastic+Normalize+ToTensor
+- recipe_id: RandomCrop224+Elastic
   augmentation_id: Elastic
   channels: 3
   stages:
@@ -473,10 +474,14 @@ recipes:
   - operation_id: Elastic
     parameters:
       sigma: 5.0
-      torchvision_alpha: 32.0
-      kornia_alpha: 0.14285714285714285
+      torchvision_alpha:
+      - 16.0
+      - 32.0
+      kornia_alpha:
+      - 0.07142857142857142
+      - 0.14285714285714285
       displacement_range:
-      - 0.0097
+      - 0.00485
       - 0.0097
       control_grid_shape:
       - 29
@@ -512,7 +517,7 @@ recipes:
   - torchvision_gpu
   - kornia_cpu
   - kornia_gpu
-- recipe_id: RandomCrop224+ColorJitter+Normalize+ToTensor
+- recipe_id: RandomCrop224+ColorJitter
   augmentation_id: ColorJitter
   channels: 3
   stages:
@@ -560,7 +565,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - dali_gpu
-- recipe_id: RandomCrop224+ChannelShuffle+Normalize+ToTensor
+- recipe_id: RandomCrop224+ChannelShuffle
   augmentation_id: ChannelShuffle
   channels: 3
   stages:
@@ -608,7 +613,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+Grayscale+Normalize+ToTensor
+- recipe_id: RandomCrop224+Grayscale
   augmentation_id: Grayscale
   channels: 3
   stages:
@@ -657,7 +662,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+RGBShift+Normalize+ToTensor
+- recipe_id: RandomCrop224+RGBShift
   augmentation_id: RGBShift
   channels: 3
   stages:
@@ -703,7 +708,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+GaussianBlur+Normalize+ToTensor
+- recipe_id: RandomCrop224+GaussianBlur
   augmentation_id: GaussianBlur
   channels: 3
   stages:
@@ -715,12 +720,14 @@ recipes:
     randomness_scope: per-image
   - operation_id: GaussianBlur
     parameters:
-      sigma: 2.0
+      sigma:
+      - 0.8
+      - 2.0
       kernel_size:
       - 5
       - 5
-    stochastic: false
-    randomness_scope: deterministic
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -755,7 +762,7 @@ recipes:
   - pillow_cpu
   - pillow_allsimd_cpu
   - dali_gpu
-- recipe_id: RandomCrop224+GaussianNoise+Normalize+ToTensor
+- recipe_id: RandomCrop224+GaussianNoise
   augmentation_id: GaussianNoise
   channels: 3
   stages:
@@ -802,7 +809,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - dali_gpu
-- recipe_id: RandomCrop224+Invert+Normalize+ToTensor
+- recipe_id: RandomCrop224+Invert
   augmentation_id: Invert
   channels: 3
   stages:
@@ -850,7 +857,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+Posterize+Normalize+ToTensor
+- recipe_id: RandomCrop224+Posterize
   augmentation_id: Posterize
   channels: 3
   stages:
@@ -862,9 +869,11 @@ recipes:
     randomness_scope: per-image
   - operation_id: Posterize
     parameters:
-      bits: 4
-    stochastic: false
-    randomness_scope: deterministic
+      bits:
+      - 4
+      - 7
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -899,7 +908,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+Solarize+Normalize+ToTensor
+- recipe_id: RandomCrop224+Solarize
   augmentation_id: Solarize
   channels: 3
   stages:
@@ -911,9 +920,11 @@ recipes:
     randomness_scope: per-image
   - operation_id: Solarize
     parameters:
-      threshold: 0.5
-    stochastic: false
-    randomness_scope: deterministic
+      threshold:
+      - 0.4
+      - 0.6
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -948,7 +959,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+Sharpen+Normalize+ToTensor
+- recipe_id: RandomCrop224+Sharpen
   augmentation_id: Sharpen
   channels: 3
   stages:
@@ -994,7 +1005,7 @@ recipes:
   - torchvision_gpu
   - kornia_cpu
   - kornia_gpu
-- recipe_id: RandomCrop224+AutoContrast+Normalize+ToTensor
+- recipe_id: RandomCrop224+AutoContrast
   augmentation_id: AutoContrast
   channels: 3
   stages:
@@ -1040,7 +1051,7 @@ recipes:
   - kornia_gpu
   - pillow_cpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+Equalize+Normalize+ToTensor
+- recipe_id: RandomCrop224+Equalize
   augmentation_id: Equalize
   channels: 3
   stages:
@@ -1089,7 +1100,7 @@ recipes:
   - pillow_cpu
   - pillow_allsimd_cpu
   - dali_gpu
-- recipe_id: RandomCrop224+Erasing+Normalize+ToTensor
+- recipe_id: RandomCrop224+Erasing
   augmentation_id: Erasing
   channels: 3
   stages:
@@ -1140,7 +1151,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - dali_gpu
-- recipe_id: RandomCrop224+JpegCompression+Normalize+ToTensor
+- recipe_id: RandomCrop224+JpegCompression
   augmentation_id: JpegCompression
   channels: 3
   stages:
@@ -1155,6 +1166,7 @@ recipes:
       quality_range:
       - 30
       - 90
+      kornia_quality_anchors: [[30, 24], [70, 63], [90, 89]]
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize
@@ -1191,7 +1203,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+RandomGamma+Normalize+ToTensor
+- recipe_id: RandomCrop224+RandomGamma
   augmentation_id: RandomGamma
   channels: 3
   stages:
@@ -1203,9 +1215,11 @@ recipes:
     randomness_scope: per-image
   - operation_id: RandomGamma
     parameters:
-      gamma: 120
-    stochastic: false
-    randomness_scope: deterministic
+      gamma:
+      - 90
+      - 120
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -1240,7 +1254,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+PlankianJitter+Normalize+ToTensor
+- recipe_id: RandomCrop224+PlankianJitter
   augmentation_id: PlankianJitter
   channels: 3
   stages:
@@ -1280,7 +1294,7 @@ recipes:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
-- recipe_id: RandomCrop224+MedianBlur+Normalize+ToTensor
+- recipe_id: RandomCrop224+MedianBlur
   augmentation_id: MedianBlur
   channels: 3
   stages:
@@ -1292,9 +1306,11 @@ recipes:
     randomness_scope: per-image
   - operation_id: MedianBlur
     parameters:
-      blur_limit: 5
-    stochastic: false
-    randomness_scope: deterministic
+      blur_limit:
+      - 3
+      - 5
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -1326,7 +1342,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+MotionBlur+Normalize+ToTensor
+- recipe_id: RandomCrop224+MotionBlur
   augmentation_id: MotionBlur
   channels: 3
   stages:
@@ -1372,7 +1388,7 @@ recipes:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
-- recipe_id: RandomCrop224+CLAHE+Normalize+ToTensor
+- recipe_id: RandomCrop224+CLAHE
   augmentation_id: CLAHE
   channels: 3
   stages:
@@ -1384,7 +1400,8 @@ recipes:
     randomness_scope: per-image
   - operation_id: CLAHE
     parameters:
-      clip_limits: [1, 2, 3, 4]
+      clip_range: [1.0, 4.0]
+      kornia_clip_range: [1.0, 3.5]
       tile_grid_size:
       - 8
       - 8
@@ -1417,7 +1434,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - dali_gpu
-- recipe_id: RandomCrop224+Brightness+Normalize+ToTensor
+- recipe_id: RandomCrop224+Brightness
   augmentation_id: Brightness
   channels: 3
   stages:
@@ -1430,10 +1447,10 @@ recipes:
   - operation_id: Brightness
     parameters:
       brightness_limit:
+      - -0.2
       - 0.2
-      - 0.2
-    stochastic: false
-    randomness_scope: deterministic
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -1468,7 +1485,7 @@ recipes:
   - pillow_cpu
   - pillow_allsimd_cpu
   - dali_gpu
-- recipe_id: RandomCrop224+Contrast+Normalize+ToTensor
+- recipe_id: RandomCrop224+Contrast
   augmentation_id: Contrast
   channels: 3
   stages:
@@ -1481,10 +1498,10 @@ recipes:
   - operation_id: Contrast
     parameters:
       contrast_limit:
+      - -0.2
       - 0.2
-      - 0.2
-    stochastic: false
-    randomness_scope: deterministic
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -1519,7 +1536,7 @@ recipes:
   - pillow_cpu
   - pillow_allsimd_cpu
   - dali_gpu
-- recipe_id: RandomCrop224+Blur+Normalize+ToTensor
+- recipe_id: RandomCrop224+Blur
   augmentation_id: Blur
   channels: 3
   stages:
@@ -1531,10 +1548,12 @@ recipes:
     randomness_scope: per-image
   - operation_id: Blur
     parameters:
-      kernel_size: 5
+      kernel_size:
+      - 3
+      - 5
       border_mode: reflect
-    stochastic: false
-    randomness_scope: deterministic
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -1566,7 +1585,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+ChannelDropout+Normalize+ToTensor
+- recipe_id: RandomCrop224+ChannelDropout
   augmentation_id: ChannelDropout
   channels: 3
   stages:
@@ -1611,7 +1630,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+LinearIllumination+Normalize+ToTensor
+- recipe_id: RandomCrop224+LinearIllumination
   augmentation_id: LinearIllumination
   channels: 3
   stages:
@@ -1653,7 +1672,7 @@ recipes:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
-- recipe_id: RandomCrop224+CornerIllumination+Normalize+ToTensor
+- recipe_id: RandomCrop224+CornerIllumination
   augmentation_id: CornerIllumination
   channels: 3
   stages:
@@ -1668,6 +1687,7 @@ recipes:
       gain:
       - 0.01
       - 0.2
+      kornia_gain: [0.006, 0.12]
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize
@@ -1695,7 +1715,7 @@ recipes:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
-- recipe_id: RandomCrop224+GaussianIllumination+Normalize+ToTensor
+- recipe_id: RandomCrop224+GaussianIllumination
   augmentation_id: GaussianIllumination
   channels: 3
   stages:
@@ -1710,6 +1730,7 @@ recipes:
       gain:
       - 0.01
       - 0.2
+      kornia_gain: [0.006, 0.12]
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize
@@ -1737,7 +1758,7 @@ recipes:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
-- recipe_id: RandomCrop224+Hue+Normalize+ToTensor
+- recipe_id: RandomCrop224+Hue
   augmentation_id: Hue
   channels: 3
   stages:
@@ -1784,7 +1805,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - dali_gpu
-- recipe_id: RandomCrop224+PlasmaBrightness+Normalize+ToTensor
+- recipe_id: RandomCrop224+PlasmaBrightness
   augmentation_id: PlasmaBrightness
   channels: 3
   stages:
@@ -1797,6 +1818,7 @@ recipes:
   - operation_id: PlasmaBrightness
     parameters:
       roughness: 0.5
+      kornia_intensity: [0.4, 1.0]
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize
@@ -1824,7 +1846,7 @@ recipes:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
-- recipe_id: RandomCrop224+PlasmaContrast+Normalize+ToTensor
+- recipe_id: RandomCrop224+PlasmaContrast
   augmentation_id: PlasmaContrast
   channels: 3
   stages:
@@ -1864,7 +1886,7 @@ recipes:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
-- recipe_id: RandomCrop224+PlasmaShadow+Normalize+ToTensor
+- recipe_id: RandomCrop224+PlasmaShadow
   augmentation_id: PlasmaShadow
   channels: 3
   stages:
@@ -1877,6 +1899,8 @@ recipes:
   - operation_id: PlasmaShadow
     parameters:
       roughness: 0.5
+      kornia_intensity: [-0.21, -0.14]
+      kornia_quantity: [0.46, 0.66]
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize
@@ -1904,7 +1928,7 @@ recipes:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
-- recipe_id: RandomCrop224+Rain+Normalize+ToTensor
+- recipe_id: RandomCrop224+Rain
   augmentation_id: Rain
   channels: 3
   stages:
@@ -1916,9 +1940,10 @@ recipes:
     randomness_scope: per-image
   - operation_id: Rain
     parameters:
+      input_height: 224
       drop_width: 5
-      drop_height: 20
       brightness_coefficient: 1.0
+      kornia_drop_count: 1150
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize
@@ -1946,7 +1971,7 @@ recipes:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
-- recipe_id: RandomCrop224+SaltAndPepper+Normalize+ToTensor
+- recipe_id: RandomCrop224+SaltAndPepper
   augmentation_id: SaltAndPepper
   channels: 3
   stages:
@@ -1993,7 +2018,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - dali_gpu
-- recipe_id: RandomCrop224+Saturation+Normalize+ToTensor
+- recipe_id: RandomCrop224+Saturation
   augmentation_id: Saturation
   channels: 3
   stages:
@@ -2005,9 +2030,11 @@ recipes:
     randomness_scope: per-image
   - operation_id: Saturation
     parameters:
-      saturation_factor: 0.5
-    stochastic: false
-    randomness_scope: deterministic
+      saturation_factor:
+      - -0.2
+      - 0.3
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -2039,7 +2066,7 @@ recipes:
   - pillow_cpu
   - pillow_allsimd_cpu
   - dali_gpu
-- recipe_id: RandomCrop224+Snow+Normalize+ToTensor
+- recipe_id: RandomCrop224+Snow
   augmentation_id: Snow
   channels: 3
   stages:
@@ -2080,7 +2107,7 @@ recipes:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
-- recipe_id: RandomCrop224+OpticalDistortion+Normalize+ToTensor
+- recipe_id: RandomCrop224+OpticalDistortion
   augmentation_id: OpticalDistortion
   channels: 3
   stages:
@@ -2092,8 +2119,11 @@ recipes:
     randomness_scope: per-image
   - operation_id: OpticalDistortion
     parameters:
-      distort_limit: 0.5
+      distort_limit:
+      - -0.3
+      - 0.3
       mode: fisheye
+      kornia_gamma: [45.0, 90.0]
     stochastic: true
     randomness_scope: per-image
   - operation_id: Normalize
@@ -2121,7 +2151,7 @@ recipes:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
-- recipe_id: RandomCrop224+Shear+Normalize+ToTensor
+- recipe_id: RandomCrop224+Shear
   augmentation_id: Shear
   channels: 3
   stages:
@@ -2133,9 +2163,11 @@ recipes:
     randomness_scope: per-image
   - operation_id: Shear
     parameters:
-      shear: 10
-    stochastic: false
-    randomness_scope: deterministic
+      shear:
+      - -10.0
+      - 10.0
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -2170,7 +2202,7 @@ recipes:
   - pillow_cpu
   - pillow_allsimd_cpu
   - dali_gpu
-- recipe_id: RandomCrop224+ThinPlateSpline+Normalize+ToTensor
+- recipe_id: RandomCrop224+ThinPlateSpline
   augmentation_id: ThinPlateSpline
   channels: 3
   stages:
@@ -2211,7 +2243,7 @@ recipes:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
-- recipe_id: RandomCrop224+PhotoMetricDistort+Normalize+ToTensor
+- recipe_id: RandomCrop224+PhotoMetricDistort
   augmentation_id: PhotoMetricDistort
   channels: 3
   stages:
@@ -2262,7 +2294,7 @@ recipes:
   - albumentationsx_cpu
   - torchvision_cpu
   - torchvision_gpu
-- recipe_id: RandomCrop224+ColorJiggle+Normalize+ToTensor
+- recipe_id: RandomCrop224+ColorJiggle
   augmentation_id: ColorJiggle
   channels: 3
   stages:
@@ -2318,7 +2350,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - dali_gpu
-- recipe_id: LongestMaxSize+RandomCrop224+Normalize+ToTensor
+- recipe_id: LongestMaxSize+RandomCrop224
   augmentation_id: LongestMaxSize
   channels: 3
   stages:
@@ -2368,7 +2400,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: SmallestMaxSize+RandomCrop224+Normalize+ToTensor
+- recipe_id: SmallestMaxSize+RandomCrop224
   augmentation_id: SmallestMaxSize
   channels: 3
   stages:
@@ -2418,7 +2450,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+Transpose+Normalize+ToTensor
+- recipe_id: RandomCrop224+Transpose
   augmentation_id: Transpose
   channels: 3
   stages:
@@ -2454,19 +2486,13 @@ recipes:
   - albumentationsx
   - pillow
   - pillow_allsimd
-  - torchvision
-  - kornia
   - dali
   supported_implementations:
   - albumentationsx_cpu
   - pillow_cpu
-  - torchvision_cpu
-  - torchvision_gpu
-  - kornia_cpu
-  - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+RandomRotate90+Normalize+ToTensor
+- recipe_id: RandomCrop224+RandomRotate90
   augmentation_id: RandomRotate90
   channels: 3
   stages:
@@ -2517,7 +2543,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+RandomJigsaw+Normalize+ToTensor
+- recipe_id: RandomCrop224+RandomJigsaw
   augmentation_id: RandomJigsaw
   channels: 3
   stages:
@@ -2559,7 +2585,7 @@ recipes:
   - albumentationsx_cpu
   - kornia_cpu
   - kornia_gpu
-- recipe_id: RandomCrop224+EnhanceEdge+Normalize+ToTensor
+- recipe_id: RandomCrop224+EnhanceEdge
   augmentation_id: EnhanceEdge
   channels: 3
   stages:
@@ -2603,7 +2629,7 @@ recipes:
   - albumentationsx_cpu
   - pillow_cpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+EnhanceDetail+Normalize+ToTensor
+- recipe_id: RandomCrop224+EnhanceDetail
   augmentation_id: EnhanceDetail
   channels: 3
   stages:
@@ -2647,7 +2673,7 @@ recipes:
   - albumentationsx_cpu
   - pillow_cpu
   - pillow_allsimd_cpu
-- recipe_id: RandomCrop224+UnsharpMask+Normalize+ToTensor
+- recipe_id: RandomCrop224+UnsharpMask
   augmentation_id: UnsharpMask
   channels: 3
   stages:
@@ -2695,7 +2721,7 @@ recipes:
   - albumentationsx_cpu
   - pillow_cpu
   - pillow_allsimd_cpu
-- recipe_id: CenterCrop+Normalize+ToTensor
+- recipe_id: CenterCrop
   augmentation_id: CenterCrop
   channels: 3
   stages:
@@ -2739,7 +2765,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: Resize256+Crop+Normalize+ToTensor
+- recipe_id: Resize256+Crop
   augmentation_id: Crop
   channels: 3
   stages:
@@ -2792,7 +2818,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: Resize224+CropAndPad+Normalize+ToTensor
+- recipe_id: Resize224+CropAndPad
   augmentation_id: CropAndPad
   channels: 3
   stages:
@@ -2833,7 +2859,6 @@ recipes:
   supported_libraries:
   - albumentationsx
   - torchvision
-  - kornia
   - pillow
   - pillow_allsimd
   - dali
@@ -2842,11 +2867,9 @@ recipes:
   - pillow_cpu
   - torchvision_cpu
   - torchvision_gpu
-  - kornia_cpu
-  - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: LetterBox+Normalize+ToTensor
+- recipe_id: LetterBox
   augmentation_id: LetterBox
   channels: 3
   stages:
@@ -2876,21 +2899,15 @@ recipes:
     randomness_scope: deterministic
   supported_libraries:
   - albumentationsx
-  - torchvision
-  - kornia
   - pillow
   - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
   - pillow_cpu
-  - torchvision_cpu
-  - torchvision_gpu
-  - kornia_cpu
-  - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: PadIfNeeded+RandomCrop224+Normalize+ToTensor
+- recipe_id: PadIfNeeded+RandomCrop224
   augmentation_id: PadIfNeeded
   channels: 3
   stages:
@@ -2940,8 +2957,8 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: Resize224+ChannelSwap+Normalize+ToTensor
-  augmentation_id: ChannelSwap
+- recipe_id: Resize224+RGBToBGR
+  augmentation_id: RGB <-> BGR
   channels: 3
   stages:
   - operation_id: Resize
@@ -2953,10 +2970,7 @@ recipes:
     randomness_scope: deterministic
   - operation_id: ChannelSwap
     parameters:
-      channel_order:
-      - 2
-      - 1
-      - 0
+      channel_order: [2, 1, 0]
     stochastic: false
     randomness_scope: deterministic
   - operation_id: Normalize
@@ -2993,61 +3007,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: Resize224+Colorize+Normalize+ToTensor
-  augmentation_id: Colorize
-  channels: 3
-  stages:
-  - operation_id: Resize
-    parameters:
-      target_size: 224
-      interpolation: bilinear
-      antialias: false
-    stochastic: false
-    randomness_scope: deterministic
-  - operation_id: Colorize
-    parameters:
-      black:
-      - 8
-      - 24
-      - 64
-      white:
-      - 255
-      - 238
-      - 192
-    stochastic: false
-    randomness_scope: deterministic
-  - operation_id: Normalize
-    parameters:
-      mean:
-      - 0.485
-      - 0.456
-      - 0.406
-      std:
-      - 0.229
-      - 0.224
-      - 0.225
-    stochastic: false
-    randomness_scope: deterministic
-  - operation_id: ToTensor
-    parameters:
-      layout: CHW
-      dtype: float16
-    stochastic: false
-    randomness_scope: deterministic
-  supported_libraries:
-  - albumentationsx
-  - pillow
-  - pillow_allsimd
-  - dali
-  - kornia
-  supported_implementations:
-  - albumentationsx_cpu
-  - pillow_cpu
-  - kornia_cpu
-  - kornia_gpu
-  - dali_gpu
-  - pillow_allsimd_cpu
-- recipe_id: Resize224+Dithering+Normalize+ToTensor
+- recipe_id: Resize224+Dithering
   augmentation_id: Dithering
   channels: 3
   stages:
@@ -3090,7 +3050,7 @@ recipes:
   - albumentationsx_cpu
   - pillow_cpu
   - pillow_allsimd_cpu
-- recipe_id: Resize224+MorphologicalDilation+Normalize+ToTensor
+- recipe_id: Resize224+MorphologicalDilation
   augmentation_id: MorphologicalDilation
   channels: 3
   stages:
@@ -3134,7 +3094,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - dali_gpu
-- recipe_id: Resize224+MorphologicalErosion+Normalize+ToTensor
+- recipe_id: Resize224+MorphologicalErosion
   augmentation_id: MorphologicalErosion
   channels: 3
   stages:
@@ -3178,7 +3138,7 @@ recipes:
   - kornia_cpu
   - kornia_gpu
   - dali_gpu
-- recipe_id: RandomScale+RandomCrop224+Normalize+ToTensor
+- recipe_id: RandomScale+RandomCrop224
   augmentation_id: RandomScale
   channels: 3
   stages:
@@ -3230,7 +3190,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: Resize224+RandomSizedCrop+Normalize+ToTensor
+- recipe_id: Resize224+RandomSizedCrop
   augmentation_id: RandomSizedCrop
   channels: 3
   stages:
@@ -3284,7 +3244,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: Resize224+CoarseDropout+Normalize+ToTensor
+- recipe_id: Resize224+CoarseDropout
   augmentation_id: CoarseDropout
   channels: 3
   stages:
@@ -3335,7 +3295,7 @@ recipes:
   - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: Resize224+Emboss+Normalize+ToTensor
+- recipe_id: Resize224+Emboss
   augmentation_id: Emboss
   channels: 3
   stages:
@@ -3348,10 +3308,14 @@ recipes:
     randomness_scope: deterministic
   - operation_id: Emboss
     parameters:
-      alpha: 0.5
-      strength: 1.0
-    stochastic: false
-    randomness_scope: deterministic
+      alpha:
+      - 0.2
+      - 0.5
+      strength:
+      - 0.5
+      - 1.0
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:
@@ -3372,18 +3336,15 @@ recipes:
     randomness_scope: deterministic
   supported_libraries:
   - albumentationsx
-  - kornia
   - pillow
   - pillow_allsimd
   - dali
   supported_implementations:
   - albumentationsx_cpu
   - pillow_cpu
-  - kornia_cpu
-  - kornia_gpu
   - dali_gpu
   - pillow_allsimd_cpu
-- recipe_id: Resize224+PixelSpread+Normalize+ToTensor
+- recipe_id: Resize224+PixelSpread
   augmentation_id: PixelSpread
   channels: 3
   stages:
@@ -3423,7 +3384,7 @@ recipes:
   supported_implementations:
   - albumentationsx_cpu
   - dali_gpu
-- recipe_id: Resize224+ShiftScaleRotate+Normalize+ToTensor
+- recipe_id: Resize224+ShiftScaleRotate
   augmentation_id: ShiftScaleRotate
   channels: 3
   stages:
@@ -3437,13 +3398,17 @@ recipes:
   - operation_id: ShiftScaleRotate
     parameters:
       input_size: 224
-      angle: 12
-      scale: 1.125
+      angle:
+      - -12.0
+      - 12.0
+      scale:
+      - 0.875
+      - 1.125
       shift:
-      - 14
-      - -7
-    stochastic: false
-    randomness_scope: deterministic
+        x: [-14, 14]
+        y: [-7, 7]
+    stochastic: true
+    randomness_scope: per-image
   - operation_id: Normalize
     parameters:
       mean:

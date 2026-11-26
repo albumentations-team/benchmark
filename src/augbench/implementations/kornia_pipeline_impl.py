@@ -16,12 +16,27 @@ if TYPE_CHECKING:
 
 
 _FP32_GPU_STAGES = frozenset(
-    {"CoarseDropout", "CornerIllumination", "Erasing", "LinearIllumination", "Perspective", "ShiftScaleRotate"}
+    {
+        "CoarseDropout",
+        "CornerIllumination",
+        "Erasing",
+        "LinearIllumination",
+        "Perspective",
+        "ShiftScaleRotate",
+        "ThinPlateSpline",
+    }
 )
 
 
 def __call__(transform: Any, image: Any) -> Any:  # noqa: N807
     return transform(image.unsqueeze(0)).squeeze(0)
+
+
+class _RecipeStages(nn.ModuleList):
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        for stage in self:
+            image = stage(image)
+        return image
 
 
 class _HostBatchFloat16(nn.Module):
@@ -38,7 +53,7 @@ class _DeferredCpuRecipe(nn.Module):
 
     def __init__(self, *, transforms: tuple[nn.Module, ...], recipe: RecipeSpec) -> None:
         super().__init__()
-        self.cpu_transform = force_per_sample_randomness(nn.Sequential(*transforms))
+        self.cpu_transform = force_per_sample_randomness(_RecipeStages(transforms))
         self.host_batch_transform = _HostBatchFloat16()
         self.gpu_transform = _GpuBatchRecipe(tail=None, recipe=recipe)
 
@@ -94,9 +109,9 @@ def build_recipe(recipe: RecipeSpec, implementation_id: str) -> nn.Module:
         gpu_transforms = tuple(
             _transform(spec, recipe.recipe_id, fp32=spec.name in _FP32_GPU_STAGES) for spec in gpu_specs
         )
-        tail = force_per_sample_randomness(nn.Sequential(*gpu_transforms)) if gpu_transforms else None
+        tail = force_per_sample_randomness(_RecipeStages(gpu_transforms)) if gpu_transforms else None
         return _GpuRecipe(
-            cpu_transform=force_per_sample_randomness(nn.Sequential(*cpu_transforms)),
+            cpu_transform=force_per_sample_randomness(_RecipeStages(cpu_transforms)),
             gpu_transform=_GpuBatchRecipe(tail=tail, recipe=recipe),
         )
     raise UnsupportedRecipeError(f"{implementation_id!r} is not a Kornia implementation")

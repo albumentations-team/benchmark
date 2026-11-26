@@ -4,7 +4,7 @@ import pytest
 
 from augbench.cli import main
 from augbench.frozen_rgb_run import FrozenRgbRun
-from augbench.gcp_controller import GcpLaunch
+from augbench.gcp_controller import GcpLaunch, LaunchedInstance
 from augbench.guest_request import GuestRequest
 from augbench.run_records import RunInputs, build_run_record
 
@@ -42,8 +42,7 @@ def test_launch_rgb_command_prints_actionable_state(
         status="active",
         run_id=run.run_id,
         pending_cell_ids=("1" * 64,),
-        instance_name="vm",
-        zone="zone",
+        instances=(LaunchedInstance(name="vm", zone="zone"),),
     )
     monkeypatch.setattr("augbench.cli.launch_rgb", lambda **_kwargs: (frozen, launch))
 

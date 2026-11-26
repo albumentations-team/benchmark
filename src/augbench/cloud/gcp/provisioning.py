@@ -193,6 +193,7 @@ def is_retryable_capacity_error(message: str) -> bool:
             "does not have enough resources",
             "currently unavailable",
             "resource_availability",
+            "quota",
         )
     )
 

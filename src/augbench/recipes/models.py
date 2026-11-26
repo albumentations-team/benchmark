@@ -43,7 +43,7 @@ class RecipeSpec(_RecipeModel):
 class RecipeCatalog(_RecipeModel):
     schema_version: Literal[1] = 1
     recipe_set_id: str = Field(min_length=1)
-    family: Literal["rgb"]
+    family: Literal["rgb", "grayscale"]
     recipes: tuple[RecipeSpec, ...] = Field(min_length=1)
 
     @model_validator(mode="after")
@@ -52,5 +52,5 @@ class RecipeCatalog(_RecipeModel):
         if len(recipe_ids) != len(set(recipe_ids)):
             raise ValueError("recipe catalog contains duplicate recipe IDs")
         if any(recipe.channels != _RGB_CHANNELS for recipe in self.recipes):
-            raise ValueError("RGB recipes require three channels")
+            raise ValueError("these image recipes require three output channels")
         return self

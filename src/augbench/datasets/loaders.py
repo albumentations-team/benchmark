@@ -20,11 +20,12 @@ def _validate_uint8_hwc(sample: NDArray[np.generic], *, channels: int, source: P
     return cast("Uint8Array", np.ascontiguousarray(sample, dtype=np.uint8))
 
 
-class SimpleJpegRgbLoader:
-    """Read one JPEG from disk and decode it directly to RGB HWC uint8."""
+class SimpleJpegLoader:
+    """Read a JPEG directly into an HWC uint8 array."""
 
-    def load(self, path: Path) -> Uint8Array:
+    def load(self, path: Path, *, channels: int = 3) -> Uint8Array:
         import simplejpeg
 
-        sample = simplejpeg.decode_jpeg(path.read_bytes(), colorspace="RGB")
-        return _validate_uint8_hwc(sample, channels=3, source=path)
+        colorspace = "GRAY" if channels == 1 else "RGB"
+        sample = simplejpeg.decode_jpeg(path.read_bytes(), colorspace=colorspace)
+        return _validate_uint8_hwc(sample, channels=channels, source=path)

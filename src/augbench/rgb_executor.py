@@ -54,6 +54,7 @@ class _DaliExecution:
     seed: int
     height: int
     width: int
+    jpeg_channels: int = 3
 
 
 class _DaliAdapter(Protocol):
@@ -71,14 +72,12 @@ class RGBCellExecutor:
         dataset_files: Sequence[Path],
         adapters: AdapterRegistry | None = None,
     ) -> None:
-        if config.family != "rgb" or recipes.family != "rgb":
-            raise ValueError("RGB executor requires RGB config, recipes, and dataset")
         if len(dataset_files) != config.dataset.item_count:
-            raise ValueError("RGB executor dataset does not match configured item count")
+            raise ValueError("executor dataset does not match configured item count")
         validate_rgb_recipes(config, recipes)
         self._config = config
         self._recipes = recipes
-        self._sources = tuple(SourceRef(path=path) for path in dataset_files)
+        self._sources = tuple(SourceRef(path=path, channels=config.jpeg_channels) for path in dataset_files)
         self._adapters = adapters or default_adapter_registry()
 
     def execute(self, cell: CellKey) -> ResultRecord:
@@ -221,6 +220,7 @@ class RGBCellExecutor:
                 seed=seed,
                 height=self._config.output.height,
                 width=self._config.output.width,
+                jpeg_channels=self._config.jpeg_channels,
             ),
         )
         latest: dict[str, object] | None = None
@@ -270,6 +270,7 @@ class RGBCellExecutor:
                 seed=seed,
                 height=self._config.output.height,
                 width=self._config.output.width,
+                jpeg_channels=self._config.jpeg_channels,
             ),
         )
         source.open()

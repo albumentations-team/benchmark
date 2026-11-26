@@ -25,7 +25,16 @@ Each measurement records throughput and peak process GPU memory together.
 The CPU paths include AlbumentationsX, Pillow, and Pillow-AllSIMD in fast mode.
 TorchVision and Kornia each have a CPU and a GPU path. DALI uses its native GPU pipeline.
 
-The current TorchVision GPU path uses TorchCodec 0.17.0 with hardware nvJPEG on the L4. It improved throughput on all 44 of its recipes relative to the earlier hybrid decode path, with a median paired speedup of 5.69×. On RandomCrop224, throughput increased from 495 to 4,464 images/s. The [methodology FAQ](docs/benchmark_faq.md#why-do-torchvision-gpu-and-kornia-gpu-use-different-jpeg-pipelines) explains why Kornia GPU keeps CPU decode and crop/resize.
+The workload models image classification on 8-bit RGB inputs. Each sample contains one image with
+no bounding boxes, masks, keypoints, or additional targets. The benchmark includes augmentation
+libraries (AlbumentationsX, TorchVision, Kornia) and preprocessing libraries (Pillow, Pillow-AllSIMD,
+DALI). Native AlbumentationsX transforms define the reference effects. We adapt TorchVision and
+Kornia to match them and assemble the preprocessing paths from library primitives.
+
+The separate [grayscale Colorize workload](docs/benchmark_execution_contract.md#grayscale-colorize-workload)
+starts with one-channel ImageNet JPEGs prepared offline and returns an RGB batch.
+
+The current TorchVision GPU path uses TorchCodec 0.17.0 with hardware nvJPEG on the L4. It improved throughput on all 44 of its recipes relative to the earlier hybrid decode path, with a median paired speedup of 5.69×. On RandomCrop224, throughput increased from 495 to 4,464 images/s. The [methodology FAQ](docs/benchmark_faq.md) explains the trade-offs between the two library groups and why Kornia GPU keeps CPU decode and crop/resize.
 
 See the [current manuscript](paper/main.tex), [per-recipe results and seed observations](paper/generated/recipe-results.csv),
 and [reproduction instructions](paper/README.md). The [September preprint](https://arxiv.org/abs/2609.06635)

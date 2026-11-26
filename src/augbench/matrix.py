@@ -18,7 +18,7 @@ def build_matrix(*, run_id: str, config: FamilyRunConfig, recipes: RecipeCatalog
     cells = tuple(
         CellKey(
             run_id=run_id,
-            family="rgb",
+            family=recipes.family,
             implementation=implementation,
             recipe_id=recipe.recipe_id,
             seed=seed,

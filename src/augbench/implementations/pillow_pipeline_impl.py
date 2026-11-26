@@ -82,7 +82,14 @@ class _RandomResizedCrop:
                 top = random.randint(0, height - crop_height)  # noqa: S311
                 cropped = image.crop((left, top, left + crop_width, top + crop_height))
                 return self._resize(cropped)
-        return self._resize(image)
+        aspect = width / height
+        if aspect < self._ratio[0]:
+            height = round(width / self._ratio[0])
+        elif aspect > self._ratio[1]:
+            width = round(height * self._ratio[1])
+        left = (image.width - width) // 2
+        top = (image.height - height) // 2
+        return self._resize(image.crop((left, top, left + width, top + height)))
 
 
 class _PillowRecipe:

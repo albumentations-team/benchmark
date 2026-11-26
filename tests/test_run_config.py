@@ -22,7 +22,7 @@ def test_rgb_config_defines_the_entire_runnable_contract() -> None:
     assert config.execution.batch_size == 256
     assert config.execution.warmup_batches == 1
     assert config.execution.measured_batches == 32
-    assert config.execution.seeds == (137, 138, 139)
+    assert config.execution.seeds == (137, 138, 139, 140, 141)
     assert config.execution.num_workers == 15
     assert config.execution.prefetch_factor == 2
     assert config.execution.prewarm_dataset

@@ -20,7 +20,7 @@ execution:
   batch_size: 256
   warmup_batches: 1
   measured_batches: 32
-  seeds: [137, 138, 139]
+  seeds: [137, 138, 139, 140, 141]
   num_workers: 15
   prefetch_factor: 2
   persistent_workers: true

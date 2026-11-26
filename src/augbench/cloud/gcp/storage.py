@@ -66,6 +66,15 @@ class GcloudObjectStore:
             raise RuntimeError(f"gcloud read failed for {uri}: {error_text.strip()}")
         return completed.stdout
 
+    def delete(self, key: str) -> None:
+        uri = self._uri(key)
+        completed = self._runner([self._executable, "storage", "rm", "--quiet", uri])
+        if completed.returncode != 0:
+            error_text = completed.stderr.decode(errors="replace")
+            if "not found" in error_text.lower() or "matched no objects" in error_text.lower():
+                return
+            raise RuntimeError(f"gcloud delete failed for {uri}: {error_text.strip()}")
+
     def list_keys(self, prefix: str) -> tuple[str, ...]:
         uri = self._uri(prefix.rstrip("/"))
         completed = self._runner([self._executable, "storage", "ls", "--recursive", uri])

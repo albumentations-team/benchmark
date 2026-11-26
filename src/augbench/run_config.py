@@ -62,7 +62,7 @@ class ExecutionConfig(_ConfigModel):
 
 class FamilyRunConfig(_ConfigModel):
     schema_version: Literal[1] = 1
-    family: Literal["rgb", "image9ch", "video", "volume"]
+    family: Literal["rgb", "grayscale", "image9ch", "video", "volume"]
     output: OutputConfig
     normalization: Literal["gpu"]
     dataset: DatasetConfig
@@ -73,12 +73,16 @@ class FamilyRunConfig(_ConfigModel):
     implementations: tuple[str, ...] = Field(min_length=1)
     measurements: dict[str, tuple[str, ...]] | None = None
 
+    @property
+    def jpeg_channels(self) -> int:
+        return 1 if self.family == "grayscale" else _RGB_CHANNELS
+
     @model_validator(mode="after")
     def validate_runnable_family(self) -> FamilyRunConfig:
-        if self.family != "rgb":
-            raise ValueError("only the RGB family is runnable until its dataset and adapters are added")
+        if self.family not in {"rgb", "grayscale"}:
+            raise ValueError("this family requires its own dataset and adapters")
         if self.output.channels != _RGB_CHANNELS:
-            raise ValueError("the active RGB contract requires three channels")
+            raise ValueError("these image recipes require three output channels")
         if self.normalization != "gpu":
             raise ValueError("normalization is always applied to the collated CUDA batch")
         if self.dataset.item_count < self.execution.required_items:
@@ -107,6 +111,7 @@ class GcpRunConfig(_ConfigModel):
     boot_disk_size_gib: int = Field(ge=50)
     provisioning_deadline_seconds: int = Field(ge=60)
     run_deadline_seconds: int = Field(ge=60)
+    max_vms: int = Field(default=1, ge=1)
 
 
 def load_gcp_config(path: pathlib.Path) -> GcpRunConfig:

@@ -1,15 +1,30 @@
+import hashlib
 import io
+import json
 import tarfile
 from pathlib import Path
+
+from PIL import Image
 
 from augbench.dataset_materialize import materialize_rgb_dataset
 from augbench.run_config import DatasetConfig
 
 
 def test_materialize_selects_sorted_jpegs_and_reuses_a_complete_cache(tmp_path: Path) -> None:
+    pixels = Image.new("RGB", (48, 32), color=(41, 79, 137))
+    exif = Image.Exif()
+    exif[274] = 6
+    with io.BytesIO() as clean, io.BytesIO() as tagged:
+        pixels.save(clean, format="JPEG")
+        pixels.save(tagged, format="JPEG", exif=exif)
+        xmp = b"http://ns.adobe.com/xap/1.0/\x00<xmpmeta/>"
+        app1 = b"\xff\xe1" + (len(xmp) + 2).to_bytes(2, "big") + xmp
+        expected = clean.getvalue()[:2] + app1 + clean.getvalue()[2:]
+        source_bytes = tagged.getvalue()[:2] + app1 + tagged.getvalue()[2:]
+
     archive = tmp_path / "source.tar"
     with tarfile.open(archive, "w") as tar:
-        for name, payload in (("val/b.JPEG", b"b"), ("val/a.JPEG", b"a"), ("val/skip.png", b"skip")):
+        for name, payload in (("val/b.JPEG", expected), ("val/a.JPEG", source_bytes), ("val/skip.png", b"skip")):
             info = tarfile.TarInfo(name)
             info.size = len(payload)
             tar.addfile(info, io.BytesIO(payload))
@@ -23,11 +38,23 @@ def test_materialize_selects_sorted_jpegs_and_reuses_a_complete_cache(tmp_path: 
         access_order="seeded-random-without-replacement",
     )
 
-    first = materialize_rgb_dataset(archive=archive, dataset=dataset, cache_root=tmp_path / "cache")
-    second = materialize_rgb_dataset(archive=archive, dataset=dataset, cache_root=tmp_path / "cache")
+    cache = tmp_path / "cache"
+    old_key = hashlib.sha256(
+        json.dumps(dataset.model_dump(mode="json"), sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    old_file = cache / old_key / "val" / "a.JPEG"
+    old_file.parent.mkdir(parents=True)
+    old_file.write_bytes(source_bytes)
+
+    first = materialize_rgb_dataset(archive=archive, dataset=dataset, cache_root=cache)
+    second = materialize_rgb_dataset(archive=archive, dataset=dataset, cache_root=cache)
 
     assert first.files == (first.root / "val/a.JPEG",)
-    assert first.files[0].read_bytes() == b"a"
+    assert first.root != old_file.parent.parent
+    assert first.files[0].read_bytes() == expected
+    with Image.open(first.files[0]) as image:
+        assert image.size == (48, 32)
+        assert not image.getexif()
     assert not first.root.joinpath("val/b.JPEG").exists()
     assert not first.cache_hit
     assert second.cache_hit

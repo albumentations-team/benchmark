@@ -23,7 +23,7 @@ def _cell(seed: int = 137) -> CellKey:
         run_id="a" * 64,
         family="rgb",
         implementation="pillow_cpu",
-        recipe_id="Resize224+Normalize+ToTensor",
+        recipe_id="Resize224",
         seed=seed,
     )
 

@@ -24,8 +24,11 @@ class _Remote:
     def list_keys(self, prefix: str) -> tuple[str, ...]:
         return tuple(key for key in self.objects if key.startswith(prefix))
 
+    def delete(self, key: str) -> None:
+        del self.objects[key]
 
-def _cloud() -> GcpRunConfig:
+
+def _cloud(max_vms: int = 1) -> GcpRunConfig:
     return GcpRunConfig(
         project="albumentations",
         gcs_base_uri="gs://bucket/benchmark",
@@ -39,6 +42,7 @@ def _cloud() -> GcpRunConfig:
         boot_disk_size_gib=350,
         provisioning_deadline_seconds=60,
         run_deadline_seconds=3600,
+        max_vms=max_vms,
     )
 
 
@@ -73,12 +77,12 @@ def _cell(request: GuestRequest) -> CellKey:
         run_id=request.run.run_id,
         family="rgb",
         implementation="pillow_cpu",
-        recipe_id="Resize224+Normalize+ToTensor",
+        recipe_id="Resize224",
         seed=137,
     )
 
 
-def test_controller_creates_one_labeled_vm_for_missing_cells(tmp_path: Path) -> None:
+def test_controller_creates_one_labeled_vm_for_one_job(tmp_path: Path) -> None:
     startup = tmp_path / "bootstrap.sh"
     startup.write_text("#!/bin/bash\n", encoding="utf-8")
     request = _request()
@@ -183,4 +187,78 @@ def test_controller_never_launches_a_duplicate_active_vm(tmp_path: Path) -> None
     )
 
     assert launch.status == "active"
-    assert launch.instance_name == "augbench-rgb"
+    assert [instance.name for instance in launch.instances] == ["augbench-rgb"]
+
+
+def _cells(request: GuestRequest, *jobs: tuple[str, int]) -> tuple[CellKey, ...]:
+    return tuple(
+        CellKey(
+            run_id=request.run.run_id, family="rgb", implementation=implementation, recipe_id="Resize224", seed=seed
+        )
+        for implementation, seed in jobs
+    )
+
+
+def test_controller_launches_one_vm_per_job_up_to_the_cap(tmp_path: Path) -> None:
+    startup = tmp_path / "bootstrap.sh"
+    startup.write_text("#!/bin/bash\n", encoding="utf-8")
+    request = _request()
+    cells = _cells(
+        request, *[(implementation, seed) for implementation in ("pillow_cpu", "dali_gpu") for seed in (1, 2, 3)]
+    )
+    created: list[str] = []
+
+    def runner(command: list[str]) -> subprocess.CompletedProcess[bytes]:
+        if command[2:4] == ["instances", "list"]:
+            return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+        if command[2:4] in (["accelerator-types", "list"], ["machine-types", "list"]):
+            return subprocess.CompletedProcess(command, 0, stdout=b"us-central1-a\nus-east4-c\n", stderr=b"")
+        if command[2:4] == ["instances", "create"]:
+            created.append(command[4])
+            return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+        raise AssertionError(command)
+
+    launch = start_or_resume(
+        start=GcpStartRequest(cloud=_cloud(max_vms=4), request=request, cells=cells, startup_script=startup),
+        dependencies=GcpControllerDependencies(remote=_Remote(), runner=runner, sleep=lambda _seconds: None),
+    )
+
+    label = request.run.run_id[:12]
+    assert sorted(created) == [f"augbench-rgb-{label}-0{number}" for number in (1, 2, 3, 4)]
+    assert len(launch.instances) == 4
+    assert launch.shortfall == 0
+
+
+def test_controller_tops_up_only_the_missing_vms_and_frees_dead_claims(tmp_path: Path) -> None:
+    startup = tmp_path / "bootstrap.sh"
+    startup.write_text("#!/bin/bash\n", encoding="utf-8")
+    request = _request()
+    cells = _cells(request, ("pillow_cpu", 1), ("pillow_cpu", 2), ("pillow_cpu", 3))
+    label = request.run.run_id[:12]
+    remote = _Remote()
+    claims = f"runs/{request.run.run_id}/claims"
+    remote.objects[f"{claims}/pillow_cpu-1.json"] = b'{"instance":"alive"}\n'
+    remote.objects[f"{claims}/pillow_cpu-2.json"] = b'{"instance":"dead"}\n'
+    created: list[str] = []
+
+    def runner(command: list[str]) -> subprocess.CompletedProcess[bytes]:
+        if command[2:4] == ["instances", "list"]:
+            if f"--filter=labels.augbench-run={label}" in command:
+                return subprocess.CompletedProcess(command, 0, stdout=b"alive,us-east4-c,RUNNING\n", stderr=b"")
+            return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+        if command[2:4] in (["accelerator-types", "list"], ["machine-types", "list"]):
+            return subprocess.CompletedProcess(command, 0, stdout=b"us-central1-a\n", stderr=b"")
+        if command[2:4] == ["instances", "create"]:
+            created.append(command[4])
+            return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+        raise AssertionError(command)
+
+    launch = start_or_resume(
+        start=GcpStartRequest(cloud=_cloud(max_vms=3), request=request, cells=cells, startup_script=startup),
+        dependencies=GcpControllerDependencies(remote=remote, runner=runner, sleep=lambda _seconds: None),
+    )
+
+    assert len(created) == 2
+    assert launch.instances[0].name == "alive"
+    assert set(remote.objects) >= {f"{claims}/pillow_cpu-1.json"}
+    assert f"{claims}/pillow_cpu-2.json" not in remote.objects

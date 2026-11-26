@@ -385,8 +385,8 @@ def _write_metrics(path: Path, data: _PaperData) -> None:
         "CommonMeanDaliRatio": f"{common_means['dali_gpu']:.2f}",
     }
     batch_size = _single({group[0].output.shape[0] for group in data.groups.values()})
-    metrics.update(_common_headline_metrics(data, common_memories, batch_size))
-    crop = "RandomCrop224+Normalize+ToTensor"
+    metrics.update(_common_plot_metrics(data, common_memories, batch_size))
+    crop = next((recipe.recipe_id for recipe in data.recipes if recipe.augmentation_id == "RandomCrop224"), "")
     for implementation, label in ((AX, "AX"), ("dali_gpu", "DALI")):
         if (implementation, crop) in data.speed:
             metrics[f"Crop{label}BatchRate"] = f"{data.speed[implementation, crop] / batch_size:.1f}"
@@ -426,7 +426,7 @@ def _write_metrics(path: Path, data: _PaperData) -> None:
     _write_tex(path, (rf"\newcommand{{\{command}}}{{{value}}}" for command, value in metrics.items()))
 
 
-def _common_headline_metrics(data: _PaperData, common_memories: Mapping[str, float], batch_size: int) -> dict[str, str]:
+def _common_plot_metrics(data: _PaperData, common_memories: Mapping[str, float], batch_size: int) -> dict[str, str]:
     metrics = {
         "CommonDALIFastest": str(
             sum(
@@ -439,9 +439,11 @@ def _common_headline_metrics(data: _PaperData, common_memories: Mapping[str, flo
             )
         ),
     }
-    for implementation, command in ((AX, "AlbumentationsX"), ("dali_gpu", "DALIGPU")):
+    for implementation, label in data.implementations:
+        command = "AllSIMD" if implementation == PILLOW_ALLSIMD[0] else label.replace(" ", "")
         speed = median(data.speed[implementation, recipe] for recipe in data.common)
         memory = common_memories[implementation]
+        metrics[f"CommonSpeed{command}"] = f"{speed:,.0f}"
         metrics[f"CommonMemory{command}"] = f"{memory:,.0f}"
         metrics[f"CommonBatchRate{command}"] = f"{speed / batch_size:.1f}"
         baselines = [
@@ -689,7 +691,7 @@ def _write_recipe_results(path: Path, data: _PaperData) -> None:
 
 
 def _write_common_recipe_ratios(path: Path, data: _PaperData) -> None:
-    abbreviations = {
+    abbreviation = {
         "Kornia CPU": "K-CPU",
         "Kornia GPU": "K-GPU",
         "Pillow": "PIL",
@@ -698,18 +700,17 @@ def _write_common_recipe_ratios(path: Path, data: _PaperData) -> None:
         "TorchVision GPU": "TV-GPU",
     }
     columns = tuple(
-        (implementation, abbreviations.get(label, label)) for implementation, label in _COMMON_RECIPE_RATIO_PATHS
+        (implementation, abbreviation.get(label, label)) for implementation, label in _COMMON_RECIPE_RATIO_PATHS
     )
-    headers = " & ".join([r"\textbf{Recipe}", *(rf"\textbf{{{label}}}" for _, label in columns)])
     lines = [
         r"\begin{longtable}{P{3.6cm}rrrrrrr}",
         (
             r"\caption{Median throughput for each recipe divided by the AX median for that recipe. "
             r"Each median uses three seeds.}\label{tab:common-throughput}\\"
         ),
-        headers + r" \\ \midrule",
+        " & ".join([r"\textbf{Recipe}", *(rf"\textbf{{{label}}}" for _, label in columns)]) + r" \\ \midrule",
         r"\endfirsthead",
-        headers + r" \\ \midrule",
+        " & ".join([r"\textbf{Recipe}", *(rf"\textbf{{{label}}}" for _, label in columns)]) + r" \\ \midrule",
         r"\endhead",
     ]
     for index, recipe in enumerate(data.recipes, start=1):

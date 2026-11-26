@@ -185,7 +185,6 @@ unset PILLOW_ALLSIMD_ISA
 cd "$CODE_ROOT"
 PYTHONPATH="$CODE_ROOT/src" "$STATE_ROOT/environment/bin/python" -m augbench.guest_worker \
   --request "$REQUEST_PATH" \
-  --family-config "$CODE_ROOT/configs/families/rgb.yaml" \
   --dataset-archive "$STATE_ROOT/downloads/dataset.tar" \
   --dataset-cache "$STATE_ROOT/datasets" \
   --pillow-allsimd-site "$allsimd_site"

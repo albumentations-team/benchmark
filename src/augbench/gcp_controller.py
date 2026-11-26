@@ -1,4 +1,4 @@
-"""One-VM GCE controller for a frozen RGB run."""
+"""GCE fleet controller for a frozen image run."""
 
 from __future__ import annotations
 
@@ -6,7 +6,9 @@ import hashlib
 import json
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from itertools import count, islice
 from typing import TYPE_CHECKING, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -19,6 +21,7 @@ from augbench.cloud.gcp.provisioning import (
     provision_first_available,
     resolve_candidate_zones,
 )
+from augbench.job_claims import release_stale_claims
 from augbench.remote_results import completed_cell_ids, pending_cells
 
 if TYPE_CHECKING:
@@ -36,6 +39,8 @@ class GcpControllerStore(Protocol):
     def read(self, key: str) -> bytes: ...
 
     def list_keys(self, prefix: str) -> tuple[str, ...]: ...
+
+    def delete(self, key: str) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -55,6 +60,13 @@ class GcpControllerDependencies:
     sleep: Callable[[float], None] = time.sleep
 
 
+class LaunchedInstance(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    name: str
+    zone: str
+
+
 class GcpLaunch(BaseModel):
     """The controller's short, actionable state after one invocation."""
 
@@ -63,8 +75,8 @@ class GcpLaunch(BaseModel):
     status: Literal["complete", "active", "launched"]
     run_id: str = Field(pattern=r"^[0-9a-f]{64}$")
     pending_cell_ids: tuple[str, ...]
-    instance_name: str | None = None
-    zone: str | None = None
+    instances: tuple[LaunchedInstance, ...] = ()
+    shortfall: int = 0
 
 
 def start_or_resume(
@@ -72,7 +84,7 @@ def start_or_resume(
     start: GcpStartRequest,
     dependencies: GcpControllerDependencies,
 ) -> GcpLaunch:
-    """Publish immutable input, reuse valid cells, then create at most one VM."""
+    """Publish immutable input, reuse valid cells, then top the fleet up to its VM cap."""
     cloud = start.cloud
     request = start.request
     cells = start.cells
@@ -101,30 +113,32 @@ def start_or_resume(
         runner=command_runner,
     )
     active = tuple(instance for instance in instances if instance.active)
-    if active:
-        instance = active[0]
-        return GcpLaunch(
-            status="active",
-            run_id=request.run.run_id,
-            pending_cell_ids=tuple(cell.cell_id for cell in pending),
-            instance_name=instance.name,
-            zone=instance.zone,
-        )
     for instance in instances:
-        delete_instance(
-            project=cloud.project,
-            zone=instance.zone,
-            instance_name=instance.name,
-            executable=executable,
-            runner=command_runner,
-        )
+        if not instance.active:
+            delete_instance(
+                project=cloud.project,
+                zone=instance.zone,
+                instance_name=instance.name,
+                executable=executable,
+                runner=command_runner,
+            )
+    release_stale_claims(store=remote, run_id=request.run.run_id, active_instances={i.name for i in active})
 
-    pending_request = request.model_copy(update={"pending_cell_ids": tuple(cell.cell_id for cell in pending)})
+    pending_ids = tuple(cell.cell_id for cell in pending)
+    running = tuple(LaunchedInstance(name=instance.name, zone=instance.zone) for instance in active)
+    jobs = {(cell.implementation, cell.seed) for cell in pending}
+    wanted = min(cloud.max_vms, len(jobs)) - len(active)
+    if wanted <= 0:
+        return GcpLaunch(status="active", run_id=request.run.run_id, pending_cell_ids=pending_ids, instances=running)
+
+    pending_request = request.model_copy(update={"pending_cell_ids": pending_ids})
     request_digest = hashlib.sha256(_json_bytes(pending_request)).hexdigest()
     request_key = f"runs/{request.run.run_id}/requests/{request_digest}.json"
     _publish_immutable(remote, request_key, _json_bytes(pending_request))
-    request_uri = f"{cloud.gcs_base_uri.rstrip('/')}/{request_key}"
-    instance_name = f"augbench-rgb-{label_value}"
+    family = request.run.family_config["family"]
+    names = _free_instance_names(
+        prefix=f"augbench-{family}-{label_value}", taken={i.name for i in active}, how_many=wanted
+    )
     zones = resolve_candidate_zones(
         configured_zones=cloud.zones,
         project=cloud.project,
@@ -132,38 +146,92 @@ def start_or_resume(
         executable=executable,
         runner=command_runner,
     )
-    zone = provision_first_available(
-        attempt=GcpProvisioningAttempt(
+
+    launched, errors = _provision_fleet(
+        fleet=_Fleet(
+            cloud=cloud,
+            names=names,
             zones=zones,
-            spec_for_zone=lambda candidate: GcpVmSpec(
-                project=cloud.project,
-                zone=candidate,
-                instance_name=instance_name,
-                machine_type=cloud.machine_type,
-                image=cloud.image,
-                boot_disk_size_gib=cloud.boot_disk_size_gib,
-                service_account=cloud.service_account,
-                startup_script=startup_script,
-                max_run_duration_seconds=cloud.run_deadline_seconds,
-                provisioning_model=cloud.provisioning_model,
-                labels={"augbench": "1", "augbench-run": label_value, "augbench-family": "rgb"},
-                metadata={"augbench-request-uri": request_uri},
-            ),
-            executable=executable,
-            runner=command_runner,
-            deadline_seconds=cloud.provisioning_deadline_seconds,
-            poll_seconds=30.0,
-            clock=dependencies.clock,
-            sleep=dependencies.sleep,
+            startup_script=startup_script,
+            request_uri=f"{cloud.gcs_base_uri.rstrip('/')}/{request_key}",
+            labels={"augbench": "1", "augbench-run": label_value, "augbench-family": family},
         ),
+        dependencies=dependencies,
+        runner=command_runner,
     )
+    if not launched and not active:
+        raise errors[0]
     return GcpLaunch(
         status="launched",
         run_id=request.run.run_id,
-        pending_cell_ids=tuple(cell.cell_id for cell in pending),
-        instance_name=instance_name,
-        zone=zone,
+        pending_cell_ids=pending_ids,
+        instances=(*running, *launched),
+        shortfall=len(errors),
     )
+
+
+@dataclass(frozen=True)
+class _Fleet:
+    cloud: GcpRunConfig
+    names: tuple[str, ...]
+    zones: tuple[str, ...]
+    startup_script: Path
+    request_uri: str
+    labels: dict[str, str]
+
+
+def _provision_fleet(
+    *,
+    fleet: _Fleet,
+    dependencies: GcpControllerDependencies,
+    runner: InstanceCommandRunner,
+) -> tuple[list[LaunchedInstance], list[Exception]]:
+    """Create the VMs concurrently; zones rotate per VM so capacity and quota spread out."""
+    cloud = fleet.cloud
+
+    def provision(index: int) -> LaunchedInstance:
+        offset = index % len(fleet.zones)
+        zone = provision_first_available(
+            attempt=GcpProvisioningAttempt(
+                zones=(*fleet.zones[offset:], *fleet.zones[:offset]),
+                spec_for_zone=lambda candidate: GcpVmSpec(
+                    project=cloud.project,
+                    zone=candidate,
+                    instance_name=fleet.names[index],
+                    machine_type=cloud.machine_type,
+                    image=cloud.image,
+                    boot_disk_size_gib=cloud.boot_disk_size_gib,
+                    service_account=cloud.service_account,
+                    startup_script=fleet.startup_script,
+                    max_run_duration_seconds=cloud.run_deadline_seconds,
+                    provisioning_model=cloud.provisioning_model,
+                    labels=fleet.labels,
+                    metadata={"augbench-request-uri": fleet.request_uri},
+                ),
+                executable=dependencies.executable,
+                runner=runner,
+                deadline_seconds=cloud.provisioning_deadline_seconds,
+                poll_seconds=30.0,
+                clock=dependencies.clock,
+                sleep=dependencies.sleep,
+            ),
+        )
+        return LaunchedInstance(name=fleet.names[index], zone=zone)
+
+    launched: list[LaunchedInstance] = []
+    errors: list[Exception] = []
+    with ThreadPoolExecutor(max_workers=len(fleet.names)) as pool:
+        for future in [pool.submit(provision, index) for index in range(len(fleet.names))]:
+            try:
+                launched.append(future.result())
+            except (RuntimeError, TimeoutError) as error:
+                errors.append(error)
+    return launched, errors
+
+
+def _free_instance_names(*, prefix: str, taken: set[str], how_many: int) -> tuple[str, ...]:
+    candidates = (name for number in count(1) if (name := f"{prefix}-{number:02d}") not in taken)
+    return tuple(islice(candidates, how_many))
 
 
 def _delete_reclaimable_augbench_instances(

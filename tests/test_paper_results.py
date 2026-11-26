@@ -27,6 +27,7 @@ from paper import generate_results as paper
 @pytest.fixture
 def selected_run() -> RunRecord:
     config = load_family_config(Path(__file__).parents[1] / "configs/families/rgb.yaml")
+    config = config.model_copy(update={"execution": config.execution.model_copy(update={"seeds": (137, 138, 139)})})
     return build_run_record(
         family_config=config.model_dump(mode="json"),
         inputs=RunInputs(
@@ -97,6 +98,8 @@ def test_summary_aggregates_paired_ratios_and_differences(tmp_path: Path, paper_
     metrics = output.read_text()
     assert r"\newcommand{\PairKorniaRatio}{0.50}" in metrics
     assert r"\newcommand{\PairKorniaMemoryDelta}{+200}" in metrics
+    assert r"\newcommand{\CropAXBatchRate}{0.8}" in metrics
+    assert r"\newcommand{\CropDALIBatchRate}{0.4}" in metrics
 
 
 def test_common_mean_averages_recipe_ratios_with_equal_weight(paper_data: paper._PaperData) -> None:
@@ -220,7 +223,7 @@ def _write_observation(directory: Path, run: RunRecord, record: ResultRecord) ->
 
 
 def test_full_report_rejects_measurement_selection(tmp_path: Path, selected_run: RunRecord) -> None:
-    config = {**selected_run.family_config, "measurements": {"Resize224+Normalize+ToTensor": [paper.AX]}}
+    config = {**selected_run.family_config, "measurements": {"Resize224": [paper.AX]}}
     run = build_run_record(family_config=config, inputs=selected_run.inputs, hardware=selected_run.hardware)
     manifest = tmp_path / "run.json"
     manifest.write_text(run.model_dump_json())

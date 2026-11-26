@@ -1,11 +1,36 @@
 # Production benchmark contract
 
 This repository measures the path from a prepared file on local disk to a batch ready for a
-model on the GPU. Only RGB runs today. Nine-channel images, video, and volumes will use the same
-runner and result schema once each family has an agreed dataset, recipe catalog, output
+model on the GPU. The image runner supports RGB and a separate grayscale Colorize workload.
+Nine-channel images, video, and volumes need their own dataset, recipe catalog, output
 contract, and batch size.
 
 The [methodology FAQ](benchmark_faq.md) explains the choices behind this contract.
+The [TorchVision and Kornia adapter inventory](torchvision_kornia_adapters.md) lists
+the work each adapter adds around the native operators.
+
+## RGB workload and reference implementations
+
+Each sample starts with one 8-bit RGB JPEG, as in ImageNet image classification. The augmentation
+call receives only the image. Bounding boxes, masks, keypoints, `additional_targets`, and other
+annotations are outside this workload. Each library can use its native working dtype after decode.
+
+AlbumentationsX, TorchVision, and Kornia are the augmentation libraries in this comparison. Their
+higher-level transforms provide ready-made behavior for richer workloads, including annotation
+handling where supported. That API can add bookkeeping and dispatch overhead in image-only use.
+Pillow, Pillow-AllSIMD, and DALI provide the preprocessing primitives in this comparison. Using
+lower-level primitives can reduce overhead, and richer workloads require more application code to
+implement, test, and maintain.
+
+Each AX stage is one stock transform with its public parameters. The top-level `A.Compose` runs the
+stages listed in the catalog. Declare any required input preparation as its own stage.
+Keep `A.Lambda`, `A.OneOf`, and `A.Sequential` out of the AX adapter.
+AX owns image processing and parameter sampling for its path. Choose native transforms
+or functional operators in TorchVision and Kornia. Tune their parameters against the AX
+effect and retain their algorithms and kernel costs. Sample parameters in the adapter
+when the native operator accepts values and provides no sampler for them. Leave a path
+unsupported when it would require implementing the target effect in the benchmark. Assemble Pillow,
+Pillow-AllSIMD, and DALI stages from native primitives as needed.
 
 ## What one cell measures
 
@@ -27,14 +52,14 @@ fall outside the production benchmark.
 | Field | Value |
 | --- | --- |
 | Data | The first 10,000 `val/*.JPEG` files in lexicographic order from the SHA-256-verified ImageNet validation archive |
-| Recipes | 73 manually matched RGB recipes, each supported by at least two libraries |
-| Matrix | 441 supported implementation–recipe pairs × 3 seeds = 1,323 cells |
-| Seeds | 137, 138, 139 |
+| Recipes | 72 RGB recipes, each supported by at least two libraries |
+| Matrix | 421 supported implementation–recipe pairs × 5 seeds = 2,105 cells |
+| Seeds | 137, 138, 139, 140, 141 |
 | Batch size | 256 images |
 | Warm-up | 1 full batch outside the timer |
 | Measurement | 32 full batches, 8,192 images |
 | Workers | 15, `persistent_workers=True`, `prefetch_factor=2`, `pin_memory=True` |
-| Hardware | One Standard `g2-standard-16` VM with one NVIDIA L4 in any eligible GCP zone |
+| Hardware | Standard `g2-standard-16` VMs, each with one NVIDIA L4, in any eligible GCP zone. A run uses up to 20 VMs at once |
 
 All PyTorch DataLoader paths use `prefetch_factor=2`. Each worker can prepare up to two
 batches. The setting is fixed across libraries.
@@ -64,17 +89,22 @@ for the implementation's PID before pipeline construction and measures the peak 
 as throughput. The peak includes the entire process's VRAM use, including CUDA state retained
 after preflight. Subtracting the baseline from the peak gives the increase during the cell.
 
-Normalization always runs on the GPU. Every path produces normalized CUDA `float16` output.
-The table describes new runs. Each completed run retains the implementation in its frozen code archive.
+Mean/std normalization runs on the GPU on every path. The catalog entries `Normalize` and
+`ToTensor` specify batch statistics, layout, and dtype. The `recipe_id` names the image
+operations, for example `Resize224+RGBToBGR`. The per-image CPU recipe contains only
+image operations. The AX adapter ends its `A.Compose` with `ToTensorV2`, which turns each HWC
+`uint8` image into a CHW tensor. Workers stack the tensors into a BCHW batch and transfer it as
+`uint8`. On CUDA, the native `InputNormalizer` returns normalized FP16 with no layout change.
+Each completed run retains the implementation in its frozen code archive.
 
 | Implementation | Before GPU transfer | On the GPU |
 | --- | --- | --- |
-| AlbumentationsX CPU | SimpleJPEG, `uint8` recipe, pinned H2D transfer in `uint8` | BCHW view, then `albumentations.batch.InputNormalizer` with FP32 arithmetic and FP16 output |
+| AlbumentationsX CPU | SimpleJPEG, `uint8` recipe, `ToTensorV2`, pinned H2D transfer in `uint8` | `albumentations.batch.InputNormalizer` with FP32 arithmetic and FP16 output |
 | Pillow CPU | Pillow decode, `uint8` recipe, pinned H2D transfer in `uint8` | Convert to `float16` and normalize |
 | Pillow-AllSIMD CPU (fast) | Same code with the Pillow-AllSIMD wheel in a separate process | Convert to `float16` and normalize |
 | TorchVision CPU | `torchvision.io`, `uint8` recipe, pinned H2D transfer in `uint8` | Convert the batch to `float16` and apply `torchvision.transforms.v2.Normalize` |
 | Kornia CPU | `kornia.io.load_image` with `kornia-rs`, CPU recipe in `float32`, cast the host batch to `float16`, pinned H2D transfer | Apply `kornia.enhance.Normalize` to the `float16` batch |
-| TorchVision GPU | DataLoader workers read JPEG bytes and remove EXIF metadata to preserve the stored pixel orientation | TorchCodec decodes the batch with nvJPEG, TorchVision applies transforms per image, then normalizes the FP16 batch |
+| TorchVision GPU | DataLoader workers read the prepared JPEG bytes | TorchCodec decodes the batch with nvJPEG, TorchVision applies transforms per image, then normalizes the FP16 batch |
 | Kornia GPU | DataLoader workers decode with `kornia.io.load_image` and `kornia-rs` and apply the shape-forming stages in FP32. The assembled FP16 batch uses pinned H2D transfer. | Apply remaining transforms and `kornia.enhance.Normalize` to the FP16 batch |
 | DALI GPU | Native file reader and mixed JPEG decoder | Native DALI graph and `float16` normalization |
 
@@ -85,22 +115,34 @@ CPU paths complete the image operations before transfer. The `Resize` recipe has
 followed by GPU normalization and output preparation. Recipes such as `Pad` and
 `LongestMaxSize` list the subsequent crop explicitly.
 
-For a given operation, parameters are matched by hand for practical effect. APIs, interpolation,
-random number generation, and rounding can differ, so pixel equality is outside the comparison
-contract.
+Set the available geometry, interpolation, boundary fill, and sampling parameters against AX.
+When the native operators differ, compare an observable property such as displacement or the
+strength of the pixel change. Record any material difference the public parameters leave.
 
-New recipes use one RGB JPEG per sample. Compare the same operation with fixed parameters or
-matching sampling ranges and the same output shape. An adapter may compose native operations,
-such as Pillow channel splitting and merging or a byte lookup table. Mosaic, reference-image
+Compare the same operation with fixed parameters or matching sampling ranges and the same output
+shape. A preprocessing adapter may compose native operations such as Pillow channel splitting
+and merging or a byte lookup table. Mosaic, reference-image
 histogram matching, and box-aware crops require a different input protocol. ModeFilter is outside
 the recipe selection. DALI's grid mask drops square patches, while AX GridMask drops stripes.
+
+Each stochastic stage samples independently for every image during recipe execution. A
+batched implementation may draw all its parameters in one call. When a native kernel takes
+one parameter for the whole call, the adapter may group images after drawing their parameters
+and restore the original image order. Sampling and any grouping run inside the input pipeline.
 
 DALI uses ROI JPEG decoding when a recipe starts with a compatible crop.
 `RandomCrop224` samples a separate window at native resolution for every image and adds
 centered zero padding where a dimension is too short. `RandomResizedCrop` samples separate windows
 inside the decoder and then resizes them. All readers use the pixel orientation stored in the file.
-`Blur` uses a 5×5 box in every measured path. AX, Kornia, and DALI reflect the boundary; the
-Pillow box filter repeats edge pixels. ChannelDropout zeros one uniformly sampled RGB channel.
+`Blur` samples a 3×3 or 5×5 box with equal probability for each image. AX, Kornia, and DALI
+reflect the boundary. The Pillow paths reflect-pad before their box filter. ChannelDropout zeros one
+uniformly sampled RGB channel.
+
+R29 (CLAHE) uses an 8×8 grid. AX processes Lab lightness with a clip limit drawn from 1.0 to 4.0.
+Kornia processes RGB channels independently with a clip limit drawn from 1.0 to 3.5.
+DALI processes luma and groups draws that yield the same integer histogram threshold.
+R63 (`RGB <-> BGR`) uses the fixed order `[2, 1, 0]`. R12 (ChannelShuffle) uniformly
+chooses from all six orders for each image.
 
 `Resize` (R01) and `RandomResizedCrop` (R03) use bilinear interpolation without antialiasing. AX
 uses OpenCV's `INTER_LINEAR`. DALI and TorchVision use `antialias=False`. Pillow and
@@ -109,35 +151,76 @@ automatically smooths when downsampling. Kornia uses `align_corners=False` for b
 Its `Resize` explicitly sets `antialias=False`, and its `RandomResizedCrop` slices the crop and
 resizes it without antialiasing. Crop selection and rounding may differ by library.
 
-For R10 (Elastic), the AX, TorchVision, and Kornia parameters are
-[matched by their displacement fields](rgb_elastic_calibration.md) at roughly 0.74 px RMS and a
+For R10 (Elastic), AX, TorchVision, and Kornia draw a new field and a uniform amplitude
+multiplier from 0.5 to 1.0 for each image. The upper endpoint uses the
+[calibrated displacement fields](rgb_elastic_calibration.md) at roughly 0.74 px RMS and a
 spatial scale of about 10 px. DALI and Pillow omit this recipe.
 
-R08 applies scale 2, rotation 25°, X/Y shears 10°/15°, and translation
-20 px on each axis as one centered bilinear warp. R09 uses a centered
-projective map with independent sign and a uniform magnitude in 0.05–0.10,
-divided by crop width, for each axis of each image.
+R07 (Rotate) samples an angle from −45° to +45° and performs one bilinear warp at
+the original crop size, with zero fill and no separate antialiasing pass.
+
+R08 (Affine) samples one isotropic scale from 0.75–1.25, rotation from ±15°, two shears from ±8°,
+and two shifts from ±12 px. ShiftScaleRotate uses scale 0.875–1.125, rotation ±12°, shifts ±14
+and ±7 px, and zero shear. TorchVision and Kornia use native `RandomAffine` and express the
+shift limits as fractions of the 224-pixel crop. The libraries use their native samplers and
+matrix conventions.
+
+R09 uses native AlbumentationsX `Perspective` as the reference. Each image draws a
+standard deviation from 0.05–0.10 and eight normal offsets, which move the four corners
+inward. Pillow and DALI use those corner and output-scale rules with their native warps.
+TorchVision samples and rounds the inner corners, then passes them to its native
+`perspective`. Kornia samples its corners with native `RandomPerspective` at distortion
+scale 0.24. Both pass the inner quadrilateral as the source and adjust the destination
+extent to keep the original canvas size. Kornia retains its uniform corner sampler.
 
 R24 samples an integer JPEG quality uniformly from 30 through 90 for each
 image. TorchVision GPU encodes images in groups with the same sampled quality
-and restores sample order after decoding. Kornia and DALI apply JPEG artifact
-simulators. Nominal quality is shared across implementations and does not
-calibrate distortion strength.
+and restores sample order after decoding. Kornia maps the sampled quality to its
+differentiable codec using the calibration points 30→24, 70→63, and 90→89. DALI
+passes the sampled quality to its native artifact simulator.
 
 ColorJitter recipes sample factors and operation order per image. DALI uses
 its native hue adjustment, an RGB-space approximation to HSV hue rotation.
 
-R46 (Shear) applies a fixed 10° X shear about the image center on all eight paths.
-In pixel-center coordinates its forward map is
-`x' = x + tan(10°) * (y - (height - 1) / 2)`, `y' = y`.
-The output keeps the input size and uses bilinear sampling with zero-valued samples
-outside the frame. Pillow and Pillow-AllSIMD pad with one zero pixel before warping.
-TorchVision and Kornia use FP32 sampling in their GPU Shear stage and convert back to
-FP16 before normalization. Each implementation retains its own reader and crop path.
+R46 (Shear) samples an X shear angle uniformly from −10° to +10° per image. TorchVision and
+Kornia use native `RandomAffine` with rotation, shift, scale, and Y shear fixed at identity.
+The output keeps its size and uses bilinear sampling and a zero border. Pillow and
+Pillow-AllSIMD add one zero pixel before warping.
+
+R71 (PixelSpread) uses two per-pixel integer draws in `[-2, 2]` for spatial offsets, shared
+by all three channels. DALI uses nearest-neighbor remap with zero outside the source.
+
+R52 (Transpose), R61 (LetterBox), and R70 (Emboss) use AX, Pillow, Pillow-AllSIMD,
+and DALI. Kornia uses native `PadTo` for R62 (PadIfNeeded), which pads the right and bottom
+edges. R06 (Pad) and R60 (CropAndPad) require independent control of each border and
+omit Kornia.
+
+## Grayscale Colorize workload
+
+Prepare one-channel `uint8` JPEGs offline from ImageNet validation. The converter preserves
+the source dimensions and file names, re-encodes at JPEG quality 95, and reports the archive
+SHA-256. The grayscale recipe begins with a native grayscale decode, crops to 224×224, and
+then colorizes to RGB. The output uses the same CUDA batch contract as RGB. The six eligible
+paths are AX, Pillow, Pillow-AllSIMD, Kornia CPU, Kornia GPU, and DALI. Results use independent
+run and cell identities and a separate catalog.
+
+```bash
+uv run augbench prepare-grayscale --source-archive val.tar --output-archive val-grayscale.tar
+uv run augbench launch-grayscale --archive-uri "$GRAYSCALE_ARCHIVE_URI" --archive-sha256 "$GRAYSCALE_ARCHIVE_SHA256"
+```
+
+The launcher takes the uploaded grayscale archive URI and the SHA-256 printed by preparation.
+It uses the RGB selection policy and execution settings. A production launch verifies the archive
+and preflights each path on CUDA before collecting throughput and peak VRAM.
 
 ## Data access
 
-After extraction, the VM reads all 10,000 JPEGs sequentially once outside the timed cells. All
+The VM removes EXIF APP1 headers from the selected JPEGs during extraction. This copies the
+compressed image data into one shared cache while preserving the orientation of the stored pixels.
+The preparation version is part of the cache key. Every implementation reads the same prepared
+JPEGs, including TorchCodec, which normally applies EXIF orientation.
+
+After preparation, the VM reads all 10,000 JPEGs sequentially once outside the timed cells. All
 implementations then use the same deterministic PCG64 permutation without replacement for each
 seed. PyTorch DataLoader adds no shuffle. DALI receives the same preordered file list.
 
@@ -154,15 +237,18 @@ rule, plus the package lock, recipe catalog, and hardware config. It then:
 
 1. Checks GCS for `runs/<run_id>/cells/*.json`.
 2. Validates each existing cell's contents and identity.
-3. Reuses an active VM with the same `augbench-run` label.
-4. Otherwise, looks for zones with `g2-standard-16` and L4 availability and creates one Standard
-   VM.
+3. Counts the active VMs with the same `augbench-run` label and releases claims that belong to VMs that no longer exist.
+4. Looks for zones with `g2-standard-16` and L4 availability and creates Standard VMs until the run has
+   `min(max_vms, pending jobs)` of them. A job is one implementation and seed. Creation rotates the zone
+   order per VM, and a quota or capacity error moves on to the next zone.
 5. On the VM, downloads the code, raw dataset, and cached RGB environment once, verifies the
    Pillow-AllSIMD lock and wheel, extracts the first 10,000 sorted `val/*.JPEG` files, and
    prewarms them. If the run measures TorchVision GPU, bootstrap makes the installed NVIDIA
    driver's `libnvcuvid.so.1` available to that worker. Each
-   implementation runs in its own process. It checks one batch through CUDA
-   output per recipe, then runs the missing cells with the configured 15 workers. For preflight,
+   VM then takes jobs from the shared queue: it claims the next unclaimed job with a conditional
+   `runs/<run_id>/claims/<implementation>-<seed>.json` create, runs it in its own process, and
+   claims the next job when it finishes. A job checks one batch through CUDA output per recipe,
+   then runs its missing cells with the configured 15 workers. For preflight,
    paths other than DALI use one temporary DataLoader worker. DALI uses its native graph.
 6. Writes an immutable GCS object immediately after each cell.
 7. Saves bootstrap stdout and stderr in `runs/<run_id>/logs/` before the VM shuts down, whatever
@@ -170,8 +256,9 @@ rule, plus the package lock, recipe catalog, and hardware config. It then:
 8. Before provisioning, removes only terminated or suspended `augbench` VMs so their boot disks
    release quota. Active VMs and GCS artifacts are preserved.
 
-On the VM, each implementation job runs through all its recipes and seeds in sequence. Jobs are
-never split by recipe, seed, duration, or arbitrary shard.
+A job runs one implementation and one seed through all its recipes in sequence on one VM. Jobs are
+never split by recipe, duration, or arbitrary shard. A VM that ends while holding a claim leaves the
+claim in place. The next launch releases it and reruns only the job's missing cells.
 
 ## Aggregation
 
@@ -183,7 +270,7 @@ census is separate. Unsupported operations never count as speed losses.
 A report may compare paths from separately validated runs with the same workload and hardware
 settings. Each observation keeps its source run and cell IDs. For an invalid result or a
 corrected recipe, freeze a correction run covering the affected implementation–recipe pairs
-and all three seeds. Validate the replacement cells before regenerating the report. Keep the
+and all seeds. Validate the replacement cells before regenerating the report. Keep the
 original cells for reproduction.
 
 The report's TorchVision GPU replacement uses a lock that adds TorchCodec to

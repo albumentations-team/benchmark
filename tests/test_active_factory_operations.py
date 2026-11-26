@@ -14,10 +14,14 @@ if TYPE_CHECKING:
     import pytest
 
 
-def test_recipe_factories_contain_only_current_rgb_operations() -> None:
+def test_recipe_factories_contain_only_current_image_operations() -> None:
     root = Path(__file__).parents[1]
-    recipes = load_recipe_catalog(root / "catalog" / "recipes" / "rgb.yaml")
-    catalog_operations = {stage.operation_id for recipe in recipes.recipes for stage in recipe.stages}
+    catalog_operations = {
+        stage.operation_id
+        for family in ("rgb", "grayscale")
+        for recipe in load_recipe_catalog(root / "catalog" / "recipes" / f"{family}.yaml").recipes
+        for stage in recipe.stages
+    }
 
     for filename in (
         "albumentationsx_impl.py",
@@ -54,31 +58,6 @@ def test_kornia_gpu_support_policy_matches_the_recipe_catalog() -> None:
     for recipe in recipes.recipes:
         if "kornia_gpu" in recipe.supported_implementations:
             assert {stage.operation_id for stage in recipe.stages[:-2]} <= builders, recipe.recipe_id
-
-
-def test_kornia_factories_adapt_catalog_lists_to_kornia_ranges() -> None:
-    source = (Path(__file__).parents[1] / "src" / "augbench" / "implementations" / "kornia_impl.py").read_text(
-        encoding="utf-8"
-    )
-
-    assert source.count('gain=tuple(params["gain"])') == 3
-    assert 'amount=tuple(params["amount"])' in source
-    assert 'salt_vs_pepper=tuple(params["salt_vs_pepper"])' in source
-    assert 'snow_coefficient=tuple(params["snow_point_range"])' in source
-    assert 'RandomRotation90(times=tuple(params["times"]), p=1)' in source
-    assert 'grid_size=tuple(params["tile_grid_size"])' in source
-    assert 'kernel_size=tuple(params["kernel_size"])' in source
-    assert 'angle=tuple(params["angle_range"])' in source
-    assert 'direction=tuple(params["direction_range"])' in source
-    assert 'scale=tuple(params["scale"])' in source
-    assert 'ratio=tuple(params["ratio"])' in source
-    assert 'size=tuple(params["size"])' in source
-    assert '_RandomJigsawWithPad(grid=tuple(params["grid"]))' in source
-    assert 'degrees=tuple(params["angle_range"])' in source
-    assert "angle = self.angle.to(image)" in source
-    assert "translation = self.translation.to(image)" in source
-    assert "scale_factor = self.scale_factor.to(image)" in source
-    assert "shear = self.shear.to(image)" in source
 
 
 def _factory_operations(path: Path) -> set[str]:

@@ -21,7 +21,7 @@
 \makeatletter
 \let\inputrows\@@input
 \makeatother
-\newcommand{\repo}{\href{https://github.com/albumentations-team/benchmark}{benchmark repository}}
+\newcommand{\repo}{\href{https://github.com/albumentations-team/benchmark/tree/codex/fix-rgb-review-findings}{benchmark repository}}
 \input{generated/metrics.tex}
 \input{generated/sources.tex}
 \input{generated/coverage-metrics.tex}
@@ -322,10 +322,10 @@ timer. The measurement does not establish cold-cache disk performance.
 
 NVML samples process GPU memory at a nominal \MemoryPollMs{}\,ms interval
 and takes readings before pipeline construction and after teardown.
-Short peaks can fall between samples. The DataLoader generator and DALI graph
-use the cell seed. The cell seed also initializes Python, NumPy, and PyTorch
-RNGs in the worker processes. AX Compose uses base seed zero, combined with
-its DataLoader worker seed. Augmentation draws are independent per image.
+Short peaks can fall between samples. The DataLoader generator is
+seeded with the cell seed. The DALI graph and DataLoader workers use the same
+cell seed for their random streams. AX Compose uses base seed zero, combined
+with its DataLoader worker seed. Augmentation draws are independent per image.
 
 Normalization uses RGB means \((0.485,0.456,0.406)\) and standard deviations
 \((0.229,0.224,0.225)\) on the unit intensity scale. The runner validates

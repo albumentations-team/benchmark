@@ -16,7 +16,7 @@ def test_matrix_contains_only_supported_library_recipe_seed_cells() -> None:
 
     assert cells
     assert len({cell.cell_id for cell in cells}) == len(cells)
-    assert {cell.seed for cell in cells} == {137, 138, 139}
+    assert {cell.seed for cell in cells} == {137, 138, 139, 140, 141}
     assert {cell.implementation for cell in cells} <= set(config.implementations)
     supported = {
         (recipe.recipe_id, implementation)

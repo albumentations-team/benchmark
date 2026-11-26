@@ -52,3 +52,10 @@ def test_stopping_instance_is_not_reclaimable() -> None:
     )[0]
 
     assert not instance.reclaimable
+
+
+def test_quota_errors_move_on_to_the_next_zone() -> None:
+    from augbench.cloud.gcp.provisioning import is_retryable_capacity_error
+
+    assert is_retryable_capacity_error("Quota 'NVIDIA_L4_GPUS' exceeded. Limit: 8.0 in region us-central1.")
+    assert not is_retryable_capacity_error("Permission denied on resource project")

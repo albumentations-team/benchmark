@@ -12,8 +12,8 @@ if TYPE_CHECKING:
 
 
 def validate_rgb_recipes(config: FamilyRunConfig, recipes: RecipeCatalog) -> None:
-    if config.family != "rgb" or recipes.family != "rgb":
-        raise ValueError("RGB recipe validation requires RGB config and catalog")
+    if config.family != recipes.family:
+        raise ValueError("recipe catalog family must match the run configuration")
     for recipe in recipes.recipes:
         _validate_recipe(config, recipe)
 
