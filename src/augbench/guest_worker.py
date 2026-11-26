@@ -8,7 +8,6 @@ import os
 import socket
 import subprocess
 import sys
-import urllib.request
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -93,15 +92,8 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _instance_name() -> str:
-    """Return the GCE instance name, which the controller compares with its VM listing."""
-    metadata = urllib.request.Request(
-        "http://metadata.google.internal/computeMetadata/v1/instance/name", headers={"Metadata-Flavor": "Google"}
-    )
-    try:
-        with urllib.request.urlopen(metadata, timeout=5) as response:  # noqa: S310 - same fixed URL.
-            return response.read().decode().strip()
-    except OSError:
-        return socket.gethostname().split(".")[0]
+    """Return the GCE instance name: a GCE VM's short hostname, which the controller compares with its VM listing."""
+    return socket.gethostname().split(".")[0]
 
 
 def _jobs(config: FamilyRunConfig, cells: Iterable[CellKey]) -> tuple[tuple[str, int], ...]:

@@ -14,22 +14,18 @@ The output is `paper/build/main.pdf`. The generated inputs are checked in, so th
 
 ## Regenerate the results
 
-The report combines four immutable runs. All four are under `gs://imagenet_validation/augmentation-benchmark/runs/<run_id>/`, each with a `run.json` manifest and a `cells/` directory. A run's source archive is `code/<code_archive_sha256>/source.tar.gz` under the same root; the recipe catalog and package lock below come from it (or from the listed Git revision).
+The report combines three immutable runs. All three are under `gs://imagenet_validation/augmentation-benchmark/runs/<run_id>/`, each with a `run.json` manifest and a `cells/` directory. A run's source archive is `code/<code_archive_sha256>/source.tar.gz` under the same root; the recipe catalog and package lock below come from it (or from the listed Git revision).
 
 | Run | Run ID | Source revision |
 | --- | --- | --- |
-| Input pipeline, all eight paths, AX 2.6.8 | `d89b7ecffa4c75b9ab078abf889f3fba91d06772c3eb908c1e7b67c63d41134f` | `c7ed1d7` |
-| Input pipeline, AX only, AX 2.6.9 | `c6ee8be602a64fcb3379c4b573c050adcabf9fc41202df563a9b95e2c0531bdd` | `f76aa24` |
-| Training step, ResNet-18 | `6fee5174725e31313be5f374ccb2d01a930daeb233281c891b0a3f86d636d7a8` | `9472eb7` |
-| Training step, ResNet-50 | `cb7c84e476eda901a11b294c4790b8997d1332d4d8516c3afec66a32523f7cf6` | `9472eb7` |
+| Input pipeline, all eight paths | `d84d75894f2a0b5ad879c5df1c06ca1ec82690486652c62ed50295a241e19a1a` | `fd09812` |
+| Training step, ResNet-18 | `8b5152c09b0eb23f4a6b0fb87d01650da8575cef8e37818049ac54974b866822` | `fd09812` |
+| Training step, ResNet-50 | `eb35667fb31dfd0f2a47b5b3c50f61b646291a289d99a7c5f2e32b2aece05c61` | `fd09812` |
 
-The AX-only run replaces the AX cells of the full run. Each implementation ran in its own process, so the other cells stay valid; the generator checks that the two package locks differ only in the AlbumentationsX entry and that every replacement cell records that version.
-
-Put each run in its own directory: `run.json`, `cells/`, the run's `catalog/recipes/*.yaml`, and, for the two input-pipeline runs, `environments/rgb/lock.txt`. Then, from the repository root:
+Put each run in its own directory: `run.json`, `cells/`, and the run's recipe catalog (`catalog/recipes/rgb.yaml` or `imagenet_train.yaml` at the source revision). Then, from the repository root:
 
 ```bash
-rgb_args=(--run full/run.json --cells full/cells --recipes full/rgb.yaml
-          --ax-run ax/run.json ax/cells ax/rgb.yaml --ax-locks full/lock.txt ax/lock.txt)
+rgb_args=(--run rgb/run.json --cells rgb/cells --recipes rgb/rgb.yaml)
 uv run python -m paper.generate_results "${rgb_args[@]}"
 uv run python -m paper.generate_training \
   --run resnet18/run.json resnet18/cells resnet18/imagenet_train.yaml \
