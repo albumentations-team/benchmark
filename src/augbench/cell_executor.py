@@ -25,7 +25,8 @@ from augbench.execution.pipeline import (
 from augbench.measurement_window import MeasurementWindow, measure_window
 from augbench.nvml_memory import NvmlProcessMemoryMonitor
 from augbench.recipe_contract import validate_rgb_recipes
-from augbench.run_records import CellKey, OutputObservation, ResultRecord
+from augbench.run_records import CellKey, OutputObservation, ResultRecord, TrainingObservation
+from augbench.training.step import TrainSession
 
 _OUTPUT_SHAPE_DIMENSIONS = 4
 
@@ -47,6 +48,14 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
+class _TrainingRun:
+    """The session that consumes ready batches and the list that collects loader waits."""
+
+    session: TrainSession
+    waits: list[float]
+
+
+@dataclass(frozen=True)
 class _DaliExecution:
     batch_size: int
     num_workers: int
@@ -61,7 +70,7 @@ class _DaliAdapter(Protocol):
     def native_source(self, *, sources: Sequence[Any], recipe: RecipeSpec, execution: _DaliExecution) -> Any: ...
 
 
-class RGBCellExecutor:
+class CellExecutor:
     """Execute cells sequentially inside a benchmark worker process."""
 
     def __init__(
@@ -79,6 +88,7 @@ class RGBCellExecutor:
         self._recipes = recipes
         self._sources = tuple(SourceRef(path=path, channels=config.jpeg_channels) for path in dataset_files)
         self._adapters = adapters or default_adapter_registry()
+        self._train_session: TrainSession | None = None
 
     def execute(self, cell: CellKey) -> ResultRecord:
         recipe = self._recipe(cell.recipe_id)
@@ -88,6 +98,10 @@ class RGBCellExecutor:
         adapter = self._adapters.load(cell.implementation)
         sources = self._sources_for_seed(cell.seed)
         _clear_device_state()
+        session = self._training_session()
+        waits: list[float] = []
+        training = None if session is None else _TrainingRun(session, waits)
+        ceiling = 0.0
         monitor = NvmlProcessMemoryMonitor()
         monitor.start()
         try:
@@ -95,10 +109,14 @@ class RGBCellExecutor:
             # outside the throughput timer but intentionally inside the
             # process-wide memory window.
             runtime = adapter.build_recipe(recipe)
+            if session is not None:
+                ceiling = self._measure_ceiling(session, cell.seed)
+                monitor.mark_steady()
+                session.reset(cell.seed)
             if cell.implementation == "dali_gpu":
-                throughput, output = self._execute_dali(adapter, recipe, sources, cell.seed)
+                throughput, output = self._execute_dali(adapter, recipe, sources, cell.seed, training)
             else:
-                throughput, output = self._execute_dataloader(adapter, runtime, sources, cell.seed)
+                throughput, output = self._execute_dataloader(adapter, runtime, sources, cell.seed, training)
         finally:
             memory = monitor.stop()
         return ResultRecord(
@@ -109,6 +127,7 @@ class RGBCellExecutor:
             gpu_memory=memory,
             output=output,
             runtime=_runtime_metadata(adapter),
+            training=None if session is None else _training_observation(session, ceiling, waits, monitor),
         )
 
     def preflight(self, cell: CellKey) -> None:
@@ -139,6 +158,7 @@ class RGBCellExecutor:
         runtime: RecipeRuntime,
         sources: Sequence[Any],
         seed: int,
+        training: _TrainingRun | None,
     ) -> tuple[Any, OutputObservation]:
         dataset = RecipeDataset(items=sources, adapter=adapter, runtime=runtime)
         loader = TorchDataLoaderSource(
@@ -155,16 +175,21 @@ class RGBCellExecutor:
             ),
         )
         consumer = ReadyGpuBatchConsumer(runtime=runtime, expected_channels=self._config.output.channels)
+
+        def consume(batch: Any) -> int:
+            return consumer(batch) if training is None else training.session.step(consumer.prepare(batch))
+
         loader.open()
         try:
             batch_count = self._config.execution.warmup_batches + self._config.execution.measured_batches
             throughput = measure_window(
                 batches=(loader.next_batch() for _ in range(batch_count)),
-                consume=consumer,
+                consume=consume,
                 synchronize=consumer.synchronize,
                 window=MeasurementWindow(
                     warmup_batches=self._config.execution.warmup_batches,
                     measured_batches=self._config.execution.measured_batches,
+                    waits=None if training is None else training.waits,
                 ),
                 clock=time.perf_counter,
             )
@@ -194,9 +219,15 @@ class RGBCellExecutor:
             ),
         )
         consumer = ReadyGpuBatchConsumer(runtime=runtime, expected_channels=self._config.output.channels)
+        session = self._training_session()
         loader.open()
         try:
-            consumer(loader.next_batch())
+            if session is None:
+                consumer(loader.next_batch())
+            else:
+                ready = consumer.prepare(loader.next_batch())
+                session.reset(seed)
+                session.step(ready)
             consumer.synchronize()
             self._output_observation(consumer.last_validation)
         finally:
@@ -208,6 +239,7 @@ class RGBCellExecutor:
         recipe: RecipeSpec,
         sources: Sequence[Any],
         seed: int,
+        training: _TrainingRun | None,
     ) -> tuple[Any, OutputObservation]:
         native = cast("_DaliAdapter", adapter)
         source = native.native_source(
@@ -231,7 +263,7 @@ class RGBCellExecutor:
                 canonicalize_model_batch(batch[0], expected_channels=self._config.output.channels),
             )
             latest = output_validation(ready)
-            return int(ready.shape[0])
+            return int(ready.shape[0]) if training is None else training.session.step(ready)
 
         source.open()
         try:
@@ -243,6 +275,7 @@ class RGBCellExecutor:
                 window=MeasurementWindow(
                     warmup_batches=self._config.execution.warmup_batches,
                     measured_batches=self._config.execution.measured_batches,
+                    waits=None if training is None else training.waits,
                 ),
                 clock=time.perf_counter,
             )
@@ -278,9 +311,40 @@ class RGBCellExecutor:
             batch, _labels = source.next_batch()
             ready = materialize(canonicalize_model_batch(batch, expected_channels=self._config.output.channels))
             self._output_observation(output_validation(ready))
+            session = self._training_session()
+            if session is not None:
+                session.reset(seed)
+                session.step(ready)
             _cuda_synchronize()
         finally:
             source.close()
+
+    def _training_session(self) -> TrainSession | None:
+        training = self._config.training
+        if training is None:
+            return None
+        if self._train_session is None:
+            self._train_session = TrainSession(training, batch_size=self._config.execution.batch_size)
+        return self._train_session
+
+    def _measure_ceiling(self, session: TrainSession, seed: int) -> float:
+        """Run the step alone on one resident batch before the loader opens; this also compiles the model."""
+        import torch
+
+        training = self._config.training
+        if training is None:
+            raise RuntimeError("the ceiling belongs to training cells")
+        session.reset(seed)
+        generator = torch.Generator(device="cuda").manual_seed(seed)
+        images = torch.randn(
+            (self._config.execution.batch_size, *self._config.output.shape),
+            generator=generator,
+            device="cuda",
+            dtype=torch.float16,
+        )
+        rate = session.ceiling(images, steps=training.ceiling_steps, warmup=training.ceiling_warmup_steps)
+        del images
+        return rate
 
     def _sources_for_seed(self, seed: int) -> tuple[Any, ...]:
         return reordered_items(
@@ -301,6 +365,20 @@ class RGBCellExecutor:
         if output.shape[1:] != expected_shape:
             raise ValueError(f"RGB output shape {output.shape[1:]} does not match configured {expected_shape}")
         return output
+
+
+def _training_observation(
+    session: TrainSession, ceiling: float, waits: list[float], monitor: NvmlProcessMemoryMonitor
+) -> TrainingObservation:
+    if not session.loss_is_finite():
+        raise RuntimeError("the training loss became non-finite during the measured window")
+    return TrainingObservation(
+        model=session.model_name,
+        ceiling_images_per_second=ceiling,
+        loader_wait_seconds=sum(waits),
+        steady_peak_mib=monitor.steady_peak_mib,
+        loss_finite=True,
+    )
 
 
 def _output_observation(validation: dict[str, object]) -> OutputObservation:

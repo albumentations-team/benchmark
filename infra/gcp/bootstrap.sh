@@ -39,6 +39,25 @@ sys.exit("torchvision_gpu" not in selected)
 ' "$REQUEST_PATH"
 }
 
+requires_compiler() {
+  python3 -c '
+import json, sys
+config = json.load(open(sys.argv[1], encoding="utf-8"))["run"]["family_config"]
+sys.exit("training" not in config)
+' "$REQUEST_PATH"
+}
+
+# torch.compile builds Triton launchers and host glue with gcc. Fail now instead of minutes into a cell.
+# One cache directory per VM lets later jobs on this machine reuse earlier compilations.
+stage_compiler_cache() {
+  if ! command -v gcc >/dev/null 2>&1; then
+    printf 'torch.compile needs a C compiler and gcc was not found on this image\n' >&2
+    return 1
+  fi
+  export TORCHINDUCTOR_CACHE_DIR="$STATE_ROOT/inductor"
+  mkdir -p "$TORCHINDUCTOR_CACHE_DIR"
+}
+
 stage_nvidia_media() {
   local driver library installed media_dir temporary
   driver="$(nvidia-smi --id=0 --query-gpu=driver_version --format=csv,noheader)"
@@ -155,6 +174,10 @@ gcloud storage cp --quiet "$request_uri" "$REQUEST_PATH"
 
 if requires_nvidia_media; then
   stage_nvidia_media
+fi
+
+if requires_compiler; then
+  stage_compiler_cache
 fi
 
 code_uri="$(request_field code_archive_uri)"

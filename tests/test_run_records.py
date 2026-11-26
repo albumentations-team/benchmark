@@ -70,3 +70,23 @@ def test_production_result_cannot_be_marked_unsupported() -> None:
             gpu_memory=GpuMemory(peak_mib=512.0, poll_interval_ms=50, valid_samples=9),
             output=OutputObservation(shape=(256, 3, 224, 224)),
         )
+
+
+def test_run_and_cell_identities_keep_their_published_values() -> None:
+    run = build_run_record(
+        family_config={"family": "rgb", "batch_size": 256},
+        inputs=RunInputs(
+            git_commit="a" * 40,
+            code_archive_sha256="b" * 64,
+            dataset_archive_sha256="d" * 64,
+            recipe_catalog_sha256="e" * 64,
+            environment_lock_sha256={"torch-stack": "f" * 64},
+        ),
+        hardware={"machine_type": "g2-standard-16", "gpu": "NVIDIA L4"},
+    )
+    rgb = CellKey(run_id=run.run_id, family="rgb", implementation="pillow_cpu", recipe_id="Resize", seed=137)
+    grayscale = CellKey(run_id="a" * 64, family="grayscale", implementation="dali_gpu", recipe_id="X", seed=141)
+
+    assert run.run_id == "7e3f0c0c85a7d949c4ccc28947bc87c7cf4a3441ac237fa7913cc92b9b9a4704"
+    assert rgb.cell_id == "125b5556a1c4ea4589956c2b0c9ccc3396e15e9f7f5c0d33ae3575969fdbc62d"
+    assert grayscale.cell_id == "0df054d42b839d9cb22371dda07d53e25f29b069157d10749918d13c53eccdff"

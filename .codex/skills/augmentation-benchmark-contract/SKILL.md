@@ -23,8 +23,11 @@ both primary outcomes:
 2. peak process GPU memory from pipeline construction through the final CUDA
    synchronization.
 
-Never create a memory-only, micro, H2D-only, training, capacity, or smoke
-matrix unless the user explicitly adds that research question.
+Never create a memory-only, micro, H2D-only, capacity, or smoke
+matrix unless the user explicitly adds that research question. The ImageNet
+training-step family (`imagenet_train`) is such an explicit addition, made on
+2026-11-26. It has its own contract section, one run per model, and records the
+model-only ceiling, loader wait, and two GPU-memory peaks.
 
 ## RGB workload and reference effect
 

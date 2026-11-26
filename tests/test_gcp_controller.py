@@ -46,9 +46,9 @@ def _cloud(max_vms: int = 1) -> GcpRunConfig:
     )
 
 
-def _request() -> GuestRequest:
+def _request(family: str = "rgb") -> GuestRequest:
     run = build_run_record(
-        family_config={"family": "rgb"},
+        family_config={"family": family},
         inputs=RunInputs(
             git_commit="a" * 40,
             code_archive_sha256="b" * 64,
@@ -262,3 +262,26 @@ def test_controller_tops_up_only_the_missing_vms_and_frees_dead_claims(tmp_path:
     assert launch.instances[0].name == "alive"
     assert set(remote.objects) >= {f"{claims}/pillow_cpu-1.json"}
     assert f"{claims}/pillow_cpu-2.json" not in remote.objects
+
+
+def test_instance_names_replace_family_underscores_which_gce_rejects(tmp_path: Path) -> None:
+    startup = tmp_path / "bootstrap.sh"
+    startup.write_text("#!/bin/bash\n", encoding="utf-8")
+    request = _request("imagenet_train")
+    created: list[list[str]] = []
+
+    def runner(command: list[str]) -> subprocess.CompletedProcess[bytes]:
+        if command[2:4] == ["instances", "list"]:
+            return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+        if command[2:4] in (["accelerator-types", "list"], ["machine-types", "list"]):
+            return subprocess.CompletedProcess(command, 0, stdout=b"us-central1-a\n", stderr=b"")
+        created.append(command)
+        return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+
+    start_or_resume(
+        start=GcpStartRequest(cloud=_cloud(), request=request, cells=(_cell(request),), startup_script=startup),
+        dependencies=GcpControllerDependencies(remote=_Remote(), runner=runner, sleep=lambda _seconds: None),
+    )
+
+    assert created[0][4] == f"augbench-imagenet-train-{request.run.run_id[:12]}-01"
+    assert "augbench-family=imagenet_train" in ",".join(created[0])

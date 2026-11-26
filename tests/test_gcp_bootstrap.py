@@ -26,8 +26,17 @@ def test_bootstrap_is_self_contained_and_has_valid_shell_syntax() -> None:
     subprocess.run(["bash", "-n", str(script)], check=True)  # noqa: S603, S607 - fixed local script path.
 
 
+def test_bootstrap_stages_a_compiler_cache_only_for_training_runs() -> None:
+    source = (ROOT / "infra" / "gcp" / "bootstrap.sh").read_text(encoding="utf-8")
+
+    assert 'sys.exit("training" not in config)' in source
+    assert "command -v gcc" in source
+    assert 'export TORCHINDUCTOR_CACHE_DIR="$STATE_ROOT/inductor"' in source
+    assert source.index("if requires_compiler; then") < source.index('code_uri="$(request_field code_archive_uri)"')
+
+
 def test_rgb_launch_uses_the_current_bootstrap() -> None:
-    source = (ROOT / "src" / "augbench" / "launch_rgb.py").read_text(encoding="utf-8")
+    source = (ROOT / "src" / "augbench" / "launch.py").read_text(encoding="utf-8")
 
     assert '"infra/gcp/bootstrap.sh"' in source
     assert "bootstrap_v2" not in source

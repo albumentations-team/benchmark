@@ -42,3 +42,9 @@ def test_decoder_rejects_a_result_stored_under_another_cell_id() -> None:
 
     with pytest.raises(ValueError, match="cell ID"):
         decode_result(encode_result(result), expected_cell_id="0" * 64)
+
+
+def test_input_pipeline_results_stay_byte_identical_without_a_training_field() -> None:
+    from augbench.result_store import encode_result
+
+    assert b'"training"' not in encode_result(_result())

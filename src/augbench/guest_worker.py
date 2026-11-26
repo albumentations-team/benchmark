@@ -12,6 +12,7 @@ import urllib.request
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from augbench.cell_executor import CellExecutor, pillow_allsimd_runtime
 from augbench.cloud.gcp.storage import GcloudObjectStore
 from augbench.dataset_access import prewarm_files
 from augbench.dataset_materialize import materialize_rgb_dataset
@@ -21,7 +22,6 @@ from augbench.matrix import build_matrix
 from augbench.recipes.load import load_recipe_catalog
 from augbench.remote_results import completed_cell_ids
 from augbench.result_publisher import ResultPublisher
-from augbench.rgb_executor import RGBCellExecutor, pillow_allsimd_runtime
 from augbench.run_config import FamilyRunConfig, load_family_config
 
 _AX_THREAD_ENV = (
@@ -136,7 +136,7 @@ def _run_job(
 
         torch.set_num_threads(1)
         torch.set_num_interop_threads(1)
-    executor = RGBCellExecutor(
+    executor = CellExecutor(
         config=config,
         recipes=recipes,
         dataset_files=tuple(Path(path) for path in json.load(sys.stdin)),
@@ -199,7 +199,7 @@ def select_pending_cells(*, request: GuestRequest, cells: Iterable[CellKey]) -> 
     return tuple(cell for cell in indexed.values() if cell.cell_id in requested)
 
 
-def preflight_implementations(executor: RGBCellExecutor, cells: Iterable[CellKey]) -> None:
+def preflight_implementations(executor: CellExecutor, cells: Iterable[CellKey]) -> None:
     """Compile every implementation and execute one real batch per implementation-recipe pair."""
     compiled: set[str] = set()
     preflighted: set[tuple[str, str]] = set()

@@ -8,9 +8,9 @@ from PIL import Image
 from augbench.adapters.registry import default_adapter_registry
 from augbench.adapters.sources import SourceRef
 from augbench.datasets.prepare_grayscale import prepare_grayscale_archive
-from augbench.frozen_rgb_run import build_frozen_rgb_run
-from augbench.launch_rgb import grayscale_config
+from augbench.frozen_run import build_frozen_run
 from augbench.recipes.load import load_recipe_catalog
+from augbench.run_config import FamilyRunConfig, load_family_config
 
 ROOT = Path(__file__).parents[1]
 
@@ -42,10 +42,21 @@ def test_grayscale_archive_contains_deterministic_one_channel_jpegs(tmp_path: Pa
 
 
 def test_grayscale_colorize_has_a_separate_frozen_matrix() -> None:
-    config = grayscale_config(repository_root=ROOT, archive_uri="gs://bucket/gray.tar", archive_sha256="c" * 64)
-    frozen = build_frozen_rgb_run(
-        repository_root=ROOT, git_commit="a" * 40, code_archive_sha256="b" * 64, config=config
+    stock = load_family_config(ROOT / "configs/families/grayscale.yaml")
+    archive = {"archive_uri": "gs://bucket/gray.tar", "archive_sha256": "c" * 64}
+    config = FamilyRunConfig.model_validate(
+        {**stock.model_dump(), "dataset": {**stock.dataset.model_dump(), **archive}}
     )
+    frozen = build_frozen_run(repository_root=ROOT, git_commit="a" * 40, code_archive_sha256="b" * 64, config=config)
+    assert config.implementations == (
+        "albumentationsx_cpu",
+        "pillow_cpu",
+        "kornia_cpu",
+        "kornia_gpu",
+        "dali_gpu",
+        "pillow_allsimd_cpu",
+    )
+    assert config.execution == load_family_config(ROOT / "configs/families/rgb.yaml").execution
     assert config.jpeg_channels == 1
     assert config.output.shape == (3, 224, 224)
     assert {cell.family for cell in frozen.cells} == {"grayscale"}

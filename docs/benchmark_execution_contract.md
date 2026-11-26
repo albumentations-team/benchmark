@@ -1,9 +1,9 @@
 # Production benchmark contract
 
 This repository measures the path from a prepared file on local disk to a batch ready for a
-model on the GPU. The image runner supports RGB and a separate grayscale Colorize workload.
-Nine-channel images, video, and volumes need their own dataset, recipe catalog, output
-contract, and batch size.
+model on the GPU. The image runner supports RGB, a separate grayscale Colorize workload, and an
+ImageNet training-step workload. Nine-channel images, video, and volumes need their own dataset,
+recipe catalog, output contract, and batch size.
 
 The [methodology FAQ](benchmark_faq.md) explains the choices behind this contract.
 The [TorchVision and Kornia adapter inventory](torchvision_kornia_adapters.md) lists
@@ -212,6 +212,41 @@ uv run augbench launch-grayscale --archive-uri "$GRAYSCALE_ARCHIVE_URI" --archiv
 The launcher takes the uploaded grayscale archive URI and the SHA-256 printed by preparation.
 It uses the RGB selection policy and execution settings. A production launch verifies the archive
 and preflights each path on CUDA before collecting throughput and peak VRAM.
+
+## ImageNet training workload
+
+This workload answers one question: does the loader ranking survive when a model trains on the same
+GPU and the same CPU cores? It reuses the eight input paths, the timing boundary, and the RGB output
+contract. Each ready batch feeds one training step, and the cell reports the rate of those steps.
+
+| Field | Value |
+| --- | --- |
+| Family | `imagenet_train`; one run per model (`configs/families/train-resnet18.yaml`, `train-resnet50.yaml`) |
+| Data | All 50,000 ImageNet validation JPEGs; one pass per seed, no rollover |
+| Models | ResNet-18 (batch 256) and ResNet-50 (batch 128), `torchvision.models`, untrained |
+| Step | `torch.compile`, bfloat16 autocast without `GradScaler`, `channels_last`, fused SGD, cross-entropy on fixed random labels |
+| Window | 10 warm-up and 150 measured batches; 15 workers, prefetch 2, persistent workers, pinned memory |
+| Recipes | `RandomResizedCrop+HorizontalFlip`; `+ColorJitter`; `+ColorJitter+Erasing`. Stage definitions come from the RGB catalog. Pillow paths lack ColorJitter and Erasing |
+| Cells | 5 seeds × (8 + 6 + 6) pairs = 100 per run |
+
+The step runs on the delivered batch with no extra copy: the loader's normalized `float16` BCHW batch
+goes into autocast. The labels are random and fixed per seed because the cell measures speed. It makes no
+claim about accuracy or convergence.
+
+A cell records, in one pass:
+
+- throughput of training steps over the measured window (images/s);
+- the model-only ceiling: the same step on one resident synthetic batch, measured in the same process before
+  the loader opens, which also compiles the model. Ceiling and cell share the machine, so machine
+  differences cancel in their ratio;
+- loader wait: the seconds the training loop blocked on the next batch during the window;
+- two GPU-memory peaks: the contract peak from pipeline construction to the end, and the peak after
+  the ceiling phase, which leaves out the compilation spike;
+- a finite loss at the end of the window. A non-finite loss fails the cell.
+
+The worker keeps one compiled model per process. Each cell restores the initial weights in place and starts
+a new optimizer, so compilation happens once per job. The VM keeps the Inductor cache for later jobs and
+refuses to start when it has no C compiler.
 
 ## Data access
 

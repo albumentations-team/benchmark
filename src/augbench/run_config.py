@@ -60,9 +60,23 @@ class ExecutionConfig(_ConfigModel):
         return self.batch_size * (self.warmup_batches + self.measured_batches)
 
 
+class TrainingConfig(_ConfigModel):
+    """One ImageNet-style training step on each delivered batch."""
+
+    model: Literal["resnet18", "resnet50"]
+    compile: bool = True
+    amp_dtype: Literal["bfloat16"] = "bfloat16"
+    learning_rate: float = Field(gt=0)
+    momentum: float = Field(ge=0, lt=1)
+    weight_decay: float = Field(ge=0)
+    ceiling_warmup_steps: int = Field(ge=1)
+    ceiling_steps: int = Field(ge=1)
+    label_classes: int = Field(default=1000, ge=2)
+
+
 class FamilyRunConfig(_ConfigModel):
     schema_version: Literal[1] = 1
-    family: Literal["rgb", "grayscale", "image9ch", "video", "volume"]
+    family: Literal["rgb", "grayscale", "imagenet_train", "image9ch", "video", "volume"]
     output: OutputConfig
     normalization: Literal["gpu"]
     dataset: DatasetConfig
@@ -72,6 +86,7 @@ class FamilyRunConfig(_ConfigModel):
     execution: ExecutionConfig
     implementations: tuple[str, ...] = Field(min_length=1)
     measurements: dict[str, tuple[str, ...]] | None = None
+    training: TrainingConfig | None = None
 
     @property
     def jpeg_channels(self) -> int:
@@ -79,8 +94,10 @@ class FamilyRunConfig(_ConfigModel):
 
     @model_validator(mode="after")
     def validate_runnable_family(self) -> FamilyRunConfig:
-        if self.family not in {"rgb", "grayscale"}:
+        if self.family not in {"rgb", "grayscale", "imagenet_train"}:
             raise ValueError("this family requires its own dataset and adapters")
+        if (self.training is not None) != (self.family == "imagenet_train"):
+            raise ValueError("a training section belongs to the imagenet_train family and to no other")
         if self.output.channels != _RGB_CHANNELS:
             raise ValueError("these image recipes require three output channels")
         if self.normalization != "gpu":

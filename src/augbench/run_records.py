@@ -55,7 +55,7 @@ def build_run_record(
 
 class CellKey(_Record):
     run_id: Sha256
-    family: Literal["rgb", "grayscale"]
+    family: Literal["rgb", "grayscale", "imagenet_train"]
     implementation: str = Field(min_length=1)
     recipe_id: str = Field(min_length=1)
     seed: int
@@ -102,6 +102,16 @@ class OutputObservation(_Record):
         return self
 
 
+class TrainingObservation(_Record):
+    """What one training cell adds to the shared throughput and memory fields."""
+
+    model: Literal["resnet18", "resnet50"]
+    ceiling_images_per_second: float = Field(gt=0)
+    loader_wait_seconds: float = Field(ge=0)
+    steady_peak_mib: float = Field(ge=0)
+    loss_finite: bool
+
+
 class ResultRecord(_Record):
     schema_version: Literal[1] = 1
     run_id: Sha256
@@ -111,6 +121,7 @@ class ResultRecord(_Record):
     gpu_memory: GpuMemory
     output: OutputObservation
     runtime: dict[str, str] = Field(default_factory=dict)
+    training: TrainingObservation | None = None
 
     @model_validator(mode="after")
     def validate_identity(self) -> ResultRecord:

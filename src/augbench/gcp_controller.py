@@ -137,7 +137,7 @@ def start_or_resume(
     _publish_immutable(remote, request_key, _json_bytes(pending_request))
     family = request.run.family_config["family"]
     names = _free_instance_names(
-        prefix=f"augbench-{family}-{label_value}", taken={i.name for i in active}, how_many=wanted
+        prefix=f"augbench-{family.replace('_', '-')}-{label_value}", taken={i.name for i in active}, how_many=wanted
     )
     zones = resolve_candidate_zones(
         configured_zones=cloud.zones,

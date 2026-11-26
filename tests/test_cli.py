@@ -3,17 +3,16 @@ from pathlib import Path
 import pytest
 
 from augbench.cli import main
-from augbench.frozen_rgb_run import FrozenRgbRun
+from augbench.frozen_run import FrozenRun
 from augbench.gcp_controller import GcpLaunch, LaunchedInstance
 from augbench.guest_request import GuestRequest
+from augbench.run_config import FamilyRunConfig
 from augbench.run_records import RunInputs, build_run_record
 
+ROOT = Path(__file__).parents[1]
 
-def test_launch_rgb_command_prints_actionable_state(
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-    tmp_path: Path,
-) -> None:
+
+def _frozen() -> FrozenRun:
     run = build_run_record(
         family_config={"family": "rgb"},
         inputs=RunInputs(
@@ -37,17 +36,56 @@ def test_launch_rgb_command_prints_actionable_state(
         environment_python_version="3.13.14",
         pending_cell_ids=("0" * 64,),
     )
-    frozen = FrozenRgbRun(run=run, request=request, cells=())
-    launch = GcpLaunch(
+    return FrozenRun(run=run, request=request, cells=())
+
+
+@pytest.fixture
+def launched(monkeypatch: pytest.MonkeyPatch) -> list[FamilyRunConfig]:
+    """Replace the launcher and record the config each command resolves."""
+    frozen = _frozen()
+    state = GcpLaunch(
         status="active",
-        run_id=run.run_id,
+        run_id=frozen.run.run_id,
         pending_cell_ids=("1" * 64,),
         instances=(LaunchedInstance(name="vm", zone="zone"),),
     )
-    monkeypatch.setattr("augbench.cli.launch_rgb", lambda **_kwargs: (frozen, launch))
+    configs: list[FamilyRunConfig] = []
 
-    assert main(["launch-rgb", "--repository-root", str(tmp_path)]) == 0
+    def fake(*, repository_root: Path, config: FamilyRunConfig) -> tuple[FrozenRun, GcpLaunch]:
+        assert repository_root == ROOT
+        configs.append(config)
+        return frozen, state
+
+    monkeypatch.setattr("augbench.cli.launch", fake)
+    return configs
+
+
+def test_launch_rgb_alias_prints_actionable_state(
+    launched: list[FamilyRunConfig], capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["launch-rgb", "--repository-root", str(ROOT)]) == 0
 
     output = capsys.readouterr().out
     assert '"status": "active"' in output
     assert '"pending_cells": 1' in output
+    assert launched[0].family == "rgb"
+
+
+def test_launch_takes_any_family_config(launched: list[FamilyRunConfig]) -> None:
+    assert main(["launch", "--repository-root", str(ROOT), "--config", "configs/families/rgb.yaml"]) == 0
+    assert main(["launch", "--repository-root", str(ROOT), "--config", "configs/families/grayscale.yaml"]) == 0
+
+    assert [config.family for config in launched] == ["rgb", "grayscale"]
+
+
+def test_launch_grayscale_overrides_the_archive_fields(launched: list[FamilyRunConfig]) -> None:
+    uri = "gs://bucket/val-grayscale.tar"
+    sha = "c" * 64
+
+    assert (
+        main(["launch-grayscale", "--repository-root", str(ROOT), "--archive-uri", uri, "--archive-sha256", sha]) == 0
+    )
+
+    dataset = launched[0].dataset
+    assert (dataset.archive_uri, dataset.archive_sha256) == (uri, sha)
+    assert launched[0].family == "grayscale"
