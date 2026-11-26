@@ -515,7 +515,7 @@ def figure_captions(data: _PaperData) -> dict[str, str]:
             "the median. Right: peak process GPU memory."
         ),
         "ax-pairs": (
-            "Each path's throughput divided by AX's on every recipe both support, log scale. Marks show whether "
+            "Each path's throughput divided by AX's on every recipe both support. Marks show whether "
             "the exact 95% interval over seeds excludes equal throughput."
         ),
         "training": "Training-step throughput as a share of the model-only ceiling, with the seed interval.",

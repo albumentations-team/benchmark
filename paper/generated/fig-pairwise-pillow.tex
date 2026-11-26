@@ -1,19 +1,32 @@
 \begin{tikzpicture}
-\begin{axis}[width=10.5cm, xmode=log, xmin=0.006, xmax=5,
-  xtick={0.01,0.1,0.25,0.5,1,2,4}, xticklabels={0.01,0.1,0.25,0.5,1,2,4}, ytick={0,...,1}, yticklabels={Pillow (46),Pillow-AllSIMD (46)}, ymin=-0.7, ymax=1.7,
+\begin{axis}[width=8.2cm, xmin=0, xmax=4.5, xtick distance=1, minor x tick num=1,
+  xticklabel={$\pgfmathprintnumber{\tick}\times$}, ytick={0,...,1}, yticklabels={Pillow,Pillow-AllSIMD}, ymin=-0.7, ymax=1.7,
   height=2.90cm,
-  xlabel={Throughput of the path divided by AX on each shared recipe (log scale)},
-  legend style={at={(0.0,1.03)}, anchor=south west, draw=none, font=\footnotesize, legend columns=3,
+  xlabel={Throughput of the path divided by AX on each shared recipe},
+  legend style={at={(0.5,-0.22)}, anchor=north, draw=none, font=\footnotesize, legend columns=2,
     /tikz/every even column/.append style={column sep=1.2em}}, axis lines*=left, y axis line style={draw=none}, ytick style={draw=none}, xmajorgrids, major grid style={black!10}, tick label style={font=\small}, label style={font=\small}, clip=false]
-\node[anchor=south west,font=\footnotesize\bfseries] at (axis cs:7,1.45) {faster \textperiodcentered{} tied \textperiodcentered{} slower};
 \draw[black!50, densely dashed] (axis cs:1,-0.7) -- (axis cs:1,1.7);
-\addplot[only marks, mark=*, mark size=1.4pt, draw=verdictslower, fill=verdictslower] coordinates {(0.596681,-0.18) (0.868447,0.135) (0.588621,0.045) (0.874792,-0.045) (0.923311,-0.135) (0.855726,0.18) (0.660563,0.09) (0.651382,0) (0.668318,-0.09) (0.908035,-0.18) (0.882645,0.135) (0.901708,0.045) (0.452154,-0.045) (0.842077,-0.135) (0.849251,0.18) (0.893723,0.09) (0.928289,0) (0.959109,-0.09) (0.872175,-0.18) (0.878271,0.135) (0.0932406,0.045) (0.884297,-0.045) (0.848576,-0.135) (0.716042,0.18) (0.885843,0.09) (0.893088,0) (0.638122,-0.09) (0.326611,-0.18) (0.227928,0.135) (0.892435,0.045) (0.910349,-0.045) (0.631939,-0.135) (0.634952,0.18) (0.535191,0.09) (0.881475,0) (0.543386,-0.09) (0.6028,-0.18) (0.646256,0.135) (0.91762,0.045) (0.603957,-0.045) (0.29884,0.18) (0.456763,0.09) (0.64349,0) (0.502105,-0.09) (0.489795,-0.18) (0.870931,0.82) (0.900299,1.135) (0.856029,1.045) (0.89673,0.955) (0.941742,0.865) (0.868932,1.18) (0.936541,1.09) (0.908464,1) (0.944783,0.91) (0.917802,0.82) (0.924418,1.135) (0.915519,1.045) (0.857245,0.955) (0.883708,0.865) (0.897636,1.18) (0.918924,1.09) (0.969069,1) (0.878396,0.82) (0.891098,1.135) (0.877168,0.955) (0.853095,0.865) (0.868223,1.18) (0.91468,1.09) (0.953951,1) (0.910023,0.91) (0.755876,0.82) (0.669284,1.135) (0.913095,1.045) (0.934584,0.955) (0.858378,0.865) (0.8797,1.18) (0.846764,1.09) (0.899765,1) (0.847059,0.91) (0.875945,0.82) (0.894859,1.135) (0.94592,1.045) (0.88869,0.955) (0.751065,1.18) (0.826164,1.09) (0.933516,1) (0.895849,0.91) (0.879625,0.82)};
-\addlegendentry{slower than AX}
-\addplot[only marks, mark=o, mark size=1.6pt, draw=black!60, fill=white] coordinates {(0.970675,0.91) (0.979463,1.045)};
+\node[anchor=south east,font=\footnotesize,black!60] at (axis cs:0.95,1.7) {$\leftarrow$ slower than AX};
+\node[anchor=south west,font=\footnotesize,black!60] at (axis cs:1.05,1.7) {faster than AX $\rightarrow$};
+\addlegendimage{only marks, mark=*, mark size=1.5pt, black!70}
+\addlegendentry{interval excludes 1}
+\addlegendimage{only marks, mark=o, mark size=1.7pt, thick, black!70}
 \addlegendentry{tied}
-\addplot[only marks, mark=triangle*, mark size=2.2pt, draw=verdictfaster, fill=verdictfaster] coordinates {(2.86929,-0.135) (4.15739,0.865)};
-\addlegendentry{faster than AX}
-\node[anchor=west,font=\footnotesize] at (axis cs:7,0) {1 \textperiodcentered{} 0 \textperiodcentered{} 45};
-\node[anchor=west,font=\footnotesize] at (axis cs:7,1) {1 \textperiodcentered{} 2 \textperiodcentered{} 43};
+\addplot[only marks, forget plot, mark=*, mark size=1.5pt, draw=pathPillow!75!black, fill=pathPillow] coordinates {(0.596681,-0.18) (0.868447,0.135) (0.588621,0.045) (0.874792,-0.045) (0.923311,-0.135) (0.855726,0.18) (0.660563,0.09) (0.651382,0) (0.668318,-0.09) (0.908035,-0.18) (0.882645,0.135) (0.901708,0.045) (0.452154,-0.045) (0.842077,-0.135) (0.849251,0.18) (0.893723,0.09) (0.928289,0) (0.959109,-0.09) (0.872175,-0.18) (0.878271,0.135) (0.0932406,0.045) (0.884297,-0.045) (0.848576,-0.135) (0.716042,0.18) (0.885843,0.09) (0.893088,0) (0.638122,-0.09) (0.326611,-0.18) (0.227928,0.135) (0.892435,0.045) (0.910349,-0.045) (0.631939,-0.135) (0.634952,0.18) (0.535191,0.09) (0.881475,0) (0.543386,-0.09) (0.6028,-0.18) (0.646256,0.135) (0.91762,0.045) (0.603957,-0.045) (2.86929,-0.135) (0.29884,0.18) (0.456763,0.09) (0.64349,0) (0.502105,-0.09) (0.489795,-0.18)};
+\addplot[only marks, forget plot, mark=*, mark size=1.5pt, draw=pathPillowAllSIMD!75!black, fill=pathPillowAllSIMD] coordinates {(0.870931,0.82) (0.900299,1.135) (0.856029,1.045) (0.89673,0.955) (0.941742,0.865) (0.868932,1.18) (0.936541,1.09) (0.908464,1) (0.944783,0.91) (0.917802,0.82) (0.924418,1.135) (0.915519,1.045) (0.857245,0.955) (0.883708,0.865) (0.897636,1.18) (0.918924,1.09) (0.969069,1) (0.878396,0.82) (0.891098,1.135) (0.877168,0.955) (0.853095,0.865) (0.868223,1.18) (0.91468,1.09) (0.953951,1) (0.910023,0.91) (0.755876,0.82) (0.669284,1.135) (0.913095,1.045) (0.934584,0.955) (0.858378,0.865) (0.8797,1.18) (0.846764,1.09) (0.899765,1) (0.847059,0.91) (0.875945,0.82) (0.894859,1.135) (0.94592,1.045) (0.88869,0.955) (4.15739,0.865) (0.751065,1.18) (0.826164,1.09) (0.933516,1) (0.895849,0.91) (0.879625,0.82)};
+\addplot[only marks, forget plot, mark=o, mark size=1.7pt, thick, draw=pathPillowAllSIMD, fill=white] coordinates {(0.970675,0.91) (0.979463,1.045)};
+\node[anchor=south east,xshift=40pt,font=\footnotesize\bfseries] at (axis cs:4.5,1.55) {shared};
+\node[anchor=south east,xshift=80pt,font=\footnotesize\bfseries] at (axis cs:4.5,1.55) {faster};
+\node[anchor=south east,xshift=112pt,font=\footnotesize\bfseries] at (axis cs:4.5,1.55) {tied};
+\node[anchor=south east,xshift=152pt,font=\footnotesize\bfseries] at (axis cs:4.5,1.55) {slower};
+\draw[black!40] ([xshift=4pt]axis cs:4.5,1.55) -- ([xshift=152pt]axis cs:4.5,1.55);
+\node[anchor=east,xshift=40pt,font=\footnotesize] at (axis cs:4.5,0) {46};
+\node[anchor=east,xshift=80pt,font=\footnotesize] at (axis cs:4.5,0) {1};
+\node[anchor=east,xshift=112pt,font=\footnotesize] at (axis cs:4.5,0) {0};
+\node[anchor=east,xshift=152pt,font=\footnotesize] at (axis cs:4.5,0) {45};
+\node[anchor=east,xshift=40pt,font=\footnotesize] at (axis cs:4.5,1) {46};
+\node[anchor=east,xshift=80pt,font=\footnotesize] at (axis cs:4.5,1) {1};
+\node[anchor=east,xshift=112pt,font=\footnotesize] at (axis cs:4.5,1) {2};
+\node[anchor=east,xshift=152pt,font=\footnotesize] at (axis cs:4.5,1) {43};
 \end{axis}
 \end{tikzpicture}

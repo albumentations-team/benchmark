@@ -41,7 +41,7 @@ Medians over the 31 recipes that all eight paths support:
 
 The author maintains AlbumentationsX (AX), and AX transforms define the reference effect of each recipe. This section therefore compares every path with AX on the recipes both support. A recipe counts as faster or slower only when the exact 95% interval over seeds excludes equal throughput; the rest are tied.
 
-![Each path's throughput divided by AX's on every recipe both support, log scale. Marks show whether the exact 95% interval over seeds excludes equal throughput.](docs/generated/ax-pairs.png)
+![Each path's throughput divided by AX's on every recipe both support. Marks show whether the exact 95% interval over seeds excludes equal throughput.](docs/generated/ax-pairs.png)
 
 | Path | Shared recipes | Path faster | Tied | AX faster | Median ratio, path / AX |
 | --- | ---: | ---: | ---: | ---: | ---: |

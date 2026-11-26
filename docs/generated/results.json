@@ -28318,45 +28318,45 @@
     },
     "common-summary": {
       "caption": "Images per second on the 31 recipes all paths share: one dot per recipe, the bar marks the median. Right: peak process GPU memory.",
-      "sha256": "58708d26f2b4d3b41033acf53c70d3ef71eb700b668968839b95005ec4ad6ec3",
-      "width": 1150,
-      "height": 479
+      "sha256": "536f629a4fa1b093ac7960ce5ceb38bd9dacd2536cb4a881fb10cc1863205e27",
+      "width": 1175,
+      "height": 534
     },
     "ax-pairs": {
-      "caption": "Each path's throughput divided by AX's on every recipe both support, log scale. Marks show whether the exact 95% interval over seeds excludes equal throughput.",
-      "sha256": "4340add5ab82fdf21abfdc9842998113c144fa697b544a721939ad319d64ae23",
-      "width": 1215,
-      "height": 528
+      "caption": "Each path's throughput divided by AX's on every recipe both support. Marks show whether the exact 95% interval over seeds excludes equal throughput.",
+      "sha256": "75d7189c2fe872be5021a52d4fb72750c7214ed2c53dd79cfbedbd6a688c709e",
+      "width": 1099,
+      "height": 552
     },
     "training": {
       "caption": "Training-step throughput as a share of the model-only ceiling, with the seed interval.",
-      "sha256": "fb4fdd4956a1677752ae918a4816442b16a0a043d7519bec1e6e4bd46b790f9d",
-      "width": 1099,
+      "sha256": "fd69c8ba7f1c38e710bd9dbff55c77490ef87759756ddcabc816b81d1e5446a0",
+      "width": 1132,
       "height": 604
     },
     "pairwise-kornia": {
       "caption": "Kornia against AX on 61 shared recipes, per recipe",
-      "sha256": "65c6199e5fe1d1f4845710fff4fb757477bef868e8f4e9cb7ced49aad8692757",
-      "width": 1161,
-      "height": 255
+      "sha256": "0dd7b23f402771c90013fdc4bb3158bfc7c0a7eb4938ba27e26a3b00dc30774b",
+      "width": 1045,
+      "height": 245
     },
     "pairwise-torchvision": {
       "caption": "TorchVision against AX on 42 shared recipes, per recipe",
-      "sha256": "0432da836e984947b3a8ca3a69c3e706a111c717c5a63e08c492b7104a86db9c",
-      "width": 1215,
-      "height": 255
+      "sha256": "30ac7bd403d60a2668857ac86ef1b60ad306e44d16aed441c367711493f62078",
+      "width": 1099,
+      "height": 245
     },
     "pairwise-pillow": {
       "caption": "Pillow against AX on 46 shared recipes, per recipe",
-      "sha256": "865ad527bf4c009bc622cab644c79be9c4ef2afab6284ddf9d393eafe65f5ecc",
-      "width": 1196,
-      "height": 255
+      "sha256": "51931ecb555a1c16e6e3ef40029fdaf4fdd5fa0752b9046075913f56089d0ace",
+      "width": 1080,
+      "height": 245
     },
     "pairwise-dali": {
       "caption": "DALI against AX on 51 shared recipes, per recipe",
-      "sha256": "9cc49c638831ccebef1aab53b369e59e0b6ee2102926f5e190a643801e3ebaf6",
-      "width": 1085,
-      "height": 200
+      "sha256": "c45f4e6d97d5611c141865200aa86cb9409740d7ad7b59afc7050f033a4e32cf",
+      "width": 999,
+      "height": 192
     }
   }
 }
