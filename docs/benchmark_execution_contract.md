@@ -253,7 +253,7 @@ A cell records, in one pass:
   the loader opens, which also compiles the model. Ceiling and cell share the machine, so machine
   differences cancel in their ratio;
 - loader wait: the seconds the training loop blocked on the next batch during the window. Work that a path runs
-  on the GPU after the batch arrives (Kornia GPU, TorchVision GPU) belongs to the step, not to the wait, and DALI's
+  on the GPU after the batch arrives (Kornia GPU, TorchVision GPU) counts as step time and is outside the wait, while DALI's
   wait includes its GPU work for that batch;
 - two GPU-memory peaks: the contract peak from pipeline construction to the end, and the peak after
   the ceiling phase, which leaves out the compilation spike;
@@ -279,6 +279,9 @@ Differences that remain:
 
 - Kornia draws its operations without replacement from its own pool at one global magnitude (`m=9` of 30)
   and one sequence per call, so the adapter calls it once per image.
+- AX's `A.SomeOf` applies the two sampled operations in the order of their list indices, so AX never runs, for
+  example, Solarize before Brightness. The other paths apply them in the order drawn. `A.RandomOrder` would
+  remove the difference; the published AX cells were measured with `A.SomeOf` and have not been rerun.
 - AX shears about the image center and TorchVision about the top-left corner, so AX recenters the shear.
   AX Sharpness is `UnsharpMask` with a signed alpha (supported since AX 2.6.9); its 3×3 Gaussian differs
   slightly from Pillow's smoothing kernel.

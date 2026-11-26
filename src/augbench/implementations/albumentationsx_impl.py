@@ -104,7 +104,10 @@ def _build_affine(params: dict[str, Any]) -> Any:
 
 
 def _build_rand_augment(params: dict[str, Any]) -> Any:
-    """RandAugment as one ``SomeOf`` of stock transforms; a signed operation picks its sign through ``OneOf``."""
+    """RandAugment as one ``SomeOf`` of stock transforms; a signed operation picks its sign through ``OneOf``.
+
+    ``SomeOf`` applies the sampled operations in list order, which differs from the order drawn by the other paths.
+    """
     spec = RandAugmentSpec.from_params(params)
     operations = []
     for name in _RAND_AUGMENT_OPERATIONS:

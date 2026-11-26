@@ -425,6 +425,10 @@ and draw them with replacement; AX and Pillow take their magnitudes from TorchVi
 checks each operation against TorchVision's pixels. Kornia draws without replacement from its own
 pool and picks one sequence per call, so its adapter calls it once per image. DALI translates by
 up to 100/224 of the side instead of 150/331, and AX implements Sharpness with an unsharp mask.
+AX's \texttt{SomeOf} applies the two drawn operations in list order, while the other paths apply them in
+the order drawn, so AX never runs, for example, Solarize before Brightness. The operations do not commute,
+so the composed effect differs. We did not rerun the AX cells with random order, so we cannot say
+whether the speed changes.
 
 \clearpage
 \section{Input-pipeline results for every pair}
